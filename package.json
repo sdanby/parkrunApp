@@ -9,6 +9,9 @@
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },
+  "engines": {
+    "node": "16.x"
+  } ,
   "dependencies": {
     "axios": "^0.21.1",
     "react": "^19.1.1",
