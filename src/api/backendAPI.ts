@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'https://4eac998a262c.ngrok-free.app'
+const API_BASE_URL = 'https://parkrunapp.onrender.com'
 
 export const fetchResults = async () => {
     try {
