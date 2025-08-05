@@ -1,6 +1,9 @@
 .results-table-container {
   overflow-x: auto;
+  overflow-y: auto;      /* Add this line */
   max-width: 100vw;
+  margin-left: 0.5cm; /* Indent by 0.5cm */
+  max-height: 700px; /* or whatever height you want */
 }
 
 .results-table {
@@ -31,6 +34,11 @@
   background: #f0f0f0;
   z-index: 1;
   text-align: left;
+}
+
+.sticky-corner {
+  z-index: 3;
+  background: #f8f8f8;
 }
 
 @media (max-width: 600px) {
