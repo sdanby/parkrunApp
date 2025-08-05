@@ -61,5 +61,5 @@ h1, h2, h3 {
 }
 
 .page-content {
-  margin-top: 80px; /* Adjust to match hamburger height */
+  margin-top: 0.5cm; /* or 0cm, or adjust as needed */
 }
