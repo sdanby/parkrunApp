@@ -1,10 +1,11 @@
 import React from 'react';
 import LoginPage from '../components/LoginPage';
 
-const Login = () => {
+const Login: React.FC = () => {
     return (
         <div>
             <LoginPage />
+
         </div>
     );
 };
