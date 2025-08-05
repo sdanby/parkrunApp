@@ -3,7 +3,7 @@ import { fetchResults } from '../api/parkrunAPI';
 import './ResultsTable.css'; // Create this CSS file for sticky headers
 import { formatDate,formatDate1 } from '../utilities'; // Utility function to format dates
 
-const Results: React.FC = () => {
+const Results: React.FC<{ heading: string }> = ({ heading }) => {
     const [results, setResults] = useState<any[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
@@ -44,7 +44,7 @@ const Results: React.FC = () => {
 
 return (
     <div className="page-content">
-        <h1>Event Last Positions</h1>
+        <h1 style={{ marginLeft: '20px', fontSize: '1.5em' }}>{heading}</h1>
         <div className="results-table-container">
             <table className="results-table">
                 <thead>
