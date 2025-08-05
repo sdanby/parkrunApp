@@ -3,7 +3,7 @@
   overflow-y: auto;      /* Add this line */
   max-width: 100vw;
   margin-left: 0.5cm; /* Indent by 0.5cm */
-  max-height: 700px; /* or whatever height you want */
+  max-height: 500px; /* or whatever height you want */
 }
 
 .results-table {
@@ -19,6 +19,8 @@
   padding: 6px 8px;
   text-align: center;
   background: #fff;
+  min-width: 1cm;      /* Ensure minimum width */
+  white-space: nowrap; /* Prevent wrapping */
 }
 
 .sticky-header {
