@@ -8,7 +8,7 @@ type Course = {
     description: string;
 };
 
-const Courses: React.FC<{ heading: string }> = ({ heading }) => {
+const Courses: React.FC = () => {
     const [courses, setCourses] = useState<Course[]>([]);
 
     useEffect(() => {
@@ -26,7 +26,6 @@ const Courses: React.FC<{ heading: string }> = ({ heading }) => {
 
     return (
         <div className="page-content">
-            <h1 style={{ marginLeft: '20px', fontSize: '1.5em' }}>{heading}</h1>
 
             <ul>
                 {courses.map(course => (
