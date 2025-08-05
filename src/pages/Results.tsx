@@ -58,7 +58,9 @@ return (
                 <tbody>
                     {eventCodes.map(code => (
                         <tr key={code}>
-                            <td className="sticky-col">{code}</td>
+                            <td className="sticky-col">
+                                {results.find(r => r.event_code === code)?.event_name || code}
+                            </td>
                             {eventDates.map(date => (
                                 <td key={date}>
                                     {positionLookup[date] && positionLookup[date][code] !== undefined
