@@ -3,7 +3,7 @@ import '../styles/main.css';
 
 const HomePage: React.FC = () => {
     return (
-        <div className="home-page" style={{ marginTop: '60px' }}>
+        <div className="home-page" >
             <h1>Welcome to the Parkrun App</h1>
             <p>
                 This application allows you to track your parkrun events, view results, and analyze your performance over time.
