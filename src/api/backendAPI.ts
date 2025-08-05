@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'https://parkrunapp.onrender.com'
+const API_BASE_URL = 'https://hello-world-9yb9.onrender.com/'
 
 export const fetchResults = async () => {
     try {
