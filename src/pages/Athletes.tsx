@@ -27,7 +27,6 @@ const Athletes: React.FC = () => {
 
     return (
         <div className="page-content">
-            <h1>Athletes</h1>
             <ul>
                 {athletes.map((athlete) => (
                     <li key={athlete.id}>
