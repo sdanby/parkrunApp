@@ -3,7 +3,7 @@
   overflow-y: auto;      /* Add this line */
   max-width: 100vw;
   margin-left: 0.5cm; /* Indent by 0.5cm */
-  max-height: 500px; /* or whatever height you want */
+  max-height: 600px; /* or whatever height you want */
 }
 
 .results-table {
@@ -18,30 +18,47 @@
   border: 1px solid #ddd;
   padding: 6px 8px;
   text-align: center;
-  background: #fff;
   min-width: 1cm;      /* Ensure minimum width */
   white-space: nowrap; /* Prevent wrapping */
+
 }
 
 .sticky-header {
   position: sticky;
   top: 0;
-  background: #f8f8f8;
-  z-index: 2;
-}
+  background-color: rgba(224,224,224,0.98);
+  text-align: center;
+  z-index: 11;
+  border-bottom: 2px solid #666 !important; /* Thicker bottom border */
+  box-shadow: 4px 0 12px rgba(80,80,80,0.15); /* Bevel effect */
 
+}
 .sticky-col {
   position: sticky;
+  max-width: 2.5cm;
   left: 0;
-  background: #f0f0f0;
-  z-index: 1;
+  background-color: rgba(224,224,224,0.98);
+  z-index: 10;
+  font-weight: bold;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* Override for sticky column */
+.results-table td.sticky-col {
   text-align: left;
 }
 
 .sticky-corner {
-  z-index: 3;
-  background: #f8f8f8;
+  z-index: 12;
+  background-color: rgba(224,224,224,0.98);
+  text-align: left;
+  border-bottom: 2px solid #666 !important;
+  border-right: 2px solid #666 !important;
+  box-shadow: 4px 4px 12px rgba(80,80,80,0.28);
 }
+
+
 
 @media (max-width: 600px) {
   .results-table th,
