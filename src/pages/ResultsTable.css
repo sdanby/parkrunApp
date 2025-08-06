@@ -11,6 +11,7 @@
   width: 100%;
   min-width: 600px;
   font-size: 0.95em;
+  border-spacing: 0;
 }
 
 .results-table th,
@@ -28,17 +29,29 @@
   top: 0;
   background-color: rgba(224,224,224,0.98);
   text-align: center;
-  z-index: 11;
-  border-bottom: 2px solid #666 !important; /* Thicker bottom border */
+  z-index: 20;
+  border-bottom: none !important;
   box-shadow: 4px 0 12px rgba(80,80,80,0.15); /* Bevel effect */
 
 }
+
 .sticky-col {
   position: sticky;
   max-width: 2.5cm;
   left: 0;
   background-color: rgba(224,224,224,0.98);
-  z-index: 10;
+  z-index: 18;
+  font-weight: bold;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sticky-col-2 {
+  position: sticky;
+  left: 2.9cm; /* Must match the width of the first sticky column */
+  max-width: 2.9cm;
+  background-color: rgba(224,224,224,0.98);
+  z-index: 17;
   font-weight: bold;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -50,11 +63,35 @@
 }
 
 .sticky-corner {
-  z-index: 12;
+  position: sticky;
+  top: 0;
+  left: 0;
+  z-index: 30; /* Highest of all */
   background-color: rgba(224,224,224,0.98);
-  text-align: left;
-  border-bottom: 2px solid #666 !important;
-  border-right: 2px solid #666 !important;
+  box-shadow: 4px 4px 12px rgba(80,80,80,0.28);
+}
+.sticky-corner-2 {
+  position: sticky;
+  top: 0;
+  left: 2.9cm; /* Must match sticky-col-2 */
+  z-index: 29; /* Just below sticky-corner */
+  background-color: rgba(224,224,224,0.98);
+  box-shadow: 4px 0 12px rgba(80,80,80,0.18);
+}
+.sticky-corner-2-1 {
+  position: sticky;
+  top: 28px;    /* Match .sticky-header.second-row top value */
+  left: 0;
+  z-index: 31;  /* Highest for second row, first column */
+  background-color: rgba(224,224,224,0.98);
+  box-shadow: 4px 4px 12px rgba(80,80,80,0.28);
+}
+.sticky-corner-2-2 {
+  position: sticky ;
+  top: 28px;    /* Match .sticky-header.second-row top value */
+  left: 2.9cm;  /* Match .sticky-col-2 left value */
+  z-index: 31;  /* Higher than .sticky-corner and .sticky-corner-2 */
+  background-color: rgba(224,224,224,0.98);
   box-shadow: 4px 4px 12px rgba(80,80,80,0.28);
 }
 
