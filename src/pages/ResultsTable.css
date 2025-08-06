@@ -23,7 +23,15 @@
   white-space: nowrap; /* Prevent wrapping */
 
 }
-
+.sticky-corner-wide {
+  position: sticky;
+  top: 0;
+  left: 0;
+  z-index: 32; /* Higher than other sticky headers */
+  background-color: #bdbdbd !important;
+  color: #222;
+  text-align: center;
+}
 .sticky-header {
   position: sticky;
   top: 0;
@@ -34,6 +42,18 @@
   box-shadow: 4px 0 12px rgba(80,80,80,0.15); /* Bevel effect */
 
 }
+.sticky-header.second-row {
+  position: sticky;
+  top: 28px; /* Match the actual height of your first header row */
+  z-index: 19;
+  background-color: rgba(224,224,224,0.98);
+}
+
+.header-grey {
+  background-color: #bdbdbd !important; /* or any grey you prefer */
+  color: #222;
+}
+
 
 .sticky-col {
   position: sticky;
