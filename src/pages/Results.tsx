@@ -14,7 +14,9 @@ const Results: React.FC = () => {
     const [results, setResults] = useState<any[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
-     const [query, setQuery] = useState<string>('recent');
+    const [query, setQuery] = useState<string>('recent');
+    const [sortBy, setSortBy] = useState<'event' | 'total'>('event');
+    const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
 
     useEffect(() => {
         const getResults = async () => {
@@ -53,6 +55,26 @@ const Results: React.FC = () => {
         if (!positionLookup[r.event_date]) positionLookup[r.event_date] = {};
         positionLookup[r.event_date][r.event_code] = r.last_position;
     });
+    const eventTotals: { [code: string]: number } = {};
+    eventCodes.forEach(code => {
+        eventTotals[code] = eventDates.reduce((sum, date) => {
+            const val = positionLookup[date]?.[code];
+            return sum + (typeof val === 'number' ? val : 0);
+        }, 0);
+    });
+    const sortedEventCodes = [...eventCodes].sort((a, b) => {
+        if (sortBy === 'event') {
+            const nameA = (results.find(r => r.event_code === a)?.event_name || a).toLowerCase();
+            const nameB = (results.find(r => r.event_code === b)?.event_name || b).toLowerCase();
+            return sortDir === 'asc' ? nameA.localeCompare(nameB) : nameB.localeCompare(nameA);
+        } else {
+            return sortDir === 'asc'
+                ? eventTotals[a] - eventTotals[b]
+                : eventTotals[b] - eventTotals[a];
+        }
+    });
+
+
 
     return (
         <div className="page-content">
@@ -71,39 +93,63 @@ const Results: React.FC = () => {
             <div className="results-table-container">
                 <table className="results-table">
                     <thead>
-                    <tr>
-                        <th className="sticky-header sticky-col  sticky-corner">Event</th>
-                        <th className="sticky-header sticky-col-2 sticky-corner-2"></th>
-                        {eventDates.map(date => (
-                        <th key={date} className="sticky-header">{formatDate1(date)}</th>
-                        ))}
-                    </tr>
-                    <tr>
-                        <th className="sticky-header sticky-col  sticky-corner-2-1"></th>
-                        <th className="sticky-header sticky-col-2  sticky-corner-2-2">Total</th>
-                        {eventDates.map(date => {
-                        const total = eventCodes.reduce((sum, code) => {
-                            const val = positionLookup[date]?.[code];
-                            return sum + (typeof val === 'number' ? val : 0);
-                        }, 0);
-                        return (
-                            <th key={date} className="sticky-header second-row">{total}</th>
-                        );
-                        })}
-                    </tr>
+                        <tr>
+                            <th
+                                colSpan={2}
+                                className="sticky-corner-wide"
+                                style={{ textAlign: 'center' }}
+                            >
+                                Participation
+                            </th>
+                            {eventDates.map(date => (
+                                <th key={date} className="sticky-header">{formatDate1(date)}</th>
+                            ))}
+                        </tr>
+                        <tr>
+                            <th
+                                className="sticky-col sticky-corner-2-1"
+                                style={{ cursor: 'pointer' }}
+                                onClick={() => {
+                                    setSortBy('event');
+                                    setSortDir(sortBy === 'event' && sortDir === 'asc' ? 'desc' : 'asc');
+                                }}
+                            >
+                                Event {sortBy === 'event'
+                                    ? (sortDir === 'asc' ? '▲' : '▼')
+                                    : <span style={{ opacity: 0.3 }}>▲▼</span>}
+                            </th>
+                            <th
+                                className="sticky-col-2 sticky-corner-2-2"
+                                style={{ cursor: 'pointer' }}
+                                onClick={() => {
+                                    setSortBy('total');
+                                    setSortDir(sortBy === 'total' && sortDir === 'asc' ? 'desc' : 'asc');
+                                }}
+                            >
+                                Total {sortBy === 'total'
+                                    ? (sortDir === 'asc' ? '▲' : '▼')
+                                    : <span style={{ opacity: 0.3 }}>▲▼</span>}
+                            </th>
+  
+                            {eventDates.map(date => {
+                                const total = sortedEventCodes.reduce((sum, code) => {
+                                    const val = positionLookup[date]?.[code];
+                                    return sum + (typeof val === 'number' ? val : 0);
+                                }, 0);
+                                return (
+                                    <th key={date} className="sticky-header second-row">{total}</th>
+                                );
+                            })}
+                        </tr>
                     </thead>
                     <tbody>
-                        {eventCodes.map(code => (
+                        {sortedEventCodes.map(code => (
                             <tr key={code}>
                                 <td className="sticky-col">
                                     {results.find(r => r.event_code === code)?.event_name || code}
                                 </td>
                                 <td className="sticky-col-2">
-                                    {/* Total for this event across all dates */}
-                                    {eventDates.reduce((sum, date) => {
-                                        const val = positionLookup[date]?.[code];
-                                        return sum + (typeof val === 'number' ? val : 0);
-                                    }, 0)}
+                                    {eventTotals[code]}
                                 </td>
                                 {eventDates.map(date => (
                                     <td key={date}>
