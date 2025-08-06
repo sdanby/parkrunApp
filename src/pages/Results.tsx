@@ -71,18 +71,39 @@ const Results: React.FC = () => {
             <div className="results-table-container">
                 <table className="results-table">
                     <thead>
-                        <tr>
-                            <th className="sticky-col sticky-header sticky-corner">Event</th>
-                            {eventDates.map(date => (
-                                <th key={date} className="sticky-header">{formatDate1(date)}</th>
-                            ))}
-                        </tr>
+                    <tr>
+                        <th className="sticky-header sticky-col  sticky-corner">Event</th>
+                        <th className="sticky-header sticky-col-2 sticky-corner-2"></th>
+                        {eventDates.map(date => (
+                        <th key={date} className="sticky-header">{formatDate1(date)}</th>
+                        ))}
+                    </tr>
+                    <tr>
+                        <th className="sticky-header sticky-col  sticky-corner-2-1"></th>
+                        <th className="sticky-header sticky-col-2  sticky-corner-2-2">Total</th>
+                        {eventDates.map(date => {
+                        const total = eventCodes.reduce((sum, code) => {
+                            const val = positionLookup[date]?.[code];
+                            return sum + (typeof val === 'number' ? val : 0);
+                        }, 0);
+                        return (
+                            <th key={date} className="sticky-header second-row">{total}</th>
+                        );
+                        })}
+                    </tr>
                     </thead>
                     <tbody>
                         {eventCodes.map(code => (
                             <tr key={code}>
                                 <td className="sticky-col">
                                     {results.find(r => r.event_code === code)?.event_name || code}
+                                </td>
+                                <td className="sticky-col-2">
+                                    {/* Total for this event across all dates */}
+                                    {eventDates.reduce((sum, date) => {
+                                        const val = positionLookup[date]?.[code];
+                                        return sum + (typeof val === 'number' ? val : 0);
+                                    }, 0)}
                                 </td>
                                 {eventDates.map(date => (
                                     <td key={date}>
