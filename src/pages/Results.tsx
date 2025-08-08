@@ -17,6 +17,7 @@ const Results: React.FC = () => {
     const [query, setQuery] = useState<string>('recent');
     const [sortBy, setSortBy] = useState<'event' | 'total'>('event');
     const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+    const [aggregation, setAggregation] = useState<'total' | 'average'>('total');
 
     useEffect(() => {
         const getResults = async () => {
@@ -59,9 +60,17 @@ const Results: React.FC = () => {
     eventCodes.forEach(code => {
         eventTotals[code] = eventDates.reduce((sum, date) => {
             const val = positionLookup[date]?.[code];
-            return sum + (typeof val === 'number' ? val : 0);
-        }, 0);
-    });
+            return sum + (typeof val === 'number' ? val : 0);}, 0);
+        if (aggregation === 'average') {    
+            const count = eventDates.reduce((cnt, date) => {
+                const val = positionLookup[date]?.[code];
+                return cnt + (typeof val === 'number' ? 1 : 0);
+            }, 0);
+        eventTotals[code] = count > 0 ? Math.round(eventTotals[code] / count) : 0;
+        } 
+    }
+       
+   );
     const sortedEventCodes = [...eventCodes].sort((a, b) => {
         if (sortBy === 'event') {
             const nameA = (results.find(r => r.event_code === a)?.event_name || a).toLowerCase();
@@ -78,7 +87,7 @@ const Results: React.FC = () => {
 
     return (
         <div className="page-content">
-            <div style={{ marginBottom: '1em',marginLeft: '0.5cm' }}>
+            <div style={{ marginBottom: '1em', marginLeft: '0.5cm', display: 'flex', alignItems: 'center' }}>
                 <label htmlFor="query-select" style={{ marginRight: '1em' }}>Analysis:</label>
                 <select
                     id="query-select"
@@ -89,6 +98,13 @@ const Results: React.FC = () => {
                         <option key={opt.value} value={opt.value}>{opt.label}</option>
                     ))}
                 </select>
+                    <label htmlFor="aggregation-select" style={{ margin: '0 1em 0 2em' }}>Show:</label>
+            <button
+                style={{ marginLeft: '1em' }}
+                onClick={() => setAggregation(aggregation === 'total' ? 'average' : 'total')}
+            >
+                {aggregation === 'total' ? 'Show Averages' : 'Show Totals'}
+            </button>
             </div>
             <div className="results-table-container">
                 <table className="results-table">
@@ -126,18 +142,28 @@ const Results: React.FC = () => {
                                     setSortDir(sortBy === 'total' && sortDir === 'asc' ? 'desc' : 'asc');
                                 }}
                             >
-                                Total {sortBy === 'total'
+                                {aggregation === 'average' ? 'Avg' : 'Total'}{' '}
+                                {sortBy === 'total'
                                     ? (sortDir === 'asc' ? '▲' : '▼')
                                     : <span style={{ opacity: 0.3 }}>▲▼</span>}
                             </th>
-  
                             {eventDates.map(date => {
-                                const total = sortedEventCodes.reduce((sum, code) => {
+                                // Sum all values for this date
+                                const sum = eventCodes.reduce((acc, code) => {
                                     const val = positionLookup[date]?.[code];
-                                    return sum + (typeof val === 'number' ? val : 0);
+                                    return acc + (typeof val === 'number' ? val : 0);
                                 }, 0);
+                                // Count valid numbers for this date
+                                const count = eventCodes.reduce((cnt, code) => {
+                                    const val = positionLookup[date]?.[code];
+                                    return cnt + (typeof val === 'number' ? 1 : 0);
+                                }, 0);
+                                // Show average or total
+                                const value = aggregation === 'average'
+                                    ? (count > 0 ? Math.round(sum / count) : 0)
+                                    : sum;
                                 return (
-                                    <th key={date} className="sticky-header second-row">{total}</th>
+                                    <th key={date} className="sticky-header second-row">{value}</th>
                                 );
                             })}
                         </tr>
