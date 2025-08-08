@@ -4,10 +4,11 @@ import axios from 'axios';
 const API_BASE_URL = 'https://hello-world-9yb9.onrender.com/'
 
 
-export const fetchResults = async () => {
+export const fetchResults = async (limit: number = 15) => {
     try {
-        const response = await axios.get(`${API_BASE_URL}/results`);
-        //const response = await axios.get(`http://127.0.0.1:5000/results`, { withCredentials: false });
+        const response = await axios.get(`${API_BASE_URL}/results`, {
+            params: { limit }
+        });
         console.log('Results fetched check:', response.data);
         return response.data;
     } catch (error) {
