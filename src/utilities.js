@@ -44,6 +44,12 @@
         const formattedDate = `${day}-${monthNames[parseInt(month) - 1]}-${year.slice(-2)}`; // e.g., "12-Apr-21"
         return formattedDate;
     };
+        export const formatDate2 = (dateStr) => {
+        const [day, month, year] = dateStr.split('/');
+        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const formattedDate = `${day}${monthNames[parseInt(month) - 1]}${year.slice(-2)}`; // e.g., "12Apr21"
+        return formattedDate;
+    };
     export const getJulianDateNumber = (date) => {
         // Extract date components
         const day = date.getDate();
