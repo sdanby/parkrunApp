@@ -20,9 +20,9 @@ const TopBar: React.FC = () => {
     const location = useLocation();
     const heading = headings[location.pathname] || '';
     return (
-        <div className="top-bar" style={{ display: 'flex', alignItems: 'center', padding: '10px 0' }}>
+        <div className="top-bar" style={{ display: 'flex', alignItems: 'center', padding: '0px 0' }}>
             <HamburgerMenu />
-            <h1 style={{ marginLeft: '2cm', marginTop: '0.5cm',fontSize: '1.5em' }}>{heading}</h1>
+            <h1 style={{ marginLeft: '2cm', marginTop: '0.8cm',fontSize: '1.5em' }}>{heading}</h1>
         </div>
     );
 };
