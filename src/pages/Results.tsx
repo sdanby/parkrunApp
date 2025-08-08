@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { fetchResults ,fetchAllResults} from '../api/parkrunAPI';
 import './ResultsTable.css'; // Create this CSS file for sticky headers
-import { formatDate,formatDate1 } from '../utilities'; // Utility function to format dates
+import { formatDate,formatDate1,formatDate2 } from '../utilities'; // Utility function to format dates
 
 const queryOptions = [
-    { value: 'recent', label: 'Recent Event Participation' },
-    { value: 'all', label: 'All Event Participation' },
+    { value: 'recent', label: 'Recent Events' },
+    { value: 'last50', label: 'Last 50 Events' },
+    { value: 'all', label: 'All Events' },
 
     // Add more options here as needed
 ];
@@ -19,25 +20,27 @@ const Results: React.FC = () => {
     const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
     const [aggregation, setAggregation] = useState<'total' | 'average'>('total');
 
-    useEffect(() => {
-        const getResults = async () => {
-            setLoading(true);
-            try {
-                let data;
-                if (query === 'all') {
-                    data = await fetchAllResults();
-                } else {
-                    data = await fetchResults();
-                }
-                setResults(Array.isArray(data) ? data : []);
-            } catch (err) {
-                setError('Failed to fetch results');
-            } finally {
-                setLoading(false);
+useEffect(() => {
+    const getResults = async () => {
+        setLoading(true);
+        try {
+            let data;
+            if (query === 'all') {
+                data = await fetchAllResults();
+            } else if (query === 'last50') {
+                data = await fetchResults(50);
+            } else {
+                data = await fetchResults();
             }
-        };
-        getResults();
-    }, [query]);
+            setResults(Array.isArray(data) ? data : []);
+        } catch (err) {
+            setError('Failed to fetch results');
+        } finally {
+            setLoading(false);
+        }
+    };
+    getResults();
+}, [query]);
 
     if (loading) return <div>Loading...</div>;
     if (error) return <div>{error}</div>;
@@ -83,11 +86,9 @@ const Results: React.FC = () => {
         }
     });
 
-
-
     return (
         <div className="page-content">
-            <div style={{ marginBottom: '1em', marginLeft: '0.5cm', display: 'flex', alignItems: 'center' }}>
+            <div style={{ marginBottom: '0.5em', marginLeft: '0.5cm', display: 'flex', alignItems: 'center' }}>
                 <label htmlFor="query-select" style={{ marginRight: '1em' }}>Analysis:</label>
                 <select
                     id="query-select"
@@ -98,9 +99,12 @@ const Results: React.FC = () => {
                         <option key={opt.value} value={opt.value}>{opt.label}</option>
                     ))}
                 </select>
-                    <label htmlFor="aggregation-select" style={{ margin: '0 1em 0 2em' }}>Show:</label>
+    
+            </div>
+            <div style={{ marginBottom: '0.5em',marginLeft: '0.1cm', display: 'flex', alignItems: 'center' }}>
+            <label htmlFor="aggregation-select" style={{ margin: '0 1em 0 2em' }}>Show:</label>
             <button
-                style={{ marginLeft: '1em' }}
+                style={{ marginLeft: '0.2em' }}
                 onClick={() => setAggregation(aggregation === 'total' ? 'average' : 'total')}
             >
                 {aggregation === 'total' ? 'Show Averages' : 'Show Totals'}
@@ -118,7 +122,7 @@ const Results: React.FC = () => {
                                 Participation
                             </th>
                             {eventDates.map(date => (
-                                <th key={date} className="sticky-header">{formatDate1(date)}</th>
+                                <th key={date} className="sticky-header">{formatDate2(date)}</th>
                             ))}
                         </tr>
                         <tr>
