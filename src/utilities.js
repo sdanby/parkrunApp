@@ -154,3 +154,11 @@
         const secs = seconds % 60;
         return `${minutes}:${secs < 10 ? '0' + secs : secs}`; // Format seconds as mm:ss
     };
+
+    export const formatAvgTime = (seconds) => {
+        if (typeof seconds !== 'number' || isNaN(seconds)) return '';
+        const mins = Math.floor(seconds / 60);
+        const secs = Math.round(seconds % 60);
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
+    };
+
