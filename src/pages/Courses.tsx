@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { fetchCoursesData } from '../api/backendAPI';
 
 // Define the course type
