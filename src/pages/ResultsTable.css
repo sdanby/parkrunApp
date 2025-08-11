@@ -1,3 +1,9 @@
+select:focus {
+    outline: none;
+    border-color: #111; /* or your preferred color */
+    box-shadow: 0 0 2px #aaa; /* optional: subtle focus effect */
+}
+
 .results-table-container {
   overflow-x: auto;
   overflow-y: auto;      /* Add this line */
