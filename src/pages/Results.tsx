@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { fetchResults ,fetchAllResults} from '../api/parkrunAPI';
 import './ResultsTable.css'; // Create this CSS file for sticky headers
-import { formatDate,formatDate1,formatDate2,formatAvgTime } from '../utilities'; // Utility function to format dates
+import { formatDate,formatDate1,formatDate2,formatAvgTime,formatDateToDDMMYYYY } from '../utilities'; // Utility function to format dates
 
 const queryOptions = [
     { value: 'recent', label: 'Recent Events' },
     { value: 'last50', label: 'Last 50 Events' },
+    { value: 'since-lockdown', label: 'Since Lockdown' },
     { value: 'all', label: 'All Events' },
     { value: 'Annual', label: 'Annual'},
     { value: 'Qseason', label: 'Qtr Seasonality'},
@@ -97,6 +98,70 @@ const cellAggOptions = [
 ];
 const eventMilestones = new Set([50, 100, 150, 200, 250, 300, 400, 500, 600, 700, 750, 800, 900, 1000]);
 
+// Aggregate an array of result rows by year. Each returned row represents one event_code for a year.
+function aggregateResultsByYear(rows: any[]): any[] {
+    // rows expected to have event_date like 'DD/MM/YYYY' or ISO; try to extract year robustly
+    const byEventYear: { [key: string]: any[] } = {};
+    rows.forEach(r => {
+        let yr = '';
+        try {
+            // If event_date is DD/MM/YYYY
+            if (typeof r.event_date === 'string' && r.event_date.includes('/')) {
+                const parts = r.event_date.split('/');
+                yr = parts[2];
+            } else if (typeof r.event_date === 'string' && r.event_date.length >= 4) {
+                // ISO-like YYYY-MM-DD
+                yr = r.event_date.slice(0, 4);
+            }
+        } catch (e) {
+            yr = '';
+        }
+        const key = `${r.event_code}::${yr}`;
+        if (!byEventYear[key]) byEventYear[key] = [];
+        byEventYear[key].push(r);
+    });
+
+    const out: any[] = [];
+    Object.keys(byEventYear).forEach(key => {
+        const parts = key.split('::');
+        const code = parts[0];
+        const year = parts[1];
+        const group = byEventYear[key];
+        // Aggregate numeric fields by average
+        const numericFields = ['last_position', 'volunteers', 'event_number', 'coeff', 'obs', 'coeff_event', 'avg_time', 'avgtimelim12', 'avgtimelim5', 'tourist_count'];
+        const agg: any = {
+            event_code: code,
+            event_name: group[0]?.event_name || code,
+            event_date: year // use year as the date value for the table
+        };
+        numericFields.forEach(f => {
+            // collect raw values, ignore null/undefined/empty and non-numeric
+            const rawVals = group.map((g: any) => g[f]).filter((v: any) => v !== null && v !== undefined && v !== '' && !isNaN(Number(v)));
+            const vals = rawVals.map((v: any) => Number(v));
+            // if no valid values, set to null so display logic treats it as missing
+            agg[f] = vals.length > 0 ? (vals.reduce((a: number, b: number) => a + b, 0) / vals.length) : null;
+        });
+        out.push(agg);
+    });
+    // Sort years descending so latest years appear first in the table
+    out.sort((a, b) => Number(b.event_date) - Number(a.event_date));
+    return out;
+}
+
+// Safely format header date values. If `query` is 'Annual' we expect year strings and return them directly.
+function formatHeaderDate(date: string, query: string): string {
+    if (query === 'Annual') return String(date);
+    if (!date) return '';
+    // If date looks like a year-only string (4 digits), just return it
+    if (/^\d{4}$/.test(date)) return date;
+    // If date is ISO (YYYY-MM-DD), convert to DD/MM/YYYY for formatDate2
+    if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+        return formatDateToDDMMYYYY(date);
+    }
+    // Otherwise assume it's DD/MM/YYYY already and return as-is for formatDate2
+    return formatDate2(date);
+}
+
 const Results: React.FC = () => {
     const [results, setResults] = useState<any[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
@@ -118,8 +183,17 @@ const Results: React.FC = () => {
                 let data;
                 if (query === 'all') {
                     data = await fetchAllResults();
+                } else if (query === 'Annual') {
+                    // Fetch all results then aggregate by year
+                    const all = await fetchAllResults();
+                    data = aggregateResultsByYear(Array.isArray(all) ? all : []);
+                    // default Cell Agg to average for annual view
+                    setCellAgg('avg');
                 } else if (query === 'last50') {
                     data = await fetchResults(50);
+                } else if (query === 'since-lockdown') {
+                    // fetch results from 2021-07-24 onwards
+                    data = await fetchResults('2021-07-24');
                 } else {
                     data = await fetchResults();
                 }
@@ -170,6 +244,13 @@ const Results: React.FC = () => {
             // Default cellAgg based on analysisType when Type changes
         setCellAgg(analysisType === 'Times' ? 'avg' : 'single');
     }, [analysisType]);
+
+    // When Period is Annual, force Cell Agg to 'avg' and keep it consistent
+    useEffect(() => {
+        if (query === 'Annual') {
+            setCellAgg('avg');
+        }
+    }, [query]);
 
     if (loading) return <div>Loading...</div>;
     if (error) return <div>{error}</div>;
@@ -344,19 +425,31 @@ coeff: { [key: string]: { [key: string]: number } };
         return (typeof val === 'number' && !isNaN(val)) ? formatAvgTime(val) : '';
     } else if (filterType === 'volunteers') {
         const val = volunteers[date]?.[code];
-        return (typeof val === 'number' && val !== 0) ? val : '';
+        if (typeof val === 'number' && val !== 0) {
+            return analysisType === 'participants' ? Math.round(val) : val;
+        }
+        return '';
     } else if (filterType === 'tourist') {
         const val = tourists[date]?.[code];
-        return (typeof val === 'number' && val !== 0) ? val : '';
+        if (typeof val === 'number' && val !== 0) {
+            return analysisType === 'participants' ? Math.round(val) : val;
+        }
+        return '';
     } else if (filterType === 'eventNumber') {
         const val = event_number[date]?.[code];
-        return (typeof val === 'number' && val !== 0 && val <= 10000) ? val : '';
+        if (typeof val === 'number' && val !== 0 && val <= 10000) {
+            return analysisType === 'participants' ? Math.round(val) : val;
+        }
+        return '';
     } else if (filterType === 'coeff') {
         const val = coeff[date]?.[code];
         return (typeof val === 'number' && val !== 0) ? formatCoeff(val) : '';
     } else {
         const val = positionLookup[date]?.[code];
-        return (typeof val === 'number' && val !== 0) ? val : '';
+        if (typeof val === 'number' && val !== 0) {
+            return analysisType === 'participants' ? Math.round(val) : val;
+        }
+        return '';
     }
 }
 // Return numeric value for a cell (unformatted) to allow comparisons/highlighting
@@ -533,9 +626,11 @@ const coeff: { [key: string]: { [key: string]: number } } = {};
     });  
 const event_number: { [key: string]: { [key: string]: number } } = {};
     results.forEach(r => {
-        if (r.event_number <= 10000) {
+        const en = r.event_number;
+        // only store valid positive numeric event numbers (ignore null/undefined/0 and non-numeric)
+        if (typeof en === 'number' && !isNaN(en) && en > 0 && en <= 10000) {
             if (!event_number[r.event_date]) event_number[r.event_date] = {};
-            event_number[r.event_date][r.event_code] = r.event_number;
+            event_number[r.event_date][r.event_code] = en;
         }
     });
 // Build a lookup for avg_time
@@ -632,7 +727,7 @@ const sortedEventCodes = [...eventCodes].sort((a, b) => {
                     { value: 'lt12', label: 'avg (Times < 12%)' },
                     { value: 'lt5', label: 'avg (Times < 5%)' }
                 ]
-                : [{ value: 'single', label: 'Single Value' }]
+                : (query === 'Annual' ? [{ value: 'avg', label: 'Average' }] : [{ value: 'single', label: 'Single Value' }])
             }
             pos2='1.1em'
         />
@@ -660,7 +755,7 @@ const sortedEventCodes = [...eventCodes].sort((a, b) => {
                                 Participation
                             </th>
                             {eventDates.map(date => (
-                                <th key={date} className="sticky-header">{formatDate2(date)}</th>
+                                <th key={date} className="sticky-header">{formatHeaderDate(date, query)}</th>
                             ))}
                         </tr>
                         <tr>
@@ -735,9 +830,13 @@ const sortedEventCodes = [...eventCodes].sort((a, b) => {
                                         return <th key={date} className="sticky-header second-row"> </th>;
                                     }
                                     const value = getAggregatedValueForDate(lookup, date, eventCodes, aggType);
+                                    // For Participants and participant-like filters, round aggregates for these agg types
+                                    const participantLike = analysisType === 'participants' && ['all', 'tourist', 'eventNumber', 'volunteers'].includes(filterType);
+                                    const roundAggs = ['total', 'max', 'min', 'range'];
+                                    const displayValue = (participantLike && roundAggs.includes(aggType) && filterType !== 'coeff') ? Math.round(value) : value;
                                     return (
                                         <th key={date} className="sticky-header second-row">
-                                            {filterType === 'coeff' ? formatCoeff(value) : value}
+                                            {filterType === 'coeff' ? formatCoeff(value) : displayValue}
                                         </th>
                                     );
                                 }
@@ -757,7 +856,7 @@ const sortedEventCodes = [...eventCodes].sort((a, b) => {
                                             ? formatCoeff(eventTotals[code])
                                             : analysisType === 'Times'
                                                 ? formatAvgTime(eventTotals[code])
-                                                : eventTotals[code]}
+                                                : (analysisType === 'participants' && ['total', 'max', 'min', 'range'].includes(aggType) ? Math.round(eventTotals[code]) : eventTotals[code])}
                                 </td>
                                 {eventDates.map(date => {
                                     // compute numeric cell value for comparison/highlighting
@@ -789,8 +888,7 @@ const sortedEventCodes = [...eventCodes].sort((a, b) => {
                                         {filterType === 'eventNumber'
                                                 ? (() => {
                                                     // For per-code cells show the raw event_number for that date/code
-                                                    // (using aggregation like 'range' across a single code returns 0,
-                                                    // which hides the cell — we want the actual event number here)
+                                                    // If missing (e.g., Annual view uses year keys) fall back to the aggregated cell value
                                                     const raw = event_number[date]?.[code];
                                                     if (typeof raw === 'number' && raw !== 0 && raw <= 10000) {
                                                         if (eventMilestones.has(raw)) {
@@ -798,7 +896,25 @@ const sortedEventCodes = [...eventCodes].sort((a, b) => {
                                                         }
                                                         return raw;
                                                     }
-                                                    return '';
+                                                    // Fallback: for aggregated views (Annual) compute via getCellValue
+                                                    const fallback = getCellValue({
+                                                        analysisType,
+                                                        avgType,
+                                                        filterType,
+                                                        date,
+                                                        code,
+                                                        avgTimeLim12Lookup,
+                                                        avgTimeLim5Lookup,
+                                                        avgTimeLookup,
+                                                        volunteers,
+                                                        tourists,
+                                                        coeff,
+                                                        positionLookup,
+                                                        event_number,
+                                                        formatAvgTime,
+                                                        cellAgg
+                                                    });
+                                                    return fallback ?? '';
                                                 })()
                                                 : (() => getCellValue({
                                                     analysisType,
