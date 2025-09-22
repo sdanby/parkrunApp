@@ -136,7 +136,16 @@ function aggregateResultsByYear(rows: any[]): any[] {
         };
         numericFields.forEach(f => {
             // collect raw values, ignore null/undefined/empty and non-numeric
-            const rawVals = group.map((g: any) => g[f]).filter((v: any) => v !== null && v !== undefined && v !== '' && !isNaN(Number(v)));
+            // For event_number specifically, also ignore absurdly large values > 10000
+            const rawVals = group.map((g: any) => g[f]).filter((v: any) => {
+                if (v === null || v === undefined || v === '') return false;
+                const num = Number(v);
+                if (isNaN(num)) return false;
+                if (f === 'event_number') {
+                    return num > 0 && num <= 10000;
+                }
+                return true;
+            });
             const vals = rawVals.map((v: any) => Number(v));
             // if no valid values, set to null so display logic treats it as missing
             agg[f] = vals.length > 0 ? (vals.reduce((a: number, b: number) => a + b, 0) / vals.length) : null;
@@ -885,38 +894,46 @@ const sortedEventCodes = [...eventCodes].sort((a, b) => {
                                         : undefined;
                                     return (
                                     <td key={date} style={cellStyle}>
-                                        {filterType === 'eventNumber'
-                                                ? (() => {
-                                                    // For per-code cells show the raw event_number for that date/code
-                                                    // If missing (e.g., Annual view uses year keys) fall back to the aggregated cell value
-                                                    const raw = event_number[date]?.[code];
-                                                    if (typeof raw === 'number' && raw !== 0 && raw <= 10000) {
-                                                        if (eventMilestones.has(raw)) {
-                                                            return <span style={{ fontWeight: 'bold' }}>{raw}</span>;
+                                        {(() => {
+                                            const participantLike = analysisType === 'participants' && ['all', 'tourist', 'eventNumber', 'volunteers'].includes(filterType);
+                                            let val: any = '';
+                                            if (filterType === 'eventNumber') {
+                                                // For per-code cells show the raw event_number for that date/code
+                                                // If missing (e.g., Annual view uses year keys) fall back to the aggregated cell value
+                                                const raw = event_number[date]?.[code];
+                                                if (typeof raw === 'number' && raw !== 0 && raw <= 10000) {
+                                                    val = raw;
+                                                } else {
+                                                    // Only attempt fallbacks for the Annual view; avoid polluting Recent/other views
+                                                    if (query === 'Annual') {
+                                                        const fallback = getCellValue({
+                                                            analysisType,
+                                                            avgType,
+                                                            filterType,
+                                                            date,
+                                                            code,
+                                                            avgTimeLim12Lookup,
+                                                            avgTimeLim5Lookup,
+                                                            avgTimeLookup,
+                                                            volunteers,
+                                                            tourists,
+                                                            coeff,
+                                                            positionLookup,
+                                                            event_number,
+                                                            formatAvgTime,
+                                                            cellAgg
+                                                        });
+                                                        if (fallback !== '' && fallback !== null && typeof fallback !== 'undefined') {
+                                                            val = fallback;
+                                                        } else {
+                                                            const aggRow = results.find(r => String(r.event_code) === String(code) && String(r.event_date) === String(date));
+                                                            const aggVal = aggRow ? aggRow.event_number : null;
+                                                            if (typeof aggVal === 'number' && !isNaN(aggVal) && aggVal !== 0) val = aggVal;
                                                         }
-                                                        return raw;
                                                     }
-                                                    // Fallback: for aggregated views (Annual) compute via getCellValue
-                                                    const fallback = getCellValue({
-                                                        analysisType,
-                                                        avgType,
-                                                        filterType,
-                                                        date,
-                                                        code,
-                                                        avgTimeLim12Lookup,
-                                                        avgTimeLim5Lookup,
-                                                        avgTimeLookup,
-                                                        volunteers,
-                                                        tourists,
-                                                        coeff,
-                                                        positionLookup,
-                                                        event_number,
-                                                        formatAvgTime,
-                                                        cellAgg
-                                                    });
-                                                    return fallback ?? '';
-                                                })()
-                                                : (() => getCellValue({
+                                                }
+                                            } else {
+                                                val = getCellValue({
                                                     analysisType,
                                                     avgType,
                                                     filterType,
@@ -932,8 +949,17 @@ const sortedEventCodes = [...eventCodes].sort((a, b) => {
                                                     positionLookup,
                                                     formatAvgTime,
                                                     cellAgg
-                                                }))()
-                                        }
+                                                });
+                                            }
+                                            // If numeric and participant-like, round to integer for display
+                                            if (participantLike && typeof val === 'number' && !isNaN(val)) {
+                                                const rounded = Math.round(val);
+                                                if (eventMilestones.has(rounded)) return <span style={{ fontWeight: 'bold' }}>{rounded}</span>;
+                                                return rounded;
+                                            }
+                                            // If val is still numeric but not participant-like, return as-is
+                                            return val ?? '';
+                                        })()}
                                     </td>
                                     );
                                 })}
