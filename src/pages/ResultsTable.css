@@ -1,3 +1,123 @@
+/* Results table layout and column width constraints */
+.results-table-container {
+  width: 100%;
+  overflow-x: auto; /* allow horizontal scroll on small viewports */
+  overflow-y: hidden;
+  /* ensure left-aligned content */
+  text-align: left;
+}
+
+.results-table {
+  width: auto !important; /* let table size to its content, preventing squeeze */
+  border-collapse: collapse;
+  table-layout: fixed; /* keep columns to specified widths */
+  font-size: 0.9rem;
+  text-align: left; /* left justify the table content */
+}
+
+.results-table th,
+.results-table td {
+  padding: 0.25rem 0.4rem;
+  border: 1px solid #eee;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 3.5cm; /* allow a bit more room by default */
+  box-sizing: border-box;
+}
+
+/* Top-left spanning header should be sum of first two columns */
+.sticky-corner-wide {
+  min-width: 6cm !important;
+  max-width: 6cm !important;
+  width: 6cm !important;
+}
+
+/* First sticky column (event name) fixed to 4cm */
+.sticky-col,
+.sticky-corner-2-1 {
+  position: sticky;
+  left: 0;
+  z-index: 5;
+  min-width: 4cm !important;
+  max-width: 4cm !important;
+  width: 4cm !important;
+  background: #fff;
+}
+
+/* Second sticky column (totals) fixed to 2.5cm */
+.sticky-col-2,
+.sticky-corner-2-2 {
+  position: sticky;
+  left: 4cm; /* positioned after first column */
+  z-index: 5;
+  min-width: 2.5cm !important;
+  max-width: 2.5cm !important;
+  width: 2.5cm !important;
+  background: #fff;
+}
+
+/* Date/header columns capped to 2cm */
+.sticky-header,
+.sticky-header.second-row {
+  min-width: 2cm;
+  max-width: 2cm;
+  width: 2cm;
+}
+
+/* Strongly enforce first and second column widths across both header and body cells */
+.results-table th:first-child,
+.results-table td:first-child {
+  min-width: 4cm !important;
+  max-width: 4cm !important;
+  width: 4cm !important;
+}
+.results-table th:nth-child(2),
+.results-table td:nth-child(2) {
+  min-width: 2.5cm !important;
+  max-width: 2.5cm !important;
+  width: 2.5cm !important;
+}
+
+/* Keep table visually neat on small screens */
+@media (max-width: 640px) {
+  .sticky-col { min-width: 3.5cm; max-width: 3.5cm; width: 3.5cm; }
+  .sticky-col-2 { min-width: 2.5cm !important; max-width: 2.5cm !important; width: 2.5cm !important; }
+  .sticky-header { min-width: 1.6cm; max-width: 1.6cm; width: 1.6cm; }
+}
+
+/* Compact table mode: don't stretch to fill container (used for Qseason/Mseason) */
+.results-table.compact {
+  table-layout: fixed;
+  width: auto !important; /* let the table size to its content caps instead of stretching */
+  margin-left: 0; /* left-justify compact tables as well */
+  margin-right: 0;
+}
+
+/* Ensure compact table still enforces the column caps */
+.results-table.compact th,
+.results-table.compact td {
+  max-width: 3.5cm;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Ensure columns 3 and onwards are at least 2.5cm so header dates can display */
+.results-table th:nth-child(n+3),
+.results-table td:nth-child(n+3) {
+  min-width: 2.5cm !important;
+  max-width: 4cm !important;
+  width: 2.5cm !important;
+}
+
+/* Same enforcement for compact tables */
+.results-table.compact th:nth-child(n+3),
+.results-table.compact td:nth-child(n+3) {
+  min-width: 2.5cm !important;
+  max-width: 4cm !important;
+  width: 2.5cm !important;
+}
 select:focus {
     outline: none;
     border-color: #111; /* or your preferred color */
