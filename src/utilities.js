@@ -39,15 +39,26 @@
         return `${day}/${month}/${year}`; // Return formatted date as DD/MM/YYYY
     };
     export const formatDate1 = (dateStr) => {
-        const [day, month, year] = dateStr.split('/');
+        if (!dateStr || typeof dateStr !== 'string') return String(dateStr ?? '');
+        const parts = dateStr.split('/');
+        if (parts.length < 3) return dateStr; // not in expected DD/MM/YYYY form
+        const [day, month, year] = parts;
         const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        const formattedDate = `${day}-${monthNames[parseInt(month) - 1]}-${year.slice(-2)}`; // e.g., "12-Apr-21"
+        const mi = parseInt(month, 10) - 1;
+        if (isNaN(mi) || mi < 0 || mi > 11) return dateStr;
+        const formattedDate = `${day}-${monthNames[mi]}-${String(year).slice(-2)}`; // e.g., "12-Apr-21"
         return formattedDate;
     };
         export const formatDate2 = (dateStr) => {
-        const [day, month, year] = dateStr.split('/');
+        // Be defensive: if input is missing or not in DD/MM/YYYY form just return a stringified value
+        if (!dateStr || typeof dateStr !== 'string') return String(dateStr ?? '');
+        const parts = dateStr.split('/');
+        if (parts.length < 3) return dateStr; // not DD/MM/YYYY - avoid throwing
+        const [day, month, year] = parts;
+        const mi = parseInt(month, 10) - 1;
         const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        const formattedDate = `${day}${monthNames[parseInt(month) - 1]}${year.slice(-2)}`; // e.g., "12Apr21"
+        if (isNaN(mi) || mi < 0 || mi > 11) return dateStr;
+        const formattedDate = `${day}${monthNames[mi]}${String(year).slice(-2)}`; // e.g., "12Apr21"
         return formattedDate;
     };
     export const getJulianDateNumber = (date) => {
