@@ -15,6 +15,7 @@ const queryOptions = [
 ];
 const analysisOptions = [
     { value: 'participants', label: 'Participants' },
+    { value: '%Participants', label: '%Participants' },
     { value: 'Times', label: 'Times' },
     { value: 'Age', label: 'Age' },
 
@@ -60,6 +61,8 @@ const participantFilterOptions = [
     { value: '5pc', label: '5% consistency' },
     { value: 'unknown', label: 'Unknown' },
 ];
+// %Participants behaves like Participants but excludes Event Number and Seasonal Hardness
+const percentParticipantFilterOptions = participantFilterOptions.filter(o => o.value !== 'eventNumber' && o.value !== 'coeff');
 const timesFilterOptions = [
     { value: 'all', label: 'All' },
     { value: 'tourist', label: 'Tourist' },
@@ -98,6 +101,118 @@ const cellAggOptions = [
 ];
 const eventMilestones = new Set([50, 100, 150, 200, 250, 300, 400, 500, 600, 700, 750, 800, 900, 1000]);
 
+
+// Aggregate an array of result rows by month (seasonality). Each returned row represents one event_code for a month name (Jan..Dec)
+function aggregateResultsByMonth(rows: any[]): any[] {
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const byEventMonth: { [key: string]: any[] } = {};
+    rows.forEach(r => {
+        let mon = '';
+        try {
+            // If event_date is DD/MM/YYYY
+            if (typeof r.event_date === 'string' && r.event_date.includes('/')) {
+                const parts = r.event_date.split('/');
+                mon = months[Number(parts[1]) - 1];
+            } else if (typeof r.event_date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(r.event_date)) {
+                // ISO YYYY-MM-DD
+                const m = Number(r.event_date.slice(5,7));
+                mon = months[m - 1];
+            }
+        } catch (e) {
+            mon = '';
+        }
+        const key = `${r.event_code}::${mon}`;
+        if (!byEventMonth[key]) byEventMonth[key] = [];
+        byEventMonth[key].push(r);
+    });
+    const out: any[] = [];
+    Object.keys(byEventMonth).forEach(key => {
+        const parts = key.split('::');
+        const code = parts[0];
+        const mon = parts[1];
+        const group = byEventMonth[key];
+        const numericFields = ['last_position', 'volunteers', 'event_number', 'coeff', 'obs', 'coeff_event', 'avg_time', 'avgtimelim12', 'avgtimelim5', 'tourist_count'];
+        const agg: any = {
+            event_code: code,
+            event_name: group[0]?.event_name || code,
+            event_date: mon // use month name
+        };
+        numericFields.forEach(f => {
+            const rawVals = group.map((g: any) => g[f]).filter((v: any) => {
+                if (v === null || v === undefined || v === '') return false;
+                const num = Number(v);
+                if (isNaN(num)) return false;
+                if (f === 'event_number') {
+                    return num > 0 && num <= 10000;
+                }
+                return true;
+            });
+            const vals = rawVals.map((v: any) => Number(v));
+            agg[f] = vals.length > 0 ? (vals.reduce((a: number, b: number) => a + b, 0) / vals.length) : null;
+        });
+        out.push(agg);
+    });
+    // Ensure month order Jan..Dec
+    const monthsOrder = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    out.sort((a,b) => monthsOrder.indexOf(a.event_date) - monthsOrder.indexOf(b.event_date));
+    return out;
+}
+
+// Aggregate rows by quarter (Q1..Q4)
+function aggregateResultsByQuarter(rows: any[]): any[] {
+    const quarters = ['Q1','Q2','Q3','Q4'];
+    const byEventQuarter: { [key: string]: any[] } = {};
+    rows.forEach(r => {
+        let q = '';
+        try {
+            if (typeof r.event_date === 'string' && r.event_date.includes('/')) {
+                const parts = r.event_date.split('/');
+                const m = Number(parts[1]);
+                const qi = Math.max(1, Math.min(4, Math.ceil(m / 3)));
+                q = quarters[qi - 1];
+            } else if (typeof r.event_date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(r.event_date)) {
+                const m = Number(r.event_date.slice(5,7));
+                const qi = Math.max(1, Math.min(4, Math.ceil(m / 3)));
+                q = quarters[qi - 1];
+            }
+        } catch (e) {
+            q = '';
+        }
+        const key = `${r.event_code}::${q}`;
+        if (!byEventQuarter[key]) byEventQuarter[key] = [];
+        byEventQuarter[key].push(r);
+    });
+    const out: any[] = [];
+    Object.keys(byEventQuarter).forEach(key => {
+        const parts = key.split('::');
+        const code = parts[0];
+        const quarter = parts[1];
+        const group = byEventQuarter[key];
+        const numericFields = ['last_position', 'volunteers', 'event_number', 'coeff', 'obs', 'coeff_event', 'avg_time', 'avgtimelim12', 'avgtimelim5', 'tourist_count'];
+        const agg: any = {
+            event_code: code,
+            event_name: group[0]?.event_name || code,
+            event_date: quarter // use quarter label
+        };
+        numericFields.forEach(f => {
+            const rawVals = group.map((g: any) => g[f]).filter((v: any) => {
+                if (v === null || v === undefined || v === '') return false;
+                const num = Number(v);
+                if (isNaN(num)) return false;
+                if (f === 'event_number') {
+                    return num > 0 && num <= 10000;
+                }
+                return true;
+            });
+            const vals = rawVals.map((v: any) => Number(v));
+            agg[f] = vals.length > 0 ? (vals.reduce((a: number, b: number) => a + b, 0) / vals.length) : null;
+        });
+        out.push(agg);
+    });
+    // Ensure quarter order Q1..Q4
+    out.sort((a,b) => ['Q1','Q2','Q3','Q4'].indexOf(a.event_date) - ['Q1','Q2','Q3','Q4'].indexOf(b.event_date));
+    return out;
+}
 // Aggregate an array of result rows by year. Each returned row represents one event_code for a year.
 function aggregateResultsByYear(rows: any[]): any[] {
     // rows expected to have event_date like 'DD/MM/YYYY' or ISO; try to extract year robustly
@@ -158,17 +273,25 @@ function aggregateResultsByYear(rows: any[]): any[] {
 }
 
 // Safely format header date values. If `query` is 'Annual' we expect year strings and return them directly.
-function formatHeaderDate(date: string, query: string): string {
-    if (query === 'Annual') return String(date);
+function formatHeaderDate(date: any, query: string): string {
+    // For Annual (year strings) and Monthly seasonality (month names) return the value directly
+    if (query === 'Annual' || query === 'Mseason' || query === 'Qseason') return String(date ?? '');
     if (!date) return '';
+    // If date is not a string, coerce to string to avoid downstream errors
+    if (typeof date !== 'string') return String(date);
     // If date looks like a year-only string (4 digits), just return it
     if (/^\d{4}$/.test(date)) return date;
     // If date is ISO (YYYY-MM-DD), convert to DD/MM/YYYY for formatDate2
     if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
         return formatDateToDDMMYYYY(date);
     }
-    // Otherwise assume it's DD/MM/YYYY already and return as-is for formatDate2
-    return formatDate2(date);
+    // Otherwise assume it's DD/MM/YYYY already and return formatted version via formatDate2
+    try {
+        return formatDate2(date);
+    } catch (e) {
+        // fallback to a safe string
+        return String(date);
+    }
 }
 
 const Results: React.FC = () => {
@@ -198,6 +321,16 @@ const Results: React.FC = () => {
                     data = aggregateResultsByYear(Array.isArray(all) ? all : []);
                     // default Cell Agg to average for annual view
                     setCellAgg('avg');
+                } else if (query === 'Mseason') {
+                    // Monthly seasonality: fetch all and aggregate by month
+                    const all = await fetchAllResults();
+                    data = aggregateResultsByMonth(Array.isArray(all) ? all : []);
+                    setCellAgg('avg');
+                } else if (query === 'Qseason') {
+                    // Quarterly seasonality: fetch all and aggregate by quarter
+                    const all = await fetchAllResults();
+                    data = aggregateResultsByQuarter(Array.isArray(all) ? all : []);
+                    setCellAgg('avg');
                 } else if (query === 'last50') {
                     data = await fetchResults(50);
                 } else if (query === 'since-lockdown') {
@@ -216,7 +349,8 @@ const Results: React.FC = () => {
         getResults();
     }, [query]);
     useEffect(() => {
-        if (analysisType === 'participants' && avgType !== 'none') {
+        // When analysis type is not Times, force no time adjustment and reset filter to safe default
+        if (analysisType !== 'Times' && avgType !== 'none') {
             setAvgType('none');
             setFilterType('all');
         }
@@ -250,13 +384,15 @@ const Results: React.FC = () => {
         }
     }, [analysisType]);
     useEffect(() => {
-            // Default cellAgg based on analysisType when Type changes
-        setCellAgg(analysisType === 'Times' ? 'avg' : 'single');
+    // Default cellAgg based on analysisType when Type changes.
+    // Do not override when viewing Annual/Mseason/Qseason (these force 'avg').
+    if (['Annual', 'Mseason', 'Qseason'].includes(query)) return;
+    setCellAgg(analysisType === 'Times' ? 'avg' : 'single');
     }, [analysisType]);
 
     // When Period is Annual, force Cell Agg to 'avg' and keep it consistent
     useEffect(() => {
-        if (query === 'Annual') {
+        if (['Annual', 'Mseason', 'Qseason'].includes(query)) {
             setCellAgg('avg');
         }
     }, [query]);
@@ -268,6 +404,10 @@ const Results: React.FC = () => {
 
 // Helper function to get allowed aggTypes
 function getAllowedAggTypes(analysisType: string, filterType: string): string[] {
+    // For %Participants we don't allow Total or Growth (percent of participants should be a simple aggregate)
+    if (analysisType === '%Participants') {
+        return ['avg', 'max', 'min', 'range'];
+    }
     if (analysisType === 'Times') {
         return ['avg', 'max', 'min', 'growth'];
     }
@@ -281,6 +421,17 @@ function getAllowedAggTypes(analysisType: string, filterType: string): string[] 
     }
     return ['avg', 'total', 'max', 'min', 'range', 'growth'];
 }  
+// Helper to compute the second-column header label (short forms for Range/Growth)
+function getSecondColumnHeaderLabel(analysisType: string, aggType: string): string {
+    if (aggType === 'growth') return 'Grth';
+    if (aggType === 'range') return 'Rng';
+    // Use short labels for both Times and Participants
+    if (aggType === 'avg') return 'Avg';
+    if (aggType === 'total') return 'Total';
+    if (aggType === 'max') return 'Max';
+    if (aggType === 'min') return 'Min';
+    return '';
+}
 function getAggregatedValueForDate(
     lookup: { [date: string]: { [code: string]: number } },
     date: string,
@@ -432,6 +583,20 @@ coeff: { [key: string]: { [key: string]: number } };
             val = avgTimeLookup[date]?.[code];
         }
         return (typeof val === 'number' && !isNaN(val)) ? formatAvgTime(val) : '';
+    } else if (analysisType === '%Participants') {
+        // compute percentage = (filterCount / participants) * 100
+        const participants = positionLookup[date]?.[code];
+        if (!participants || participants === 0) return '';
+        let count = 0;
+        if (filterType === 'tourist') count = tourists[date]?.[code] || 0;
+        else if (filterType === 'volunteers') count = volunteers[date]?.[code] || 0;
+        else if (filterType === 'all') count = participants;
+        else {
+            // for other filters fallback to positionLookup or 0
+            count = positionLookup[date]?.[code] || 0;
+        }
+        const pct = (Number(count) / Number(participants)) * 100;
+        return formatPercent(pct);
     } else if (filterType === 'volunteers') {
         const val = volunteers[date]?.[code];
         if (typeof val === 'number' && val !== 0) {
@@ -505,6 +670,17 @@ positionLookup: { [key: string]: { [key: string]: number } };
             return typeof v === 'number' && !isNaN(v) ? v : null;
         }
     }
+    if (analysisType === '%Participants') {
+        const participants = positionLookup[date]?.[code];
+        if (!participants || participants === 0) return null;
+        let count = 0;
+        if (filterType === 'tourist') count = tourists[date]?.[code] || 0;
+        else if (filterType === 'volunteers') count = volunteers[date]?.[code] || 0;
+        else if (filterType === 'all') count = participants;
+        else count = positionLookup[date]?.[code] || 0;
+        const pct = (Number(count) / Number(participants)) * 100;
+        return isFinite(pct) ? Math.round(pct) : null;
+    }
     if (filterType === 'volunteers') {
         const v = volunteers[date]?.[code];
         return typeof v === 'number' ? v : null;
@@ -527,6 +703,10 @@ positionLookup: { [key: string]: { [key: string]: number } };
 function formatCoeff(val: number): string | number {
     const percent = ((val - 1) * 100).toFixed(2);
     return percent === "0.00" ? '0%' : `${percent}%`;
+}
+function formatPercent(val: number | null | undefined): string {
+    if (val === null || val === undefined || !isFinite(Number(val))) return '';
+    return `${Math.round(Number(val))}%`;
 }
 // Format a number with `sig` significant figures and a leading '+' for positive values
 function formatSigned(val: number, sig = 2): string {
@@ -556,6 +736,7 @@ interface AnalysisControlsProps {
     setValue2: (val: string) => void;
     options2?: { value: string; label: string }[];
     disabled?: boolean;
+    disabled2?: boolean;
     pos1?: string;
     pos2?: string;
     }
@@ -569,6 +750,7 @@ const AnalysisControls: React.FC<AnalysisControlsProps> = ({
     setValue2,
     options2,
     disabled = false,
+    disabled2 = false,
     pos1 = '0.2cm',
     pos2 = '0.8em'
     }) => (
@@ -594,6 +776,7 @@ const AnalysisControls: React.FC<AnalysisControlsProps> = ({
                 value={value2}
                 onChange={e => setValue2(e.target.value)}
                 style={{ width: '125px' }}
+                disabled={disabled2}
             >
                 {(options2 ?? []).map(opt => (
                     <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -602,15 +785,21 @@ const AnalysisControls: React.FC<AnalysisControlsProps> = ({
         
     </div>
     );
-const handleAggTypeChange = (val: string) => {
-    setAggType(val);
-    console.log('aggType changed to', val);
-    };
+// Use setAggType directly from component state to update aggregation type
 // Get unique event_codes and event_dates
 const eventCodes = Array.from(new Set(results.map(r => r.event_code)))
     .sort((a, b) => Number(a) - Number(b));
-const eventDates = Array.from(new Set(results.map(r => r.event_date)))
-    .sort((a, b) => new Date(b).getTime() - new Date(a).getTime()); // Latest first
+let eventDates = Array.from(new Set(results.map(r => r.event_date)));
+    if (query === 'Mseason') {
+        // Ensure months are in calendar order Jan..Dec
+        const monthsOrder = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        eventDates = eventDates.sort((a, b) => monthsOrder.indexOf(a) - monthsOrder.indexOf(b));
+    } else if (query === 'Qseason') {
+        const qOrder = ['Q1','Q2','Q3','Q4'];
+        eventDates = eventDates.sort((a, b) => qOrder.indexOf(a) - qOrder.indexOf(b));
+    } else {
+        eventDates = eventDates.sort((a, b) => new Date(b).getTime() - new Date(a).getTime()); // Latest first
+    }
 // Build a lookup for last_position
 const positionLookup: { [key: string]: { [key: string]: number } } = {};
     results.forEach(r => {
@@ -681,19 +870,70 @@ const eventTotals: { [code: string]: number } = {};
             }
             eventTotals[code] = getAggregatedTotalForCode(lookup, eventDates, code, aggType);
         } else {
-            let lookup;
-            if (filterType === 'volunteers') {
-                lookup = volunteers;
-            } else if (filterType === 'tourist') {
-                lookup = tourists;
-            } else if (filterType === 'eventNumber') {
-                lookup = event_number;
-            } else if (filterType === 'coeff') {
-                lookup = coeff;
+            // Special handling for the new "%Participants" analysis: compute per-date percentages then aggregate those percentages
+            if (analysisType === '%Participants') {
+                const pcts: number[] = [];
+                eventDates.forEach(d => {
+                    const denom = positionLookup[d]?.[code];
+                    if (!denom || denom === 0) return;
+                    let numer = 0;
+                    if (filterType === 'volunteers') numer = volunteers[d]?.[code] || 0;
+                    else if (filterType === 'tourist') numer = tourists[d]?.[code] || 0;
+                    else if (filterType === 'all') numer = denom;
+                    else numer = positionLookup[d]?.[code] || 0;
+                    const pct = (Number(numer) / Number(denom)) * 100;
+                    if (isFinite(pct)) pcts.push(pct);
+                });
+                if (pcts.length === 0) {
+                    eventTotals[code] = 0;
+                } else if (aggType === 'avg' || aggType === 'average') {
+                    const s = pcts.reduce((a, b) => a + b, 0) / pcts.length;
+                    eventTotals[code] = Math.round(s);
+                } else if (aggType === 'max') {
+                    eventTotals[code] = Math.round(Math.max(...pcts));
+                } else if (aggType === 'min') {
+                    eventTotals[code] = Math.round(Math.min(...pcts));
+                } else if (aggType === 'range') {
+                    eventTotals[code] = Math.round(Math.max(...pcts) - Math.min(...pcts));
+                } else if (aggType === 'growth') {
+                    // Compute slope on chronological percentages (left-to-right)
+                    const ys = pcts.slice().reverse();
+                    const n = ys.length;
+                    if (n < 2) {
+                        eventTotals[code] = 0;
+                    } else {
+                        const meanX = (n - 1) / 2;
+                        const meanY = ys.reduce((a, b) => a + b, 0) / n;
+                        let num = 0, den = 0;
+                        for (let i = 0; i < n; i++) {
+                            num += (i - meanX) * (ys[i] - meanY);
+                            den += (i - meanX) * (i - meanX);
+                        }
+                        const slope = den !== 0 ? num / den : 0;
+                        eventTotals[code] = slope; // keep slope as numeric (percent points per period)
+                    }
+                } else {
+                    // Fallback: ratio of aggregated totals
+                    const numLookup = filterType === 'volunteers' ? volunteers : (filterType === 'tourist' ? tourists : positionLookup);
+                    const numer = getAggregatedTotalForCode(numLookup, eventDates, code, aggType);
+                    const denom = getAggregatedTotalForCode(positionLookup, eventDates, code, aggType);
+                    eventTotals[code] = denom ? Math.round((Number(numer) / Number(denom)) * 100) : 0;
+                }
             } else {
-                lookup = positionLookup;
+                let lookup;
+                if (filterType === 'volunteers') {
+                    lookup = volunteers;
+                } else if (filterType === 'tourist') {
+                    lookup = tourists;
+                } else if (filterType === 'eventNumber') {
+                    lookup = event_number;
+                } else if (filterType === 'coeff') {
+                    lookup = coeff;
+                } else {
+                    lookup = positionLookup;
+                }
+                eventTotals[code] = getAggregatedTotalForCode(lookup, eventDates, code, aggType);
             }
-            eventTotals[code] = getAggregatedTotalForCode(lookup, eventDates, code, aggType);
         }
     });    
 const sortedEventCodes = [...eventCodes].sort((a, b) => {
@@ -725,7 +965,7 @@ const sortedEventCodes = [...eventCodes].sort((a, b) => {
         <AnalysisControls
             value={filterType}
             setValue={setFilterType}
-            options={analysisType === 'Times' ? timesFilterOptions : participantFilterOptions}
+            options={analysisType === 'Times' ? timesFilterOptions : (analysisType === '%Participants' ? percentParticipantFilterOptions : participantFilterOptions)}
             label1="Filter"
             label2="Cell Agg"
             value2={cellAgg}
@@ -736,24 +976,25 @@ const sortedEventCodes = [...eventCodes].sort((a, b) => {
                     { value: 'lt12', label: 'avg (Times < 12%)' },
                     { value: 'lt5', label: 'avg (Times < 5%)' }
                 ]
-                : (query === 'Annual' ? [{ value: 'avg', label: 'Average' }] : [{ value: 'single', label: 'Single Value' }])
+                : (['Annual', 'Mseason', 'Qseason'].includes(query) ? [{ value: 'avg', label: 'Average' }] : [{ value: 'single', label: 'Single Value' }])
             }
             pos2='1.1em'
         />
         <AnalysisControls
             value={aggType}
-            setValue={handleAggTypeChange}
+            setValue={setAggType}
             options={aggOptions.filter(opt => getAllowedAggTypes(analysisType, filterType).includes(opt.value))}
             label1="Agg"
             label2="Time Adj"
             value2={avgType}
             setValue2={setAvgType}
-            options2={avgOptions}
+            options2={analysisType === 'Times' ? avgOptions : [{ value: 'none', label: 'No Adjustment' }]}
             disabled={filterType === 'eventNumber' && aggType === 'total'}
+            disabled2={analysisType !== 'Times'}
             pos1="0.4cm"
         />
             <div className="results-table-container">
-                <table className="results-table">
+                <table className={query === 'Qseason' ? 'results-table compact' : 'results-table'}>
                     <thead>
                         <tr>
                             <th
@@ -763,7 +1004,7 @@ const sortedEventCodes = [...eventCodes].sort((a, b) => {
                             >
                                 Participation
                             </th>
-                            {eventDates.map(date => (
+                            {eventDates.filter(Boolean).map(date => (
                                 <th key={date} className="sticky-header">{formatHeaderDate(date, query)}</th>
                             ))}
                         </tr>
@@ -788,18 +1029,7 @@ const sortedEventCodes = [...eventCodes].sort((a, b) => {
                                     setSortDir(sortBy === 'total' && sortDir === 'asc' ? 'desc' : 'asc');
                                 }}
                             >
-                                {analysisType === 'Times'
-                                    ? (aggType === 'avg' ? 'Avg Time'
-                                        : aggType === 'max' ? 'Max Time'
-                                        : aggType === 'min' ? 'Min Time'
-                                        : aggType === 'range' ? 'Range'
-                                        : aggType === 'total' ? 'Total Time'
-                                        : '')
-                                    : (aggType === 'avg' ? 'Avg'
-                                        : aggType === 'total' ? 'Total'
-                                        : aggType === 'max' ? 'Max'
-                                        : aggType === 'min' ? 'Min'
-                                        : '')}
+                                {getSecondColumnHeaderLabel(analysisType, aggType)}
                                 {sortBy === 'total'
                                     ? (sortDir === 'asc' ? '▲' : '▼')
                                     : <span style={{ opacity: 0.3 }}>▲▼</span>}
@@ -839,6 +1069,39 @@ const sortedEventCodes = [...eventCodes].sort((a, b) => {
                                         return <th key={date} className="sticky-header second-row"> </th>;
                                     }
                                     const value = getAggregatedValueForDate(lookup, date, eventCodes, aggType);
+                                    // For %Participants mode compute per-event percentages for this date then aggregate those
+                                    if (analysisType === '%Participants') {
+                                        const pcts: number[] = [];
+                                        eventCodes.forEach(code => {
+                                            const denom = positionLookup[date]?.[code];
+                                            if (!denom || denom === 0) return;
+                                            let numer = 0;
+                                            if (filterType === 'volunteers') numer = volunteers[date]?.[code] || 0;
+                                            else if (filterType === 'tourist') numer = tourists[date]?.[code] || 0;
+                                            else if (filterType === 'all') numer = denom;
+                                            else numer = positionLookup[date]?.[code] || 0;
+                                            const pct = (Number(numer) / Number(denom)) * 100;
+                                            if (isFinite(pct)) pcts.push(pct);
+                                        });
+                                        if (pcts.length === 0) {
+                                            return <th key={date} className="sticky-header second-row"> </th>;
+                                        }
+                                        if (aggType === 'avg' || aggType === 'average') {
+                                            const s = pcts.reduce((a, b) => a + b, 0) / pcts.length;
+                                            return <th key={date} className="sticky-header second-row">{formatPercent(Math.round(s))}</th>;
+                                        }
+                                        if (aggType === 'max') {
+                                            return <th key={date} className="sticky-header second-row">{formatPercent(Math.round(Math.max(...pcts)))}</th>;
+                                        }
+                                        if (aggType === 'min') {
+                                            return <th key={date} className="sticky-header second-row">{formatPercent(Math.round(Math.min(...pcts)))}</th>;
+                                        }
+                                        if (aggType === 'range') {
+                                            return <th key={date} className="sticky-header second-row">{formatPercent(Math.round(Math.max(...pcts) - Math.min(...pcts)))}</th>;
+                                        }
+                                        // growth not shown at header-level for percent mode
+                                        return <th key={date} className="sticky-header second-row"> </th>;
+                                    }
                                     // For Participants and participant-like filters, round aggregates for these agg types
                                     const participantLike = analysisType === 'participants' && ['all', 'tourist', 'eventNumber', 'volunteers'].includes(filterType);
                                     const roundAggs = ['total', 'max', 'min', 'range'];
@@ -859,13 +1122,15 @@ const sortedEventCodes = [...eventCodes].sort((a, b) => {
                                     {results.find(r => r.event_code === code)?.event_name || code}
                                 </td>
                                 <td className="sticky-col-2">
-                                    {aggType === 'growth'
-                                        ? formatSignedFixed(Number(eventTotals[code]), 2)
-                                        : filterType === 'coeff'
-                                            ? formatCoeff(eventTotals[code])
-                                            : analysisType === 'Times'
-                                                ? formatAvgTime(eventTotals[code])
-                                                : (analysisType === 'participants' && ['total', 'max', 'min', 'range'].includes(aggType) ? Math.round(eventTotals[code]) : eventTotals[code])}
+                                    {analysisType === '%Participants'
+                                        ? (aggType === 'growth' ? formatSignedFixed(Number(eventTotals[code]), 2) : formatPercent(eventTotals[code]))
+                                        : aggType === 'growth'
+                                            ? formatSignedFixed(Number(eventTotals[code]), 2)
+                                            : filterType === 'coeff'
+                                                ? formatCoeff(eventTotals[code])
+                                                : analysisType === 'Times'
+                                                    ? formatAvgTime(eventTotals[code])
+                                                    : (analysisType === 'participants' && ['total', 'max', 'min', 'range'].includes(aggType) ? Math.round(eventTotals[code]) : eventTotals[code])}
                                 </td>
                                 {eventDates.map(date => {
                                     // compute numeric cell value for comparison/highlighting
@@ -954,7 +1219,8 @@ const sortedEventCodes = [...eventCodes].sort((a, b) => {
                                             // If numeric and participant-like, round to integer for display
                                             if (participantLike && typeof val === 'number' && !isNaN(val)) {
                                                 const rounded = Math.round(val);
-                                                if (eventMilestones.has(rounded)) return <span style={{ fontWeight: 'bold' }}>{rounded}</span>;
+                                                // Only bold milestone numbers when filtering by Event Number
+                                                if (filterType === 'eventNumber' && eventMilestones.has(rounded)) return <span style={{ fontWeight: 'bold' }}>{rounded}</span>;
                                                 return rounded;
                                             }
                                             // If val is still numeric but not participant-like, return as-is
