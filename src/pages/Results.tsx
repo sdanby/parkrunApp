@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { fetchResults ,fetchAllResults} from '../api/parkrunAPI';
 import './ResultsTable.css'; // Create this CSS file for sticky headers
 import { formatDate,formatDate1,formatDate2,formatAvgTime,formatDateToDDMMYYYY } from '../utilities'; // Utility function to format dates
@@ -21,6 +21,79 @@ const analysisOptions = [
 
     // Add more options here as needed
 ];
+// Short help text for various option values. Use these in the hover tooltip.
+const helpTextMap: { [key: string]: string } = {
+    participants: 'Number of participants (finishers) at each event. Aggregations operate on counts.',
+    '%Participants': 'Shows filter counts as a percentage of total participants for each event. Useful to compare proportions across events.',
+    Times: 'Average/Max/Min times for participants; supports filtering by subgroups (e.g. Regulars).',
+    Age: 'Age-related statistics (mean/median) for participants.',
+    all: 'All participants at the event.',
+    tourist: 'Participants flagged as tourists (visitors).',
+    volunteers: 'Number of volunteers recorded for the event.',
+    eventNumber: 'Event-specific number identifier (only numeric). Not suitable for percent mode.',
+    coeff: 'Seasonal hardness coefficient. Shown as percent-like values for comparison.',
+    avg: 'Average aggregation (mean).',
+    total: 'Sum across selected dates or events.',
+    max: 'Maximum value observed across the selected period.',
+    min: 'Minimum value observed across the selected period.',
+    range: 'Difference between maximum and minimum values (presented as percent points for %Participants).',
+    growth: 'Linear slope (least-squares) showing trend across the selected dates.'
+};
+
+// Small tooltip component that shows short help text for control options and supports a 'More' drilldown
+const HelpTooltip: React.FC<{ label: string; options: { value: string; label: string }[] }> = ({ label, options }) => {
+    const [expanded, setExpanded] = useState<string | null>(null);
+    const [open, setOpen] = useState(false);
+    const wrapperRef = useRef<HTMLSpanElement | null>(null);
+
+    useEffect(() => {
+        const onDocClick = (e: any) => {
+            if (!open) return;
+            if (wrapperRef.current && !wrapperRef.current.contains(e.target)) {
+                setOpen(false);
+            }
+        };
+        document.addEventListener('click', onDocClick);
+        return () => document.removeEventListener('click', onDocClick);
+    }, [open]);
+
+    const toggle = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        setOpen(s => !s);
+    };
+
+    return (
+        <span className={`help-tooltip${open ? ' open' : ''}`} ref={wrapperRef}>
+            <button
+                type="button"
+                aria-label={`${label} help`}
+                aria-expanded={open}
+                className="help-trigger"
+                onClick={toggle}
+                onKeyDown={(e) => { if (e.key === 'Escape') setOpen(false); }}
+            >
+                ?
+            </button>
+            <div className="help-content" role="dialog" aria-hidden={!open}>
+                <div className="help-title">{label} - quick help</div>
+                <div className="close-x" onClick={() => setOpen(false)} aria-label="Close">✕</div>
+                <div style={{ marginTop: 6 }}>
+                    {options.slice(0, 8).map(opt => (
+                        <div key={opt.value} className="help-item"><span className="help-key">{opt.label}</span><span className="help-desc">{helpTextMap[opt.value] || ''}</span></div>
+                    ))}
+                </div>
+                {expanded ? (
+                    <div style={{ marginTop: 6 }}>
+                        <div style={{ fontSize: '0.85em' }}>{helpTextMap[expanded]}</div>
+                        <div className="more-link" onClick={() => setExpanded(null)}>Less</div>
+                    </div>
+                ) : (
+                    <div className="more-link" onClick={() => setExpanded(options[0]?.value || null)}>More...</div>
+                )}
+            </div>
+        </span>
+    );
+};
 const filterOptions = [
     { value: 'all', label: 'All' },
     { value: 'sex', label: 'Sex' },
@@ -756,7 +829,10 @@ const AnalysisControls: React.FC<AnalysisControlsProps> = ({
     }) => (
     <div style={{ marginBottom: '0.5em', marginLeft: '0.4cm', display: 'flex', alignItems: 'center' }}>
 
-            <label htmlFor={`${label1}-select`} style={{ fontSize: '0.85em', marginRight: pos1 }}>{label1}</label>
+            <div style={{ display: 'flex', alignItems: 'center', marginRight: pos1 }}>
+                <HelpTooltip label={label1} options={options} />
+                <label htmlFor={`${label1}-select`} style={{ fontSize: '0.85em', marginLeft: '0.4em' }}>{label1}</label>
+            </div>
             <select
                 id={`${label1}-select`}
                 value={value}
@@ -782,6 +858,10 @@ const AnalysisControls: React.FC<AnalysisControlsProps> = ({
                     <option key={opt.value} value={opt.value}>{opt.label}</option>
                 ))}
             </select>
+            {/* Place help icons after right-side controls when provided */}
+            {label2 === 'Period' || label2 === 'Cell Agg' || label2 === 'Time Adj' ? (
+                <div style={{ marginLeft: '0.4em' }}><HelpTooltip label={label2} options={options2 ?? []} /></div>
+            ) : null}
         
     </div>
     );
