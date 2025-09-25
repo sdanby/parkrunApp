@@ -400,16 +400,16 @@ select:focus {
   .results-table th:nth-child(n+2),
   .results-table td:nth-child(n+2) {
     /* second column and all following columns get a tighter cap on phones */
-    min-width: 64px !important;
-    max-width: 120px !important; /* allow some headroom for wider cells */
+    min-width: 60px !important;
+    max-width: 110px !important; /* allow some headroom for wider cells */
     width: auto !important;
   }
 
   /* Dates / columns 3+ should be smaller to make the table more phone-friendly */
   .results-table th:nth-child(n+3),
   .results-table td:nth-child(n+3) {
-    min-width: 48px !important;
-    max-width: 80px !important;
+    min-width: 40px !important;
+    max-width: 75px !important;
     width: 48px !important;
   }
 
@@ -418,8 +418,8 @@ select:focus {
   .results-table.compact td:nth-child(n+2),
   .results-table.compact th:nth-child(n+3),
   .results-table.compact td:nth-child(n+3) {
-    min-width: 48px !important;
-    max-width: 100px !important;
+    min-width: 40px !important;
+    max-width: 80px !important;
     width: auto !important;
   }
 }
