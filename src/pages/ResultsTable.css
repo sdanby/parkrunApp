@@ -247,3 +247,47 @@ select:focus {
     min-width: 400px;
   }
 }
+
+/* Extra-small screens: shrink the first column and adjust sticky offsets for mobile */
+@media (max-width: 480px) {
+  /* Make first column narrower for phones */
+  .results-table th:first-child,
+  .results-table td:first-child,
+  .sticky-col,
+  .sticky-corner-2-1 {
+    min-width: 100px !important;
+    max-width: 100px !important;
+    width: 100px !important;
+  }
+
+  /* Move second column to sit immediately after the smaller first column */
+  .results-table th:nth-child(2),
+  .results-table td:nth-child(2),
+  .sticky-col-2,
+  .sticky-corner-2-2 {
+    min-width: 70px !important;
+    max-width: 70px !important;
+    width: 70px !important;
+    left: 100px !important; /* must match the first column width */
+  }
+
+  /* Reduce header date column widths so table fits better */
+  .sticky-header,
+  .sticky-header.second-row {
+    min-width: 56px !important;
+    max-width: 56px !important;
+    width: 56px !important;
+  }
+
+  /* Ensure the wide corner spanning header aligns with smaller columns */
+  .sticky-corner-wide {
+    min-width: 170px !important;
+    max-width: 170px !important;
+    width: 170px !important;
+  }
+
+  /* Slightly reduce overall font size on very small screens */
+  .results-table {
+    font-size: 0.82em;
+  }
+}
