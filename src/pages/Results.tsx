@@ -1040,7 +1040,7 @@ const sortedEventCodes = [...eventCodes].sort((a, b) => {
             value2={query}
             setValue2={setQuery}
             options2={queryOptions}
-            pos2='2.0em'
+            pos2='1.6em'
         />
         <AnalysisControls
             value={filterType}
@@ -1058,7 +1058,7 @@ const sortedEventCodes = [...eventCodes].sort((a, b) => {
                 ]
                 : (['Annual', 'Mseason', 'Qseason'].includes(query) ? [{ value: 'avg', label: 'Average' }] : [{ value: 'single', label: 'Single Value' }])
             }
-            pos2='1.1em'
+            pos2='0.7em'
         />
         <AnalysisControls
             value={aggType}
@@ -1072,6 +1072,7 @@ const sortedEventCodes = [...eventCodes].sort((a, b) => {
             disabled={filterType === 'eventNumber' && aggType === 'total'}
             disabled2={analysisType !== 'Times'}
             pos1="0.4cm"
+            pos2 ="0.5em"
         />
             <div className="results-table-container">
                 <table className={query === 'Qseason' ? 'results-table compact' : 'results-table'}>
