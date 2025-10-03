@@ -23,15 +23,15 @@ const analysisOptions = [
 ];
 // Short help text for various option values. Use these in the hover tooltip.
 const helpTextMap: { [key: string]: string } = {
-    participants: 'Number of participants (finishers) at each event. Aggregations operate on counts.',
-    '%Participants': 'Shows filter counts as a percentage of total participants for each event. Useful to compare proportions across events.',
-    Times: 'Average/Max/Min times for participants; supports filtering by subgroups (e.g. Regulars).',
-    Age: 'Age-related statistics (mean/median) for participants.',
+    participants: 'Number of parkrunners/walkers recorded at each event. Aggregations operate on counts.',
+    '%Participants': 'Dive.',
+    Times: 'The participants event times - aggregated across the event using - Average, Maximum, Minimum etc.',
+    Age: 'The participants calculated age* - aggregated across the event using - Average, Maximum, Minimum etc. * note that age is approximate and accuracy depends on the number of observations',
     all: 'All participants at the event.',
-    tourist: 'Participants flagged as tourists (visitors).',
+    Tourist: 'Participants flagged as tourists (visitors). A tourist run is assigned to a parkrunner if over a period of 15 previous events, it is not the most frequetly attended event',
     volunteers: 'Number of volunteers recorded for the event.',
     eventNumber: 'Event-specific number identifier (only numeric). Not suitable for percent mode.',
-    coeff: 'Seasonal hardness coefficient. Shown as percent-like values for comparison.',
+    coeff: 'Seasonal hardness coefficient. This is calculated by comparing the ratio of the fastest run in',
     avg: 'Average aggregation (mean).',
     total: 'Sum across selected dates or events.',
     max: 'Maximum value observed across the selected period.',
@@ -154,6 +154,8 @@ const timesFilterOptions = [
     { value: '5pc', label: '5% consistency' },
     { value: 'unknown', label: 'Unknown' },
 ];
+// For Age analysis exclude volunteers, eventNumber and seasonal hardness
+const ageFilterOptions = participantFilterOptions.filter(o => !['volunteers', 'eventNumber', 'coeff'].includes(o.value));
 const avgOptions = [
     { value: 'none', label: 'No Adjustment' },
     { value: 'hardness', label: 'Hardness Adjusted' },
@@ -204,7 +206,7 @@ function aggregateResultsByMonth(rows: any[]): any[] {
         const code = parts[0];
         const mon = parts[1];
         const group = byEventMonth[key];
-        const numericFields = ['last_position', 'volunteers', 'event_number', 'coeff', 'obs', 'coeff_event', 'avg_time', 'avgtimelim12', 'avgtimelim5', 'tourist_count'];
+    const numericFields = ['last_position', 'volunteers', 'event_number', 'coeff', 'obs', 'coeff_event', 'avg_time', 'avgtimelim12', 'avgtimelim5', 'tourist_count', 'avg_age'];
         const agg: any = {
             event_code: code,
             event_name: group[0]?.event_name || code,
@@ -261,7 +263,7 @@ function aggregateResultsByQuarter(rows: any[]): any[] {
         const code = parts[0];
         const quarter = parts[1];
         const group = byEventQuarter[key];
-        const numericFields = ['last_position', 'volunteers', 'event_number', 'coeff', 'obs', 'coeff_event', 'avg_time', 'avgtimelim12', 'avgtimelim5', 'tourist_count'];
+    const numericFields = ['last_position', 'volunteers', 'event_number', 'coeff', 'obs', 'coeff_event', 'avg_time', 'avgtimelim12', 'avgtimelim5', 'tourist_count', 'avg_age'];
         const agg: any = {
             event_code: code,
             event_name: group[0]?.event_name || code,
@@ -316,7 +318,7 @@ function aggregateResultsByYear(rows: any[]): any[] {
         const year = parts[1];
         const group = byEventYear[key];
         // Aggregate numeric fields by average
-        const numericFields = ['last_position', 'volunteers', 'event_number', 'coeff', 'obs', 'coeff_event', 'avg_time', 'avgtimelim12', 'avgtimelim5', 'tourist_count'];
+    const numericFields = ['last_position', 'volunteers', 'event_number', 'coeff', 'obs', 'coeff_event', 'avg_time', 'avgtimelim12', 'avgtimelim5', 'tourist_count', 'avg_age'];
         const agg: any = {
             event_code: code,
             event_name: group[0]?.event_name || code,
@@ -432,7 +434,7 @@ const Results: React.FC = () => {
         // Ensure aggType remains valid when analysisType or filterType change
         // Implemented inline here so the hook order is stable (must run before any early returns)  
         let allowed: string[];
-        if (analysisType === 'Times') {
+    if (analysisType === 'Times') {
             allowed = ['avg', 'max', 'min'];
             // allow growth for numeric aggregates (Times uses slope of avg_time)
             allowed.push('growth');
@@ -451,7 +453,9 @@ const Results: React.FC = () => {
     }, [analysisType, filterType]);
     useEffect(() => {
             // Reset filterType if it isn't valid for the selected analysisType
-        const allowedFilters = analysisType === 'Times' ? timesFilterOptions.map(o => o.value) : participantFilterOptions.map(o => o.value);
+        const allowedFilters = analysisType === 'Times'
+            ? timesFilterOptions.map(o => o.value)
+            : (analysisType === 'Age' ? ageFilterOptions.map(o => o.value) : participantFilterOptions.map(o => o.value));
         if (!allowedFilters.includes(filterType)) {
             setFilterType(allowedFilters[0]);
         }
@@ -484,6 +488,10 @@ function getAllowedAggTypes(analysisType: string, filterType: string): string[] 
     if (analysisType === 'Times') {
         return ['avg', 'max', 'min', 'growth'];
     }
+    // For Age, don't allow 'total' as it doesn't make sense for averages
+    if (analysisType === 'Age') {
+        return ['avg', 'max', 'min', 'range', 'growth'];
+    }
     // When filtering by event number we can't show 'total'
     if (filterType === 'eventNumber') {
         return ['avg', 'max', 'min', 'range', 'growth']; // 'total' not allowed
@@ -510,6 +518,7 @@ function getAggregatedValueForDate(
     date: string,
     eventCodes: string[],
     aggregation: string
+    , precision?: number
 ): number {
     let values;
     // Special filter for event_number
@@ -531,7 +540,10 @@ function getAggregatedValueForDate(
             // For coeff, keep two decimals
             return count > 0 ? Number((sum / count).toFixed(4)) : 0;
         } else {
-            // For others, round to whole number
+            // For others, round to whole number unless precision provided
+            if (typeof precision === 'number') {
+                return count > 0 ? Number((sum / count).toFixed(precision)) : 0;
+            }
             return count > 0 ? Math.round(sum / count) : 0;
         }
     } else if (aggregation === 'max') {
@@ -555,6 +567,7 @@ function getAggregatedTotalForCode(
     eventDates: string[],
     code: string,
     aggregation: string
+    , precision?: number
 ): number {
     let values;
     if (lookup === event_number) {
@@ -575,6 +588,8 @@ function getAggregatedTotalForCode(
         // For coeff, keep two decimals; for others, round to whole number
         if (lookup === coeff) {
             return values.length > 0 ? (sum / values.length) : 0;
+        } else if (typeof precision === 'number') {
+            return values.length > 0 ? Number((sum / values.length).toFixed(precision)) : 0;
         } else {
             return values.length > 0 ? Math.round(sum / values.length) : 0;
         }
@@ -626,7 +641,8 @@ function getCellValue({
     event_number,
     formatAvgTime
     ,
-    cellAgg
+    cellAgg,
+    avgAgeLookup
 }: {
     analysisType: string;
     avgType: string;
@@ -643,7 +659,13 @@ coeff: { [key: string]: { [key: string]: number } };
     event_number: { [key: string]: { [key: string]: number } };
     formatAvgTime: (val: number) => string;
     cellAgg?: string;
+    avgAgeLookup?: { [key: string]: { [key: string]: number | null } };
 }): string | number {
+    // Age analysis: if avgAgeLookup provided, return raw numeric age (renderer will format)
+    if (analysisType === 'Age') {
+        const v = avgAgeLookup && avgAgeLookup[date] ? avgAgeLookup[date][code] : null;
+        return typeof v === 'number' ? v : '';
+    }
     if (analysisType === 'Times') {
         // cellAgg controls which per-cell avg to show when Type=Times
         let val: number | undefined;
@@ -699,6 +721,12 @@ coeff: { [key: string]: { [key: string]: number } };
         return '';
     }
 }
+// Handle Age cells
+function formatAge(val: number | null | undefined): string {
+    if (val === null || val === undefined) return '';
+    if (typeof val === 'number' && !isNaN(val)) return (Math.round(val * 10) / 10).toFixed(1);
+    return '';
+}
 // Return numeric value for a cell (unformatted) to allow comparisons/highlighting
 function getCellNumericValue({
     analysisType,
@@ -729,6 +757,7 @@ tourists: { [key: string]: { [key: string]: number } };
 coeff: { [key: string]: { [key: string]: number } };
 positionLookup: { [key: string]: { [key: string]: number } };
     event_number: { [key: string]: { [key: string]: number } };
+    avgAgeLookup?: { [key: string]: { [key: string]: number | null } };
     cellAgg?: string;
 }): number | null {
     if (analysisType === 'Times') {
@@ -765,6 +794,11 @@ positionLookup: { [key: string]: { [key: string]: number } };
     if (filterType === 'eventNumber') {
         const v = event_number[date]?.[code];
         return (typeof v === 'number' && v <= 10000) ? v : null;
+    }
+    // Age analysis: use precomputed avg_age per event (if available)
+    if (analysisType === 'Age') {
+        const v = avgAgeLookup && avgAgeLookup[date] ? avgAgeLookup[date][code] : null;
+        return typeof v === 'number' ? v : null;
     }
     if (filterType === 'coeff') {
         const v = coeff[date]?.[code];
@@ -934,6 +968,21 @@ const avgTimeLim5Lookup: { [key: string]: { [key: string]: number } } = {};
         //if (r.event_code == 1) console.log('r.avg_time:', r.event_code, r.event_date,r.avgtimelim5);
         avgTimeLim5Lookup[r.event_date][r.event_code] = r.avgtimelim5;
     });
+// Build a lookup for avg_age (parkrun_events.avg_age). Accept multiple possible key names from backend.
+const avgAgeLookup: { [key: string]: { [key: string]: number | null } } = {};
+results.forEach(r => {
+    if (!avgAgeLookup[r.event_date]) avgAgeLookup[r.event_date] = {};
+    const v = r.avg_age ?? r.avgAge ?? null;
+    const num = (v === null || v === undefined || v === '') ? null : Number(v);
+    avgAgeLookup[r.event_date][r.event_code] = (num !== null && !isNaN(Number(num))) ? Number(num) : null;
+});
+// Debug: when user selects Age, log the avgAgeLookup sample to console to help debug blank cells
+if (typeof window !== 'undefined') {
+    // Defer logging until UI mounts; attach a small helper to window for manual inspection
+    // Expose debug lookup for manual inspection in the browser console
+    const _w: any = window;
+    _w['__debug_avgAgeLookup'] = avgAgeLookup;
+}
 //console.log('avgTimeLookup:', avgTimeLookup);
 const eventTotals: { [code: string]: number } = {};
 // Compute totals/aggregates per event code. For Times use the selected avgType lookup and respect aggType.
@@ -949,6 +998,10 @@ const eventTotals: { [code: string]: number } = {};
                 lookup = avgTimeLookup;
             }
             eventTotals[code] = getAggregatedTotalForCode(lookup, eventDates, code, aggType);
+        } else if (analysisType === 'Age') {
+            // Use the precomputed per-event avg age values directly. getAggregatedTotalForCode will ignore nulls.
+            const ageLookupAny: any = avgAgeLookup;
+            eventTotals[code] = getAggregatedTotalForCode(ageLookupAny, eventDates, code, aggType, 1);
         } else {
             // Special handling for the new "%Participants" analysis: compute per-date percentages then aggregate those percentages
             if (analysisType === '%Participants') {
@@ -1045,7 +1098,7 @@ const sortedEventCodes = [...eventCodes].sort((a, b) => {
         <AnalysisControls
             value={filterType}
             setValue={setFilterType}
-            options={analysisType === 'Times' ? timesFilterOptions : (analysisType === '%Participants' ? percentParticipantFilterOptions : participantFilterOptions)}
+            options={analysisType === 'Times' ? timesFilterOptions : (analysisType === '%Participants' ? percentParticipantFilterOptions : (analysisType === 'Age' ? ageFilterOptions : participantFilterOptions))}
             label1="Filter"
             label2="Cell Agg"
             value2={cellAgg}
@@ -1117,7 +1170,14 @@ const sortedEventCodes = [...eventCodes].sort((a, b) => {
                             </th>
                             {eventDates.map(date => {
                                 let lookup;
-                                                    if (analysisType === 'Times') {
+                                if (analysisType === 'Age') {
+                                    const _ageLookupAny: any = avgAgeLookup;
+                                    const hdrVal = getAggregatedValueForDate(_ageLookupAny, date, eventCodes, aggType, 1);
+                                    return (
+                                        <th key={date} className="sticky-header second-row">{hdrVal ? formatAge(hdrVal) : ''}</th>
+                                    );
+                                }
+                                if (analysisType === 'Times') {
                                                         // header aggregates follow cellAgg selection
                                                         if (cellAgg === 'lt12') {
                                                             lookup = avgTimeLim12Lookup;
@@ -1211,7 +1271,9 @@ const sortedEventCodes = [...eventCodes].sort((a, b) => {
                                                 ? formatCoeff(eventTotals[code])
                                                 : analysisType === 'Times'
                                                     ? formatAvgTime(eventTotals[code])
-                                                    : (analysisType === 'participants' && ['total', 'max', 'min', 'range'].includes(aggType) ? Math.round(eventTotals[code]) : eventTotals[code])}
+                                                    : analysisType === 'Age'
+                                                        ? formatAge(eventTotals[code])
+                                                        : (analysisType === 'participants' && ['total', 'max', 'min', 'range'].includes(aggType) ? Math.round(eventTotals[code]) : eventTotals[code])}
                                 </td>
                                 {eventDates.map(date => {
                                     // compute numeric cell value for comparison/highlighting
@@ -1229,6 +1291,7 @@ const sortedEventCodes = [...eventCodes].sort((a, b) => {
                                         coeff,
                                         positionLookup,
                                         event_number,
+                                        avgAgeLookup,
                                         cellAgg
                                     });
                                     // compare numeric values with small tolerance to avoid float equality misses
@@ -1267,7 +1330,8 @@ const sortedEventCodes = [...eventCodes].sort((a, b) => {
                                                             positionLookup,
                                                             event_number,
                                                             formatAvgTime,
-                                                            cellAgg
+                                                            cellAgg,
+                                                            avgAgeLookup
                                                         });
                                                         if (fallback !== '' && fallback !== null && typeof fallback !== 'undefined') {
                                                             val = fallback;
@@ -1294,8 +1358,18 @@ const sortedEventCodes = [...eventCodes].sort((a, b) => {
                                                     event_number,
                                                     positionLookup,
                                                     formatAvgTime,
-                                                    cellAgg
+                                                    cellAgg,
+                                                    avgAgeLookup
                                                 });
+                                            }
+                                            // If this is the Age analysis, prefer avgAgeLookup and format with two decimals
+                                            if (analysisType === 'Age') {
+                                                // Try avgAgeLookup first (per-event precomputed average)
+                                                const ageVal = (avgAgeLookup && avgAgeLookup[date]) ? avgAgeLookup[date][code] : null;
+                                                if (typeof ageVal === 'number') return formatAge(ageVal);
+                                                // Fallback to whatever val contains (might be numeric)
+                                                if (typeof val === 'number') return formatAge(val);
+                                                return '';
                                             }
                                             // If numeric and participant-like, round to integer for display
                                             if (participantLike && typeof val === 'number' && !isNaN(val)) {
