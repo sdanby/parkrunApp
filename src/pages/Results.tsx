@@ -206,7 +206,7 @@ function aggregateResultsByMonth(rows: any[]): any[] {
         const code = parts[0];
         const mon = parts[1];
         const group = byEventMonth[key];
-    const numericFields = ['last_position', 'volunteers', 'event_number', 'coeff', 'obs', 'coeff_event', 'avg_time', 'avgtimelim12', 'avgtimelim5', 'tourist_count', 'avg_age'];
+    const numericFields = ['last_position', 'volunteers', 'event_number', 'coeff', 'obs', 'coeff_event', 'avg_time', 'avgtimelim12', 'avgtimelim5', 'tourist_count', 'regulars', 'avg_age'];
         const agg: any = {
             event_code: code,
             event_name: group[0]?.event_name || code,
@@ -263,7 +263,7 @@ function aggregateResultsByQuarter(rows: any[]): any[] {
         const code = parts[0];
         const quarter = parts[1];
         const group = byEventQuarter[key];
-    const numericFields = ['last_position', 'volunteers', 'event_number', 'coeff', 'obs', 'coeff_event', 'avg_time', 'avgtimelim12', 'avgtimelim5', 'tourist_count', 'avg_age'];
+    const numericFields = ['last_position', 'volunteers', 'event_number', 'coeff', 'obs', 'coeff_event', 'avg_time', 'avgtimelim12', 'avgtimelim5', 'tourist_count', 'regulars', 'avg_age'];
         const agg: any = {
             event_code: code,
             event_name: group[0]?.event_name || code,
@@ -318,7 +318,7 @@ function aggregateResultsByYear(rows: any[]): any[] {
         const year = parts[1];
         const group = byEventYear[key];
         // Aggregate numeric fields by average
-    const numericFields = ['last_position', 'volunteers', 'event_number', 'coeff', 'obs', 'coeff_event', 'avg_time', 'avgtimelim12', 'avgtimelim5', 'tourist_count', 'avg_age'];
+    const numericFields = ['last_position', 'volunteers', 'event_number', 'coeff', 'obs', 'coeff_event', 'avg_time', 'avgtimelim12', 'avgtimelim5', 'tourist_count', 'regulars', 'avg_age'];
         const agg: any = {
             event_code: code,
             event_name: group[0]?.event_name || code,
@@ -683,9 +683,10 @@ coeff: { [key: string]: { [key: string]: number } };
         const participants = positionLookup[date]?.[code];
         if (!participants || participants === 0) return '';
         let count = 0;
-        if (filterType === 'tourist') count = tourists[date]?.[code] || 0;
-        else if (filterType === 'volunteers') count = volunteers[date]?.[code] || 0;
-        else if (filterType === 'all') count = participants;
+    if (filterType === 'tourist') count = tourists[date]?.[code] || 0;
+    else if (filterType === 'volunteers') count = volunteers[date]?.[code] || 0;
+    else if (filterType === 'regs') count = regulars[date]?.[code] || 0;
+    else if (filterType === 'all') count = participants;
         else {
             // for other filters fallback to positionLookup or 0
             count = positionLookup[date]?.[code] || 0;
@@ -700,6 +701,12 @@ coeff: { [key: string]: { [key: string]: number } };
         return '';
     } else if (filterType === 'tourist') {
         const val = tourists[date]?.[code];
+        if (typeof val === 'number' && val !== 0) {
+            return analysisType === 'participants' ? Math.round(val) : val;
+        }
+        return '';
+    } else if (filterType === 'regs') {
+        const val = regulars[date]?.[code];
         if (typeof val === 'number' && val !== 0) {
             return analysisType === 'participants' ? Math.round(val) : val;
         }
@@ -776,10 +783,11 @@ positionLookup: { [key: string]: { [key: string]: number } };
         const participants = positionLookup[date]?.[code];
         if (!participants || participants === 0) return null;
         let count = 0;
-        if (filterType === 'tourist') count = tourists[date]?.[code] || 0;
-        else if (filterType === 'volunteers') count = volunteers[date]?.[code] || 0;
-        else if (filterType === 'all') count = participants;
-        else count = positionLookup[date]?.[code] || 0;
+    if (filterType === 'tourist') count = tourists[date]?.[code] || 0;
+    else if (filterType === 'volunteers') count = volunteers[date]?.[code] || 0;
+    else if (filterType === 'regs') count = regulars[date]?.[code] || 0;
+    else if (filterType === 'all') count = participants;
+    else count = positionLookup[date]?.[code] || 0;
         const pct = (Number(count) / Number(participants)) * 100;
         return isFinite(pct) ? Math.round(pct) : null;
     }
@@ -789,6 +797,10 @@ positionLookup: { [key: string]: { [key: string]: number } };
     }
     if (filterType === 'tourist') {
         const v = tourists[date]?.[code];
+        return typeof v === 'number' ? v : null;
+    }
+    if (filterType === 'regs') {
+        const v = regulars[date]?.[code];
         return typeof v === 'number' ? v : null;
     }
     if (filterType === 'eventNumber') {
@@ -931,6 +943,14 @@ const tourists: { [key: string]: { [key: string]: number } } = {};
             if (!tourists[r.event_date]) tourists[r.event_date] = {};
             tourists[r.event_date][r.event_code] = r.tourist_count;
     });
+    // Build a lookup for regulars (parkrun_events.regulars) so the UI can show Regulars filter
+    const regulars: { [key: string]: { [key: string]: number } } = {};
+        results.forEach(r => {
+            if (!regulars[r.event_date]) regulars[r.event_date] = {};
+            // accept multiple possible keys from backend: prefer r.regulars, fallback to r.regs or 0
+            const rr = (r.regulars !== undefined && r.regulars !== null) ? r.regulars : (r.regs !== undefined ? r.regs : 0);
+            regulars[r.event_date][r.event_code] = typeof rr === 'number' ? rr : Number(rr) || 0;
+        });
 const coeff: { [key: string]: { [key: string]: number } } = {};
     results.forEach(r => {
         if (!coeff[r.event_date]) coeff[r.event_date] = {};
@@ -1012,6 +1032,7 @@ const eventTotals: { [code: string]: number } = {};
                     let numer = 0;
                     if (filterType === 'volunteers') numer = volunteers[d]?.[code] || 0;
                     else if (filterType === 'tourist') numer = tourists[d]?.[code] || 0;
+                    else if (filterType === 'regs') numer = regulars[d]?.[code] || 0;
                     else if (filterType === 'all') numer = denom;
                     else numer = positionLookup[d]?.[code] || 0;
                     const pct = (Number(numer) / Number(denom)) * 100;
@@ -1047,7 +1068,7 @@ const eventTotals: { [code: string]: number } = {};
                     }
                 } else {
                     // Fallback: ratio of aggregated totals
-                    const numLookup = filterType === 'volunteers' ? volunteers : (filterType === 'tourist' ? tourists : positionLookup);
+                    const numLookup = filterType === 'volunteers' ? volunteers : (filterType === 'tourist' ? tourists : (filterType === 'regs' ? regulars : positionLookup));
                     const numer = getAggregatedTotalForCode(numLookup, eventDates, code, aggType);
                     const denom = getAggregatedTotalForCode(positionLookup, eventDates, code, aggType);
                     eventTotals[code] = denom ? Math.round((Number(numer) / Number(denom)) * 100) : 0;
@@ -1058,6 +1079,8 @@ const eventTotals: { [code: string]: number } = {};
                     lookup = volunteers;
                 } else if (filterType === 'tourist') {
                     lookup = tourists;
+                } else if (filterType === 'regs') {
+                    lookup = regulars;
                 } else if (filterType === 'eventNumber') {
                     lookup = event_number;
                 } else if (filterType === 'coeff') {
@@ -1199,6 +1222,8 @@ const sortedEventCodes = [...eventCodes].sort((a, b) => {
                                                                 lookup = volunteers;
                                                             } else if (filterType === 'tourist') {
                                                                 lookup = tourists;
+                                                            } else if (filterType === 'regs') {
+                                                                lookup = regulars;
                                     } else if (filterType === 'eventNumber') {
                                         lookup = event_number;
                                     } else if (filterType === 'coeff') {
@@ -1244,7 +1269,7 @@ const sortedEventCodes = [...eventCodes].sort((a, b) => {
                                         return <th key={date} className="sticky-header second-row"> </th>;
                                     }
                                     // For Participants and participant-like filters, round aggregates for these agg types
-                                    const participantLike = analysisType === 'participants' && ['all', 'tourist', 'eventNumber', 'volunteers'].includes(filterType);
+                                    const participantLike = analysisType === 'participants' && ['all', 'tourist', 'eventNumber', 'volunteers', 'regs'].includes(filterType);
                                     const roundAggs = ['total', 'max', 'min', 'range'];
                                     const displayValue = (participantLike && roundAggs.includes(aggType) && filterType !== 'coeff') ? Math.round(value) : value;
                                     return (
@@ -1304,7 +1329,7 @@ const sortedEventCodes = [...eventCodes].sort((a, b) => {
                                     return (
                                     <td key={date} style={cellStyle}>
                                         {(() => {
-                                            const participantLike = analysisType === 'participants' && ['all', 'tourist', 'eventNumber', 'volunteers'].includes(filterType);
+                                            const participantLike = analysisType === 'participants' && ['all', 'tourist', 'eventNumber', 'volunteers', 'regs'].includes(filterType);
                                             let val: any = '';
                                             if (filterType === 'eventNumber') {
                                                 // For per-code cells show the raw event_number for that date/code
