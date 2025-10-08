@@ -11,7 +11,18 @@ const ResultsPage: React.FC = () => {
         const getResults = async () => {
             try {
                 const data = await fetchResults();
-                setResults(data);
+                // Apply URL-driven filtering for participant pages
+                const params = new URLSearchParams(window.location.search);
+                const type = params.get('type');
+                const filter = params.get('filter');
+
+                let filtered = data;
+                if (type === 'participants' && filter === 'Super Tourist') {
+                    // Mirror Tourist behaviour but using super_tourist flag
+                    filtered = data.filter((r: any) => !!r.super_tourist);
+                }
+
+                setResults(filtered);
             } catch (err) {
                 setError('Failed to fetch results');
             } finally {
