@@ -103,7 +103,7 @@ const filterOptions = [
     { value: 'coeff', label: 'Seasonal Hardness' },
     { value: 'regs', label: 'Regulars' },
     { value: 'sTourist', label: 'Super Tourist'},
-    { value: 'sRegs', label: 'Super Regular' },
+    // removed super-regular filter
     { value: '1time', label: 'First Timers' },
     { value: 'returners', label: 'Returners'},
     { value: 'clubs', label: 'Clubs' },
@@ -125,7 +125,7 @@ const participantFilterOptions = [
     { value: 'coeff', label: 'Seasonal Hardness' },
     { value: 'regs', label: 'Regulars' },
     { value: 'sTourist', label: 'Super Tourists' },
-    { value: 'sRegs', label: 'Super Regulars' },
+    // removed super-regular filter
     { value: '1time', label: 'First Timers' },
     { value: 'returners', label: 'Returners' },
     { value: 'clubs', label: 'Clubs' },
@@ -141,7 +141,7 @@ const timesFilterOptions = [
     { value: 'tourist', label: 'Tourist' },
     { value: 'regs', label: 'Regulars' },
     { value: 'sTourist', label: 'Super Tourists' },
-    { value: 'sRegs', label: 'Super Regulars' },
+    // removed super-regular filter
     { value: '1time', label: 'First Timers' },
     { value: 'returners', label: 'Returners' },
     { value: 'clubs', label: 'Clubs' },
@@ -692,8 +692,8 @@ coeff: { [key: string]: { [key: string]: number } };
             // for other filters fallback to positionLookup or 0
             count = positionLookup[date]?.[code] || 0;
         }
-        const pct = (Number(count) / Number(participants)) * 100;
-        return formatPercent(pct);
+    const pct = (Number(count) / Number(participants)) * 100;
+    return formatPercent(pct, filterType === 'sTourist' ? 1 : 0);
     } else if (filterType === 'volunteers') {
         const val = volunteers[date]?.[code];
         if (typeof val === 'number' && val !== 0) {
@@ -796,8 +796,8 @@ positionLookup: { [key: string]: { [key: string]: number } };
     else if (filterType === 'regs') count = regulars[date]?.[code] || 0;
     else if (filterType === 'all') count = participants;
     else count = positionLookup[date]?.[code] || 0;
-        const pct = (Number(count) / Number(participants)) * 100;
-        return isFinite(pct) ? Math.round(pct) : null;
+    const pct = (Number(count) / Number(participants)) * 100;
+    return isFinite(pct) ? (filterType === 'sTourist' ? pct : Math.round(pct)) : null;
     }
     if (filterType === 'volunteers') {
         const v = volunteers[date]?.[code];
@@ -835,9 +835,11 @@ function formatCoeff(val: number): string | number {
     const percent = ((val - 1) * 100).toFixed(2);
     return percent === "0.00" ? '0%' : `${percent}%`;
 }
-function formatPercent(val: number | null | undefined): string {
+function formatPercent(val: number | null | undefined, precision = 0): string {
     if (val === null || val === undefined || !isFinite(Number(val))) return '';
-    return `${Math.round(Number(val))}%`;
+    const n = Number(val);
+    if (precision <= 0) return `${Math.round(n)}%`;
+    return `${n.toFixed(precision)}%`;
 }
 // Format a number with `sig` significant figures and a leading '+' for positive values
 function formatSigned(val: number, sig = 2): string {
@@ -1063,13 +1065,13 @@ const eventTotals: { [code: string]: number } = {};
                     eventTotals[code] = 0;
                 } else if (aggType === 'avg' || aggType === 'average') {
                     const s = pcts.reduce((a, b) => a + b, 0) / pcts.length;
-                    eventTotals[code] = Math.round(s);
+                    eventTotals[code] = filterType === 'sTourist' ? s : Math.round(s);
                 } else if (aggType === 'max') {
-                    eventTotals[code] = Math.round(Math.max(...pcts));
+                    eventTotals[code] = filterType === 'sTourist' ? Math.max(...pcts) : Math.round(Math.max(...pcts));
                 } else if (aggType === 'min') {
-                    eventTotals[code] = Math.round(Math.min(...pcts));
+                    eventTotals[code] = filterType === 'sTourist' ? Math.min(...pcts) : Math.round(Math.min(...pcts));
                 } else if (aggType === 'range') {
-                    eventTotals[code] = Math.round(Math.max(...pcts) - Math.min(...pcts));
+                    eventTotals[code] = filterType === 'sTourist' ? (Math.max(...pcts) - Math.min(...pcts)) : Math.round(Math.max(...pcts) - Math.min(...pcts));
                 } else if (aggType === 'growth') {
                     // Compute slope on chronological percentages (left-to-right)
                     const ys = pcts.slice().reverse();
@@ -1092,7 +1094,7 @@ const eventTotals: { [code: string]: number } = {};
                     const numLookup = filterType === 'volunteers' ? volunteers : (filterType === 'tourist' ? tourists : (filterType === 'sTourist' ? superTourists : (filterType === 'regs' ? regulars : positionLookup)));
                     const numer = getAggregatedTotalForCode(numLookup, eventDates, code, aggType);
                     const denom = getAggregatedTotalForCode(positionLookup, eventDates, code, aggType);
-                    eventTotals[code] = denom ? Math.round((Number(numer) / Number(denom)) * 100) : 0;
+                    eventTotals[code] = denom ? (filterType === 'sTourist' ? (Number(numer) / Number(denom)) * 100 : Math.round((Number(numer) / Number(denom)) * 100)) : 0;
                 }
             } else {
                 let lookup;
@@ -1269,6 +1271,8 @@ const sortedEventCodes = [...eventCodes].sort((a, b) => {
                                             let numer = 0;
                                             if (filterType === 'volunteers') numer = volunteers[date]?.[code] || 0;
                                             else if (filterType === 'tourist') numer = tourists[date]?.[code] || 0;
+                                            else if (filterType === 'sTourist') numer = superTourists[date]?.[code] || 0;
+                                            else if (filterType === 'regs') numer = regulars[date]?.[code] || 0;
                                             else if (filterType === 'all') numer = denom;
                                             else numer = positionLookup[date]?.[code] || 0;
                                             const pct = (Number(numer) / Number(denom)) * 100;
@@ -1279,24 +1283,25 @@ const sortedEventCodes = [...eventCodes].sort((a, b) => {
                                         }
                                         if (aggType === 'avg' || aggType === 'average') {
                                             const s = pcts.reduce((a, b) => a + b, 0) / pcts.length;
-                                            return <th key={date} className="sticky-header second-row">{formatPercent(Math.round(s))}</th>;
+                                            return <th key={date} className="sticky-header second-row">{formatPercent(filterType === 'sTourist' ? s : Math.round(s), filterType === 'sTourist' ? 1 : 0)}</th>;
                                         }
                                         if (aggType === 'max') {
-                                            return <th key={date} className="sticky-header second-row">{formatPercent(Math.round(Math.max(...pcts)))}</th>;
+                                            return <th key={date} className="sticky-header second-row">{formatPercent(filterType === 'sTourist' ? Math.max(...pcts) : Math.round(Math.max(...pcts)), filterType === 'sTourist' ? 1 : 0)}</th>;
                                         }
                                         if (aggType === 'min') {
-                                            return <th key={date} className="sticky-header second-row">{formatPercent(Math.round(Math.min(...pcts)))}</th>;
+                                            return <th key={date} className="sticky-header second-row">{formatPercent(filterType === 'sTourist' ? Math.min(...pcts) : Math.round(Math.min(...pcts)), filterType === 'sTourist' ? 1 : 0)}</th>;
                                         }
                                         if (aggType === 'range') {
-                                            return <th key={date} className="sticky-header second-row">{formatPercent(Math.round(Math.max(...pcts) - Math.min(...pcts)))}</th>;
+                                            return <th key={date} className="sticky-header second-row">{formatPercent(filterType === 'sTourist' ? (Math.max(...pcts) - Math.min(...pcts)) : Math.round(Math.max(...pcts) - Math.min(...pcts)), filterType === 'sTourist' ? 1 : 0)}</th>;
                                         }
                                         // growth not shown at header-level for percent mode
                                         return <th key={date} className="sticky-header second-row"> </th>;
                                     }
                                     // For Participants and participant-like filters, round aggregates for these agg types
-                                    const participantLike = analysisType === 'participants' && ['all', 'tourist', 'eventNumber', 'volunteers', 'regs'].includes(filterType);
+                                    const participantLike = analysisType === 'participants' && ['all', 'tourist', 'sTourist', 'eventNumber', 'volunteers', 'regs'].includes(filterType);
                                     const roundAggs = ['total', 'max', 'min', 'range'];
-                                    const displayValue = (participantLike && roundAggs.includes(aggType) && filterType !== 'coeff') ? Math.round(value) : value;
+                                    // Do not round header display for sTourist so comparisons use matching numeric precision
+                                    const displayValue = (participantLike && roundAggs.includes(aggType) && filterType !== 'coeff' && filterType !== 'sTourist') ? Math.round(value) : value;
                                     return (
                                         <th key={date} className="sticky-header second-row">
                                             {filterType === 'coeff' ? formatCoeff(value) : displayValue}
@@ -1314,7 +1319,7 @@ const sortedEventCodes = [...eventCodes].sort((a, b) => {
                                 </td>
                                 <td className="sticky-col-2">
                                     {analysisType === '%Participants'
-                                        ? (aggType === 'growth' ? formatSignedFixed(Number(eventTotals[code]), 2) : formatPercent(eventTotals[code]))
+                                        ? (aggType === 'growth' ? formatSignedFixed(Number(eventTotals[code]), 2) : formatPercent(eventTotals[code], filterType === 'sTourist' ? 1 : 0))
                                         : aggType === 'growth'
                                             ? formatSignedFixed(Number(eventTotals[code]), 2)
                                             : filterType === 'coeff'
@@ -1344,8 +1349,18 @@ const sortedEventCodes = [...eventCodes].sort((a, b) => {
                                         avgAgeLookup,
                                         cellAgg
                                     });
-                                    // compare numeric values with small tolerance to avoid float equality misses
-                                    const isEqual = aggType !== 'growth' && numeric !== null && typeof eventTotals[code] === 'number' && Math.abs(numeric - eventTotals[code]) < 0.0001;
+                                    // compare numeric values; for sTourist percent mode compare formatted values (1dp) to avoid float mismatches
+                                    let isEqual = false;
+                                    if (numeric !== null && typeof eventTotals[code] === 'number' && aggType !== 'growth') {
+                                        if (analysisType === '%Participants' && filterType === 'sTourist') {
+                                            // compare as displayed with 1 decimal
+                                            const a = formatPercent(numeric, 1);
+                                            const b = formatPercent(eventTotals[code], 1);
+                                            isEqual = a === b;
+                                        } else {
+                                            isEqual = Math.abs(numeric - eventTotals[code]) < 0.0001;
+                                        }
+                                    }
                                     const cellStyle = isEqual
                                         ? (aggType === 'max' ? { backgroundColor: '#d4f5d4' }
                                             : aggType === 'min' ? { backgroundColor: '#ffdce6' }
