@@ -486,7 +486,8 @@ const Results: React.FC = () => {
 function getAllowedAggTypes(analysisType: string, filterType: string): string[] {
     // For %Participants and %Total we don't allow Total or Growth (percent-of-column should be a simple aggregate)
     if (analysisType === '%Participants') {
-        return ['avg', 'max', 'min', 'range'];
+        // allow growth for %Participants to show trend of the percentage over time
+        return ['avg', 'max', 'min', 'range', 'growth'];
     }
     if (analysisType === '%Total') {
         // allow Total for %Total mode
@@ -696,7 +697,7 @@ coeff: { [key: string]: { [key: string]: number } };
     cellAgg?: string;
     avgAgeLookup?: { [key: string]: { [key: string]: number | null } };
 }): string | number {
-    const showOneDecimalForAnnualLocal = String(analysisType).toLowerCase() === 'participants' && filterType === 'sTourist' && ['Annual', 'Mseason', 'Qseason'].includes(query);
+    // ...existing code...
     // If we're viewing granular event dates (not Annual/Mseason/Qseason) and the event_number is missing for this date/code,
     // treat it as 'no event' -> show blank. This avoids displaying zeros where there was no event.
     if (!['Annual', 'Mseason', 'Qseason'].includes(query)) {
@@ -740,31 +741,31 @@ coeff: { [key: string]: { [key: string]: number } };
     } else if (filterType === 'volunteers') {
         const val = volunteers[date]?.[code];
         if (typeof val === 'number') {
-            return analysisType === 'participants' ? (showOneDecimalForAnnualLocal ? roundTo1(val) : Math.round(val)) : val;
+            return analysisType === 'participants' ? (showOneDecimalCells ? roundTo1(val) : Math.round(val)) : val;
         }
         return '';
     } else if (filterType === 'tourist') {
         const val = tourists[date]?.[code];
         if (typeof val === 'number') {
-            return analysisType === 'participants' ? (showOneDecimalForAnnualLocal ? roundTo1(val) : Math.round(val)) : val;
+            return analysisType === 'participants' ? (showOneDecimalCells ? roundTo1(val) : Math.round(val)) : val;
         }
         return '';
     } else if (filterType === 'sTourist') {
         const val = superTourists[date]?.[code];
         if (typeof val === 'number') {
-            return analysisType === 'participants' ? (showOneDecimalForAnnualLocal ? roundTo1(val) : Math.round(val)) : val;
+            return analysisType === 'participants' ? (showOneDecimalCells ? roundTo1(val) : Math.round(val)) : val;
         }
         return '';
     } else if (filterType === 'regs') {
         const val = regulars[date]?.[code];
         if (typeof val === 'number') {
-            return analysisType === 'participants' ? (showOneDecimalForAnnualLocal ? roundTo1(val) : Math.round(val)) : val;
+            return analysisType === 'participants' ? (showOneDecimalCells ? roundTo1(val) : Math.round(val)) : val;
         }
         return '';
     } else if (filterType === 'eventNumber') {
         const val = event_number[date]?.[code];
         if (typeof val === 'number' && val !== 0 && val <= 10000) {
-            return analysisType === 'participants' ? (showOneDecimalForAnnualLocal ? roundTo1(val) : Math.round(val)) : val;
+            return analysisType === 'participants' ? (showOneDecimalCells ? roundTo1(val) : Math.round(val)) : val;
         }
         return '';
     } else if (filterType === 'coeff') {
@@ -773,7 +774,7 @@ coeff: { [key: string]: { [key: string]: number } };
     } else {
         const val = positionLookup[date]?.[code];
         if (typeof val === 'number' && val !== 0) {
-            return analysisType === 'participants' ? (showOneDecimalForAnnualLocal ? roundTo1(val) : Math.round(val)) : val;
+            return analysisType === 'participants' ? (showOneDecimalCells ? roundTo1(val) : Math.round(val)) : val;
         }
         return '';
     }
@@ -784,9 +785,20 @@ function formatAge(val: number | null | undefined): string {
     if (typeof val === 'number' && !isNaN(val)) return (Math.round(val * 10) / 10).toFixed(1);
     return '';
 }
-// Round to 1 decimal (e.g. 4.34 -> 4.3)
+// Round value to `sig` significant figures (e.g. sig=2: 123 -> 120, 4.345 -> 4.3)
+function roundToSignificant(val: number, sig = 2): number {
+    if (!isFinite(val) || val === 0) return val === 0 ? 0 : NaN;
+    const abs = Math.abs(val);
+    const digits = Math.floor(Math.log10(abs)) + 1;
+    const shift = sig - digits;
+    const factor = Math.pow(10, shift);
+    return Math.round(val * factor) / factor;
+}
+
+// Round to 1 decimal after first rounding to 2 significant figures
 function roundTo1(val: number): number {
-    return Math.round(val * 10) / 10;
+    const sigRounded = roundToSignificant(val, 2);
+    return Math.round(sigRounded * 10) / 10;
 }
 // Return numeric value for a cell (unformatted) to allow comparisons/highlighting
 function getCellNumericValue({
@@ -993,8 +1005,14 @@ let eventDates = Array.from(new Set(results.map(r => r.event_date)));
     } else {
         eventDates = eventDates.sort((a, b) => new Date(b).getTime() - new Date(a).getTime()); // Latest first
     }
-    // Show one decimal for Annual/Monthly/Quarterly participant view when filtering Super Tourists
-    const showOneDecimalForAnnual = String(analysisType).toLowerCase() === 'participants' && filterType === 'sTourist' && ['Annual', 'Mseason', 'Qseason'].includes(query);
+    // Aggregates (top row and left column): for Type=Participants and Filter=Super Tourists
+    // show 1 decimal + 2 significant figures only for Periods: All, Recent, Last50, Since-lockdown
+    // (for other periods aggregates may still use other formatting rules elsewhere)
+    // Aggregates: for Type=Participants and Filter=Super Tourists, always show 1 decimal (2 significant figures)
+    const showOneDecimalForAnnual = String(analysisType).toLowerCase() === 'participants' && filterType === 'sTourist';
+    // Cells: for Type=Participants and filter = Super Tourists, show 1 decimal (2 significant figures)
+    // for Annual, Qtr Seasonality and Monthly Seasonality; otherwise show integers
+    const showOneDecimalCells = String(analysisType).toLowerCase() === 'participants' && filterType === 'sTourist' && ['Annual', 'Qseason', 'Mseason'].includes(query);
 // Build a lookup for last_position
 const positionLookup: { [key: string]: { [key: string]: number } } = {};
     results.forEach(r => {
@@ -1584,7 +1602,7 @@ const sortedEventCodes = [...eventCodes].sort((a, b) => {
                                                 }
                                                 // If numeric and participant-like, round to integer for display
                                                 if (participantLike && typeof val === 'number' && !isNaN(val)) {
-                                                    if (showOneDecimalForAnnual) {
+                                                    if (showOneDecimalCells) {
                                                         const r1 = roundTo1(val);
                                                         // Only bold milestone numbers when filtering by Event Number (use rounded integer check)
                                                         if (String(filterType) === 'eventNumber' && eventMilestones.has(Math.round(r1))) return <span style={{ fontWeight: 'bold' }}>{r1.toFixed(1)}</span>;
