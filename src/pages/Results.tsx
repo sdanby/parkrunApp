@@ -120,25 +120,23 @@ const filterOptions = [
 // Specific filter lists per analysis Type
 const participantFilterOptions = [
     { value: 'all', label: 'All' },
-    { value: 'tourist', label: 'Tourist' },
-    { value: 'volunteers', label: 'Volunteer' },
     { value: 'eventNumber', label: 'Event Number' },
     { value: 'coeff', label: 'Seasonal Hardness' },
-    { value: 'regs', label: 'Regulars' },
+    { value: 'volunteers', label: 'Volunteers' },
+    { value: 'tourist', label: 'Tourists' },
     { value: 'sTourist', label: 'Super Tourists' },
-    // removed super-regular filter
     { value: '1time', label: 'First Timers' },
+    { value: 'clubs', label: 'Clubbers' },
+    { value: 'pb', label: 'PBs' },
+    { value: 'recentBest', label: 'Recent Bests' },
+    { value: 'regs', label: 'Regulars' },
     { value: 'returners', label: 'Returners' },
-    { value: 'clubs', label: 'Clubs' },
-    { value: '15pc', label: '15% consistency' },
-    { value: '10pc', label: '10% consistency' },
-    { value: '5pc', label: '5% consistency' },
-    { value: 'unknown', label: 'Unknown' },
+    { value: 'eligible_time', label: 'Eligible Times' },
+    { value: 'unknown', label: 'Unknowns' }
 ];
-// %Participants behaves like Participants but excludes Event Number and Seasonal Hardness
-const percentParticipantFilterOptions = participantFilterOptions.filter(o => o.value !== 'eventNumber' && o.value !== 'coeff');
-// %Total behaves like Participants but each cell is shown as percentage of the column total
-const percentTotalFilterOptions = percentParticipantFilterOptions.slice();
+// For %Participants and %Total show the same filter list as Participants per requirement
+const percentParticipantFilterOptions = participantFilterOptions.slice();
+const percentTotalFilterOptions = participantFilterOptions.slice();
 const timesFilterOptions = [
     { value: 'all', label: 'All' },
     { value: 'tourist', label: 'Tourist' },
@@ -726,7 +724,8 @@ coeff: { [key: string]: { [key: string]: number } };
         const participants = positionLookup[date]?.[code];
         if (!participants || participants === 0) return '';
         let count: number | null = null;
-        if (filterType === 'tourist') count = (tourists[date] && typeof tourists[date][code] === 'number') ? tourists[date][code] : null;
+                if (filterType === 'tourist') count = (tourists[date] && typeof tourists[date][code] === 'number') ? tourists[date][code] : null;
+                else if (filterType === '1time') count = (firstTimers[date] && typeof firstTimers[date][code] === 'number') ? firstTimers[date][code] : null;
         else if (filterType === 'sTourist') count = (superTourists[date] && typeof superTourists[date][code] === 'number') ? superTourists[date][code] : null;
         else if (filterType === 'volunteers') count = (volunteers[date] && typeof volunteers[date][code] === 'number') ? volunteers[date][code] : null;
         else if (filterType === 'regs') count = (regulars[date] && typeof regulars[date][code] === 'number') ? regulars[date][code] : null;
@@ -1029,6 +1028,13 @@ const tourists: { [key: string]: { [key: string]: number } } = {};
     results.forEach(r => {
             if (!tourists[r.event_date]) tourists[r.event_date] = {};
             tourists[r.event_date][r.event_code] = r.tourist_count;
+    });
+    // Build a lookup for first timers count (parkrun_events.first_timers_count)
+    const firstTimers: { [key: string]: { [key: string]: number } } = {};
+    results.forEach(r => {
+        if (!firstTimers[r.event_date]) firstTimers[r.event_date] = {};
+        const ft = (r.first_timers_count !== undefined && r.first_timers_count !== null) ? r.first_timers_count : (r.first_timer_count !== undefined && r.first_timer_count !== null ? r.first_timer_count : 0);
+        firstTimers[r.event_date][r.event_code] = typeof ft === 'number' ? ft : Number(ft) || 0;
     });
     // Build a lookup for super_tourist_count (parkrun_events.super_tourist_count)
     const superTourists: { [key: string]: { [key: string]: number } } = {};
