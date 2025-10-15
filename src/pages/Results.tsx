@@ -726,8 +726,9 @@ coeff: { [key: string]: { [key: string]: number } };
         let count: number | null = null;
                 if (filterType === 'tourist') count = (tourists[date] && typeof tourists[date][code] === 'number') ? tourists[date][code] : null;
                 else if (filterType === '1time') count = (firstTimers[date] && typeof firstTimers[date][code] === 'number') ? firstTimers[date][code] : null;
-        else if (filterType === 'sTourist') count = (superTourists[date] && typeof superTourists[date][code] === 'number') ? superTourists[date][code] : null;
-        else if (filterType === 'volunteers') count = (volunteers[date] && typeof volunteers[date][code] === 'number') ? volunteers[date][code] : null;
+            else if (filterType === 'sTourist') count = (superTourists[date] && typeof superTourists[date][code] === 'number') ? superTourists[date][code] : null;
+            else if (filterType === 'volunteers') count = (volunteers[date] && typeof volunteers[date][code] === 'number') ? volunteers[date][code] : null;
+            else if (filterType === '1time') count = (firstTimers[date] && typeof firstTimers[date][code] === 'number') ? firstTimers[date][code] : null;
         else if (filterType === 'regs') count = (regulars[date] && typeof regulars[date][code] === 'number') ? regulars[date][code] : null;
         else if (filterType === 'all') count = participants;
         else {
@@ -754,6 +755,16 @@ coeff: { [key: string]: { [key: string]: number } };
         if (typeof val === 'number') {
             return analysisType === 'participants' ? (showOneDecimalCells ? roundTo1(val) : Math.round(val)) : val;
         }
+        return '';
+    } else if (filterType === '1time') {
+        const val = firstTimers[date]?.[code];
+        // debug: log when we read firstTimers value
+        console.log('[debug-cell] firstTimers cell', { date, code, val });
+        if (typeof val === 'number') {
+            return analysisType === 'participants' ? (showOneDecimalCells ? roundTo1(val) : Math.round(val)) : val;
+        }
+        // debug: fallback to positionLookup
+        console.log('[debug-cell] firstTimers fallback to positionLookup', { date, code, fallback: positionLookup[date]?.[code] });
         return '';
     } else if (filterType === 'regs') {
         const val = regulars[date]?.[code];
@@ -857,6 +868,7 @@ positionLookup: { [key: string]: { [key: string]: number } };
         else if (filterType === 'sTourist') count = (superTourists[date] && typeof superTourists[date][code] === 'number') ? superTourists[date][code] : null;
         else if (filterType === 'volunteers') count = (volunteers[date] && typeof volunteers[date][code] === 'number') ? volunteers[date][code] : null;
         else if (filterType === 'regs') count = (regulars[date] && typeof regulars[date][code] === 'number') ? regulars[date][code] : null;
+    else if (filterType === '1time') count = (firstTimers[date] && typeof firstTimers[date][code] === 'number') ? firstTimers[date][code] : null;
         else if (filterType === 'all') count = participants;
         else count = (positionLookup[date] && typeof positionLookup[date][code] === 'number') ? positionLookup[date][code] : null;
         if (count === null) return null;
@@ -869,6 +881,10 @@ positionLookup: { [key: string]: { [key: string]: number } };
     }
     if (filterType === 'tourist') {
         const v = tourists[date]?.[code];
+        return typeof v === 'number' ? v : null;
+    }
+    if (filterType === '1time') {
+        const v = firstTimers[date]?.[code];
         return typeof v === 'number' ? v : null;
     }
     if (filterType === 'sTourist') {
@@ -1036,6 +1052,19 @@ const tourists: { [key: string]: { [key: string]: number } } = {};
         const ft = (r.first_timers_count !== undefined && r.first_timers_count !== null) ? r.first_timers_count : (r.first_timer_count !== undefined && r.first_timer_count !== null ? r.first_timer_count : 0);
         firstTimers[r.event_date][r.event_code] = typeof ft === 'number' ? ft : Number(ft) || 0;
     });
+    // Debug: sample check to verify firstTimers lookup contains backend values
+    try {
+        const sampleRow = results && results.length ? results[0] : null;
+        if (sampleRow) {
+            const sd = sampleRow.event_date;
+            const sc = sampleRow.event_code;
+            console.log('[debug] firstTimers sample', { sample_date: sd, sample_code: sc, firstTimers_value: firstTimers[sd]?.[sc], raw_row: sampleRow });
+            // also show how many distinct dates and codes were captured
+            console.log('[debug] firstTimers summary', { dates: Object.keys(firstTimers).length, sample_dates: Object.keys(firstTimers).slice(0,5) });
+        }
+    } catch (e) {
+        // swallow debug errors in production
+    }
     // Build a lookup for super_tourist_count (parkrun_events.super_tourist_count)
     const superTourists: { [key: string]: { [key: string]: number } } = {};
         results.forEach(r => {
@@ -1117,6 +1146,7 @@ const eventTotals: { [code: string]: number } = {};
             if (filterType === 'volunteers') v = volunteers[d]?.[c] || 0;
             else if (filterType === 'tourist') v = tourists[d]?.[c] || 0;
             else if (filterType === 'sTourist') v = superTourists[d]?.[c] || 0;
+            else if (filterType === '1time') v = firstTimers[d]?.[c] || 0;
             else if (filterType === 'regs') v = regulars[d]?.[c] || 0;
             else if (filterType === 'all') v = positionLookup[d]?.[c] || 0;
             else v = positionLookup[d]?.[c] || 0;
@@ -1155,6 +1185,7 @@ const eventTotals: { [code: string]: number } = {};
                     else if (filterType === 'tourist') numer = tourists[d]?.[code] || 0;
                     else if (filterType === 'sTourist') numer = superTourists[d]?.[code] || 0;
                     else if (filterType === 'regs') numer = regulars[d]?.[code] || 0;
+                    else if (filterType === '1time') numer = firstTimers[d]?.[code] || 0;
                     else if (filterType === 'all') numer = positionLookup[d]?.[code] || 0;
                     else numer = positionLookup[d]?.[code] || 0;
                     // accumulate rowSum for %Total left-aggregate
@@ -1205,21 +1236,23 @@ const eventTotals: { [code: string]: number } = {};
                     }
                 } else {
                     // Fallback: ratio of aggregated totals
-                    const numLookup = filterType === 'volunteers' ? volunteers : (filterType === 'tourist' ? tourists : (filterType === 'sTourist' ? superTourists : (filterType === 'regs' ? regulars : positionLookup)));
+                    const numLookup = filterType === 'volunteers' ? volunteers : (filterType === 'tourist' ? tourists : (filterType === 'sTourist' ? superTourists : (filterType === 'regs' ? regulars : (filterType === '1time' ? firstTimers : positionLookup))));
                     const numer = getAggregatedTotalForCode(numLookup, eventDates, code, aggType);
                     const denom = getAggregatedTotalForCode(positionLookup, eventDates, code, aggType);
                     eventTotals[code] = denom ? (filterType === 'sTourist' ? (Number(numer) / Number(denom)) * 100 : Math.round((Number(numer) / Number(denom)) * 100)) : 0;
                 }
             } else {
                 let lookup;
-                if (filterType === 'volunteers') {
-                    lookup = volunteers;
-                } else if (filterType === 'tourist') {
-                    lookup = tourists;
-                } else if (filterType === 'sTourist') {
-                    lookup = superTourists;
-                } else if (filterType === 'regs') {
-                    lookup = regulars;
+                                                            if (filterType === 'volunteers') {
+                                                                lookup = volunteers;
+                                                            } else if (filterType === 'tourist') {
+                                                                lookup = tourists;
+                                                            } else if (filterType === 'sTourist') {
+                                                                lookup = superTourists;
+                                                            } else if (filterType === 'regs') {
+                                                                lookup = regulars;
+                                                            } else if (filterType === '1time') {
+                                                                lookup = firstTimers;
                 } else if (filterType === 'eventNumber') {
                     lookup = event_number;
                 } else if (filterType === 'coeff') {
@@ -1367,6 +1400,8 @@ const sortedEventCodes = [...eventCodes].sort((a, b) => {
                                                                 lookup = regulars;
                                     } else if (filterType === 'eventNumber') {
                                         lookup = event_number;
+                                    } else if (filterType === '1time') {
+                                        lookup = firstTimers;
                                     } else if (filterType === 'coeff') {
                                         lookup = coeff;
                                     } else {
@@ -1387,6 +1422,7 @@ const sortedEventCodes = [...eventCodes].sort((a, b) => {
                                             else if (filterType === 'tourist') numer = tourists[date]?.[code] || 0;
                                             else if (filterType === 'sTourist') numer = superTourists[date]?.[code] || 0;
                                             else if (filterType === 'regs') numer = regulars[date]?.[code] || 0;
+                                            else if (filterType === '1time') numer = firstTimers[date]?.[code] || 0;
                                             else if (filterType === 'all') numer = positionLookup[date]?.[code] || 0;
                                             else numer = positionLookup[date]?.[code] || 0;
                                             const pct = (Number(numer) / Number(denom)) * 100;
@@ -1424,7 +1460,7 @@ const sortedEventCodes = [...eventCodes].sort((a, b) => {
                                         return <th key={date} className="sticky-header second-row"> </th>;
                                     }
                                     // For Participants and participant-like filters, round aggregates for these agg types
-                                    const participantLike = analysisType === 'participants' && ['all', 'tourist', 'sTourist', 'eventNumber', 'volunteers', 'regs'].includes(filterType);
+                                    const participantLike = analysisType === 'participants' && ['all', 'tourist', 'sTourist', 'eventNumber', 'volunteers', 'regs', '1time'].includes(filterType);
                                     const roundAggs = ['total', 'max', 'min', 'range'];
                                     // Compute displayValue: for sTourist or Annual-seasonal participants show 1 decimal
                                     let displayValue: any;
