@@ -475,6 +475,13 @@ const Results: React.FC = () => {
         }
     }, [query]);
 
+    // Auto-switch Type back to 'participants' when certain filters require numeric counts
+    useEffect(() => {
+        if ((filterType === 'eventNumber' || filterType === 'coeff') && analysisType === '%Participants') {
+            setAnalysisType('participants');
+        }
+    }, [filterType, analysisType]);
+
     if (loading) return <div>Loading...</div>;
     if (error) return <div>{error}</div>;
     if (!results.length) return <div>No results found.</div>;
@@ -1270,6 +1277,7 @@ const eventTotals: { [code: string]: number } = {};
             else if (filterType === 'returners') v = returners[d]?.[c] || 0;
             else if (filterType === 'eligible_time') v = eligibleTimes[d]?.[c] || 0;
             else if (filterType === 'unknown') v = unknowns[d]?.[c] || 0;
+            else if (filterType === 'eventNumber') v = event_number[d]?.[c] || 0;
             else if (filterType === 'all') v = positionLookup[d]?.[c] || 0;
             else v = positionLookup[d]?.[c] || 0;
             colSum += Number(v) || 0;
@@ -1277,6 +1285,24 @@ const eventTotals: { [code: string]: number } = {};
         columnTotals[d] = colSum;
     });
     const grandTotalSum = Object.values(columnTotals).reduce((a, b) => a + b, 0);
+
+    // Dev debug: when viewing %Total with Event Number filter, print per-date diagnostics
+    try {
+        if (typeof window !== 'undefined' && analysisType === '%Total' && filterType === 'eventNumber' && eventDates.length > 0) {
+            eventDates.forEach(d => {
+                const rows = eventCodes.map(c => ({ code: c, numer: event_number[d]?.[c] ?? null }));
+                const numerVals = rows.map(r => (typeof r.numer === 'number' ? r.numer : 0));
+                const sumNumer = numerVals.reduce((a, b) => a + b, 0);
+                const colTotal = columnTotals[d] || 0;
+                const pcts = rows.map(r => (typeof r.numer === 'number' && colTotal ? (r.numer / colTotal) * 100 : null));
+                const sumPcts = pcts.reduce<number>((acc, v) => acc + (v ?? 0), 0);
+                console.log('[debug-%Total-eventNumber] date', d, 'colTotal', colTotal, 'sumNumer', sumNumer, 'sumPcts', sumPcts, 'rowsSample', rows.slice(0,10), 'pctsSample', pcts.slice(0,10));
+            });
+            console.log('[debug-%Total-eventNumber] grandTotalSum', grandTotalSum);
+        }
+    } catch (e) {
+        // ignore
+    }
 
     eventCodes.forEach(code => {
         if (analysisType === 'Times') {
@@ -1300,25 +1326,36 @@ const eventTotals: { [code: string]: number } = {};
                 const pcts: number[] = [];
                 let rowSum = 0; // sum of numerators for this row across dates (used for %Total left aggregate)
                 eventDates.forEach(d => {
+                    // Skip dates where there was no event for this code in granular views
+                    if (!['Annual', 'Mseason', 'Qseason'].includes(query)) {
+                        const en = event_number[d]?.[code];
+                        if (typeof en !== 'number') return;
+                    }
                     const denom = analysisType === '%Total' ? columnTotals[d] : positionLookup[d]?.[code];
                     if (!denom || denom === 0) return;
-                    let numer = 0;
-                    if (filterType === 'volunteers') numer = volunteers[d]?.[code] || 0;
-                    else if (filterType === 'tourist') numer = tourists[d]?.[code] || 0;
-                    else if (filterType === 'sTourist') numer = superTourists[d]?.[code] || 0;
-                    else if (filterType === 'regs') numer = regulars[d]?.[code] || 0;
-                    else if (filterType === '1time') numer = firstTimers[d]?.[code] || 0;
-                    else if (filterType === 'clubs') numer = clubbers[d]?.[code] || 0;
-                    else if (filterType === 'pb') numer = pbCount[d]?.[code] || 0;
-                    else if (filterType === 'recentBest') numer = recentBest[d]?.[code] || 0;
-                    else if (filterType === 'returners') numer = returners[d]?.[code] || 0;
-                    else if (filterType === 'eligible_time') numer = eligibleTimes[d]?.[code] || 0;
-                    else if (filterType === 'unknown') numer = unknowns[d]?.[code] || 0;
-                    else if (filterType === 'all') numer = positionLookup[d]?.[code] || 0;
-                    else numer = positionLookup[d]?.[code] || 0;
+                    // Do not coerce missing numerators to 0: treat NULL/blank as absent and skip
+                    let rawNumer: any;
+                    if (filterType === 'volunteers') rawNumer = volunteers[d]?.[code];
+                    else if (filterType === 'tourist') rawNumer = tourists[d]?.[code];
+                    else if (filterType === 'sTourist') rawNumer = superTourists[d]?.[code];
+                    else if (filterType === 'regs') rawNumer = regulars[d]?.[code];
+                    else if (filterType === '1time') rawNumer = firstTimers[d]?.[code];
+                    else if (filterType === 'clubs') rawNumer = clubbers[d]?.[code];
+                    else if (filterType === 'pb') rawNumer = pbCount[d]?.[code];
+                    else if (filterType === 'recentBest') rawNumer = recentBest[d]?.[code];
+                    else if (filterType === 'returners') rawNumer = returners[d]?.[code];
+                    else if (filterType === 'eligible_time') rawNumer = eligibleTimes[d]?.[code];
+                    else if (filterType === 'unknown') rawNumer = unknowns[d]?.[code];
+                    else if (filterType === 'eventNumber') rawNumer = event_number[d]?.[code];
+                    else if (filterType === 'all') rawNumer = positionLookup[d]?.[code];
+                    else rawNumer = positionLookup[d]?.[code];
+                    // Skip NULL/undefined/empty-string numerators so missing cells are ignored
+                    if (rawNumer === null || rawNumer === undefined || rawNumer === '') return;
+                    const numerN = Number(rawNumer);
+                    if (!isFinite(numerN)) return;
                     // accumulate rowSum for %Total left-aggregate
-                    if (analysisType === '%Total') rowSum += Number(numer) || 0;
-                    const pct = (Number(numer) / Number(denom)) * 100;
+                    if (analysisType === '%Total') rowSum += numerN || 0;
+                    const pct = (numerN / Number(denom)) * 100;
                     if (isFinite(pct)) pcts.push(pct);
                 });
                 if (pcts.length === 0) {
@@ -1572,6 +1609,36 @@ const sortedEventCodes = [...eventCodes].sort((a, b) => {
                                     if (aggType === 'growth') {
                                         return <th key={date} className="sticky-header second-row"> </th>;
                                     }
+                                    // Special-case `coeff` (seasonal hardness) here to avoid relying on
+                                    // module-level helpers that reference component-local lookups. Compute
+                                    // the average directly from the `coeff` lookup so the header shows
+                                    // the mean coefficient-derived percent correctly.
+                                    if (filterType === 'coeff') {
+                                        const vals: number[] = [];
+                                        eventCodes.forEach(c => {
+                                            const v = coeff[date]?.[c];
+                                            if (typeof v === 'number' && !isNaN(v)) vals.push(v);
+                                        });
+                                        if (vals.length === 0) {
+                                            return <th key={date} className="sticky-header second-row"> </th>;
+                                        }
+                                        if (aggType === 'avg' || aggType === 'average') {
+                                            const avgCoeff = vals.reduce((a, b) => a + b, 0) / vals.length;
+                                            return <th key={date} className="sticky-header second-row">{formatCoeff(avgCoeff)}</th>;
+                                        }
+                                        if (aggType === 'max') {
+                                            const m = Math.max(...vals);
+                                            return <th key={date} className="sticky-header second-row">{formatCoeff(m)}</th>;
+                                        }
+                                        if (aggType === 'min') {
+                                            const m = Math.min(...vals);
+                                            return <th key={date} className="sticky-header second-row">{formatCoeff(m)}</th>;
+                                        }
+                                        // For other agg types fall back to average behavior
+                                        const avgFallback = vals.reduce((a, b) => a + b, 0) / vals.length;
+                                        return <th key={date} className="sticky-header second-row">{formatCoeff(avgFallback)}</th>;
+                                    }
+
                                     let value = getAggregatedValueForDate(lookup, date, eventCodes, aggType, (showOneDecimalForAnnual && (lookup === positionLookup || filterType === 'sTourist')) ? 1 : undefined);
                                     // For participants view (non-percent) ensure header aggregates are integers
                                     if (String(analysisType).toLowerCase() === 'participants' && !showOneDecimalForAnnual) {
@@ -1581,23 +1648,34 @@ const sortedEventCodes = [...eventCodes].sort((a, b) => {
                                     if (analysisType === '%Participants' || analysisType === '%Total') {
                                         const pcts: number[] = [];
                                         eventCodes.forEach(code => {
+                                            // Skip dates where there was no event for this code in granular views
+                                            if (!['Annual', 'Mseason', 'Qseason'].includes(query)) {
+                                                const en = event_number[date]?.[code];
+                                                if (typeof en !== 'number') return;
+                                            }
                                             const denom = analysisType === '%Total' ? columnTotals[date] : positionLookup[date]?.[code];
                                             if (!denom || denom === 0) return;
-                                            let numer = 0;
-                                            if (filterType === 'volunteers') numer = volunteers[date]?.[code] || 0;
-                                            else if (filterType === 'tourist') numer = tourists[date]?.[code] || 0;
-                                            else if (filterType === 'sTourist') numer = superTourists[date]?.[code] || 0;
-                                            else if (filterType === 'regs') numer = regulars[date]?.[code] || 0;
-                                            else if (filterType === '1time') numer = firstTimers[date]?.[code] || 0;
-                                            else if (filterType === 'clubs') numer = clubbers[date]?.[code] || 0;
-                                            else if (filterType === 'pb') numer = pbCount[date]?.[code] || 0;
-                                            else if (filterType === 'recentBest') numer = recentBest[date]?.[code] || 0;
-                                            else if (filterType === 'returners') numer = returners[date]?.[code] || 0;
-                                            else if (filterType === 'eligible_time') numer = eligibleTimes[date]?.[code] || 0;
-                                            else if (filterType === 'unknown') numer = unknowns[date]?.[code] || 0;
-                                            else if (filterType === 'all') numer = positionLookup[date]?.[code] || 0;
-                                            else numer = positionLookup[date]?.[code] || 0;
-                                            const pct = (Number(numer) / Number(denom)) * 100;
+                                            // Do not coerce missing numerators to 0: treat NULL/blank as absent and skip
+                                            let rawNumer: any;
+                                            if (filterType === 'volunteers') rawNumer = volunteers[date]?.[code];
+                                            else if (filterType === 'tourist') rawNumer = tourists[date]?.[code];
+                                            else if (filterType === 'sTourist') rawNumer = superTourists[date]?.[code];
+                                            else if (filterType === 'regs') rawNumer = regulars[date]?.[code];
+                                            else if (filterType === '1time') rawNumer = firstTimers[date]?.[code];
+                                            else if (filterType === 'clubs') rawNumer = clubbers[date]?.[code];
+                                            else if (filterType === 'pb') rawNumer = pbCount[date]?.[code];
+                                            else if (filterType === 'recentBest') rawNumer = recentBest[date]?.[code];
+                                            else if (filterType === 'returners') rawNumer = returners[date]?.[code];
+                                            else if (filterType === 'eligible_time') rawNumer = eligibleTimes[date]?.[code];
+                                            else if (filterType === 'unknown') rawNumer = unknowns[date]?.[code];
+                                            else if (filterType === 'eventNumber') rawNumer = event_number[date]?.[code];
+                                            else if (filterType === 'all') rawNumer = positionLookup[date]?.[code];
+                                            else rawNumer = positionLookup[date]?.[code];
+                                            // Skip NULL/undefined/empty-string numerators so missing cells are ignored
+                                            if (rawNumer === null || rawNumer === undefined || rawNumer === '') return;
+                                            const numerN = Number(rawNumer);
+                                            if (!isFinite(numerN)) return;
+                                            const pct = (numerN / Number(denom)) * 100;
                                             if (isFinite(pct)) pcts.push(pct);
                                         });
                                         if (pcts.length === 0) {
@@ -1605,28 +1683,48 @@ const sortedEventCodes = [...eventCodes].sort((a, b) => {
                                         }
                                         if (aggType === 'avg' || aggType === 'average') {
                                             const s = pcts.reduce((a, b) => a + b, 0) / pcts.length;
+                                            if (analysisType === '%Total') {
+                                                const sig2 = roundToSignificant(s, 2);
+                                                return <th key={date} className="sticky-header second-row">{formatPercent(Number(sig2.toFixed(1)), 1)}</th>;
+                                            }
                                             const outVal = (percentOneDecimalFilters.includes(filterType) || showOneDecimalForAnnual) ? roundTo1(s, 3) : Math.round(s);
-                                            return <th key={date} className="sticky-header second-row">{formatPercent((percentOneDecimalFilters.includes(filterType) ? roundTo1(outVal, 3) : outVal), (percentOneDecimalFilters.includes(filterType) || analysisType === '%Total' || showOneDecimalForAnnual) ? 1 : 0)}</th>;
+                                            return <th key={date} className="sticky-header second-row">{formatPercent((percentOneDecimalFilters.includes(filterType) ? roundTo1(outVal, 3) : outVal), (percentOneDecimalFilters.includes(filterType) || showOneDecimalForAnnual) ? 1 : 0)}</th>;
                                         }
                                         if (aggType === 'total') {
                                             const totalPct = pcts.reduce((a, b) => a + b, 0);
+                                            if (analysisType === '%Total') {
+                                                const sig2 = roundToSignificant(totalPct, 2);
+                                                return <th key={date} className="sticky-header second-row">{formatPercent(Number(sig2.toFixed(1)), 1)}</th>;
+                                            }
                                             const outVal = (percentOneDecimalFilters.includes(filterType) || showOneDecimalForAnnual) ? roundTo1(totalPct, 3) : Math.round(totalPct);
-                                            return <th key={date} className="sticky-header second-row">{formatPercent((percentOneDecimalFilters.includes(filterType) ? roundTo1(outVal, 3) : outVal), (percentOneDecimalFilters.includes(filterType) || analysisType === '%Total' || showOneDecimalForAnnual) ? 1 : 0)}</th>;
+                                            return <th key={date} className="sticky-header second-row">{formatPercent((percentOneDecimalFilters.includes(filterType) ? roundTo1(outVal, 3) : outVal), (percentOneDecimalFilters.includes(filterType) || showOneDecimalForAnnual) ? 1 : 0)}</th>;
                                         }
                                         if (aggType === 'max') {
                                             const m = Math.max(...pcts);
+                                            if (analysisType === '%Total') {
+                                                const sig2 = roundToSignificant(m, 2);
+                                                return <th key={date} className="sticky-header second-row">{formatPercent(Number(sig2.toFixed(1)), 1)}</th>;
+                                            }
                                             const outVal = (percentOneDecimalFilters.includes(filterType) || showOneDecimalForAnnual) ? roundTo1(m, 3) : Math.round(m);
-                                            return <th key={date} className="sticky-header second-row">{formatPercent((percentOneDecimalFilters.includes(filterType) ? roundTo1(outVal, 3) : outVal), (percentOneDecimalFilters.includes(filterType) || analysisType === '%Total' || showOneDecimalForAnnual) ? 1 : 0)}</th>;
+                                            return <th key={date} className="sticky-header second-row">{formatPercent((percentOneDecimalFilters.includes(filterType) ? roundTo1(outVal, 3) : outVal), (percentOneDecimalFilters.includes(filterType) || showOneDecimalForAnnual) ? 1 : 0)}</th>;
                                         }
                                         if (aggType === 'min') {
                                             const m = Math.min(...pcts);
+                                            if (analysisType === '%Total') {
+                                                const sig2 = roundToSignificant(m, 2);
+                                                return <th key={date} className="sticky-header second-row">{formatPercent(Number(sig2.toFixed(1)), 1)}</th>;
+                                            }
                                             const outVal = (percentOneDecimalFilters.includes(filterType) || showOneDecimalForAnnual) ? roundTo1(m, 3) : Math.round(m);
-                                            return <th key={date} className="sticky-header second-row">{formatPercent((percentOneDecimalFilters.includes(filterType) ? roundTo1(outVal, 3) : outVal), (percentOneDecimalFilters.includes(filterType) || analysisType === '%Total' || showOneDecimalForAnnual) ? 1 : 0)}</th>;
+                                            return <th key={date} className="sticky-header second-row">{formatPercent((percentOneDecimalFilters.includes(filterType) ? roundTo1(outVal, 3) : outVal), (percentOneDecimalFilters.includes(filterType) || showOneDecimalForAnnual) ? 1 : 0)}</th>;
                                         }
                                         if (aggType === 'range') {
                                             const r = Math.max(...pcts) - Math.min(...pcts);
+                                            if (analysisType === '%Total') {
+                                                const sig2 = roundToSignificant(r, 2);
+                                                return <th key={date} className="sticky-header second-row">{formatPercent(Number(sig2.toFixed(1)), 1)}</th>;
+                                            }
                                             const outVal = (percentOneDecimalFilters.includes(filterType) || showOneDecimalForAnnual) ? roundTo1(r, 3) : Math.round(r);
-                                            return <th key={date} className="sticky-header second-row">{formatPercent((percentOneDecimalFilters.includes(filterType) ? roundTo1(outVal, 3) : outVal), (percentOneDecimalFilters.includes(filterType) || analysisType === '%Total' || showOneDecimalForAnnual) ? 1 : 0)}</th>;
+                                            return <th key={date} className="sticky-header second-row">{formatPercent((percentOneDecimalFilters.includes(filterType) ? roundTo1(outVal, 3) : outVal), (percentOneDecimalFilters.includes(filterType) || showOneDecimalForAnnual) ? 1 : 0)}</th>;
                                         }
                                         // growth not shown at header-level for percent mode
                                         return <th key={date} className="sticky-header second-row"> </th>;
@@ -1667,7 +1765,14 @@ const sortedEventCodes = [...eventCodes].sort((a, b) => {
                                         // compute left aggregate display
                                         if (analysisType === '%Participants' || analysisType === '%Total') {
                                             if (aggType === 'growth') return formatSignedFixed(Number(eventTotals[code]), 2);
-                                            return formatPercent((percentOneDecimalFilters.includes(filterType) ? roundTo1(eventTotals[code], 3) : eventTotals[code]), (analysisType === '%Total' || percentOneDecimalFilters.includes(filterType) || showOneDecimalForAnnual) ? 1 : 0);
+                                            // For %Total we want two significant figures and 1 decimal place
+                                            if (analysisType === '%Total') {
+                                                const raw = Number(eventTotals[code]);
+                                                if (!isFinite(raw)) return '';
+                                                const sig2 = roundToSignificant(raw, 2);
+                                                return formatPercent(Number(sig2.toFixed(1)), 1);
+                                            }
+                                            return formatPercent((percentOneDecimalFilters.includes(filterType) ? roundTo1(eventTotals[code], 3) : eventTotals[code]), (percentOneDecimalFilters.includes(filterType) || showOneDecimalForAnnual) ? 1 : 0);
                                         }
                                         if (aggType === 'growth') return formatSignedFixed(Number(eventTotals[code]), 2);
                                         if (filterType === 'coeff') return formatCoeff(eventTotals[code]);
