@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { fetchResults ,fetchAllResults} from '../api/parkrunAPI';
+import { fetchResults, fetchAllResults } from '../api/backendAPI';
 import './ResultsTable.css'; // Create this CSS file for sticky headers
 import { formatDate,formatDate1,formatDate2,formatAvgTime,formatDateToDDMMYYYY } from '../utilities'; // Utility function to format dates
 
@@ -33,6 +33,8 @@ const helpTextMap: { [key: string]: string } = {
     volunteers: 'Number of volunteers recorded for the event.',
     eventNumber: 'Event-specific number identifier (only numeric). Not suitable for percent mode.',
     coeff: 'Seasonal hardness coefficient. This is calculated by comparing the ratio of the fastest run in',
+    coeff_event: 'Event hardness coefficient. Similar to Seasonal Hardness but specific to each event (driven by coeff_event).',
+    coeff_combined: 'Combined Hardness = Seasonal Hardness + Event Hardness (sum of coeff and coeff_event).',
     avg: 'Average aggregation (mean).',
     total: 'Sum across selected dates or events.',
     max: 'Maximum value observed across the selected period.',
@@ -102,6 +104,9 @@ const filterOptions = [
     { value: 'volunteers', label: 'Volunteers' },
     { value: 'eventNumber', label: 'Event Number' },
     { value: 'coeff', label: 'Seasonal Hardness' },
+    { value: 'coeff_event', label: 'Event Hardness' },
+    { value: 'coeff_combined', label: 'Combined Hardness' },
+    { value: 'coeff_combined', label: 'Combined Hardness' },
     { value: 'regs', label: 'Regulars' },
     { value: 'sTourist', label: 'Super Tourist'},
     // removed super-regular filter
@@ -122,6 +127,8 @@ const participantFilterOptions = [
     { value: 'all', label: 'All' },
     { value: 'eventNumber', label: 'Event Number' },
     { value: 'coeff', label: 'Seasonal Hardness' },
+    { value: 'coeff_event', label: 'Event Hardness' },
+    { value: 'coeff_combined', label: 'Combined Hardness' },
     { value: 'volunteers', label: 'Volunteers' },
     { value: 'tourist', label: 'Tourists' },
     { value: 'sTourist', label: 'Super Tourists' },
@@ -155,8 +162,8 @@ const timesFilterOptions = [
     { value: '5pc', label: '5% consistency' },
     { value: 'unknown', label: 'Unknown' },
 ];
-// For Age analysis exclude volunteers, eventNumber and seasonal hardness
-const ageFilterOptions = participantFilterOptions.filter(o => !['volunteers', 'eventNumber', 'coeff'].includes(o.value));
+// For Age analysis exclude volunteers, eventNumber and seasonal hardness (both seasonal and event-level)
+const ageFilterOptions = participantFilterOptions.filter(o => !['volunteers', 'eventNumber', 'coeff', 'coeff_event', 'coeff_combined'].includes(o.value));
 const avgOptions = [
     { value: 'none', label: 'No Adjustment' },
     { value: 'hardness', label: 'Hardness Adjusted' },
@@ -410,9 +417,10 @@ const Results: React.FC = () => {
                 } else if (query === 'last50') {
                     data = await fetchResults(50);
                 } else if (query === 'since-lockdown') {
-                    // fetch results from 2021-07-24 onwards
+                    // fetch results from 2021-07-24 onwards by asking the server
                     data = await fetchResults('2021-07-24');
                 } else {
+                    // Default: recent events (or when query is unrecognised) -> fetch recent results
                     data = await fetchResults();
                 }
                 setResults(Array.isArray(data) ? data : []);
@@ -442,7 +450,7 @@ const Results: React.FC = () => {
         } else if (filterType === 'eventNumber') {
                 allowed = ['avg', 'max', 'min', 'range'];
                 allowed.push('growth');
-        } else if (analysisType === 'participants' && filterType === 'coeff') {
+        } else if (analysisType === 'participants' && (filterType === 'coeff' || filterType === 'coeff_event' || filterType === 'coeff_combined')) {
             allowed = ['avg', 'max', 'min', 'range'];
         } else {
                 allowed = ['avg', 'total', 'max', 'min', 'range'];
@@ -477,7 +485,7 @@ const Results: React.FC = () => {
 
     // Auto-switch Type back to 'participants' when certain filters require numeric counts
     useEffect(() => {
-        if ((filterType === 'eventNumber' || filterType === 'coeff') && analysisType === '%Participants') {
+        if ((filterType === 'eventNumber' || filterType === 'coeff' || filterType === 'coeff_event' || filterType === 'coeff_combined') && analysisType === '%Participants') {
             setAnalysisType('participants');
         }
     }, [filterType, analysisType]);
@@ -509,8 +517,8 @@ function getAllowedAggTypes(analysisType: string, filterType: string): string[] 
     if (filterType === 'eventNumber') {
         return ['avg', 'max', 'min', 'range', 'growth']; // 'total' not allowed
     }
-    // Don't allow 'total' when viewing Participants with Seasonal Hardness (coeff)
-    if (analysisType === 'participants' && filterType === 'coeff') {
+    // Don't allow 'total' when viewing Participants with Seasonal Hardness (coeff) or Event Hardness (coeff_event)
+    if (analysisType === 'participants' && (filterType === 'coeff' || filterType === 'coeff_event' || filterType === 'coeff_combined')) {
         return ['avg', 'max', 'min', 'range', 'growth'];
     }
     return ['avg', 'total', 'max', 'min', 'range', 'growth'];
@@ -566,8 +574,8 @@ function getAggregatedValueForDate(
     const count = values.length;
 
     if (aggregation === 'average' || aggregation === 'avg') {
-        if (lookup === coeff) {
-            // For coeff, keep two decimals
+        if (lookup === coeff || lookup === coeff_event || lookup === coeff_combined) {
+            // For coeff or coeff_event, keep two decimals
             return count > 0 ? Number((sum / count).toFixed(4)) : 0;
         } else {
             // For others, round to whole number unless precision provided
@@ -627,7 +635,7 @@ function getAggregatedTotalForCode(
 
     if (aggregation === 'average' || aggregation === 'avg') {
         // For coeff, keep two decimals; for others, round to whole number
-        if (lookup === coeff) {
+            if (lookup === coeff || lookup === coeff_event || lookup === coeff_combined) {
             return values.length > 0 ? (sum / values.length) : 0;
         } else if (typeof precision === 'number') {
             return values.length > 0 ? Number((sum / values.length).toFixed(precision)) : 0;
@@ -815,8 +823,11 @@ coeff: { [key: string]: { [key: string]: number } };
             return analysisType === 'participants' ? (showOneDecimalCells ? roundTo1(val, 3) : Math.round(val)) : val;
         }
         return '';
-    } else if (filterType === 'coeff') {
-        const val = coeff[date]?.[code];
+    } else if (filterType === 'coeff' || filterType === 'coeff_event' || filterType === 'coeff_combined') {
+        const val = (filterType === 'coeff_event') ? coeff_event[date]?.[code] : (filterType === 'coeff_combined' ? coeff_combined[date]?.[code] : coeff[date]?.[code]);
+        if (filterType === 'coeff_combined') {
+            return (typeof val === 'number') ? formatCombined(val) : '';
+        }
         return (typeof val === 'number' && val !== 0) ? formatCoeff(val) : '';
     } else {
         const val = positionLookup[date]?.[code];
@@ -971,8 +982,8 @@ positionLookup: { [key: string]: { [key: string]: number } };
         const v = avgAgeLookup && avgAgeLookup[date] ? avgAgeLookup[date][code] : null;
         return typeof v === 'number' ? v : null;
     }
-    if (filterType === 'coeff') {
-        const v = coeff[date]?.[code];
+    if (filterType === 'coeff' || filterType === 'coeff_event' || filterType === 'coeff_combined') {
+        const v = (filterType === 'coeff_event') ? coeff_event[date]?.[code] : (filterType === 'coeff_combined' ? coeff_combined[date]?.[code] : coeff[date]?.[code]);
         return typeof v === 'number' ? v : null;
     }
     const v = positionLookup[date]?.[code];
@@ -981,6 +992,12 @@ positionLookup: { [key: string]: { [key: string]: number } };
 function formatCoeff(val: number): string | number {
     const percent = ((val - 1) * 100).toFixed(2);
     return percent === "0.00" ? '0%' : `${percent}%`;
+}
+function formatCombined(val: number): string {
+    if (val === null || val === undefined || !isFinite(Number(val))) return '';
+    // val is combined deviation (e.g. 0.096032). Show as percent with two decimals (e.g. 9.60%).
+    const pct = (Number(val) * 100).toFixed(2);
+    return pct === '0.00' ? '0%' : `${pct}%`;
 }
 function formatPercent(val: number | null | undefined, precision = 0): string {
     if (val === null || val === undefined || !isFinite(Number(val))) return '';
@@ -1142,19 +1159,7 @@ const tourists: { [key: string]: { [key: string]: number } } = {};
         const ft = (r.first_timers_count !== undefined && r.first_timers_count !== null) ? r.first_timers_count : (r.first_timer_count !== undefined && r.first_timer_count !== null ? r.first_timer_count : 0);
         firstTimers[r.event_date][r.event_code] = typeof ft === 'number' ? ft : Number(ft) || 0;
     });
-    // Debug: sample check to verify firstTimers lookup contains backend values
-    try {
-        const sampleRow = results && results.length ? results[0] : null;
-        if (sampleRow) {
-            const sd = sampleRow.event_date;
-            const sc = sampleRow.event_code;
-            console.log('[debug] firstTimers sample', { sample_date: sd, sample_code: sc, firstTimers_value: firstTimers[sd]?.[sc], raw_row: sampleRow });
-            // also show how many distinct dates and codes were captured
-            console.log('[debug] firstTimers summary', { dates: Object.keys(firstTimers).length, sample_dates: Object.keys(firstTimers).slice(0,5) });
-        }
-    } catch (e) {
-        // swallow debug errors in production
-    }
+    // (removed debug sample check for firstTimers)
     // Seasonal debug: when viewing aggregated periods and First Timers filter, print a small sample matrix
     try {
         if (['Annual', 'Mseason', 'Qseason'].includes(query) && filterType === '1time') {
@@ -1207,8 +1212,52 @@ const tourists: { [key: string]: { [key: string]: number } } = {};
 const coeff: { [key: string]: { [key: string]: number } } = {};
     results.forEach(r => {
         if (!coeff[r.event_date]) coeff[r.event_date] = {};
-        coeff[r.event_date][r.event_code] = r.coeff;
-    });  
+        const raw = r.coeff;
+        let num = (typeof raw === 'number') ? raw : (raw ? Number(raw) : 0);
+        // Some backends return seasonal hardness as a deviation decimal (e.g. 0.0345 for 3.45%).
+        // Normalize to coefficient form (1 + deviation) when value looks like a small deviation.
+        if (isFinite(num) && Math.abs(num) < 0.5) {
+            num = 1 + num;
+        }
+        coeff[r.event_date][r.event_code] = isFinite(num) ? num : 0;
+    });
+const coeff_event: { [key: string]: { [key: string]: number } } = {};
+    results.forEach(r => {
+        if (!coeff_event[r.event_date]) coeff_event[r.event_date] = {};
+        // Accept several possible backend key names for event-level coefficient
+        const ceRaw = (r.coeff_event !== undefined && r.coeff_event !== null) ? r.coeff_event : (r.coeffEvent !== undefined && r.coeffEvent !== null ? r.coeffEvent : (r.coeffevent !== undefined && r.coeffevent !== null ? r.coeffevent : 0));
+        let ce = (typeof ceRaw === 'number') ? ceRaw : (ceRaw ? Number(ceRaw) : 0);
+        // Normalize small deviation values to coefficient form
+        if (isFinite(ce) && Math.abs(ce) < 0.5) {
+            ce = 1 + ce;
+        }
+        coeff_event[r.event_date][r.event_code] = isFinite(ce) ? ce : 0;
+    });
+
+const coeff_combined: { [key: string]: { [key: string]: number } } = {};
+    results.forEach(r => {
+        if (!coeff_combined[r.event_date]) coeff_combined[r.event_date] = {};
+        // Use the normalized coeff and coeff_event lookups (which were normalized to coefficient form)
+        const cNorm = (coeff[r.event_date] && typeof coeff[r.event_date][r.event_code] === 'number') ? coeff[r.event_date][r.event_code] : 0;
+        const ceNorm = (coeff_event[r.event_date] && typeof coeff_event[r.event_date][r.event_code] === 'number') ? coeff_event[r.event_date][r.event_code] : 0;
+        // Combined hardness should sum the deviations from 1: (coeff-1) + (coeff_event-1)
+        const combinedDeviation = (isFinite(cNorm) ? cNorm : 0) - 1 + (isFinite(ceNorm) ? ceNorm : 0) - 1;
+        coeff_combined[r.event_date][r.event_code] = combinedDeviation;
+    });
+// Debug: expose combined coeff diagnostics in browser console for dev troubleshooting
+if (typeof window !== 'undefined') {
+    try {
+        const rowsWithEventCoeff = results.filter(r => {
+            const ce = r.coeff_event ?? r.coeffEvent ?? r.coeffevent;
+            return ce !== undefined && ce !== null && Number(ce) !== 0;
+        }).slice(0, 10);
+        const sample = rowsWithEventCoeff.length > 0 ? rowsWithEventCoeff.map(r => ({ event_date: r.event_date, event_code: r.event_code, coeff: r.coeff, coeff_event: r.coeff_event ?? r.coeffEvent ?? r.coeffevent, coeff_combined: coeff_combined[r.event_date]?.[r.event_code] })) : results.slice(0,10).map(r => ({ event_date: r.event_date, event_code: r.event_code, coeff: r.coeff, coeff_event: r.coeff_event ?? r.coeffEvent ?? r.coeffevent, coeff_combined: coeff_combined[r.event_date]?.[r.event_code] }));
+        // show counts and a small sample for inspection
+        console.log('[debug-coeff-combined] rowsWithEventCoeff', rowsWithEventCoeff.length, 'sample', sample);
+    } catch (e) {
+        // ignore
+    }
+}
 const event_number: { [key: string]: { [key: string]: number } } = {};
     results.forEach(r => {
         const en = r.event_number;
@@ -1442,8 +1491,8 @@ const eventTotals: { [code: string]: number } = {};
                                                                 lookup = unknowns;
                 } else if (filterType === 'eventNumber') {
                     lookup = event_number;
-                } else if (filterType === 'coeff') {
-                    lookup = coeff;
+                } else if (filterType === 'coeff' || filterType === 'coeff_event' || filterType === 'coeff_combined') {
+                    lookup = (filterType === 'coeff_event') ? coeff_event : (filterType === 'coeff_combined' ? coeff_combined : coeff);
                 } else {
                     lookup = positionLookup;
                 }
@@ -1495,6 +1544,7 @@ const sortedEventCodes = [...eventCodes].sort((a, b) => {
             }
             pos2='0.7em'
         />
+        {typeof window !== 'undefined' && console && console.log && console.log('[debug] Filter options (participantFilterOptions):', participantFilterOptions.map(o => o.value))}
         <AnalysisControls
             value={aggType}
             setValue={setAggType}
@@ -1601,8 +1651,8 @@ const sortedEventCodes = [...eventCodes].sort((a, b) => {
                                         lookup = event_number;
                                     } else if (filterType === '1time') {
                                         lookup = firstTimers;
-                                    } else if (filterType === 'coeff') {
-                                        lookup = coeff;
+                                    } else if (filterType === 'coeff' || filterType === 'coeff_event' || filterType === 'coeff_combined') {
+                                        lookup = (filterType === 'coeff_event') ? coeff_event : (filterType === 'coeff_combined' ? coeff_combined : coeff);
                                     } else {
                                         lookup = positionLookup;
                                     }
@@ -1613,10 +1663,10 @@ const sortedEventCodes = [...eventCodes].sort((a, b) => {
                                     // module-level helpers that reference component-local lookups. Compute
                                     // the average directly from the `coeff` lookup so the header shows
                                     // the mean coefficient-derived percent correctly.
-                                    if (filterType === 'coeff') {
+                                    if (filterType === 'coeff' || filterType === 'coeff_event' || filterType === 'coeff_combined') {
                                         const vals: number[] = [];
                                         eventCodes.forEach(c => {
-                                            const v = coeff[date]?.[c];
+                                            const v = (filterType === 'coeff_event') ? coeff_event[date]?.[c] : (filterType === 'coeff_combined' ? coeff_combined[date]?.[c] : coeff[date]?.[c]);
                                             if (typeof v === 'number' && !isNaN(v)) vals.push(v);
                                         });
                                         if (vals.length === 0) {
@@ -1624,19 +1674,19 @@ const sortedEventCodes = [...eventCodes].sort((a, b) => {
                                         }
                                         if (aggType === 'avg' || aggType === 'average') {
                                             const avgCoeff = vals.reduce((a, b) => a + b, 0) / vals.length;
-                                            return <th key={date} className="sticky-header second-row">{formatCoeff(avgCoeff)}</th>;
+                                            return <th key={date} className="sticky-header second-row">{filterType === 'coeff_combined' ? formatCombined(avgCoeff) : formatCoeff(avgCoeff)}</th>;
                                         }
                                         if (aggType === 'max') {
                                             const m = Math.max(...vals);
-                                            return <th key={date} className="sticky-header second-row">{formatCoeff(m)}</th>;
+                                            return <th key={date} className="sticky-header second-row">{filterType === 'coeff_combined' ? formatCombined(m) : formatCoeff(m)}</th>;
                                         }
                                         if (aggType === 'min') {
                                             const m = Math.min(...vals);
-                                            return <th key={date} className="sticky-header second-row">{formatCoeff(m)}</th>;
+                                            return <th key={date} className="sticky-header second-row">{filterType === 'coeff_combined' ? formatCombined(m) : formatCoeff(m)}</th>;
                                         }
                                         // For other agg types fall back to average behavior
                                         const avgFallback = vals.reduce((a, b) => a + b, 0) / vals.length;
-                                        return <th key={date} className="sticky-header second-row">{formatCoeff(avgFallback)}</th>;
+                                        return <th key={date} className="sticky-header second-row">{filterType === 'coeff_combined' ? formatCombined(avgFallback) : formatCoeff(avgFallback)}</th>;
                                     }
 
                                     let value = getAggregatedValueForDate(lookup, date, eventCodes, aggType, (showOneDecimalForAnnual && (lookup === positionLookup || filterType === 'sTourist')) ? 1 : undefined);
@@ -1734,7 +1784,7 @@ const sortedEventCodes = [...eventCodes].sort((a, b) => {
                                     const roundAggs = ['total', 'max', 'min', 'range'];
                                     // Compute displayValue: for sTourist or Annual-seasonal participants show 1 decimal
                                     let displayValue: any;
-                                    if (participantLike && filterType !== 'coeff') {
+                                    if (participantLike && (filterType !== 'coeff' && filterType !== 'coeff_event' && filterType !== 'coeff_combined')) {
                                         if (showOneDecimalForAnnual) {
                                             // only the special annual-season case shows a rounded 1-decimal value
                                             displayValue = Number(roundTo1(Number(value || 0), 3)).toFixed(1);
@@ -1747,7 +1797,7 @@ const sortedEventCodes = [...eventCodes].sort((a, b) => {
                                     }
                                     return (
                                         <th key={date} className="sticky-header second-row">
-                                            {filterType === 'coeff' ? formatCoeff(value) : displayValue}
+                                            {(filterType === 'coeff' || filterType === 'coeff_event' || filterType === 'coeff_combined') ? formatCoeff(value) : displayValue}
                                         </th>
                                     );
                                 }
@@ -1775,7 +1825,8 @@ const sortedEventCodes = [...eventCodes].sort((a, b) => {
                                             return formatPercent((percentOneDecimalFilters.includes(filterType) ? roundTo1(eventTotals[code], 3) : eventTotals[code]), (percentOneDecimalFilters.includes(filterType) || showOneDecimalForAnnual) ? 1 : 0);
                                         }
                                         if (aggType === 'growth') return formatSignedFixed(Number(eventTotals[code]), 2);
-                                        if (filterType === 'coeff') return formatCoeff(eventTotals[code]);
+                                        if (filterType === 'coeff_combined') return formatCombined(eventTotals[code]);
+                                        if (filterType === 'coeff' || filterType === 'coeff_event') return formatCoeff(eventTotals[code]);
                                         if (analysisType === 'Times') return formatAvgTime(eventTotals[code]);
                                         if (analysisType === 'Age') return formatAge(eventTotals[code]);
                                         // participants numeric aggregates
