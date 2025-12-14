@@ -7,6 +7,41 @@
   text-align: left;
 }
 
+:root {
+--col1-width: 4cm;
+--col2-width: 2.5cm;
+}
+
+/* apply to both headers and cells for column 1/2 */
+.results-table th:first-child,
+.results-table td:first-child {
+box-sizing: border-box;
+min-width: var(--col1-width) !important;
+max-width: var(--col1-width) !important;
+width: var(--col1-width) !important;
+white-space: nowrap;
+overflow: hidden;
+}
+
+.results-table th:nth-child(2),
+.results-table td:nth-child(2) {
+box-sizing: border-box;
+min-width: var(--col2-width) !important;
+max-width: var(--col2-width) !important;
+width: var(--col2-width) !important;
+white-space: nowrap;
+overflow: hidden;
+}
+
+
+/* make sticky offsets match variable widths */
+.sticky-col { left: 0 !important; }
+.sticky-col-2, .sticky-corner-2-2 { left: var(--col1-width) !important; }
+
+/* make sticky offsets match variable widths */
+.sticky-col { left: 0 !important; }
+.sticky-col-2, .sticky-corner-2-2 { left: var(--col1-width) !important; }
+
 .results-table {
   width: auto !important; /* let table size to its content, preventing squeeze */
   border-collapse: collapse;
@@ -28,9 +63,9 @@
 
 /* Top-left spanning header should be sum of first two columns */
 .sticky-corner-wide {
-  min-width: 6cm !important;
-  max-width: 6cm !important;
-  width: 6cm !important;
+  min-width: 5cm !important;
+  max-width: 5cm !important;
+  width: 5cm !important;
 }
 
 /* First sticky column (event name) fixed to 4cm */
@@ -148,7 +183,7 @@
 }
 
 /* Keep table visually neat on small screens */
-@media (max-width: 640px) {
+@media (max-width: 640px) {*/
   .sticky-col { min-width: 3.5cm; max-width: 3.5cm; width: 3.5cm; }
   .sticky-col-2 { min-width: 2.5cm !important; max-width: 2.5cm !important; width: 2.5cm !important; }
   .sticky-header { min-width: 1.6cm; max-width: 1.6cm; width: 1.6cm; }
