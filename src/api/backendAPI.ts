@@ -23,13 +23,13 @@ export const fetchResults = async (opts?: number | string) => {
 export const fetchAllResults = async () => {
     const candidates = [
         // Prefer the known working resultsAll endpoint when available
-        `${API_BASE_URL}/resultsAll`,
-        `${API_BASE_URL}/results?all=true`,
-        `${API_BASE_URL}/results?all=1`,
-        `${API_BASE_URL}/results/all`,
-        `${API_BASE_URL}/results?limit=10000`,
-        `${API_BASE_URL}/results?since=1970-01-01`,
-        `${API_BASE_URL}/results`
+        `${API_BASE_URL}/resultsAll`
+       // `${API_BASE_URL}/results?all=true`
+      //  `${API_BASE_URL}/results?all=1`,
+      //  `${API_BASE_URL}/results/all`,
+      //  `${API_BASE_URL}/results?limit=10000`,
+      //  `${API_BASE_URL}/results?since=1970-01-01`,
+      //  `${API_BASE_URL}/results`
     ];
     let lastErr: any = null;
     let bestData: any[] | null = null;
