@@ -1114,51 +1114,107 @@ let eventDates = Array.from(new Set(results.map(r => r.event_date)));
     // Cells: for Type=Participants and filter = Super Tourists, show 1 decimal (2 significant figures)
     // for Annual, Qtr Seasonality and Monthly Seasonality; otherwise show integers
     const showOneDecimalCells = String(analysisType).toLowerCase() === 'participants' && filterType === 'sTourist' && ['Annual', 'Qseason', 'Mseason'].includes(query);
-// Build a lookup for last_position
+// Build lookups in a single pass for performance
 const positionLookup: { [key: string]: { [key: string]: number } } = {};
-    results.forEach(r => {
-        if (!positionLookup[r.event_date]) positionLookup[r.event_date] = {};
-        positionLookup[r.event_date][r.event_code] = r.last_position;
-    });
 const volunteers: { [key: string]: { [key: string]: number } } = {};
-    results.forEach(r => {
-        if (!volunteers[r.event_date]) volunteers[r.event_date] = {};
-        volunteers[r.event_date][r.event_code] = r.volunteers;
-    });
-    // Build a lookup for tourist_count
 const tourists: { [key: string]: { [key: string]: number } } = {};
-    results.forEach(r => {
-            if (!tourists[r.event_date]) tourists[r.event_date] = {};
-            tourists[r.event_date][r.event_code] = r.tourist_count;
-    });
-    // Build lookups for additional parkrun_events fields
-    const clubbers: { [key: string]: { [key: string]: number } } = {};
-    const pbCount: { [key: string]: { [key: string]: number } } = {};
-    const recentBest: { [key: string]: { [key: string]: number } } = {};
-    const returners: { [key: string]: { [key: string]: number } } = {};
-    const eligibleTimes: { [key: string]: { [key: string]: number } } = {};
-    const unknowns: { [key: string]: { [key: string]: number } } = {};
-    results.forEach(r => {
-        if (!clubbers[r.event_date]) clubbers[r.event_date] = {};
-        clubbers[r.event_date][r.event_code] = typeof r.club_count === 'number' ? r.club_count : (r.club_count ? Number(r.club_count) : 0);
-        if (!pbCount[r.event_date]) pbCount[r.event_date] = {};
-        pbCount[r.event_date][r.event_code] = typeof r.pb_count === 'number' ? r.pb_count : (r.pb_count ? Number(r.pb_count) : 0);
-        if (!recentBest[r.event_date]) recentBest[r.event_date] = {};
-        recentBest[r.event_date][r.event_code] = typeof r.recentbest_count === 'number' ? r.recentbest_count : (r.recentbest_count ? Number(r.recentbest_count) : 0);
-        if (!returners[r.event_date]) returners[r.event_date] = {};
-        returners[r.event_date][r.event_code] = typeof r.returners_count === 'number' ? r.returners_count : (r.returners_count ? Number(r.returners_count) : 0);
-        if (!eligibleTimes[r.event_date]) eligibleTimes[r.event_date] = {};
-        eligibleTimes[r.event_date][r.event_code] = typeof r.eligible_time_count === 'number' ? r.eligible_time_count : (r.eligible_time_count ? Number(r.eligible_time_count) : 0);
-        if (!unknowns[r.event_date]) unknowns[r.event_date] = {};
-        unknowns[r.event_date][r.event_code] = typeof r.unknown_count === 'number' ? r.unknown_count : (r.unknown_count ? Number(r.unknown_count) : 0);
-    });
-    // Build a lookup for first timers count (parkrun_events.first_timers_count)
-    const firstTimers: { [key: string]: { [key: string]: number } } = {};
-    results.forEach(r => {
-        if (!firstTimers[r.event_date]) firstTimers[r.event_date] = {};
-        const ft = (r.first_timers_count !== undefined && r.first_timers_count !== null) ? r.first_timers_count : (r.first_timer_count !== undefined && r.first_timer_count !== null ? r.first_timer_count : 0);
-        firstTimers[r.event_date][r.event_code] = typeof ft === 'number' ? ft : Number(ft) || 0;
-    });
+const clubbers: { [key: string]: { [key: string]: number } } = {};
+const pbCount: { [key: string]: { [key: string]: number } } = {};
+const recentBest: { [key: string]: { [key: string]: number } } = {};
+const returners: { [key: string]: { [key: string]: number } } = {};
+const eligibleTimes: { [key: string]: { [key: string]: number } } = {};
+const unknowns: { [key: string]: { [key: string]: number } } = {};
+const firstTimers: { [key: string]: { [key: string]: number } } = {};
+const superTourists: { [key: string]: { [key: string]: number } } = {};
+const regulars: { [key: string]: { [key: string]: number } } = {};
+const coeff: { [key: string]: { [key: string]: number } } = {};
+const coeff_event: { [key: string]: { [key: string]: number } } = {};
+const coeff_combined: { [key: string]: { [key: string]: number } } = {};
+const event_number: { [key: string]: { [key: string]: number } } = {};
+const avgTimeLookup: { [key: string]: { [key: string]: number } } = {};
+const avgTimeLim12Lookup: { [key: string]: { [key: string]: number } } = {};
+const avgTimeLim5Lookup: { [key: string]: { [key: string]: number } } = {};
+const avgAgeLookup: { [key: string]: { [key: string]: number | null } } = {};
+
+results.forEach(r => {
+    const d = r.event_date;
+    const c = r.event_code;
+    if (!positionLookup[d]) positionLookup[d] = {};
+    positionLookup[d][c] = r.last_position;
+
+    if (!volunteers[d]) volunteers[d] = {};
+    volunteers[d][c] = typeof r.volunteers === 'number' ? r.volunteers : (r.volunteers ? Number(r.volunteers) : 0);
+
+    if (!tourists[d]) tourists[d] = {};
+    tourists[d][c] = typeof r.tourist_count === 'number' ? r.tourist_count : (r.tourist_count ? Number(r.tourist_count) : 0);
+
+    if (!clubbers[d]) clubbers[d] = {};
+    clubbers[d][c] = typeof r.club_count === 'number' ? r.club_count : (r.club_count ? Number(r.club_count) : 0);
+
+    if (!pbCount[d]) pbCount[d] = {};
+    pbCount[d][c] = typeof r.pb_count === 'number' ? r.pb_count : (r.pb_count ? Number(r.pb_count) : 0);
+
+    if (!recentBest[d]) recentBest[d] = {};
+    recentBest[d][c] = typeof r.recentbest_count === 'number' ? r.recentbest_count : (r.recentbest_count ? Number(r.recentbest_count) : 0);
+
+    if (!returners[d]) returners[d] = {};
+    returners[d][c] = typeof r.returners_count === 'number' ? r.returners_count : (r.returners_count ? Number(r.returners_count) : 0);
+
+    if (!eligibleTimes[d]) eligibleTimes[d] = {};
+    eligibleTimes[d][c] = typeof r.eligible_time_count === 'number' ? r.eligible_time_count : (r.eligible_time_count ? Number(r.eligible_time_count) : 0);
+
+    if (!unknowns[d]) unknowns[d] = {};
+    unknowns[d][c] = typeof r.unknown_count === 'number' ? r.unknown_count : (r.unknown_count ? Number(r.unknown_count) : 0);
+
+    if (!firstTimers[d]) firstTimers[d] = {};
+    const ft = (r.first_timers_count !== undefined && r.first_timers_count !== null) ? r.first_timers_count : (r.first_timer_count !== undefined && r.first_timer_count !== null ? r.first_timer_count : 0);
+    firstTimers[d][c] = typeof ft === 'number' ? ft : Number(ft) || 0;
+
+    if (!superTourists[d]) superTourists[d] = {};
+    const sc = (r.super_tourist_count !== undefined && r.super_tourist_count !== null) ? r.super_tourist_count : (r.super_tourist !== undefined && r.super_tourist !== null ? r.super_tourist : 0);
+    superTourists[d][c] = typeof sc === 'number' ? sc : Number(sc) || 0;
+
+    if (!regulars[d]) regulars[d] = {};
+    const rr = (r.regulars !== undefined && r.regulars !== null) ? r.regulars : (r.regs !== undefined ? r.regs : 0);
+    regulars[d][c] = typeof rr === 'number' ? rr : Number(rr) || 0;
+
+    // event_number
+    if (typeof r.event_number === 'number' && !isNaN(r.event_number) && r.event_number > 0 && r.event_number <= 10000) {
+        if (!event_number[d]) event_number[d] = {};
+        event_number[d][c] = r.event_number;
+    }
+
+    // avg times
+    if (!avgTimeLookup[d]) avgTimeLookup[d] = {};
+    avgTimeLookup[d][c] = r.avg_time;
+    if (!avgTimeLim12Lookup[d]) avgTimeLim12Lookup[d] = {};
+    avgTimeLim12Lookup[d][c] = r.avgtimelim12;
+    if (!avgTimeLim5Lookup[d]) avgTimeLim5Lookup[d] = {};
+    avgTimeLim5Lookup[d][c] = r.avgtimelim5;
+
+    // coeff normalization: accept multiple possible key names and normalize small deviations to coefficient form
+    if (!coeff[d]) coeff[d] = {};
+    const rawCoeff = (r.coeff !== undefined && r.coeff !== null) ? r.coeff : 0;
+    let numCoeff = (typeof rawCoeff === 'number') ? rawCoeff : (rawCoeff ? Number(rawCoeff) : 0);
+    if (isFinite(numCoeff) && Math.abs(numCoeff) < 0.5) numCoeff = 1 + numCoeff;
+    coeff[d][c] = isFinite(numCoeff) ? numCoeff : 0;
+
+    if (!coeff_event[d]) coeff_event[d] = {};
+    const rawCe = (r.coeff_event !== undefined && r.coeff_event !== null) ? r.coeff_event : (r.coefEvent !== undefined ? r.coefEvent : (r.coeffEvent ?? r.coeffevent ?? 0));
+    let numCe = (typeof rawCe === 'number') ? rawCe : (rawCe ? Number(rawCe) : 0);
+    if (isFinite(numCe) && Math.abs(numCe) < 0.5) numCe = 1 + numCe;
+    coeff_event[d][c] = isFinite(numCe) ? numCe : 0;
+
+    if (!coeff_combined[d]) coeff_combined[d] = {};
+    const combinedDeviation = (isFinite(numCoeff) ? numCoeff : 0) - 1 + (isFinite(numCe) ? numCe : 0) - 1;
+    coeff_combined[d][c] = combinedDeviation;
+
+    // avg age
+    if (!avgAgeLookup[d]) avgAgeLookup[d] = {};
+    const v = r.avg_age ?? r.avgAge ?? null;
+    const num = (v === null || v === undefined || v === '') ? null : Number(v);
+    avgAgeLookup[d][c] = (num !== null && !isNaN(Number(num))) ? Number(num) : null;
+});
     // (removed debug sample check for firstTimers)
     // Seasonal debug: when viewing aggregated periods and First Timers filter, print a small sample matrix
     try {
@@ -1193,57 +1249,6 @@ const tourists: { [key: string]: { [key: string]: number } } = {};
     } catch (e) {
         // ignore
     }
-    // Build a lookup for super_tourist_count (parkrun_events.super_tourist_count)
-    const superTourists: { [key: string]: { [key: string]: number } } = {};
-        results.forEach(r => {
-            if (!superTourists[r.event_date]) superTourists[r.event_date] = {};
-            // accept multiple possible keys from backend: prefer r.super_tourist_count, fallback to r.super_tourist or 0
-            const sc = (r.super_tourist_count !== undefined && r.super_tourist_count !== null) ? r.super_tourist_count : (r.super_tourist !== undefined && r.super_tourist !== null ? r.super_tourist : 0);
-            superTourists[r.event_date][r.event_code] = typeof sc === 'number' ? sc : Number(sc) || 0;
-        });
-    // Build a lookup for regulars (parkrun_events.regulars) so the UI can show Regulars filter
-    const regulars: { [key: string]: { [key: string]: number } } = {};
-        results.forEach(r => {
-            if (!regulars[r.event_date]) regulars[r.event_date] = {};
-            // accept multiple possible keys from backend: prefer r.regulars, fallback to r.regs or 0
-            const rr = (r.regulars !== undefined && r.regulars !== null) ? r.regulars : (r.regs !== undefined ? r.regs : 0);
-            regulars[r.event_date][r.event_code] = typeof rr === 'number' ? rr : Number(rr) || 0;
-        });
-const coeff: { [key: string]: { [key: string]: number } } = {};
-    results.forEach(r => {
-        if (!coeff[r.event_date]) coeff[r.event_date] = {};
-        const raw = r.coeff;
-        let num = (typeof raw === 'number') ? raw : (raw ? Number(raw) : 0);
-        // Some backends return seasonal hardness as a deviation decimal (e.g. 0.0345 for 3.45%).
-        // Normalize to coefficient form (1 + deviation) when value looks like a small deviation.
-        if (isFinite(num) && Math.abs(num) < 0.5) {
-            num = 1 + num;
-        }
-        coeff[r.event_date][r.event_code] = isFinite(num) ? num : 0;
-    });
-const coeff_event: { [key: string]: { [key: string]: number } } = {};
-    results.forEach(r => {
-        if (!coeff_event[r.event_date]) coeff_event[r.event_date] = {};
-        // Accept several possible backend key names for event-level coefficient
-        const ceRaw = (r.coeff_event !== undefined && r.coeff_event !== null) ? r.coeff_event : (r.coeffEvent !== undefined && r.coeffEvent !== null ? r.coeffEvent : (r.coeffevent !== undefined && r.coeffevent !== null ? r.coeffevent : 0));
-        let ce = (typeof ceRaw === 'number') ? ceRaw : (ceRaw ? Number(ceRaw) : 0);
-        // Normalize small deviation values to coefficient form
-        if (isFinite(ce) && Math.abs(ce) < 0.5) {
-            ce = 1 + ce;
-        }
-        coeff_event[r.event_date][r.event_code] = isFinite(ce) ? ce : 0;
-    });
-
-const coeff_combined: { [key: string]: { [key: string]: number } } = {};
-    results.forEach(r => {
-        if (!coeff_combined[r.event_date]) coeff_combined[r.event_date] = {};
-        // Use the normalized coeff and coeff_event lookups (which were normalized to coefficient form)
-        const cNorm = (coeff[r.event_date] && typeof coeff[r.event_date][r.event_code] === 'number') ? coeff[r.event_date][r.event_code] : 0;
-        const ceNorm = (coeff_event[r.event_date] && typeof coeff_event[r.event_date][r.event_code] === 'number') ? coeff_event[r.event_date][r.event_code] : 0;
-        // Combined hardness should sum the deviations from 1: (coeff-1) + (coeff_event-1)
-        const combinedDeviation = (isFinite(cNorm) ? cNorm : 0) - 1 + (isFinite(ceNorm) ? ceNorm : 0) - 1;
-        coeff_combined[r.event_date][r.event_code] = combinedDeviation;
-    });
 // Debug: expose combined coeff diagnostics in browser console for dev troubleshooting
 if (typeof window !== 'undefined') {
     try {
@@ -1258,46 +1263,7 @@ if (typeof window !== 'undefined') {
         // ignore
     }
 }
-const event_number: { [key: string]: { [key: string]: number } } = {};
-    results.forEach(r => {
-        const en = r.event_number;
-        // only store valid positive numeric event numbers (ignore null/undefined/0 and non-numeric)
-        if (typeof en === 'number' && !isNaN(en) && en > 0 && en <= 10000) {
-            if (!event_number[r.event_date]) event_number[r.event_date] = {};
-            event_number[r.event_date][r.event_code] = en;
-        }
-    });
-// Build a lookup for avg_time
-const avgTimeLookup: { [key: string]: { [key: string]: number } } = {};
-    results.forEach(r => {
-        if (!avgTimeLookup[r.event_date]) avgTimeLookup[r.event_date] = {};
-        //if (r.event_code == 1) console.log('r.avg_time:', r.event_code, r.event_date,r.avg_time);
-        avgTimeLookup[r.event_date][r.event_code] = r.avg_time;
-    });
-// Add after avgTimeLookup
-const avgTimeLim12Lookup: { [key: string]: { [key: string]: number } } = {};
-    //console.log('results:', results);
-    results.forEach(r => {
-        if (!avgTimeLim12Lookup[r.event_date]) avgTimeLim12Lookup[r.event_date] = {};
-        //if (r.event_code == 1) console.log('r.avg_time:', r.event_code, r.event_date,r.avgTimeLim12);
-        avgTimeLim12Lookup[r.event_date][r.event_code] = r.avgtimelim12;
-    });
-// Add after avgTimeLookup
-const avgTimeLim5Lookup: { [key: string]: { [key: string]: number } } = {};
-    //console.log('results:', results);
-    results.forEach(r => {
-        if (!avgTimeLim5Lookup[r.event_date]) avgTimeLim5Lookup[r.event_date] = {};
-        //if (r.event_code == 1) console.log('r.avg_time:', r.event_code, r.event_date,r.avgtimelim5);
-        avgTimeLim5Lookup[r.event_date][r.event_code] = r.avgtimelim5;
-    });
-// Build a lookup for avg_age (parkrun_events.avg_age). Accept multiple possible key names from backend.
-const avgAgeLookup: { [key: string]: { [key: string]: number | null } } = {};
-results.forEach(r => {
-    if (!avgAgeLookup[r.event_date]) avgAgeLookup[r.event_date] = {};
-    const v = r.avg_age ?? r.avgAge ?? null;
-    const num = (v === null || v === undefined || v === '') ? null : Number(v);
-    avgAgeLookup[r.event_date][r.event_code] = (num !== null && !isNaN(Number(num))) ? Number(num) : null;
-});
+
 // Debug: when user selects Age, log the avgAgeLookup sample to console to help debug blank cells
 if (typeof window !== 'undefined') {
     // Defer logging until UI mounts; attach a small helper to window for manual inspection
