@@ -591,9 +591,9 @@ function getAggregatedValueForDate(
         } else if (aggregation === 'range') {
             if (count > 0) {
                 const rangeVal = Math.max(...values) - Math.min(...values);
-                // For coeff (seasonal hardness) we want a coefficient-like result
+                // For coeff (seasonal hardness) and event-level coeff_event we want a coefficient-like result
                 // so add 1 to the range (e.g. 0.04 -> 1.04) so formatCoeff yields a positive percent
-                return lookup === coeff ? rangeVal + 1 : rangeVal;
+                return (lookup === coeff || lookup === coeff_event) ? rangeVal + 1 : rangeVal;
             }
             return 0;
     } else {
@@ -668,7 +668,7 @@ function getAggregatedTotalForCode(
     } else if (aggregation === 'range') {
         if (values.length > 0) {
             const rangeVal = Math.max(...values) - Math.min(...values);
-            return lookup === coeff ? rangeVal + 1 : rangeVal;
+            return (lookup === coeff || lookup === coeff_event) ? rangeVal + 1 : rangeVal;
         }
         return 0;
     }
