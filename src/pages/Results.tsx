@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { fetchResults, fetchAllResults } from '../api/backendAPI';
 import './ResultsTable.css'; // Create this CSS file for sticky headers
 import { formatDate,formatDate1,formatDate2,formatAvgTime,formatDateToDDMMYYYY } from '../utilities'; // Utility function to format dates
@@ -710,132 +710,41 @@ coeff: { [key: string]: { [key: string]: number } };
     cellAgg?: string;
     avgAgeLookup?: { [key: string]: { [key: string]: number | null } };
 }): string | number {
-    // ...existing code...
-    // If we're viewing granular event dates (not Annual/Mseason/Qseason) and the event_number is missing for this date/code,
-    // treat it as 'no event' -> show blank. This avoids displaying zeros where there was no event.
-    if (!['Annual', 'Mseason', 'Qseason'].includes(query)) {
-        const en = event_number?.[date]?.[code];
-        if (typeof en !== 'number') return '';
-    }
-    // Age analysis: if avgAgeLookup provided, return raw numeric age (renderer will format)
-    if (analysisType === 'Age') {
-        const v = avgAgeLookup && avgAgeLookup[date] ? avgAgeLookup[date][code] : null;
-        return typeof v === 'number' ? v : '';
-    }
+    // Use numeric getter and format according to analysisType/filterType
+    const numeric = getCellNumericValue({ analysisType, avgType: _avgType, filterType, date, code, avgTimeLim12Lookup, avgTimeLim5Lookup, avgTimeLookup, volunteers, tourists, coeff, positionLookup, event_number, cellAgg, avgAgeLookup });
+    if (numeric === null || numeric === undefined) return '';
+    const n = Number(numeric);
+    if (!isFinite(n)) return '';
     if (analysisType === 'Times') {
-        // cellAgg controls which per-cell avg to show when Type=Times
-        let val: number | undefined;
-        if (cellAgg === 'lt12') {
-            val = avgTimeLim12Lookup[date]?.[code];
-        } else if (cellAgg === 'lt5') {
-            val = avgTimeLim5Lookup[date]?.[code];
-        } else {
-            // 'avg' or undefined
-            val = avgTimeLookup[date]?.[code];
-        }
-        return (typeof val === 'number' && !isNaN(val)) ? formatAvgTime(val) : '';
-    } else if (analysisType === '%Participants') {
-        // compute percentage = (filterCount / participants) * 100
-        const participants = positionLookup[date]?.[code];
-        if (!participants || participants === 0) return '';
-        let count: number | null = null;
-                if (filterType === 'tourist') count = (tourists[date] && typeof tourists[date][code] === 'number') ? tourists[date][code] : null;
-                else if (filterType === '1time') count = (firstTimers[date] && typeof firstTimers[date][code] === 'number') ? firstTimers[date][code] : null;
-            else if (filterType === 'sTourist') count = (superTourists[date] && typeof superTourists[date][code] === 'number') ? superTourists[date][code] : null;
-            else if (filterType === 'volunteers') count = (volunteers[date] && typeof volunteers[date][code] === 'number') ? volunteers[date][code] : null;
-                else if (filterType === '1time') count = (firstTimers[date] && typeof firstTimers[date][code] === 'number') ? firstTimers[date][code] : null;
-            else if (filterType === 'clubs') count = (clubbers[date] && typeof clubbers[date][code] === 'number') ? clubbers[date][code] : null;
-            else if (filterType === 'pb') count = (pbCount[date] && typeof pbCount[date][code] === 'number') ? pbCount[date][code] : null;
-            else if (filterType === 'recentBest') count = (recentBest[date] && typeof recentBest[date][code] === 'number') ? recentBest[date][code] : null;
-            else if (filterType === 'returners') count = (returners[date] && typeof returners[date][code] === 'number') ? returners[date][code] : null;
-            else if (filterType === 'eligible_time') count = (eligibleTimes[date] && typeof eligibleTimes[date][code] === 'number') ? eligibleTimes[date][code] : null;
-            else if (filterType === 'unknown') count = (unknowns[date] && typeof unknowns[date][code] === 'number') ? unknowns[date][code] : null;
-            else if (filterType === 'regs') count = (regulars[date] && typeof regulars[date][code] === 'number') ? regulars[date][code] : null;
-        else if (filterType === 'all') count = participants;
-        else {
-            // for other filters fallback to positionLookup
-            count = (positionLookup[date] && typeof positionLookup[date][code] === 'number') ? positionLookup[date][code] : null;
-        }
-        if (count === null) return '';
-        const pct = (Number(count) / Number(participants)) * 100;
-    return percentOneDecimalFilters.includes(filterType) ? formatPercent(roundTo1(pct, 3), 1) : formatPercent(pct, 0);
-    } else if (filterType === 'volunteers') {
-        const val = volunteers[date]?.[code];
-        if (typeof val === 'number') {
-            return analysisType === 'participants' ? (showOneDecimalCells ? roundTo1(val, 3) : Math.round(val)) : val;
-        }
-        return '';
-    } else if (filterType === 'tourist') {
-        const val = tourists[date]?.[code];
-        if (typeof val === 'number') {
-            return analysisType === 'participants' ? (showOneDecimalCells ? roundTo1(val, 3) : Math.round(val)) : val;
-        }
-        return '';
-    } else if (filterType === 'sTourist') {
-        const val = superTourists[date]?.[code];
-        if (typeof val === 'number') {
-            return analysisType === 'participants' ? (showOneDecimalCells ? roundTo1(val, 3) : Math.round(val)) : val;
-        }
-        return '';
-    } else if (filterType === '1time') {
-        const val = firstTimers[date]?.[code];
-        // debug: log when we read firstTimers value
-        console.log('[debug-cell] firstTimers cell', { date, code, val });
-        if (typeof val === 'number') {
-            return analysisType === 'participants' ? (showOneDecimalCells ? roundTo1(val, 3) : Math.round(val)) : val;
-        }
-        // debug: fallback to positionLookup
-        console.log('[debug-cell] firstTimers fallback to positionLookup', { date, code, fallback: positionLookup[date]?.[code] });
-        return '';
-    } else if (filterType === 'clubs') {
-        const val = clubbers[date]?.[code];
-    if (typeof val === 'number') return analysisType === 'participants' ? (showOneDecimalCells ? roundTo1(val, 3) : Math.round(val)) : val;
-        return '';
-    } else if (filterType === 'pb') {
-        const val = pbCount[date]?.[code];
-    if (typeof val === 'number') return analysisType === 'participants' ? (showOneDecimalCells ? roundTo1(val, 3) : Math.round(val)) : val;
-        return '';
-    } else if (filterType === 'recentBest') {
-        const val = recentBest[date]?.[code];
-    if (typeof val === 'number') return analysisType === 'participants' ? (showOneDecimalCells ? roundTo1(val, 3) : Math.round(val)) : val;
-        return '';
-    } else if (filterType === 'returners') {
-        const val = returners[date]?.[code];
-    if (typeof val === 'number') return analysisType === 'participants' ? (showOneDecimalCells ? roundTo1(val, 3) : Math.round(val)) : val;
-        return '';
-    } else if (filterType === 'eligible_time') {
-        const val = eligibleTimes[date]?.[code];
-    if (typeof val === 'number') return analysisType === 'participants' ? (showOneDecimalCells ? roundTo1(val, 3) : Math.round(val)) : val;
-        return '';
-    } else if (filterType === 'unknown') {
-        const val = unknowns[date]?.[code];
-    if (typeof val === 'number') return analysisType === 'participants' ? (showOneDecimalCells ? roundTo1(val, 3) : Math.round(val)) : val;
-        return '';
-    } else if (filterType === 'regs') {
-        const val = regulars[date]?.[code];
-        if (typeof val === 'number') {
-            return analysisType === 'participants' ? (showOneDecimalCells ? roundTo1(val, 3) : Math.round(val)) : val;
-        }
-        return '';
-    } else if (filterType === 'eventNumber') {
-        const val = event_number[date]?.[code];
-        if (typeof val === 'number' && val !== 0 && val <= 10000) {
-            return analysisType === 'participants' ? (showOneDecimalCells ? roundTo1(val, 3) : Math.round(val)) : val;
-        }
-        return '';
-    } else if (filterType === 'coeff' || filterType === 'coeff_event' || filterType === 'coeff_combined') {
-        const val = (filterType === 'coeff_event') ? coeff_event[date]?.[code] : (filterType === 'coeff_combined' ? coeff_combined[date]?.[code] : coeff[date]?.[code]);
-        if (filterType === 'coeff_combined') {
-            return (typeof val === 'number') ? formatCombined(val) : '';
-        }
-        return (typeof val === 'number' && val !== 0) ? formatCoeff(val) : '';
-    } else {
-        const val = positionLookup[date]?.[code];
-        if (typeof val === 'number' && val !== 0) {
-            return analysisType === 'participants' ? (showOneDecimalCells ? roundTo1(val, 3) : Math.round(val)) : val;
-        }
-        return '';
+        return typeof formatAvgTime === 'function' ? formatAvgTime(n) : n;
     }
+    if (analysisType === 'Age') {
+        return formatAge(n);
+    }
+    if (analysisType === '%Participants') {
+        return formatPercent(n, (percentOneDecimalFilters.includes(filterType) || showOneDecimalForAnnual) ? 1 : 0);
+    }
+    if (analysisType === '%Total') {
+        // For coeff-style filters numeric already represents deviation where required
+        const precision = (String(filterType).startsWith('coeff') || percentOneDecimalFilters.includes(filterType) || showOneDecimalForAnnual) ? 1 : 0;
+        return formatPercent(n, precision);
+    }
+    // Default: Participants / raw numbers
+    // Special-case: when viewing raw Participants but the filter is a hardness coeff
+    // we want to show the deviation as a percent with two decimals (e.g. 0.096 -> 9.60%).
+    if (String(analysisType).toLowerCase() === 'participants') {
+        if (String(filterType).startsWith('coeff')) {
+            if (filterType === 'coeff_combined') {
+                // coeff_combined stored as deviation
+                return formatCombined(n);
+            }
+            // coeff and coeff_event stored as coefficient (≈1.02)
+            return formatCoeff(n);
+        }
+        if (showOneDecimalCells) return roundTo1(n, 3);
+        return Math.round(n);
+    }
+    return n;
 }
 // Handle Age cells
 function formatAge(val: number | null | undefined): string {
@@ -984,7 +893,13 @@ positionLookup: { [key: string]: { [key: string]: number } };
     }
     if (filterType === 'coeff' || filterType === 'coeff_event' || filterType === 'coeff_combined') {
         const v = (filterType === 'coeff_event') ? coeff_event[date]?.[code] : (filterType === 'coeff_combined' ? coeff_combined[date]?.[code] : coeff[date]?.[code]);
-        return typeof v === 'number' ? v : null;
+        if (typeof v !== 'number' || !isFinite(v)) return null;
+        // For %Total we want the numerator to be the deviation value (coeff - 1)
+        if (analysisType === '%Total') {
+            if (filterType === 'coeff_combined') return v; // combined already stored as deviation
+            return v - 1;
+        }
+        return v;
     }
     const v = positionLookup[date]?.[code];
     return typeof v === 'number' ? v : null;
@@ -1277,47 +1192,38 @@ const eventTotals: { [code: string]: number } = {};
     // Precompute column totals (sum across eventCodes for each date) for %Total mode.
     // Use the currently selected filter to build column totals so %Total divides by the correct base.
     const columnTotals: { [date: string]: number } = {};
+    // Build column totals by summing the numeric value used for each cell.
+    // This ensures numerators and denominators use the same units for all filters,
+    // including coeff / coeff_event / coeff_combined where getCellNumericValue
+    // already returns deviations for `%Total` mode when appropriate.
     eventDates.forEach(d => {
         let colSum = 0;
         eventCodes.forEach(c => {
-            let v = 0;
-            if (filterType === 'volunteers') v = volunteers[d]?.[c] || 0;
-            else if (filterType === 'tourist') v = tourists[d]?.[c] || 0;
-            else if (filterType === 'sTourist') v = superTourists[d]?.[c] || 0;
-            else if (filterType === '1time') v = firstTimers[d]?.[c] || 0;
-            else if (filterType === 'regs') v = regulars[d]?.[c] || 0;
-            else if (filterType === 'clubs') v = clubbers[d]?.[c] || 0;
-            else if (filterType === 'pb') v = pbCount[d]?.[c] || 0;
-            else if (filterType === 'recentBest') v = recentBest[d]?.[c] || 0;
-            else if (filterType === 'returners') v = returners[d]?.[c] || 0;
-            else if (filterType === 'eligible_time') v = eligibleTimes[d]?.[c] || 0;
-            else if (filterType === 'unknown') v = unknowns[d]?.[c] || 0;
-            else if (filterType === 'eventNumber') v = event_number[d]?.[c] || 0;
-            else if (filterType === 'all') v = positionLookup[d]?.[c] || 0;
-            else v = positionLookup[d]?.[c] || 0;
-            colSum += Number(v) || 0;
+            const v = getCellNumericValue({
+                analysisType,
+                avgType,
+                filterType,
+                date: d,
+                code: c,
+                avgTimeLim12Lookup,
+                avgTimeLim5Lookup,
+                avgTimeLookup,
+                volunteers,
+                tourists,
+                coeff,
+                positionLookup,
+                event_number,
+                cellAgg,
+                avgAgeLookup
+            });
+            colSum += (typeof v === 'number' && isFinite(v)) ? Number(v) : 0;
         });
         columnTotals[d] = colSum;
     });
-    const grandTotalSum = Object.values(columnTotals).reduce((a, b) => a + b, 0);
-
-    // Dev debug: when viewing %Total with Event Number filter, print per-date diagnostics
-    try {
-        if (typeof window !== 'undefined' && analysisType === '%Total' && filterType === 'eventNumber' && eventDates.length > 0) {
-            eventDates.forEach(d => {
-                const rows = eventCodes.map(c => ({ code: c, numer: event_number[d]?.[c] ?? null }));
-                const numerVals = rows.map(r => (typeof r.numer === 'number' ? r.numer : 0));
-                const sumNumer = numerVals.reduce((a, b) => a + b, 0);
-                const colTotal = columnTotals[d] || 0;
-                const pcts = rows.map(r => (typeof r.numer === 'number' && colTotal ? (r.numer / colTotal) * 100 : null));
-                const sumPcts = pcts.reduce<number>((acc, v) => acc + (v ?? 0), 0);
-                console.log('[debug-%Total-eventNumber] date', d, 'colTotal', colTotal, 'sumNumer', sumNumer, 'sumPcts', sumPcts, 'rowsSample', rows.slice(0,10), 'pctsSample', pcts.slice(0,10));
-            });
-            console.log('[debug-%Total-eventNumber] grandTotalSum', grandTotalSum);
-        }
-    } catch (e) {
-        // ignore
-    }
+    let grandTotalSum = Object.values(columnTotals).reduce((a, b) => a + b, 0);
+    // Removed dev diagnostics and per-date coeff precompute. Header aggregation for
+    // `%Total` + `agg='total'` now computes the sum of the per-event percentages
+    // for that date so the header reflects the cells below.
 
     eventCodes.forEach(code => {
         if (analysisType === 'Times') {
@@ -1346,7 +1252,19 @@ const eventTotals: { [code: string]: number } = {};
                         const en = event_number[d]?.[code];
                         if (typeof en !== 'number') return;
                     }
-                    const denom = analysisType === '%Total' ? columnTotals[d] : positionLookup[d]?.[code];
+                    let denom = analysisType === '%Total' ? columnTotals[d] : positionLookup[d]?.[code];
+                    // For coefficient-style filters, compute denom as the sum of deviations
+                    if (analysisType === '%Total' && String(filterType).startsWith('coeff')) {
+                        denom = eventCodes.reduce((acc, cc) => {
+                            let v: any;
+                            if (filterType === 'coeff') v = coeff[d]?.[cc];
+                            else if (filterType === 'coeff_event') v = coeff_event[d]?.[cc];
+                            else v = coeff_combined[d]?.[cc];
+                            if (v === null || v === undefined) return acc;
+                            const num = (filterType === 'coeff_combined') ? Number(v) : (Number(v) - 1);
+                            return acc + (isFinite(num) ? num : 0);
+                        }, 0);
+                    }
                     if (!denom || denom === 0) return;
                     // Do not coerce missing numerators to 0: treat NULL/blank as absent and skip
                     let rawNumer: any;
@@ -1363,6 +1281,9 @@ const eventTotals: { [code: string]: number } = {};
                     else if (filterType === 'unknown') rawNumer = unknowns[d]?.[code];
                     else if (filterType === 'eventNumber') rawNumer = event_number[d]?.[code];
                     else if (filterType === 'all') rawNumer = positionLookup[d]?.[code];
+                    else if (filterType === 'coeff') rawNumer = (coeff[d]?.[code] !== undefined && coeff[d]?.[code] !== null) ? (Number(coeff[d][code]) - 1) : null;
+                    else if (filterType === 'coeff_event') rawNumer = (coeff_event[d]?.[code] !== undefined && coeff_event[d]?.[code] !== null) ? (Number(coeff_event[d][code]) - 1) : null;
+                    else if (filterType === 'coeff_combined') rawNumer = coeff_combined[d]?.[code];
                     else rawNumer = positionLookup[d]?.[code];
                     // Skip NULL/undefined/empty-string numerators so missing cells are ignored
                     if (rawNumer === null || rawNumer === undefined || rawNumer === '') return;
@@ -1376,12 +1297,13 @@ const eventTotals: { [code: string]: number } = {};
                 if (pcts.length === 0) {
                     eventTotals[code] = 0;
                 } else if (aggType === 'total') {
-                    // For %Total, left aggregate is rowSum as a percent of grand total
-                    if (analysisType === '%Total') {
-                        eventTotals[code] = grandTotalSum ? (rowSum / grandTotalSum) * 100 : 0;
+                    // For 'total' agg: sum the per-date percentages (pcts)
+                    // For %Total this means the left aggregate is the sum of each cell's percent-of-column value.
+                    const totalPct = pcts.reduce((a, b) => a + b, 0);
+                    // Keep decimals for %Total or filters that require one decimal, otherwise round
+                    if (analysisType === '%Total' || percentOneDecimalFilters.includes(filterType)) {
+                        eventTotals[code] = totalPct;
                     } else {
-                        // For non-%Total, fall back to summing pcts
-                        const totalPct = pcts.reduce((a, b) => a + b, 0);
                         eventTotals[code] = Math.round(totalPct);
                     }
                 } else if (aggType === 'avg' || aggType === 'average') {
@@ -1625,35 +1547,9 @@ const sortedEventCodes = [...eventCodes].sort((a, b) => {
                                     if (aggType === 'growth') {
                                         return <th key={date} className="sticky-header second-row"> </th>;
                                     }
-                                    // Special-case `coeff` (seasonal hardness) here to avoid relying on
-                                    // module-level helpers that reference component-local lookups. Compute
-                                    // the average directly from the `coeff` lookup so the header shows
-                                    // the mean coefficient-derived percent correctly.
-                                    if (filterType === 'coeff' || filterType === 'coeff_event' || filterType === 'coeff_combined') {
-                                        const vals: number[] = [];
-                                        eventCodes.forEach(c => {
-                                            const v = (filterType === 'coeff_event') ? coeff_event[date]?.[c] : (filterType === 'coeff_combined' ? coeff_combined[date]?.[c] : coeff[date]?.[c]);
-                                            if (typeof v === 'number' && !isNaN(v)) vals.push(v);
-                                        });
-                                        if (vals.length === 0) {
-                                            return <th key={date} className="sticky-header second-row"> </th>;
-                                        }
-                                        if (aggType === 'avg' || aggType === 'average') {
-                                            const avgCoeff = vals.reduce((a, b) => a + b, 0) / vals.length;
-                                            return <th key={date} className="sticky-header second-row">{filterType === 'coeff_combined' ? formatCombined(avgCoeff) : formatCoeff(avgCoeff)}</th>;
-                                        }
-                                        if (aggType === 'max') {
-                                            const m = Math.max(...vals);
-                                            return <th key={date} className="sticky-header second-row">{filterType === 'coeff_combined' ? formatCombined(m) : formatCoeff(m)}</th>;
-                                        }
-                                        if (aggType === 'min') {
-                                            const m = Math.min(...vals);
-                                            return <th key={date} className="sticky-header second-row">{filterType === 'coeff_combined' ? formatCombined(m) : formatCoeff(m)}</th>;
-                                        }
-                                        // For other agg types fall back to average behavior
-                                        const avgFallback = vals.reduce((a, b) => a + b, 0) / vals.length;
-                                        return <th key={date} className="sticky-header second-row">{filterType === 'coeff_combined' ? formatCombined(avgFallback) : formatCoeff(avgFallback)}</th>;
-                                    }
+                                    // No special-case here: fall through to generic aggregation
+                                    // which will use the appropriate lookup (coeff/coeff_event/coeff_combined)
+                                    // and formatting helpers for header cells.
 
                                     let value = getAggregatedValueForDate(lookup, date, eventCodes, aggType, (showOneDecimalForAnnual && (lookup === positionLookup || filterType === 'sTourist')) ? 1 : undefined);
                                     // For participants view (non-percent) ensure header aggregates are integers
@@ -1669,7 +1565,28 @@ const sortedEventCodes = [...eventCodes].sort((a, b) => {
                                                 const en = event_number[date]?.[code];
                                                 if (typeof en !== 'number') return;
                                             }
-                                            const denom = analysisType === '%Total' ? columnTotals[date] : positionLookup[date]?.[code];
+                                            let denom = analysisType === '%Total' ? columnTotals[date] : positionLookup[date]?.[code];
+                                            if (analysisType === '%Total' && String(filterType).startsWith('coeff')) {
+                                                denom = eventCodes.reduce((acc, cc) => {
+                                                    const v = getCellNumericValue({
+                                                        analysisType,
+                                                        avgType,
+                                                        filterType,
+                                                        date,
+                                                        code: cc,
+                                                        avgTimeLim12Lookup,
+                                                        avgTimeLim5Lookup,
+                                                        avgTimeLookup,
+                                                        volunteers,
+                                                        tourists,
+                                                        coeff,
+                                                        positionLookup,
+                                                        event_number,
+                                                        cellAgg
+                                                    });
+                                                    return acc + (typeof v === 'number' ? Number(v) : 0);
+                                                }, 0);
+                                            }
                                             if (!denom || denom === 0) return;
                                             // Do not coerce missing numerators to 0: treat NULL/blank as absent and skip
                                             let rawNumer: any;
@@ -1686,6 +1603,9 @@ const sortedEventCodes = [...eventCodes].sort((a, b) => {
                                             else if (filterType === 'unknown') rawNumer = unknowns[date]?.[code];
                                             else if (filterType === 'eventNumber') rawNumer = event_number[date]?.[code];
                                             else if (filterType === 'all') rawNumer = positionLookup[date]?.[code];
+                                            else if (filterType === 'coeff') rawNumer = (coeff[date]?.[code] !== undefined && coeff[date]?.[code] !== null) ? (Number(coeff[date][code]) - 1) : null;
+                                            else if (filterType === 'coeff_event') rawNumer = (coeff_event[date]?.[code] !== undefined && coeff_event[date]?.[code] !== null) ? (Number(coeff_event[date][code]) - 1) : null;
+                                            else if (filterType === 'coeff_combined') rawNumer = coeff_combined[date]?.[code];
                                             else rawNumer = positionLookup[date]?.[code];
                                             // Skip NULL/undefined/empty-string numerators so missing cells are ignored
                                             if (rawNumer === null || rawNumer === undefined || rawNumer === '') return;
@@ -1785,8 +1705,17 @@ const sortedEventCodes = [...eventCodes].sort((a, b) => {
                                             if (analysisType === '%Total') {
                                                 const raw = Number(eventTotals[code]);
                                                 if (!isFinite(raw)) return '';
-                                                const sig2 = roundToSignificant(raw, 2);
-                                                return formatPercent(Number(sig2.toFixed(1)), 1);
+                                                    // When Agg = 'total' we want the left aggregate to be the sum
+                                                    // of the per-cell percentages and displayed with no decimals.
+                                                    if (aggType === 'total') {
+                                                        return formatPercent(raw, 0);
+                                                    }
+                                                    // For coefficient filters, keep two decimal places; otherwise use 1 decimal
+                                                    if (String(filterType).startsWith('coeff')) {
+                                                        return formatPercent(roundTo1(raw, 4), 1);
+                                                    }
+                                                    const sig2 = roundToSignificant(raw, 2);
+                                                    return formatPercent(Number(sig2.toFixed(1)), 1);
                                             }
                                             return formatPercent((percentOneDecimalFilters.includes(filterType) ? roundTo1(eventTotals[code], 3) : eventTotals[code]), (percentOneDecimalFilters.includes(filterType) || showOneDecimalForAnnual) ? 1 : 0);
                                         }
@@ -1835,13 +1764,38 @@ const sortedEventCodes = [...eventCodes].sort((a, b) => {
                                         const b = formatPercent((percentOneDecimalFilters.includes(filterType) ? roundTo1(eventTotals[code], 3) : eventTotals[code]), 1);
                                         isEqual = a === b;
                                     } else if (analysisType === '%Total') {
-                                        // compute per-cell percent (numer / column total) and compare as displayed with 1 decimal
-                                        const denom = columnTotals[date] || 0;
-                                        if (denom && typeof numeric === 'number') {
-                                            const pct = (Number(numeric) / Number(denom)) * 100;
-                                            const a = formatPercent((percentOneDecimalFilters.includes(filterType) ? roundTo1(pct, 3) : pct), 1);
-                                            const b = formatPercent((percentOneDecimalFilters.includes(filterType) ? roundTo1(eventTotals[code], 3) : eventTotals[code]), 1);
-                                            isEqual = a === b;
+                                        // compute per-cell percent (numer / column total) and compare using appropriate precision
+                                        // Compute column denominator from the same numeric source used for cells
+                                        const computedDenom = eventCodes.reduce((acc, cc) => {
+                                            const v = getCellNumericValue({
+                                                analysisType,
+                                                avgType,
+                                                filterType,
+                                                date,
+                                                code: cc,
+                                                avgTimeLim12Lookup,
+                                                avgTimeLim5Lookup,
+                                                avgTimeLookup,
+                                                volunteers,
+                                                tourists,
+                                                coeff,
+                                                positionLookup,
+                                                event_number,
+                                                cellAgg
+                                            });
+                                            return acc + (typeof v === 'number' ? Number(v) : 0);
+                                        }, 0);
+                                        if (computedDenom && typeof numeric === 'number') {
+                                            const pct = (Number(numeric) / Number(computedDenom)) * 100;
+                                            if (String(filterType).startsWith('coeff')) {
+                                                const a = formatPercent(roundTo1(pct, 4), 1);
+                                                const b = formatPercent(roundTo1(Number(eventTotals[code]), 4), 1);
+                                                isEqual = a === b;
+                                            } else {
+                                                const a = formatPercent((percentOneDecimalFilters.includes(filterType) ? roundTo1(pct, 3) : pct), 1);
+                                                const b = formatPercent((percentOneDecimalFilters.includes(filterType) ? roundTo1(eventTotals[code], 3) : eventTotals[code]), 1);
+                                                isEqual = a === b;
+                                            }
                                         } else {
                                             isEqual = false;
                                         }
@@ -1926,14 +1880,37 @@ const sortedEventCodes = [...eventCodes].sort((a, b) => {
                                                 }
                                                 // If this is the new %Total analysis, show each cell as percent of the column total
                                                 if (analysisType === '%Total') {
-                                                    // use the precomputed numeric 'numeric' where available, otherwise try val
-                                                    let numer: number | null = null;
-                                                    if (typeof numeric === 'number') numer = Number(numeric);
-                                                    else if (typeof val === 'number') numer = Number(val);
-                                                    const denom = columnTotals[date] || 0;
-                                                    if (!denom || numer === null) return '';
-                                                    const pct = (Number(numer) / Number(denom)) * 100;
-                                                    return percentOneDecimalFilters.includes(filterType) ? formatPercent(roundTo1(pct, 3), 1) : formatPercent(pct, 1);
+                                                        // use the precomputed numeric 'numeric' where available, otherwise try val
+                                                        let numer: number | null = null;
+                                                        if (typeof numeric === 'number') numer = Number(numeric);
+                                                        else if (typeof val === 'number') numer = Number(val);
+                                                        // Compute column denominator from same numeric source used for cells
+                                                        const computedDenom = eventCodes.reduce((acc, cc) => {
+                                                            const v = getCellNumericValue({
+                                                                analysisType,
+                                                                avgType,
+                                                                filterType,
+                                                                date,
+                                                                code: cc,
+                                                                avgTimeLim12Lookup,
+                                                                avgTimeLim5Lookup,
+                                                                avgTimeLookup,
+                                                                volunteers,
+                                                                tourists,
+                                                                coeff,
+                                                                positionLookup,
+                                                                event_number,
+                                                                cellAgg
+                                                            });
+                                                            return acc + (typeof v === 'number' ? Number(v) : 0);
+                                                        }, 0);
+                                                        if (!computedDenom || numer === null) return '';
+                                                        const pct = (Number(numer) / Number(computedDenom)) * 100;
+                                                        // For coefficient-style filters, show one decimal
+                                                        if (String(filterType).startsWith('coeff')) {
+                                                            return formatPercent(roundTo1(pct, 4), 1);
+                                                        }
+                                                        return percentOneDecimalFilters.includes(filterType) ? formatPercent(roundTo1(pct, 3), 1) : formatPercent(pct, 1);
                                                 }
                                                 // If numeric and participant-like, round to integer for display
                                                 if (participantLike && typeof val === 'number' && !isNaN(val)) {
