@@ -906,13 +906,13 @@ positionLookup: { [key: string]: { [key: string]: number } };
 }
 function formatCoeff(val: number): string | number {
     const percent = ((val - 1) * 100).toFixed(2);
-    return percent === "0.00" ? '0%' : `${percent}%`;
+    return `${percent}%`;
 }
 function formatCombined(val: number): string {
     if (val === null || val === undefined || !isFinite(Number(val))) return '';
     // val is combined deviation (e.g. 0.096032). Show as percent with two decimals (e.g. 9.60%).
     const pct = (Number(val) * 100).toFixed(2);
-    return pct === '0.00' ? '0%' : `${pct}%`;
+    return `${pct}%`;
 }
 function formatPercent(val: number | null | undefined, precision = 0): string {
     if (val === null || val === undefined || !isFinite(Number(val))) return '';
@@ -1553,8 +1553,9 @@ const sortedEventCodes = [...eventCodes].sort((a, b) => {
 
                                     let value = getAggregatedValueForDate(lookup, date, eventCodes, aggType, (showOneDecimalForAnnual && (lookup === positionLookup || filterType === 'sTourist')) ? 1 : undefined);
                                     // For participants view (non-percent) ensure header aggregates are integers
+                                    // but do NOT round coeff-style filters (they are coefficients ≈1.00)
                                     if (String(analysisType).toLowerCase() === 'participants' && !showOneDecimalForAnnual) {
-                                        if (typeof value === 'number') value = Math.round(value);
+                                        if (typeof value === 'number' && !String(filterType).startsWith('coeff')) value = Math.round(value);
                                     }
                                     // For %Participants mode compute per-event percentages for this date then aggregate those
                                     if (analysisType === '%Participants' || analysisType === '%Total') {
@@ -1683,7 +1684,7 @@ const sortedEventCodes = [...eventCodes].sort((a, b) => {
                                     }
                                     return (
                                         <th key={date} className="sticky-header second-row">
-                                            {(filterType === 'coeff' || filterType === 'coeff_event' || filterType === 'coeff_combined') ? formatCoeff(value) : displayValue}
+                                            {filterType === 'coeff_combined' ? formatCombined(value) : (filterType === 'coeff' || filterType === 'coeff_event' ? formatCoeff(value) : displayValue)}
                                         </th>
                                     );
                                 }
