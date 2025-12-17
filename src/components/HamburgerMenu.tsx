@@ -20,7 +20,8 @@ const HamburgerMenu: React.FC = () => {
                 <ul className="hamburger-list">
                     <li onClick={() => handleMenuClick('/')}>Home</li>
                     <li onClick={() => handleMenuClick('/login')}>Login</li>
-                    <li onClick={() => handleMenuClick('/results')}>Results</li>
+                    <li onClick={() => handleMenuClick('/results')}>Events</li>
+                    <li onClick={() => handleMenuClick('/races')}>Races</li>
                     <li onClick={() => handleMenuClick('/courses')}>Courses</li>
                     <li onClick={() => handleMenuClick('/athletes')}>Athletes</li>
                 </ul>
