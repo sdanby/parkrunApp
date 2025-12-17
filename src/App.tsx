@@ -4,6 +4,7 @@ import HamburgerMenu from './components/HamburgerMenu';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Results from './pages/Results';
+import Races from './pages/Races';
 import Courses from './pages/Courses';
 import Athletes from './pages/Athletes';
 import './styles/main.css';
@@ -12,6 +13,7 @@ const headings: { [key: string]: string } = {
     '/': 'Home',
     '/login': 'Login',
     '/results': 'Event Analysis',
+    '/races': 'Races',
     '/courses': 'Courses',
     '/athletes': 'Athletes'
 };
@@ -36,6 +38,7 @@ const App: React.FC = () => {
                     <Route path="/" element={<Home />} />
                     <Route path="/login" element={<Login />} />
                     <Route path="/results" element={<Results />} />
+                    <Route path="/races" element={<Races />} />
                     <Route path="/courses" element={<Courses />} />
                     <Route path="/athletes" element={<Athletes />} />
                 </Routes>
