@@ -377,7 +377,7 @@ function formatHeaderDate(date: any, query: string): string {
     }
 }
 
-const Results: React.FC = () => {
+const ResultsPageComponent: React.FC = () => {
     const [results, setResults] = useState<any[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
         const [error, setError] = useState<string | null>(null);
@@ -1942,4 +1942,4 @@ const sortedEventCodes = [...eventCodes].sort((a, b) => {
     );
 };
 
-export default Results;
+export default ResultsPageComponent;
