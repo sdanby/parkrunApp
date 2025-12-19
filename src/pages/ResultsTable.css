@@ -1,15 +1,14 @@
 /* Results table layout and column width constraints */
-.results-table-container {
-  width: 100%;
-  overflow-x: auto; /* allow horizontal scroll on small viewports */
-  overflow-y: hidden;
-  /* ensure left-aligned content */
-  text-align: left;
-}
 
 :root {
 --col1-width: 4cm;
 --col2-width: 2.5cm;
+}
+
+/* Races-specific overrides for first two columns */
+.races-table {
+  --col1-width: 1.5cm;
+  --col2-width: 5cm;
 }
 
 /* apply to both headers and cells for column 1/2 */
@@ -141,7 +140,7 @@ overflow: hidden;
 .sticky-corner-2-1 {
   position: sticky;
   left: 0;
-  z-index: 5;
+  z-index: 60; /* raised so sticky first-column content stays above header rows */
   min-width: 4cm !important;
   max-width: 4cm !important;
   width: 4cm !important;
@@ -153,7 +152,7 @@ overflow: hidden;
 .sticky-corner-2-2 {
   position: sticky;
   left: 4cm; /* positioned after first column */
-  z-index: 5;
+  z-index: 55; /* slightly below first sticky col but above header dates */
   min-width: 2.5cm !important;
   max-width: 2.5cm !important;
   width: 2.5cm !important;
@@ -229,11 +228,82 @@ select:focus {
 
 .results-table-container {
   overflow-x: auto;
-  overflow-y: auto;      /* Add this line */
+  overflow-y: scroll;      /* force a visible vertical scrollbar */
   max-width: 100vw;
   margin-left: 0.5cm; /* Indent by 0.5cm */
-  max-height: 600px; /* or whatever height you want */
+  height: 600px; /* fixed height so overflow works reliably */
+  padding-right: 48px; /* reserve space so the overlay doesn't cover the native scrollbar */
+  padding-bottom: 18px; /* reserve space so the horizontal native scrollbar can appear */
+  -webkit-overflow-scrolling: auto;
+  scrollbar-width: thin; /* Firefox */
+  scrollbar-color: rgba(0,0,0,0.35) rgba(0,0,0,0.06);
+  display: block;
 }
+
+/* position context for absolute overlay */
+.results-table-container { position: relative; }
+
+/* small right-edge overlay to support faster vertical scrolling */
+.fast-scroll {
+  position: absolute;
+  /* move further left so it does not sit on top of the native scrollbar */
+  right: 16px;
+  top: 0;
+  height: 100%;
+  width: 18px;
+  z-index: 120;
+  cursor: ns-resize;
+  background: linear-gradient(90deg, rgba(0,0,0,0.02), rgba(0,0,0,0));
+  border-left: 1px solid rgba(0,0,0,0.04);
+  border-radius: 4px 0 0 4px;
+}
+.fast-scroll:hover { background: linear-gradient(90deg, rgba(0,0,0,0.06), rgba(0,0,0,0)); }
+
+/* WebKit/Chromium scrollbar styling (Chrome, Edge) */
+.results-table-container::-webkit-scrollbar {
+  width: 12px;
+}
+.results-table-container::-webkit-scrollbar-track {
+  background: rgba(0,0,0,0.04);
+}
+.results-table-container::-webkit-scrollbar-thumb {
+  background-color: rgba(0,0,0,0.35);
+  border-radius: 6px;
+  border: 3px solid rgba(0,0,0,0.06);
+}
+
+/* Keep native horizontal scrollbar available so users can scroll across columns.
+  We purposely do not hide native scrollbars here; the custom vertical scrollbar
+  remains for visibility when OS/browser auto-hides vertical scrollbars. */
+
+/* Custom, always-visible scrollbar (drawn UI) to ensure users can always see and drag a thumb
+   regardless of OS/browser auto-hide settings. Positioned inside the container and left of native track. */
+.custom-scrollbar {
+  position: absolute;
+  right: 8px; /* sit slightly inset from the container edge */
+  top: 6px;
+  bottom: 6px;
+  width: 12px; /* slimmer track */
+  z-index: 130;
+  pointer-events: auto; /* accept pointer events on track and thumb */
+  background: rgba(0,0,0,0.02);
+  border-radius: 6px;
+  display: block;
+}
+.custom-scrollbar .custom-thumb {
+  position: absolute;
+  left: 1px;
+  width: 10px; /* slimmer thumb */
+  background: rgba(0,0,0,0.45);
+  border-radius: 6px;
+  pointer-events: auto; /* thumb accepts pointer events */
+  cursor: grab;
+  box-shadow: none; /* remove inset shadow to reduce flicker */
+}
+.custom-scrollbar .custom-thumb:active { cursor: grabbing; transform: translateZ(0); }
+
+/* make sure overlay doesn't block pointer events for table cells except its own area */
+.results-table-container .fast-scroll { pointer-events: auto; }
 
 .results-table {
   border-collapse: collapse;
@@ -345,7 +415,7 @@ select:focus {
   position: sticky;
   top: 0;
   left: 0;
- 
+  z-index: 80; /* ensure the top-left header cells remain on top */
   background-color: rgba(224,224,224,0.98);
   box-shadow: 4px 4px 12px rgba(80,80,80,0.15);
 }
@@ -353,7 +423,7 @@ select:focus {
   position: sticky;
   top: 0;
   left: 2.8cm; /* Must match sticky-col-2 */
-
+  z-index: 75; /* keep second header corner just under the top-left */
   background-color: rgba(224,224,224,0.98);
   box-shadow: 4px 0 12px rgba(80,80,80,0.15);
 }
@@ -399,6 +469,35 @@ select:focus {
     width: 100px !important;
   }
 
+
+/* Races-specific enforcement: ensure the --col1/--col2 vars are applied
+   and override any global defaults. This makes the first col 0.5cm and
+   second col 3cm for `.races-table`. */
+.races-table th:first-child,
+.races-table td:first-child {
+  min-width: var(--col1-width) !important;
+  max-width: var(--col1-width) !important;
+  width: var(--col1-width) !important;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.races-table th:nth-child(2),
+.races-table td:nth-child(2) {
+  min-width: var(--col2-width) !important;
+  max-width: var(--col2-width) !important;
+  width: var(--col2-width) !important;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Sticky offsets must match the variable widths so sticky columns sit correctly */
+.races-table .sticky-col { left: 0 !important; min-width: var(--col1-width) !important; max-width: var(--col1-width) !important; width: var(--col1-width) !important; }
+.races-table .sticky-col-2,
+.races-table .sticky-corner-2-2 { left: var(--col1-width) !important; min-width: var(--col2-width) !important; max-width: var(--col2-width) !important; width: var(--col2-width) !important; }
+.races-table .sticky-corner,
+.races-table .sticky-corner-2 { min-width: calc(var(--col1-width) + var(--col2-width)) !important; }
   /* Move second column to sit immediately after the smaller first column */
   .results-table th:nth-child(2),
   .results-table td:nth-child(2),
@@ -457,4 +556,75 @@ select:focus {
     max-width: 80px !important;
     width: auto !important;
   }
+}
+
+/* Final, high-specificity overrides for the Races table to ensure the
+   Pos (first) column is ~0.5cm and the Names (second) column is ~3cm.
+   Placed at the end so it overrides earlier generic rules. */
+.results-table.races-table th:first-child,
+.results-table.races-table td:first-child {
+  min-width: 1.5cm !important;
+  max-width: 1.5cm !important;
+  width: 1.5cm !important;
+  padding: 2px 6px !important;
+  font-size: 0.95em !important;
+  text-align: center !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+.results-table.races-table th:nth-child(2),
+.results-table.races-table td:nth-child(2) {
+  min-width: 5cm !important;
+  max-width: 5cm !important;
+  width: 5cm !important;
+  padding: 4px 8px !important;
+  text-align: left !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+/* Sticky offsets must precisely match the widths above */
+.results-table.races-table .sticky-col {
+  left: 0 !important;
+  min-width: 1.5cm !important;
+  max-width: 1.5cm !important;
+  width: 1.5cm !important;
+}
+.results-table.races-table .sticky-col-2,
+.results-table.races-table .sticky-corner-2-2 {
+  left: 1.5cm !important;
+  min-width: 5cm !important;
+  max-width: 5cm !important;
+  width: 5cm !important;
+}
+
+/* Adjust the top-left corner span to avoid visual overflow */
+.results-table.races-table .sticky-corner,
+.results-table.races-table .sticky-corner-2 {
+  min-width: calc(1.5cm + 5cm) !important;
+  max-width: calc(1.5cm + 5cm) !important;
+}
+
+/* Limit the visible table width to roughly 18 columns to avoid the table
+   expanding to the full page width. Calculation: first two columns use
+   --col1-width and --col2-width, remaining ~16 columns use 2.5cm each. */
+.results-table {
+  max-width: calc(var(--col1-width, 4cm) + var(--col2-width, 2.5cm) + 40cm) !important;
+  width: auto !important; /* allow the table to size to content up to the max */
+}
+
+/* Analysis-specific cap: limit analysis tables to roughly 16 visible columns
+   (first two variable-width columns + 14 columns at ~2.5cm). This prevents
+   the Event Analysis table from stretching the page when many periods are selected. */
+.results-table.analysis-table {
+  max-width: calc(var(--col1-width, 4cm) + var(--col2-width, 2.5cm) + 37cm) !important;
+  width: auto !important;
+}
+
+/* Limit the container for analysis tables so only ~16 columns are visible at once */
+.results-table-container.analysis-container {
+  max-width: calc(var(--col1-width, 4cm) + var(--col2-width, 2.5cm) + 37cm) !important;
+  overflow-x: auto;
 }
