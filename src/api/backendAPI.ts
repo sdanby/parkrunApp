@@ -87,9 +87,27 @@ export const fetchEventPositions = async (eventIdentifier: string, eventDate: st
             }
         }
         if (eventDate) params.set('event_date', eventDate);
-        const url = `${API_BASE_URL}/eventpositions?${params.toString()}`;
-        const response = await axios.get(url);
-        return response.data;
+        // Try deployed convention `/api/eventpositions` first, fall back to `/eventpositions`.
+        const candidates = [
+            `${API_BASE_URL}/api/eventpositions?${params.toString()}`,
+            `${API_BASE_URL}/eventpositions?${params.toString()}`,
+        ];
+        let lastErr: any = null;
+        for (const url of candidates) {
+            try {
+                const response = await axios.get(url);
+                return response.data;
+            } catch (err: any) {
+                lastErr = err;
+                // If 404, try next candidate; otherwise rethrow after loop
+                if (err.response && err.response.status === 404) {
+                    continue;
+                }
+                throw err;
+            }
+        }
+        // If we get here all candidates 404'd
+        throw lastErr;
     } catch (error) {
         console.error('Error fetching event positions:', error);
         throw error;
