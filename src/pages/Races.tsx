@@ -20,8 +20,14 @@ const Races: React.FC = () => {
             setLoading(true);
             setError(null);
             try {
+                // Normalize date to DD/MM/YYYY expected by backend (accept YYYY-MM-DD or DD/MM/YYYY)
+                let apiDate = date || '';
+                if (/^\d{4}-\d{2}-\d{2}$/.test(apiDate)) {
+                    const parts = apiDate.split('-');
+                    apiDate = `${parts[2]}/${parts[1]}/${parts[0]}`;
+                }
                 // Use the centralized API helper which respects `API_BASE_URL`
-                const data = await fetchEventPositions(eventCodeOrName, date);
+                const data = await fetchEventPositions(eventCodeOrName, apiDate);
                 setRows(Array.isArray(data) ? data : []);
             } catch (err) {
                 setError('Failed to fetch event positions — backend may not support this endpoint');
