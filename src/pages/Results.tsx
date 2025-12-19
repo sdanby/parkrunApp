@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { fetchResults, fetchAllResults } from '../api/backendAPI';
 import './ResultsTable.css'; // Create this CSS file for sticky headers
 import { formatDate,formatDate1,formatDate2,formatAvgTime,formatDateToDDMMYYYY } from '../utilities'; // Utility function to format dates
@@ -390,6 +391,15 @@ const ResultsPageComponent: React.FC = () => {
     const [filterType, setFilterType] = useState<string>('all');
     const [aggType, setAggType] = useState<string>('avg');
     const [cellAgg, setCellAgg] = useState<string>('single');
+
+    const navigate = useNavigate();
+    const handleCellClick = (date: string, eventCode: string) => {
+        // Navigate to Races page with query params for date and event
+        const params = new URLSearchParams();
+        if (date) params.set('date', String(date));
+        if (eventCode) params.set('event', String(eventCode));
+        navigate(`/races?${params.toString()}`);
+    };
 
     useEffect(() => {
         const getResults = async () => {
@@ -1810,7 +1820,63 @@ const sortedEventCodes = [...eventCodes].sort((a, b) => {
                                             : undefined)
                                         : undefined;
                                     return (
-                                        <td key={date} style={cellStyle}>
+                                        <td
+                                            key={date}
+                                            style={{ ...(cellStyle || {}), cursor: 'pointer' }}
+                                            tabIndex={0}
+                                            onClick={() => {
+                                                try {
+                                                    const v = getCellValue({
+                                                        analysisType,
+                                                        avgType,
+                                                        filterType,
+                                                        date,
+                                                        code,
+                                                        avgTimeLim12Lookup,
+                                                        avgTimeLim5Lookup,
+                                                        avgTimeLookup,
+                                                        volunteers,
+                                                        tourists,
+                                                        coeff,
+                                                        event_number,
+                                                        positionLookup,
+                                                        formatAvgTime,
+                                                        cellAgg,
+                                                        avgAgeLookup
+                                                    });
+                                                    if (v !== '' && v !== null && typeof v !== 'undefined') handleCellClick(date, code);
+                                                } catch (e) {
+                                                    // ignore
+                                                }
+                                            }}
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter') {
+                                                    try {
+                                                        const v = getCellValue({
+                                                            analysisType,
+                                                            avgType,
+                                                            filterType,
+                                                            date,
+                                                            code,
+                                                            avgTimeLim12Lookup,
+                                                            avgTimeLim5Lookup,
+                                                            avgTimeLookup,
+                                                            volunteers,
+                                                            tourists,
+                                                            coeff,
+                                                            event_number,
+                                                            positionLookup,
+                                                            formatAvgTime,
+                                                            cellAgg,
+                                                            avgAgeLookup
+                                                        });
+                                                        if (v !== '' && v !== null && typeof v !== 'undefined') handleCellClick(date, code);
+                                                    } catch (e) {
+                                                        // ignore
+                                                    }
+                                                }
+                                            }}
+                                        >
                                             {(() => {
                                                 const participantLike = analysisType === 'participants' && ['all', 'tourist', 'sTourist', 'eventNumber', 'volunteers', 'regs'].includes(filterType);
                                                 let val: any = '';
