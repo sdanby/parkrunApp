@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'https://hello-world-9yb9.onrender.com'
+// Use environment variable when available; default to deployed host.
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'https://hello-world-9yb9.onrender.com';
 
 export const fetchResults = async (opts?: number | string) => {
     try {
@@ -87,27 +88,10 @@ export const fetchEventPositions = async (eventIdentifier: string, eventDate: st
             }
         }
         if (eventDate) params.set('event_date', eventDate);
-        // Try deployed convention `/api/eventpositions` first, fall back to `/eventpositions`.
-        const candidates = [
-            `${API_BASE_URL}/api/eventpositions?${params.toString()}`,
-            `${API_BASE_URL}/eventpositions?${params.toString()}`,
-        ];
-        let lastErr: any = null;
-        for (const url of candidates) {
-            try {
-                const response = await axios.get(url);
-                return response.data;
-            } catch (err: any) {
-                lastErr = err;
-                // If 404, try next candidate; otherwise rethrow after loop
-                if (err.response && err.response.status === 404) {
-                    continue;
-                }
-                throw err;
-            }
-        }
-        // If we get here all candidates 404'd
-        throw lastErr;
+        // Call the deployed API path `/api/eventpositions`.
+        const url = `${API_BASE_URL}/api/eventpositions?${params.toString()}`;
+        const response = await axios.get(url);
+        return response.data;
     } catch (error) {
         console.error('Error fetching event positions:', error);
         throw error;
