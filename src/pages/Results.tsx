@@ -1457,8 +1457,8 @@ const sortedEventCodes = [...eventCodes].sort((a, b) => {
             pos1="0.4cm"
             pos2 ="0.5em"
         />
-            <div className="results-table-container">
-                <table className={query === 'Qseason' ? 'results-table compact' : 'results-table'}>
+            <div className="results-table-container analysis-container">
+                <table className={query === 'Qseason' ? 'results-table compact analysis-table' : 'results-table analysis-table'}>
                     <thead>
                         <tr>
                             <th
