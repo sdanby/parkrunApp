@@ -98,6 +98,28 @@ export const fetchEventPositions = async (eventIdentifier: string, eventDate: st
     }
 };
 
+export const fetchEventInfo = async (eventIdentifier: string, eventDate: string) => {
+    try {
+        const params = new URLSearchParams();
+        if (eventIdentifier) {
+            // If identifier is numeric, send as both event_number and event_code (backend will prefer event_number then event_code).
+            if (/^\d+$/.test(String(eventIdentifier))) {
+                params.set('event_number', String(eventIdentifier));
+                params.set('event_code', String(eventIdentifier));
+            } else {
+                params.set('event_name', String(eventIdentifier));
+            }
+        }
+        if (eventDate) params.set('event_date', eventDate);
+        const url = `${API_BASE_URL}/api/eventinfo?${params.toString()}`;
+        const response = await axios.get(url);
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching event info:', error);
+        throw error;
+    }
+};
+
 export const fetchAthletes = async () => {
     try {
         const response = await axios.get(`${API_BASE_URL}/athletes`);
