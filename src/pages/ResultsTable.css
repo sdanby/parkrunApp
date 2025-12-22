@@ -7,8 +7,8 @@
 
 /* Races-specific overrides for first two columns */
 .races-table {
-  --col1-width: 1.5cm;
-  --col2-width: 5cm;
+  --col1-width: 1.39cm;
+  --col2-width: 4cm;
 }
 
 /* apply to both headers and cells for column 1/2 */
@@ -563,9 +563,9 @@ select:focus {
    Placed at the end so it overrides earlier generic rules. */
 .results-table.races-table th:first-child,
 .results-table.races-table td:first-child {
-  min-width: 1.5cm !important;
-  max-width: 1.5cm !important;
-  width: 1.5cm !important;
+  min-width: 1.39cm !important;
+  max-width: 1.39cm !important;
+  width: 1.39cm !important;
   padding: 2px 6px !important;
   font-size: 0.95em !important;
   text-align: center !important;
@@ -575,9 +575,9 @@ select:focus {
 }
 .results-table.races-table th:nth-child(2),
 .results-table.races-table td:nth-child(2) {
-  min-width: 5cm !important;
-  max-width: 5cm !important;
-  width: 5cm !important;
+  min-width: 4cm !important;
+  max-width: 4cm !important;
+  width: 4cm !important;
   padding: 4px 8px !important;
   text-align: left !important;
   white-space: nowrap !important;
@@ -588,23 +588,30 @@ select:focus {
 /* Sticky offsets must precisely match the widths above */
 .results-table.races-table .sticky-col {
   left: 0 !important;
-  min-width: 1.5cm !important;
-  max-width: 1.5cm !important;
-  width: 1.5cm !important;
+  min-width: 1.39cm !important;
+  max-width: 1.39cm !important;
+  width: 1.39cm !important;
 }
 .results-table.races-table .sticky-col-2,
 .results-table.races-table .sticky-corner-2-2 {
-  left: 1.5cm !important;
-  min-width: 5cm !important;
-  max-width: 5cm !important;
-  width: 5cm !important;
+  left: 1.39cm !important;
+  min-width: 4cm !important;
+  max-width: 4cm !important;
+  width: 4cm !important;
 }
 
 /* Adjust the top-left corner span to avoid visual overflow */
 .results-table.races-table .sticky-corner,
 .results-table.races-table .sticky-corner-2 {
-  min-width: calc(1.5cm + 5cm) !important;
-  max-width: calc(1.5cm + 5cm) !important;
+  min-width: calc(1.39cm + 4cm) !important;
+  max-width: calc(1.39cm + 4cm) !important;
+}
+
+/* Races page header: keep above sticky table headers to avoid overlap */
+.races-header {
+  position: relative;
+  z-index: 200; /* higher than table sticky headers (which use z-index ~80) */
+  background: transparent;
 }
 
 /* Limit the visible table width to roughly 18 columns to avoid the table
