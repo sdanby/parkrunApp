@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { fetchEventPositions } from '../api/backendAPI';
+import { fetchEventPositions, fetchEventInfo } from '../api/backendAPI';
 import './ResultsTable.css';
 
 // Minimal Races page — shows the selected event/date (from query) and attempts to fetch event positions
@@ -181,6 +181,7 @@ const Races: React.FC = () => {
     const params = new URLSearchParams(location.search);
     const date = params.get('date') || '';
     const eventCodeOrName = params.get('event') || '';
+    const [eventInfo, setEventInfo] = useState<{ event_name?: string; event_number?: number; event_code?: number } | null>(null);
 
     useEffect(() => {
         // If no params, do nothing — keep page minimal
@@ -198,6 +199,12 @@ const Races: React.FC = () => {
                 // Use the centralized API helper which respects `API_BASE_URL`
                 const data = await fetchEventPositions(eventCodeOrName, apiDate);
                 setRows(Array.isArray(data) ? data : []);
+                try {
+                    const info = await fetchEventInfo(eventCodeOrName, apiDate);
+                    setEventInfo(info && typeof info === 'object' ? info : null);
+                } catch (e) {
+                    // ignore — optional info
+                }
             } catch (err) {
                 setError('Failed to fetch event positions — backend may not support this endpoint');
                 setRows(null);
@@ -233,12 +240,33 @@ const Races: React.FC = () => {
         };
     }, [rows]);
 
+    // derive a friendly event name and number from fetched rows or the eventInfo API
+    // If the `event` query param is a numeric code, don't show it as the event name
+    const isNumericIdentifier = (s: string) => /^[0-9]+$/.test(String(s || '').trim());
+    const eventName = (eventInfo && eventInfo.event_name)
+        ? eventInfo.event_name
+        : ((rows && rows.length > 0 && (rows[0].event_name || rows[0].eventName))
+            ? (rows[0].event_name || rows[0].eventName)
+            : (isNumericIdentifier(eventCodeOrName) ? '' : (eventCodeOrName || '')));
+    const eventNumberVal = (eventInfo && eventInfo.event_number)
+        ? eventInfo.event_number
+        : ((rows && rows.length > 0) ? (rows[0].event_number ?? rows[0].eventNumber ?? null) : null);
+    const displayDate = (() => {
+        if (!date) return '';
+        if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+            const p = date.split('-');
+            return `${p[2]}/${p[1]}/${p[0]}`;
+        }
+        return date;
+    })();
+
     return (
         <div className="page-content">
-            <h1>Races</h1>
-            <div style={{ marginBottom: '1em' }}>
-                <strong>Selected event:</strong> {eventCodeOrName || <em>none</em>}<br />
-                <strong>Selected date:</strong> {date || <em>none</em>}
+            <div className="races-header" style={{ marginBottom: '0.6em' }}>
+                <div style={{ fontWeight: 700 }}>{eventName || <em>none</em>}</div>
+                <div style={{ color: '#444' }}>
+                    {displayDate || ''}{eventNumberVal ? `  #${eventNumberVal}` : ''}
+                </div>
             </div>
             {loading && <div>Loading event positions…</div>}
             {error && <div style={{ color: 'darkred' }}>{error}</div>}
@@ -250,11 +278,17 @@ const Races: React.FC = () => {
                             {/* Top header row: first two sticky headers then the remaining column headers */}
                             <tr>
                                 <th className="sticky-col sticky-corner" style={{ fontWeight: 700 }}>Pos</th>
-                                <th className="sticky-col-2 sticky-corner-2" style={{ fontWeight: 700, textAlign: 'left' }}>Names</th>
-                                {/* Use explicit column ordering for clarity */}
-                                {['time','age_group','age_grade','club','comment'].map((k) => (
-                                    <th key={k} className="sticky-header" style={{ fontWeight: 700 }}>{k}</th>
-                                ))}
+                                    <th className="sticky-col-2 sticky-corner-2" style={{ fontWeight: 700, textAlign: 'left' }}>Athlete</th>
+                                    {/* Use explicit column ordering with friendly labels */}
+                                    {[
+                                        { k: 'time', label: 'Time' },
+                                        { k: 'age_group', label: 'Age group' },
+                                        { k: 'age_grade', label: 'Age grade' },
+                                        { k: 'club', label: 'Club' },
+                                        { k: 'comment', label: 'Detail' }
+                                    ].map(col => (
+                                        <th key={col.k} className="sticky-header" style={{ fontWeight: 700 }}>{col.label}</th>
+                                    ))}
                             </tr>
                         </thead>
                         <tbody>
@@ -262,13 +296,13 @@ const Races: React.FC = () => {
                                 <tr key={r.athlete_code || i}>
                                     {/* First two sticky columns: position, name */}
                                     <td className="sticky-col">{String(r['position'] ?? '')}</td>
-                                    <td className="sticky-col-2" style={{ textAlign: 'left' }}>{String(r['name'] ?? '')}</td>
+                                        <td className="sticky-col-2" style={{ textAlign: 'left' }}>{String(r['name'] ?? r['athlete_name'] ?? '')}</td>
                                     {/* Remaining columns in requested order */}
-                                    <td>{String(r['time'] ?? '')}</td>
-                                    <td>{String(r['age_group'] ?? '')}</td>
-                                    <td>{String(r['age_grade'] ?? '')}</td>
-                                    <td style={{ textAlign: 'left' }}>{String(r['club'] ?? '')}</td>
-                                    <td style={{ textAlign: 'left' }}>{String(r['comment'] ?? '')}</td>
+                                        <td>{String(r['time'] ?? '')}</td>
+                                        <td>{String(r['age_group'] ?? '')}</td>
+                                        <td>{String(r['age_grade'] ?? '')}</td>
+                                        <td style={{ textAlign: 'left' }}>{String(r['club'] ?? '')}</td>
+                                        <td style={{ textAlign: 'left' }}>{String(r['comment'] ?? r['detail'] ?? '')}</td>
                                 </tr>
                             ))}
                         </tbody>
