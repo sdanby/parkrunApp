@@ -197,12 +197,22 @@ const Races: React.FC = () => {
                     apiDate = `${parts[2]}/${parts[1]}/${parts[0]}`;
                 }
                 // Use the centralized API helper which respects `API_BASE_URL`
-                const data = await fetchEventPositions(eventCodeOrName, apiDate);
-                setRows(Array.isArray(data) ? data : []);
                 try {
+                    console.log('[Races] fetchEventPositions params:', { eventCodeOrName, apiDate });
+                    const data = await fetchEventPositions(eventCodeOrName, apiDate);
+                    console.log('[Races] fetchEventPositions response:', Array.isArray(data) ? `rows:${data.length}` : data);
+                    setRows(Array.isArray(data) ? data : []);
+                } catch (err) {
+                    console.error('[Races] fetchEventPositions failed:', err);
+                    throw err;
+                }
+                try {
+                    console.log('[Races] fetchEventInfo params:', { eventCodeOrName, apiDate });
                     const info = await fetchEventInfo(eventCodeOrName, apiDate);
+                    console.log('[Races] fetchEventInfo response:', info);
                     setEventInfo(info && typeof info === 'object' ? info : null);
                 } catch (e) {
+                    console.warn('[Races] fetchEventInfo failed (optional):', e);
                     // ignore — optional info
                 }
             } catch (err) {
@@ -248,9 +258,18 @@ const Races: React.FC = () => {
         : ((rows && rows.length > 0 && (rows[0].event_name || rows[0].eventName))
             ? (rows[0].event_name || rows[0].eventName)
             : (isNumericIdentifier(eventCodeOrName) ? '' : (eventCodeOrName || '')));
-    const eventNumberVal = (eventInfo && eventInfo.event_number)
+    let eventNumberVal = (eventInfo && eventInfo.event_number)
         ? eventInfo.event_number
         : ((rows && rows.length > 0) ? (rows[0].event_number ?? rows[0].eventNumber ?? null) : null);
+    // If we still don't have an event number but the `event` query param is numeric,
+    // use it as a fallback so the header can at least show `#<code>` when backend info is missing.
+    if ((eventNumberVal === null || eventNumberVal === undefined) && isNumericIdentifier(eventCodeOrName)) {
+        try {
+            eventNumberVal = Number(eventCodeOrName);
+        } catch (e) {
+            // ignore
+        }
+    }
     const displayDate = (() => {
         if (!date) return '';
         if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
