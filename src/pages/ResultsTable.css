@@ -11,6 +11,26 @@
   --col2-width: 4cm;
 }
 
+/* Small back button shown on the Races page header */
+.races-back-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  margin-right: 0.6rem;
+  border: 1px solid rgba(0,0,0,0.08);
+  background: white;
+  color: #333;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 1.05rem;
+  line-height: 1;
+  font-weight: 1000;
+}
+.races-back-btn:hover { background: #f4f6f8; }
+.races-back-btn:active { transform: translateX(-1px); }
+
 /* apply to both headers and cells for column 1/2 */
 .results-table th:first-child,
 .results-table td:first-child {
@@ -228,16 +248,19 @@ select:focus {
 
 .results-table-container {
   overflow-x: auto;
-  overflow-y: scroll;      /* force a visible vertical scrollbar */
-  max-width: 100vw;
+  overflow-y: auto;      /* let native vertical scrollbar appear only when needed */
+  /* Make the container shrink to the table width so the scrollbar sits
+     immediately beside the table. Keep max-width to avoid overflow off-screen. */
+  display: inline-block;
+  vertical-align: top;
+  max-width: calc(100vw - 2rem);
   margin-left: 0.5cm; /* Indent by 0.5cm */
   height: 600px; /* fixed height so overflow works reliably */
-  padding-right: 48px; /* reserve space so the overlay doesn't cover the native scrollbar */
+  padding-right: 6px; /* small reserve for horizontal scrollbar */
   padding-bottom: 18px; /* reserve space so the horizontal native scrollbar can appear */
   -webkit-overflow-scrolling: auto;
   scrollbar-width: thin; /* Firefox */
   scrollbar-color: rgba(0,0,0,0.35) rgba(0,0,0,0.06);
-  display: block;
 }
 
 /* position context for absolute overlay */
@@ -607,6 +630,17 @@ select:focus {
   max-width: calc(1.39cm + 4cm) !important;
 }
 
+/* Make the races table size to its content, so the container width matches the table */
+.results-table.races-table {
+  width: auto !important;
+  display: inline-block; /* shrink-wrapping behavior so scrollbar will sit near the table */
+}
+.results-table-container {
+  /* allow horizontal scrolling when table is wider than viewport */
+  overflow-x: auto;
+  white-space: normal;
+}
+
 /* Races page header: keep above sticky table headers to avoid overlap */
 .races-header {
   position: relative;
@@ -634,4 +668,30 @@ select:focus {
 .results-table-container.analysis-container {
   max-width: calc(var(--col1-width, 4cm) + var(--col2-width, 2.5cm) + 37cm) !important;
   overflow-x: auto;
+}
+
+/* Races header indentation and emphasis */
+.races-header .races-header-title,
+.races-header .races-header-sub {
+  /* increase indent: previous 0.5cm plus additional 3cm requested */
+  padding-left: 1.0cm; /* 0.5cm + 3cm */
+  font-weight: 700;    /* make both lines bold */
+}
+.races-header .races-header-sub {
+  color: #444;         /* subdued color for the second line */
+  margin-top: 2px;
+}
+
+/* Stack title + sub vertically when placed next to the back button */
+.races-header-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.05;
+}
+
+/* separator shown between date and event number */
+.races-header .races-header-sep {
+  display: inline-block;
+  margin: 0 0.6cm; /* spacing around the vertical bar */
+  color: #444;
 }
