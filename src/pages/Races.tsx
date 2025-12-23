@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { fetchEventPositions, fetchEventInfo } from '../api/backendAPI';
 import './ResultsTable.css';
 
@@ -198,18 +198,14 @@ const Races: React.FC = () => {
                 }
                 // Use the centralized API helper which respects `API_BASE_URL`
                 try {
-                    console.log('[Races] fetchEventPositions params:', { eventCodeOrName, apiDate });
                     const data = await fetchEventPositions(eventCodeOrName, apiDate);
-                    console.log('[Races] fetchEventPositions response:', Array.isArray(data) ? `rows:${data.length}` : data);
                     setRows(Array.isArray(data) ? data : []);
                 } catch (err) {
                     console.error('[Races] fetchEventPositions failed:', err);
                     throw err;
                 }
                 try {
-                    console.log('[Races] fetchEventInfo params:', { eventCodeOrName, apiDate });
                     const info = await fetchEventInfo(eventCodeOrName, apiDate);
-                    console.log('[Races] fetchEventInfo response:', info);
                     setEventInfo(info && typeof info === 'object' ? info : null);
                 } catch (e) {
                     console.warn('[Races] fetchEventInfo failed (optional):', e);
@@ -258,16 +254,30 @@ const Races: React.FC = () => {
         : ((rows && rows.length > 0 && (rows[0].event_name || rows[0].eventName))
             ? (rows[0].event_name || rows[0].eventName)
             : (isNumericIdentifier(eventCodeOrName) ? '' : (eventCodeOrName || '')));
+    // Prefer an explicit `event_number` when present. If not present, keep
+    // the event code separate so we don't accidentally display an event_code
+    // where an event_number is expected.
     let eventNumberVal = (eventInfo && eventInfo.event_number)
         ? eventInfo.event_number
         : ((rows && rows.length > 0) ? (rows[0].event_number ?? rows[0].eventNumber ?? null) : null);
-    // If we still don't have an event number but the `event` query param is numeric,
-    // use it as a fallback so the header can at least show `#<code>` when backend info is missing.
-    if ((eventNumberVal === null || eventNumberVal === undefined) && isNumericIdentifier(eventCodeOrName)) {
-        try {
-            eventNumberVal = Number(eventCodeOrName);
-        } catch (e) {
-            // ignore
+
+    // Keep any numeric event_code in a separate variable so we can display
+    // it as a code (e.g. "code 3") rather than misstating it as an event_number.
+    let eventCodeVal: number | null = null;
+    // If we don't have a true event_number, try to read an event_code from
+    // the fetched rows or the query param but don't assign it to
+    // `eventNumberVal`.
+    if (eventNumberVal === null || eventNumberVal === undefined) {
+        if (rows && rows.length > 0) {
+            const possibleCode = rows[0].event_code ?? rows[0].eventCode ?? null;
+            if (possibleCode !== null && possibleCode !== undefined && possibleCode !== '') {
+                const n = Number(possibleCode);
+                if (!Number.isNaN(n)) eventCodeVal = n;
+            }
+        }
+        if (eventCodeVal === null && isNumericIdentifier(eventCodeOrName)) {
+            const n = Number(eventCodeOrName);
+            if (!Number.isNaN(n)) eventCodeVal = n;
         }
     }
     const displayDate = (() => {
@@ -279,12 +289,46 @@ const Races: React.FC = () => {
         return date;
     })();
 
+    // Back button component placed in the header so users can return to Results
+    const navigate = useNavigate();
+    const BackButton: React.FC = () => {
+        const handleBack = () => {
+            try {
+                if (window.history.length > 1) {
+                    navigate(-1);
+                } else {
+                    navigate('/results');
+                }
+            } catch (e) {
+                navigate('/results');
+            }
+        };
+        return (
+            <button
+                type="button"
+                aria-label="Back to Event Analysis"
+                className="races-back-btn"
+                onClick={handleBack}
+                title="Back to Event Analysis"
+            >
+                ←
+            </button>
+        );
+    };
+
     return (
         <div className="page-content">
-            <div className="races-header" style={{ marginBottom: '0.6em' }}>
-                <div style={{ fontWeight: 700 }}>{eventName || <em>none</em>}</div>
-                <div style={{ color: '#444' }}>
-                    {displayDate || ''}{eventNumberVal ? `  #${eventNumberVal}` : ''}
+            <div className="races-header" style={{ marginBottom: '0.6em', display: 'flex', alignItems: 'center' }}>
+                <BackButton />
+                <div className="races-header-text">
+                    <div className="races-header-title">{eventName || <em>none</em>}</div>
+                    <div className="races-header-sub">
+                        {displayDate || ''}
+                        { (displayDate && (eventNumberVal || eventCodeVal)) && (
+                            <span className="races-header-sep">|</span>
+                        ) }
+                        { eventNumberVal ? `#${eventNumberVal}` : (eventCodeVal ? `code ${eventCodeVal}` : '') }
+                    </div>
                 </div>
             </div>
             {loading && <div>Loading event positions…</div>}
@@ -326,32 +370,7 @@ const Races: React.FC = () => {
                             ))}
                         </tbody>
                     </table>
-                    {/* fast-scroll overlay: click to jump, drag to scroll faster */}
-                    <div
-                        className="fast-scroll"
-                        onMouseDown={onFastMouseDown}
-                        onClick={onFastClick}
-                        aria-hidden="true"
-                    />
-                    {/* custom scrollbar: always-visible thumb */}
-                    <div
-                        className="custom-scrollbar"
-                        aria-hidden="true"
-                        style={
-                            scrollbarLeft !== null && scrollbarTop !== null && scrollbarHeight !== null
-                                ? { position: 'fixed', left: `${scrollbarLeft}px`, top: `${scrollbarTop}px`, height: `${scrollbarHeight}px`, right: 'auto' }
-                                : (scrollbarLeft !== null ? { left: `${scrollbarLeft}px`, right: 'auto' } : undefined)
-                        }
-                    >
-                        <div
-                            className="custom-thumb"
-                            ref={thumbRef}
-                            style={{ height: `${thumbHeight}px`, top: `${thumbTop}px` }}
-                            onPointerDown={onThumbPointerDown}
-                            onPointerMove={onThumbPointerMove}
-                            onPointerUp={onThumbPointerUp}
-                        />
-                    </div>
+                    {/* Native scrollbars are used instead of custom fast-scroll/always-visible thumb. */}
                 </div>
             )}
             {!loading && rows === null && !error && (
