@@ -383,7 +383,22 @@ const ResultsPageComponent: React.FC = () => {
     const [results, setResults] = useState<any[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
         const [error, setError] = useState<string | null>(null);
-    const [query, setQuery] = useState<string>('recent');
+    const [query, setQuery] = useState<string>(() => {
+        try {
+            // Prefer explicit rs_query in URL (when returning via Back), else sessionStorage saved state
+            const ps = new URLSearchParams(window.location.search);
+            const rsq = ps.get('rs_query');
+            if (rsq) return rsq;
+            const raw = sessionStorage.getItem('results_state_v1');
+            if (raw) {
+                const obj = JSON.parse(raw);
+                if (obj && obj.query) return obj.query;
+            }
+        } catch (e) {
+            // ignore
+        }
+        return 'recent';
+    });
     const [sortBy, setSortBy] = useState<'event' | 'total'>('event');
     const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
     //nst [aggregation, setAggregation] = useState<'total' | 'average'>('total');
@@ -396,6 +411,56 @@ const ResultsPageComponent: React.FC = () => {
 
     const navigate = useNavigate();
     const location = useLocation();
+    const containerRef = useRef<HTMLDivElement | null>(null);
+    const pendingRestoreRef = useRef<{ top: number | null; left: number | null } | null>(null);
+
+    // Restore scroll positions once the results have been fetched and rendered.
+    const restoreScrollPositions = (desiredTop: number | null, desiredLeft: number | null) => {
+        // Candidate elements to try for horizontal scrolling. Prefer container then table then documentElement/body.
+        const candidates: (HTMLElement | null)[] = [];
+        const container = containerRef.current;
+        if (container) candidates.push(container);
+        try {
+            let table: HTMLElement | null = null;
+            if (container) {
+                table = container.querySelector('table');
+            } else {
+                table = document.querySelector('table');
+            }
+            if (table) candidates.push(table);
+        } catch (e) { /* ignore */ }
+        const docEl = document.documentElement;
+        const docBody = document.body;
+        candidates.push(docEl);
+        candidates.push(docBody);
+
+        // Vertical restore: prefer container, else documentElement/body
+        if (desiredTop !== null && typeof desiredTop === 'number') {
+            const vertHost = container || document.documentElement || document.body;
+            try { vertHost.scrollTop = desiredTop; } catch (e) { /* ignore */ }
+        }
+
+        // Horizontal restore: try candidates; clamp to maxLeft
+        if (desiredLeft !== null && typeof desiredLeft === 'number') {
+            for (const cand of candidates) {
+                if (!cand) continue;
+                const maxLeft = Math.max(0, cand.scrollWidth - cand.clientWidth);
+                const applyLeft = Math.min(desiredLeft, maxLeft);
+                try {
+                    cand.scrollLeft = applyLeft;
+                } catch (e) { /* ignore */ }
+                // If this candidate accepted a non-zero scroll or matches desired clamped, stop
+                if (cand.scrollLeft === applyLeft) {
+                    // dev diagnostic
+                    if (window && window.location && window.location.hostname === 'localhost') {
+                        // eslint-disable-next-line no-console
+                        console.info('[Results] restoreScrollPositions', { desiredLeft, appliedLeft: cand.scrollLeft, hostSummary: cand.tagName + (cand.id ? `#${cand.id}` : ''), candInfo: candidates.map(c => c ? ({ tag: c.tagName, id: c.id, scrollWidth: c.scrollWidth, clientWidth: c.clientWidth }) : null) });
+                    }
+                    break;
+                }
+            }
+        }
+    };
 
     // Restore state from sessionStorage (or URL rs_ params) when the URL search changes
     useEffect(() => {
@@ -430,7 +495,21 @@ const ResultsPageComponent: React.FC = () => {
                     if (obj.filterType) setFilterType(obj.filterType);
                     if (obj.aggType) setAggType(obj.aggType);
                     if (obj.cellAgg) setCellAgg(obj.cellAgg);
+                    // If session storage contains scroll positions, defer their restoration until results are rendered
+                    const st = (obj.scrollTop !== undefined && obj.scrollTop !== null) ? Number(obj.scrollTop) : null;
+                    const sl = (obj.scrollLeft !== undefined && obj.scrollLeft !== null) ? Number(obj.scrollLeft) : null;
+                    if ((st !== null && !isNaN(st)) || (sl !== null && !isNaN(sl))) {
+                        pendingRestoreRef.current = { top: (typeof st === 'number' && !isNaN(st)) ? st : null, left: (typeof sl === 'number' && !isNaN(sl)) ? sl : null };
+                    }
                 }
+            }
+            // Also, if rs_ params exist in the URL specifically for scroll positions, prefer those
+            const rsTop = ps.get('rs_scrollTop');
+            const rsLeft = ps.get('rs_scrollLeft');
+            if ((rsTop !== null && rsTop !== '') || (rsLeft !== null && rsLeft !== '')) {
+                const st = rsTop !== null ? Number(rsTop) : null;
+                const sl = rsLeft !== null ? Number(rsLeft) : null;
+                pendingRestoreRef.current = { top: (st !== null && !isNaN(st)) ? st : null, left: (sl !== null && !isNaN(sl)) ? sl : null };
             }
         } catch (e) {
             // ignore
@@ -458,8 +537,17 @@ const ResultsPageComponent: React.FC = () => {
         }
         // Push a results history entry containing the serialized UI state (rs_* params)
         try {
+            // capture current scroll positions (prefer container, fallback to document)
+            const container = containerRef.current;
+            const top = container && typeof container.scrollTop === 'number'
+                ? container.scrollTop
+                : (window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0);
+            const left = container && typeof container.scrollLeft === 'number'
+                ? container.scrollLeft
+                : (window.scrollX || document.documentElement.scrollLeft || document.body.scrollLeft || 0);
+
             // ensure current UI state is synchronously saved so Back navigation can restore it
-            const toSave = { query, sortBy, sortDir, analysisType, avgType, filterType, aggType, cellAgg };
+            const toSave: any = { query, sortBy, sortDir, analysisType, avgType, filterType, aggType, cellAgg, scrollTop: top, scrollLeft: left };
             try { sessionStorage.setItem('results_state_v1', JSON.stringify(toSave)); } catch (e) { /* ignore */ }
 
             const rs = new URLSearchParams();
@@ -471,6 +559,8 @@ const ResultsPageComponent: React.FC = () => {
             rs.set('rs_filterType', String(filterType));
             rs.set('rs_aggType', String(aggType));
             rs.set('rs_cellAgg', String(cellAgg));
+            rs.set('rs_scrollTop', String(top));
+            rs.set('rs_scrollLeft', String(left));
             navigate(`${location.pathname}?${rs.toString()}`);
         } catch (e) {
             // ignore
@@ -524,6 +614,15 @@ const ResultsPageComponent: React.FC = () => {
         };
         getResults();
     }, [query]);
+    // When results have been fetched and rendered, apply any pending scroll restore request
+    useEffect(() => {
+        if (pendingRestoreRef.current) {
+            const { top, left } = pendingRestoreRef.current;
+            // Use two RAFs to ensure DOM layout has settled
+            requestAnimationFrame(() => requestAnimationFrame(() => restoreScrollPositions(top, left)));
+            pendingRestoreRef.current = null;
+        }
+    }, [results, loading]);
     useEffect(() => {
         // When analysis type is not Times, force no time adjustment and reset filter to safe default
         if (analysisType !== 'Times' && avgType !== 'none') {
@@ -1488,7 +1587,7 @@ const sortedEventCodes = [...eventCodes].sort((a, b) => {
             pos1="0.4cm"
             pos2 ="0.5em"
         />
-            <div className="results-table-container analysis-container">
+            <div ref={containerRef} className="results-table-container analysis-container">
                 <table className={query === 'Qseason' ? 'results-table compact analysis-table' : 'results-table analysis-table'}>
                     <thead>
                         <tr>
