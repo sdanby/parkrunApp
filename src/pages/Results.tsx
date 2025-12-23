@@ -1,5 +1,6 @@
+/* eslint-disable */
 import React, { useEffect, useState, useRef, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { fetchResults, fetchAllResults } from '../api/backendAPI';
 import './ResultsTable.css'; // Create this CSS file for sticky headers
 import { formatDate,formatDate1,formatDate2,formatAvgTime,formatDateToDDMMYYYY } from '../utilities'; // Utility function to format dates
@@ -391,9 +392,90 @@ const ResultsPageComponent: React.FC = () => {
     const [filterType, setFilterType] = useState<string>('all');
     const [aggType, setAggType] = useState<string>('avg');
     const [cellAgg, setCellAgg] = useState<string>('single');
+    const [infoMessage, setInfoMessage] = useState<string | null>(null);
 
     const navigate = useNavigate();
+    const location = useLocation();
+
+    // Restore state from sessionStorage (or URL rs_ params) when the URL search changes
+    useEffect(() => {
+        try {
+            const ps = new URLSearchParams(location.search);
+            let found = false;
+            const maybeSet = (key: string, setter: (v: any) => void) => {
+                const val = ps.get(`rs_${key}`);
+                if (val !== null) {
+                    // pass the string directly to the setter; runtime coercion is acceptable
+                    setter(val);
+                    found = true;
+                }
+            };
+            maybeSet('query', setQuery);
+            maybeSet('sortBy', setSortBy);
+            maybeSet('sortDir', setSortDir);
+            maybeSet('analysisType', setAnalysisType);
+            maybeSet('avgType', setAvgType);
+            maybeSet('filterType', setFilterType);
+            maybeSet('aggType', setAggType);
+            maybeSet('cellAgg', setCellAgg);
+            if (!found) {
+                const raw = sessionStorage.getItem('results_state_v1');
+                if (raw) {
+                    const obj = JSON.parse(raw);
+                    if (obj.query) setQuery(obj.query);
+                    if (obj.sortBy) setSortBy(obj.sortBy);
+                    if (obj.sortDir) setSortDir(obj.sortDir);
+                    if (obj.analysisType) setAnalysisType(obj.analysisType);
+                    if (obj.avgType) setAvgType(obj.avgType);
+                    if (obj.filterType) setFilterType(obj.filterType);
+                    if (obj.aggType) setAggType(obj.aggType);
+                    if (obj.cellAgg) setCellAgg(obj.cellAgg);
+                }
+            }
+        } catch (e) {
+            // ignore
+        }
+    }, [location.search]);
+
+    // Persist selected Results state to sessionStorage whenever it changes
+    useEffect(() => {
+        try {
+            const toSave = { query, sortBy, sortDir, analysisType, avgType, filterType, aggType, cellAgg };
+            sessionStorage.setItem('results_state_v1', JSON.stringify(toSave));
+        } catch (e) {
+            // ignore
+        }
+    }, [query, sortBy, sortDir, analysisType, avgType, filterType, aggType, cellAgg]);
+
     const handleCellClick = (date: string, eventCode: string) => {
+        // Prevent navigation when the current period is aggregated
+        const aggregatedPeriods = ['Annual', 'Qseason', 'Mseason'];
+        if (aggregatedPeriods.includes(query)) {
+            setInfoMessage('Cannot select an aggregated period');
+            // clear after a short delay
+            window.setTimeout(() => setInfoMessage(null), 3000);
+            return;
+        }
+        // Push a results history entry containing the serialized UI state (rs_* params)
+        try {
+            // ensure current UI state is synchronously saved so Back navigation can restore it
+            const toSave = { query, sortBy, sortDir, analysisType, avgType, filterType, aggType, cellAgg };
+            try { sessionStorage.setItem('results_state_v1', JSON.stringify(toSave)); } catch (e) { /* ignore */ }
+
+            const rs = new URLSearchParams();
+            rs.set('rs_query', String(query));
+            rs.set('rs_sortBy', String(sortBy));
+            rs.set('rs_sortDir', String(sortDir));
+            rs.set('rs_analysisType', String(analysisType));
+            rs.set('rs_avgType', String(avgType));
+            rs.set('rs_filterType', String(filterType));
+            rs.set('rs_aggType', String(aggType));
+            rs.set('rs_cellAgg', String(cellAgg));
+            navigate(`${location.pathname}?${rs.toString()}`);
+        } catch (e) {
+            // ignore
+        }
+
         // Navigate to Races page with query params for date and event
         const params = new URLSearchParams();
         if (date) params.set('date', String(date));
@@ -1142,61 +1224,7 @@ results.forEach(r => {
 });
     // (removed debug sample check for firstTimers)
     // Seasonal debug: when viewing aggregated periods and First Timers filter, print a small sample matrix
-    try {
-        if (['Annual', 'Mseason', 'Qseason'].includes(query) && filterType === '1time') {
-            const sd = Object.keys(firstTimers).slice(0,5);
-            const sc = eventCodes.slice(0,5);
-            console.log('[debug-season] sample eventDates', sd);
-            sc.forEach(code => {
-                sd.forEach(dateKey => {
-                    const rawRow = results.find(r => String(r.event_code) === String(code) && String(r.event_date) === String(dateKey));
-                    console.log('[debug-season] cell', { date: dateKey, code, firstTimers: firstTimers[dateKey]?.[code], position: positionLookup[dateKey]?.[code], rawRow });
-                });
-            });
-        }
-    } catch (e) {
-        // ignore
-    }
-    // Additional seasonal debug for new lookups
-    try {
-        if (['Annual', 'Mseason', 'Qseason'].includes(query) && ['clubs','pb','recentBest','returners','eligible_time','unknown'].includes(filterType)) {
-            const sd = Object.keys(positionLookup).slice(0,5);
-            const sc = eventCodes.slice(0,5);
-            console.log('[debug-season-new] dates', sd, 'filter', filterType);
-            sc.forEach(code => {
-                sd.forEach(dateKey => {
-                    console.log('[debug-season-new] cell', { date: dateKey, code,
-                        clubs: clubbers[dateKey]?.[code], pb: pbCount[dateKey]?.[code], recentBest: recentBest[dateKey]?.[code], returners: returners[dateKey]?.[code], eligible: eligibleTimes[dateKey]?.[code], unknown: unknowns[dateKey]?.[code]
-                    });
-                });
-            });
-        }
-    } catch (e) {
-        // ignore
-    }
-// Debug: expose combined coeff diagnostics in browser console for dev troubleshooting
-if (typeof window !== 'undefined') {
-    try {
-        const rowsWithEventCoeff = results.filter(r => {
-            const ce = r.coeff_event ?? r.coeffEvent ?? r.coeffevent;
-            return ce !== undefined && ce !== null && Number(ce) !== 0;
-        }).slice(0, 10);
-        const sample = rowsWithEventCoeff.length > 0 ? rowsWithEventCoeff.map(r => ({ event_date: r.event_date, event_code: r.event_code, coeff: r.coeff, coeff_event: r.coeff_event ?? r.coeffEvent ?? r.coeffevent, coeff_combined: coeff_combined[r.event_date]?.[r.event_code] })) : results.slice(0,10).map(r => ({ event_date: r.event_date, event_code: r.event_code, coeff: r.coeff, coeff_event: r.coeff_event ?? r.coeffEvent ?? r.coeffevent, coeff_combined: coeff_combined[r.event_date]?.[r.event_code] }));
-        // show counts and a small sample for inspection
-        console.log('[debug-coeff-combined] rowsWithEventCoeff', rowsWithEventCoeff.length, 'sample', sample);
-    } catch (e) {
-        // ignore
-    }
-}
-
-// Debug: when user selects Age, log the avgAgeLookup sample to console to help debug blank cells
-if (typeof window !== 'undefined') {
-    // Defer logging until UI mounts; attach a small helper to window for manual inspection
-    // Expose debug lookup for manual inspection in the browser console
-    const _w: any = window;
-    _w['__debug_avgAgeLookup'] = avgAgeLookup;
-}
-//console.log('avgTimeLookup:', avgTimeLookup);
+    // removed development debug logging
 const eventTotals: { [code: string]: number } = {};
 // Compute totals/aggregates per event code. For Times use the selected avgType lookup and respect aggType.
     // Precompute column totals (sum across eventCodes for each date) for %Total mode.
@@ -1424,6 +1452,9 @@ const sortedEventCodes = [...eventCodes].sort((a, b) => {
             options2={queryOptions}
             pos2='1.6em'
         />
+        {infoMessage && (
+            <div style={{ color: 'darkorange', margin: '0.4em 0' }}>{infoMessage}</div>
+        )}
         <AnalysisControls
             value={filterType}
             setValue={setFilterType}
@@ -1442,7 +1473,7 @@ const sortedEventCodes = [...eventCodes].sort((a, b) => {
             }
             pos2='0.7em'
         />
-        {typeof window !== 'undefined' && console && console.log && console.log('[debug] Filter options (participantFilterOptions):', participantFilterOptions.map(o => o.value))}
+        {/* debug logging removed */}
         <AnalysisControls
             value={aggType}
             setValue={setAggType}
