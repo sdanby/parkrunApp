@@ -297,7 +297,24 @@ const Races: React.FC = () => {
                 if (window.history.length > 1) {
                     navigate(-1);
                 } else {
-                    navigate('/results');
+                    // Build fallback results URL using saved UI state (including scroll positions)
+                    try {
+                        const raw = sessionStorage.getItem('results_state_v1');
+                        const rs = new URLSearchParams();
+                        if (raw) {
+                            const obj = JSON.parse(raw);
+                            const keys = ['query','sortBy','sortDir','analysisType','avgType','filterType','aggType','cellAgg','scrollTop','scrollLeft'];
+                            keys.forEach(k => {
+                                if (obj && Object.prototype.hasOwnProperty.call(obj, k) && obj[k] !== undefined && obj[k] !== null) {
+                                    rs.set(`rs_${k}`, String(obj[k]));
+                                }
+                            });
+                        }
+                        const q = rs.toString();
+                        navigate(`/results${q ? `?${q}` : ''}`);
+                    } catch (e) {
+                        navigate('/results');
+                    }
                 }
             } catch (e) {
                 navigate('/results');
