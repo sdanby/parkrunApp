@@ -2,6 +2,7 @@ import axios from 'axios';
 
 // Use environment variable when available; default to deployed host.
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'https://hello-world-9yb9.onrender.com';
+const API_LOCAL_URL = 'http://localhost:5000/';
 
 export const fetchResults = async (opts?: number | string) => {
     try {
