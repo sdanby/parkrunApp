@@ -202,7 +202,7 @@ overflow: hidden;
 }
 
 /* Keep table visually neat on small screens */
-@media (max-width: 640px) {*/
+@media (max-width: 640px) {
   .sticky-col { min-width: 3.5cm; max-width: 3.5cm; width: 3.5cm; }
   .sticky-col-2 { min-width: 2.5cm !important; max-width: 2.5cm !important; width: 2.5cm !important; }
   .sticky-header { min-width: 1.6cm; max-width: 1.6cm; width: 1.6cm; }
@@ -694,4 +694,27 @@ select:focus {
   display: inline-block;
   margin: 0 0.6cm; /* spacing around the vertical bar */
   color: #444;
+}
+
+/* Mobile safeguard: prevent the whole page from scrolling horizontally on small screens
+   and force the table container to manage horizontal scrolling. This keeps the
+   sticky left columns and top controls fixed while the table content scrolls. */
+@media (max-width: 768px) {
+  .page-content {
+    overflow-x: hidden; /* prevent page horizontal scrolling */
+  }
+  .results-table-container {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-left: 0 !important;
+    /* ensure horizontal gestures are handled by this container only */
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+  /* Make sure the table itself can be wider than the container and will scroll inside it */
+  .results-table {
+    width: max-content;
+    min-width: 100%;
+  }
 }
