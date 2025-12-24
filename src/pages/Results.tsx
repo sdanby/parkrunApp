@@ -442,6 +442,9 @@ const ResultsPageComponent: React.FC = () => {
 
         // Horizontal restore: try candidates; clamp to maxLeft
         if (desiredLeft !== null && typeof desiredLeft === 'number') {
+            // Dev diagnostic: record candidate metrics before attempting apply
+            // dev-only candidate diagnostics removed
+            let applied = false;
             for (const cand of candidates) {
                 if (!cand) continue;
                 const maxLeft = Math.max(0, cand.scrollWidth - cand.clientWidth);
@@ -449,16 +452,14 @@ const ResultsPageComponent: React.FC = () => {
                 try {
                     cand.scrollLeft = applyLeft;
                 } catch (e) { /* ignore */ }
-                // If this candidate accepted a non-zero scroll or matches desired clamped, stop
-                if (cand.scrollLeft === applyLeft) {
-                    // dev diagnostic
-                    if (window && window.location && window.location.hostname === 'localhost') {
-                        // eslint-disable-next-line no-console
-                        console.info('[Results] restoreScrollPositions', { desiredLeft, appliedLeft: cand.scrollLeft, hostSummary: cand.tagName + (cand.id ? `#${cand.id}` : ''), candInfo: candidates.map(c => c ? ({ tag: c.tagName, id: c.id, scrollWidth: c.scrollWidth, clientWidth: c.clientWidth }) : null) });
-                    }
+                // If this candidate accepted the clamped value, stop
+                    if (cand.scrollLeft === applyLeft) {
+                    applied = true;
+                    // dev diagnostic removed: previously logged appliedLeft and candidate info
                     break;
                 }
             }
+            // dev diagnostic removed: no-apply case previously logged here
         }
     };
 
