@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import { createBrowserRouter, RouterProvider, Outlet, useLocation } from 'react-router-dom';
 import HamburgerMenu from './components/HamburgerMenu';
 import Home from './pages/Home';
 import Login from './pages/Login';
@@ -29,21 +29,38 @@ const TopBar: React.FC = () => {
     );
 };
 
+const RootLayout: React.FC = () => (
+    <>
+        <TopBar />
+        <div className="app">
+            <Outlet />
+        </div>
+    </>
+);
+
+// Build router options with a lenient `any` type so we can pass
+// future flags that the installed router type definitions may not
+// yet include (this silences runtime deprecation warnings).
+const _futureOptions: any = { future: { v7_relativeSplatPath: true, v7_startTransition: true } };
+
+const router = createBrowserRouter([
+    {
+        path: '/',
+        element: <RootLayout />,
+        children: [
+            { index: true, element: <Home /> },
+            { path: 'login', element: <Login /> },
+            { path: 'results', element: <Results /> },
+            { path: 'races', element: <Races /> },
+            { path: 'courses', element: <Courses /> },
+            { path: 'athletes', element: <Athletes /> }
+        ]
+    }
+], _futureOptions);
+
 const App: React.FC = () => {
     return (
-        <Router>
-            <TopBar />
-            <div className="app">
-                <Routes>
-                    <Route path="/" element={<Home />} />
-                    <Route path="/login" element={<Login />} />
-                    <Route path="/results" element={<Results />} />
-                    <Route path="/races" element={<Races />} />
-                    <Route path="/courses" element={<Courses />} />
-                    <Route path="/athletes" element={<Athletes />} />
-                </Routes>
-            </div>
-        </Router>
+        <RouterProvider router={router} />
     );
 };
 
