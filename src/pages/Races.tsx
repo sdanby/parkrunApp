@@ -11,6 +11,13 @@ const Races: React.FC = () => {
     const location = useLocation();
     const containerRef = useRef<HTMLDivElement | null>(null);
     const tableRef = useRef<HTMLTableElement | null>(null);
+    // Column widths in pixels for each table column (Pos, Athlete, Time, Age group, Age grade, Club, Detail)
+    // Columns 3+ start at ~1.5cm (≈57px at 96dpi) so table initial layout matches CSS
+    const defaultWidths = [60, 240, 57, 57, 57, 57, 57];
+    const [colWidths, setColWidths] = useState<number[]>(defaultWidths);
+    const resizingColRef = useRef<number | null>(null);
+    const startXRef = useRef<number | null>(null);
+    const startWidthRef = useRef<number | null>(null);
     const isDraggingRef = useRef(false);
     const lastYRef = useRef<number | null>(null);
     const [thumbHeight, setThumbHeight] = useState<number>(0);
@@ -140,6 +147,49 @@ const Races: React.FC = () => {
         thumbEl.style.top = `${newTop}px`;
         thumbEl.style.cursor = 'grabbing';
     };
+
+    // Column resize handlers
+    const onColResizerMouseDown = (e: React.MouseEvent, colIndex: number) => {
+        e.preventDefault();
+        resizingColRef.current = colIndex;
+        startXRef.current = e.clientX;
+        startWidthRef.current = colWidths[colIndex] ?? defaultWidths[colIndex] ?? 100;
+        document.addEventListener('mousemove', onColResizerMouseMove);
+        document.addEventListener('mouseup', onColResizerMouseUp);
+    };
+
+    const onColResizerMouseMove = (e: MouseEvent) => {
+        const col = resizingColRef.current;
+        if (col === null) return;
+        const startX = startXRef.current ?? e.clientX;
+        const startW = startWidthRef.current ?? (colWidths[col] ?? defaultWidths[col]);
+        const dx = e.clientX - startX;
+        //const newW = Math.max(40, Math.round(startW + dx));
+        const newW = Math.max(40, Math.round(startW + dx));
+        setColWidths(prev => {
+            const copy = prev.slice();
+            copy[col] = newW;
+            return copy;
+        });
+    };
+
+    const onColResizerMouseUp = (_e: MouseEvent) => {
+        resizingColRef.current = null;
+        startXRef.current = null;
+        startWidthRef.current = null;
+        document.removeEventListener('mousemove', onColResizerMouseMove);
+        document.removeEventListener('mouseup', onColResizerMouseUp);
+    };
+
+    // Ensure any global listeners are removed on unmount
+    useEffect(() => {
+        return () => {
+            try {
+                document.removeEventListener('mousemove', onColResizerMouseMove);
+                document.removeEventListener('mouseup', onColResizerMouseUp);
+            } catch (e) {}
+        };
+    }, []);
 
     const onThumbPointerMove = (e: React.PointerEvent) => {
         if (!thumbDragRef.current) return;
@@ -333,6 +383,84 @@ const Races: React.FC = () => {
         );
     };
 
+    // Expose CSS variables for first two column widths so sticky offsets follow user resizing.
+    useEffect(() => {
+        const el = containerRef.current;
+        if (!el) return;
+        try {
+            el.style.setProperty('--col1-width', `${colWidths[0]}px`);
+            el.style.setProperty('--col2-width', `${colWidths[1]}px`);
+        } catch (e) {
+            // ignore
+        }
+    }, [colWidths]);
+
+    // Ensure header <th> widths match the rendered <col> widths so header and
+    // body columns remain aligned even after resizing. Run after layout via
+    // two RAFs to ensure the browser has applied col widths.
+    useEffect(() => {
+        const applyHeaderWidths = () => {
+            const table = tableRef.current;
+            if (!table) return;
+            const cols = table.querySelectorAll<HTMLTableColElement>('col');
+            const ths = table.querySelectorAll<HTMLTableCellElement>('thead th');
+            for (let i = 0; i < cols.length; i++) {
+                try {
+                    const col = cols[i];
+                    const rect = col.getBoundingClientRect();
+                    const w = Math.max(0, Math.round(rect.width));
+                    const th = ths[i];
+                    if (th && th instanceof HTMLElement) {
+                        // Apply pixel-exact widths on the header to mirror the <col>
+                        th.style.minWidth = `${w}px`;
+                        th.style.width = `${w}px`;
+                        th.style.maxWidth = `${w}px`;
+                    }
+                } catch (e) {
+                    // ignore measurement errors
+                }
+            }
+        };
+
+        // Defer until after layout; run two RAFs to be safer across browsers.
+        let raf1 = 0;
+        let raf2 = 0;
+        raf1 = requestAnimationFrame(() => {
+            raf2 = requestAnimationFrame(() => {
+                try {
+                    applyHeaderWidths();
+                    // Additionally, ensure sticky second-column left offset matches
+                    // the measured width of the first <col>. This prevents timing
+                    // or CSS variable rounding mismatches that caused the header
+                    // to overlap the next column.
+                    const table = tableRef.current;
+                    if (table) {
+                        const firstCol = table.querySelector<HTMLTableColElement>('col');
+                        if (firstCol) {
+                            const firstW = Math.max(0, Math.round(firstCol.getBoundingClientRect().width));
+                            // Small left-shift to visually nudge the second sticky column
+                            // closer to the first column. This counteracts a ~0.7cm
+                            // gap observed on typical displays (≈19px at 96dpi).
+                            const shuntPx = 19;
+                            const leftPx = Math.max(0, firstW - shuntPx);
+                            // Apply inline left pixels to all sticky-col-2 elements inside this table
+                            const sticky2 = table.querySelectorAll<HTMLElement>('.sticky-col-2, .sticky-corner-2-2');
+                            sticky2.forEach(el => {
+                                try { el.style.left = `${leftPx}px`; } catch (e) { /* ignore */ }
+                            });
+                        }
+                    }
+                } catch (err) {
+                    // ignore
+                }
+            });
+        });
+        return () => {
+            if (raf1) cancelAnimationFrame(raf1);
+            if (raf2) cancelAnimationFrame(raf2);
+        };
+    }, [colWidths, rows]);
+
     return (
         <div className="page-content">
             <div className="races-header" style={{ marginBottom: '0.6em', display: 'flex', alignItems: 'center' }}>
@@ -354,11 +482,31 @@ const Races: React.FC = () => {
             {rows && rows.length > 0 && (
                 <div className="results-table-container" ref={containerRef}>
                     <table className="results-table races-table" ref={tableRef}>
-                        <thead>
+                        {/* colgroup binds widths to state so columns can be resized by the user */}
+                        <colgroup>
+                            {colWidths.map((w, i) => (
+                                <col key={i} style={{ width: `${w}px` }} />
+                            ))}
+                        </colgroup>
+                            <thead>
                             {/* Top header row: first two sticky headers then the remaining column headers */}
                             <tr>
-                                <th className="sticky-col sticky-corner" style={{ fontWeight: 700 }}>Pos</th>
-                                    <th className="sticky-col-2 sticky-corner-2" style={{ fontWeight: 700, textAlign: 'left' }}>Athlete</th>
+                                <th className="sticky-col sticky-header" style={{ fontWeight: 700, position: 'relative' }}>Pos
+                                    <div
+                                        role="separator"
+                                        aria-orientation="vertical"
+                                        onMouseDown={(e) => onColResizerMouseDown(e, 0)}
+                                        style={{ position: 'absolute', right: 0, top: 0, width: 8, height: '100%', cursor: 'col-resize' }}
+                                    />
+                                </th>
+                                    <th className="sticky-col-2 sticky-header" style={{ fontWeight: 700, textAlign: 'left' }}>Athlete
+                                        <div
+                                            role="separator"
+                                            aria-orientation="vertical"
+                                            onMouseDown={(e) => onColResizerMouseDown(e, 1)}
+                                            style={{ position: 'absolute', right: 0, top: 0, width: 8, height: '100%', cursor: 'col-resize' }}
+                                        />
+                                    </th>
                                     {/* Use explicit column ordering with friendly labels */}
                                     {[
                                         { k: 'time', label: 'Time' },
@@ -366,8 +514,16 @@ const Races: React.FC = () => {
                                         { k: 'age_grade', label: 'Age grade' },
                                         { k: 'club', label: 'Club' },
                                         { k: 'comment', label: 'Detail' }
-                                    ].map(col => (
-                                        <th key={col.k} className="sticky-header" style={{ fontWeight: 700 }}>{col.label}</th>
+                                    ].map((col, idx) => (
+                                        <th key={col.k} className="sticky-header" style={{ fontWeight: 700, position: 'relative' }}>
+                                            {col.label}
+                                            <div
+                                                role="separator"
+                                                aria-orientation="vertical"
+                                                onMouseDown={(e) => onColResizerMouseDown(e, idx + 2)}
+                                                style={{ position: 'absolute', right: 0, top: 0, width: 8, height: '100%', cursor: 'col-resize' }}
+                                            />
+                                        </th>
                                     ))}
                             </tr>
                         </thead>
