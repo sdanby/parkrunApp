@@ -233,6 +233,55 @@ overflow: hidden;
   width: 2.5cm !important;
 }
 
+/* Allow `.races-table` to accept user-controlled widths via <colgroup>
+   Override the strong global width caps so column widths from the colgroup
+   are respected for the Races view. These rules use !important to override
+   earlier constraints that were applied globally to .results-table. */
+/* For the Races view, bind sticky columns to the CSS custom properties so
+   user-resized widths are reflected both in the colgroup and in the
+   sticky column layout. */
+.races-table th:first-child,
+.races-table td:first-child {
+  min-width: var(--col1-width) !important;
+  max-width: var(--col1-width) !important;
+  width: var(--col1-width) !important;
+}
+.races-table th:nth-child(2),
+.races-table td:nth-child(2) {
+  min-width: var(--col2-width) !important;
+  max-width: var(--col2-width) !important;
+  width: var(--col2-width) !important;
+}
+.races-table th:nth-child(n+3),
+.races-table td:nth-child(n+3) {
+  /* allow the colgroup to control later columns */
+  min-width: initial !important;
+  max-width: initial !important;
+  width: auto !important;
+}
+
+/* Ensure sticky column classes inside .races-table respect the CSS variables */
+.races-table .sticky-col,
+.races-table .sticky-corner-2-1 {
+  position: sticky;
+  left: 0 !important;
+  z-index: 60;
+  min-width: var(--col1-width) !important;
+  max-width: var(--col1-width) !important;
+  width: var(--col1-width) !important;
+  background: #fff;
+}
+.races-table .sticky-col-2,
+.races-table .sticky-corner-2-2 {
+  position: sticky;
+  left: var(--col1-width) !important;
+  z-index: 55;
+  min-width: var(--col2-width) !important;
+  max-width: var(--col2-width) !important;
+  width: var(--col2-width) !important;
+  background: #fff;
+}
+
 /* Same enforcement for compact tables */
 .results-table.compact th:nth-child(n+3),
 .results-table.compact td:nth-child(n+3) {
@@ -334,6 +383,45 @@ select:focus {
   min-width: 600px;
   font-size: 0.95em;
   border-spacing: 0.1;
+}
+
+/* Races-specific header/body sizing fixes
+   Ensure header <th> and body <td> share identical box model and
+   prevent the resizer handle from contributing to header layout.
+*/
+.races-table {
+  table-layout: fixed; /* ensure <colgroup> widths are obeyed predictably */
+}
+
+.races-table thead th,
+.races-table tbody td {
+  box-sizing: border-box; /* consistent box model */
+  padding: 0.25rem 0.4rem; /* identical padding for header and body */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Make the resizer absolutely positioned and slightly outside the header
+   so it does not contribute to the header cell's measured width. The
+   inline styles in `Races.tsx` will be superseded by this selector. */
+.races-table thead th [role="separator"] {
+  position: absolute !important;
+  right: -4px !important; /* nudge half outside the header box */
+  top: 0 !important;
+  bottom: 0 !important;
+  width: 8px !important;
+  cursor: col-resize !important;
+  z-index: 220 !important;
+  background: transparent !important;
+}
+
+/* Ensure sticky header sits above body cells and doesn't get clipped */
+.races-table thead th {
+  position: sticky; /* keep header sticky behavior aligned with sticky cols */
+  top: 0;
+  z-index: 200;
+  background: #fff;
 }
 
 /* Tooltip for small help popups over controls */
@@ -581,15 +669,14 @@ select:focus {
   }
 }
 
-/* Final, high-specificity overrides for the Races table to ensure the
-   Pos (first) column is ~0.5cm and the Names (second) column is ~3cm.
-   Placed at the end so it overrides earlier generic rules. */
+/* Final, high-specificity overrides for the Races table: use CSS variables
+   so the user-controlled widths (via colgroup/state) remain authoritative. */
 .results-table.races-table th:first-child,
 .results-table.races-table td:first-child {
-  min-width: 1.39cm !important;
-  max-width: 1.39cm !important;
-  width: 1.39cm !important;
-  padding: 2px 6px !important;
+  min-width: var(--col1-width) !important;
+  max-width: var(--col1-width) !important;
+  width: var(--col1-width) !important;
+  padding: 2px 6px !important;  
   font-size: 0.95em !important;
   text-align: center !important;
   white-space: nowrap !important;
@@ -598,9 +685,9 @@ select:focus {
 }
 .results-table.races-table th:nth-child(2),
 .results-table.races-table td:nth-child(2) {
-  min-width: 4cm !important;
-  max-width: 4cm !important;
-  width: 4cm !important;
+  min-width: var(--col2-width) !important;
+  max-width: var(--col2-width) !important;
+  width: var(--col2-width) !important;
   padding: 4px 8px !important;
   text-align: left !important;
   white-space: nowrap !important;
@@ -611,23 +698,23 @@ select:focus {
 /* Sticky offsets must precisely match the widths above */
 .results-table.races-table .sticky-col {
   left: 0 !important;
-  min-width: 1.39cm !important;
-  max-width: 1.39cm !important;
-  width: 1.39cm !important;
+  min-width: var(--col1-width) !important;
+  max-width: var(--col1-width) !important;
+  width: var(--col1-width) !important;
 }
 .results-table.races-table .sticky-col-2,
 .results-table.races-table .sticky-corner-2-2 {
-  left: 1.39cm !important;
-  min-width: 4cm !important;
-  max-width: 4cm !important;
-  width: 4cm !important;
+  left: var(--col1-width) !important;
+  min-width: var(--col2-width) !important;
+  max-width: var(--col2-width) !important;
+  width: var(--col2-width) !important;
 }
 
 /* Adjust the top-left corner span to avoid visual overflow */
 .results-table.races-table .sticky-corner,
 .results-table.races-table .sticky-corner-2 {
-  min-width: calc(1.39cm + 4cm) !important;
-  max-width: calc(1.39cm + 4cm) !important;
+  min-width: calc(var(--col1-width) + var(--col2-width)) !important;
+  max-width: calc(var(--col1-width) + var(--col2-width)) !important;
 }
 
 /* Make the races table size to its content, so the container width matches the table */
@@ -639,6 +726,35 @@ select:focus {
   /* allow horizontal scrolling when table is wider than viewport */
   overflow-x: auto;
   white-space: normal;
+}
+
+/* Set a sensible starting size for columns 3+ in the Races view. This
+   places an initial width of 1.5cm for columns after the first two so the
+   table appears with that starting layout; users can still resize columns
+   and the colgroup inline widths will then take precedence. */
+.results-table.races-table th:nth-child(n+3),
+.results-table.races-table td:nth-child(n+3) {
+  min-width: 1.5cm !important;
+  width: 1.5cm !important;
+  /* allow user resizing to override later — colgroup inline widths have
+     higher specificity and will be applied when set by JS */
+}
+
+/* Strong override to keep the Races table header visible above the page header
+   and sticky columns. Some layouts place the page header near the table and
+   it can overlap the sticky table header; raise the header z-index here. */
+.results-table.races-table thead th,
+.results-table.races-table thead th.sticky-header {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 1200 !important; /* above `.races-header` and sticky cols */
+  background: #fff !important;
+}
+
+/* Ensure sticky column classes are below the header */
+.results-table.races-table .sticky-col,
+.results-table.races-table .sticky-col-2 {
+  z-index: 100 !important;
 }
 
 /* Races page header: keep above sticky table headers to avoid overlap */
@@ -717,4 +833,17 @@ select:focus {
     width: max-content;
     min-width: 100%;
   }
+}
+
+/* Force the Club column (6th) in the Races table to start at 1.5cm and
+   always clip overflow with ellipsis. This high-specificity rule should
+   override any global caps that keep the column wide due to content. */
+.races-table th:nth-child(6),
+.races-table td:nth-child(6) {
+  min-width: 1.5cm !important;
+  max-width: 3.5cm !important;
+  width: 3.5cm !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
 }
