@@ -99,13 +99,30 @@ export const fetchEventPositions = async (eventIdentifier: string, eventDate: st
     }
 };
 
+export const fetchEventByNumber = async (eventCode: number, eventNumber: number) => {
+    try {
+        const params = new URLSearchParams();
+        if (eventCode !== undefined && eventCode !== null) params.set('event_code', String(eventCode));
+        if (eventNumber !== undefined && eventNumber !== null) params.set('event_number', String(eventNumber));
+        const url = `${API_LOCAL_URL}/api/eventby_number?${params.toString()}`;
+        const response = await axios.get(url);
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching event by number:', error);
+        throw error;
+    }
+};
+
 export const fetchEventInfo = async (eventIdentifier: string, eventDate: string) => {
     try {
         const params = new URLSearchParams();
         if (eventIdentifier) {
-            // If identifier is numeric, send as both event_number and event_code (backend will prefer event_number then event_code).
+            // If identifier is numeric, treat it as an `event_code` (not an event_number).
+            // Previously this code set both `event_number` and `event_code` when numeric,
+            // which caused queries like `?event_number=1` to be sent when the identifier
+            // was actually an event_code (e.g. `1` for Brentwood). That led the server
+            // to return metadata for event_number=1 (first event of some other course).
             if (/^\d+$/.test(String(eventIdentifier))) {
-                params.set('event_number', String(eventIdentifier));
                 params.set('event_code', String(eventIdentifier));
             } else {
                 params.set('event_name', String(eventIdentifier));
