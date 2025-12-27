@@ -104,7 +104,7 @@ export const fetchEventByNumber = async (eventCode: number, eventNumber: number)
         const params = new URLSearchParams();
         if (eventCode !== undefined && eventCode !== null) params.set('event_code', String(eventCode));
         if (eventNumber !== undefined && eventNumber !== null) params.set('event_number', String(eventNumber));
-        const url = `${API_LOCAL_URL}/api/eventby_number?${params.toString()}`;
+        const url = `${API_BASE_URL}/api/eventby_number?${params.toString()}`;
         const response = await axios.get(url);
         return response.data;
     } catch (error) {
