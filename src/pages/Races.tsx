@@ -437,7 +437,7 @@ const Races: React.FC = () => {
                 // ignore narrowing errors
             }
             if (status404) {
-                setError('No event found for that event number');
+                setError('No event found for that event number (probably you are at the most recent event)');
             } else {
                 setError(String(e));
             }
@@ -582,7 +582,7 @@ const Races: React.FC = () => {
                                 <span style={{ display: 'inline-flex', flexDirection: 'column' }}>
                                     <button
                                         type="button"
-                                        onClick={() => changeEventNumber(-1)}
+                                        onClick={() => changeEventNumber(1)}
                                         disabled={navLoading}
                                         title="Previous event"
                                         className="evnum-btn"
@@ -590,7 +590,7 @@ const Races: React.FC = () => {
                                     >▲</button>
                                     <button
                                         type="button"
-                                        onClick={() => changeEventNumber(1)}
+                                        onClick={() => changeEventNumber(-1)}
                                         disabled={navLoading}
                                         title="Next event"
                                         className="evnum-btn"
