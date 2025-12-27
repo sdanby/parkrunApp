@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { fetchEventPositions, fetchEventInfo } from '../api/backendAPI';
+import { fetchEventPositions, fetchEventInfo, fetchEventByNumber } from '../api/backendAPI';
 import './ResultsTable.css';
 
 // Minimal Races page — shows the selected event/date (from query) and attempts to fetch event positions
@@ -230,32 +230,72 @@ const Races: React.FC = () => {
 
     const params = new URLSearchParams(location.search);
     const date = params.get('date') || '';
-    const eventCodeOrName = params.get('event') || '';
+    // Accept either `event` (legacy) or `event_code` (explicit) as the identifier
+    const rawEventParam = params.get('event') || params.get('event_code') || '';
+    // Accept an explicit event_number param so the page can display the
+    // event number and show the ▲/▼ controls even when navigation used
+    // `event_code`/`event_number` query params.
+    const paramEventNumberRaw = params.get('event_number') || params.get('eventNumber') || null;
+    const paramEventNumber = paramEventNumberRaw ? Number(paramEventNumberRaw) : null;
     const [eventInfo, setEventInfo] = useState<{ event_name?: string; event_number?: number; event_code?: number } | null>(null);
+    const [navLoading, setNavLoading] = useState<boolean>(false);
+    // If the URL doesn't include a `date`, we may resolve it from
+    // `event_code` + `event_number` via the backend. Store the resolved
+    // display date here (DD/MM/YYYY) so the header can show it.
+    const [resolvedDateDisplay, setResolvedDateDisplay] = useState<string | null>(null);
 
     useEffect(() => {
-        // If no params, do nothing — keep page minimal
-        if (!eventCodeOrName && !date) return;
+        // If no identifier (event code/name) and no date, do nothing — keep page minimal
+        if (!rawEventParam && !date) return;
         const load = async () => {
-            setLoading(true);
-            setError(null);
+                    setLoading(true);
+                    setError(null);
+                    // Clear any previously-fetched event info so the header doesn't show
+                    // stale data while we fetch the new event's info.
+                    setEventInfo(null);
+                    // Reset any previously-resolved date when starting a new load
+                    setResolvedDateDisplay(null);
+                    // Debug: log incoming params so we can trace unexpected results
+                    try {
+                        // logging intentionally removed in production
+                    } catch (err) {
+                        /* ignore */
+                    }
             try {
                 // Normalize date to DD/MM/YYYY expected by backend (accept YYYY-MM-DD or DD/MM/YYYY)
                 let apiDate = date || '';
+                if (!apiDate && rawEventParam && paramEventNumber !== null) {
+                    // No explicit date provided: resolve it from event_code + event_number.
+                    try {
+                        const info = await fetchEventByNumber(Number(rawEventParam), paramEventNumber);
+                        const returnedDate = info && (info.event_date || info.eventDate) ? String(info.event_date || info.eventDate) : '';
+                        // fetchEventByNumber result logged during debugging — removed
+                        if (returnedDate) {
+                            apiDate = returnedDate;
+                            // Also expose for display in header
+                            setResolvedDateDisplay(returnedDate);
+                        }
+                    } catch (e) {
+                        // Let the existing error handling surface this to the user
+                        throw e;
+                    }
+                }
                 if (/^\d{4}-\d{2}-\d{2}$/.test(apiDate)) {
                     const parts = apiDate.split('-');
                     apiDate = `${parts[2]}/${parts[1]}/${parts[0]}`;
                 }
                 // Use the centralized API helper which respects `API_BASE_URL`
                 try {
-                    const data = await fetchEventPositions(eventCodeOrName, apiDate);
+                    const data = await fetchEventPositions(rawEventParam, apiDate);
+                    // fetchEventPositions result logging removed
                     setRows(Array.isArray(data) ? data : []);
                 } catch (err) {
                     console.error('[Races] fetchEventPositions failed:', err);
                     throw err;
                 }
                 try {
-                    const info = await fetchEventInfo(eventCodeOrName, apiDate);
+                    const info = await fetchEventInfo(rawEventParam, apiDate);
+                    // fetchEventInfo result logging removed
                     setEventInfo(info && typeof info === 'object' ? info : null);
                 } catch (e) {
                     console.warn('[Races] fetchEventInfo failed (optional):', e);
@@ -269,7 +309,7 @@ const Races: React.FC = () => {
             }
         };
         load();
-    }, [eventCodeOrName, date]);
+    }, [rawEventParam, date, paramEventNumber]);
 
     // wire scroll/resize to update custom thumb
     useEffect(() => {
@@ -297,19 +337,24 @@ const Races: React.FC = () => {
     }, [rows]);
 
     // derive a friendly event name and number from fetched rows or the eventInfo API
-    // If the `event` query param is a numeric code, don't show it as the event name
+    // If the identifier query param is numeric, don't show it as the event name
     const isNumericIdentifier = (s: string) => /^[0-9]+$/.test(String(s || '').trim());
     const eventName = (eventInfo && eventInfo.event_name)
         ? eventInfo.event_name
         : ((rows && rows.length > 0 && (rows[0].event_name || rows[0].eventName))
             ? (rows[0].event_name || rows[0].eventName)
-            : (isNumericIdentifier(eventCodeOrName) ? '' : (eventCodeOrName || '')));
-    // Prefer an explicit `event_number` when present. If not present, keep
-    // the event code separate so we don't accidentally display an event_code
-    // where an event_number is expected.
-    let eventNumberVal = (eventInfo && eventInfo.event_number)
-        ? eventInfo.event_number
-        : ((rows && rows.length > 0) ? (rows[0].event_number ?? rows[0].eventNumber ?? null) : null);
+            : (isNumericIdentifier(rawEventParam) ? '' : (rawEventParam || '')));
+    // Prefer an explicit `event_number` query param when present because it
+    // represents the navigation intent (e.g. `/races?event_code=1&event_number=472`).
+    // Otherwise fall back to fetched `eventInfo` or the rows returned by the API.
+    let eventNumberVal: number | null = null;
+    if (paramEventNumber !== null) {
+        eventNumberVal = paramEventNumber;
+    } else {
+        eventNumberVal = (eventInfo && eventInfo.event_number)
+            ? eventInfo.event_number
+            : ((rows && rows.length > 0) ? (rows[0].event_number ?? rows[0].eventNumber ?? null) : null);
+    }
 
     // Keep any numeric event_code in a separate variable so we can display
     // it as a code (e.g. "code 3") rather than misstating it as an event_number.
@@ -325,12 +370,14 @@ const Races: React.FC = () => {
                 if (!Number.isNaN(n)) eventCodeVal = n;
             }
         }
-        if (eventCodeVal === null && isNumericIdentifier(eventCodeOrName)) {
-            const n = Number(eventCodeOrName);
+        if (eventCodeVal === null && isNumericIdentifier(rawEventParam)) {
+            const n = Number(rawEventParam);
             if (!Number.isNaN(n)) eventCodeVal = n;
         }
     }
     const displayDate = (() => {
+        // Prefer a resolved date (from fetchEventByNumber) if available.
+        if (resolvedDateDisplay) return resolvedDateDisplay;
         if (!date) return '';
         if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
             const p = date.split('-');
@@ -339,33 +386,86 @@ const Races: React.FC = () => {
         return date;
     })();
 
+    // Change event number by delta (-1 or +1). Will look up the date for the
+    // requested event number for the same event_code, then navigate/update.
+    const changeEventNumber = async (delta: number) => {
+        // Determine event_code to operate on
+        const code = (eventInfo && eventInfo.event_code) ? Number(eventInfo.event_code) : (eventCodeVal ?? null);
+        const currentNumber = eventNumberVal ? Number(eventNumberVal) : null;
+        if (!code) {
+            setError('Event code unknown — cannot change event number');
+            return;
+        }
+        const candidate = (currentNumber || 0) + delta;
+        if (candidate < 1) {
+            setError('Already at the first event');
+            return;
+        }
+        setNavLoading(true);
+        setError(null);
+        // changeEventNumber invocation logging removed
+        try {
+            const info = await fetchEventByNumber(code, candidate);
+            // changeEventNumber fetchEventByNumber logging removed
+            // Expecting event_date returned as DD/MM/YYYY or similar — convert to ISO YYYY-MM-DD for URL
+            let newDate = info && (info.event_date || info.eventDate) ? String(info.event_date || info.eventDate) : '';
+            if (!newDate) {
+                setError('Event not found');
+                return;
+            }
+            if (/^\d{2}\/\d{2}\/\d{4}$/.test(newDate)) {
+                const p = newDate.split('/');
+                newDate = `${p[2]}-${p[1]}-${p[0]}`;
+            }
+            // Navigate to the new event using only `event_code` + `event_number`.
+            // The loader will resolve the date from these params.
+            const qs = new URLSearchParams();
+            qs.set('event_code', String(code));
+            qs.set('event_number', String(candidate));
+            navigate(`/races?${qs.toString()}`);
+        } catch (e) {
+            // If backend returned 404, surface a friendly message.
+            // `e` is `unknown` in TS; narrow safely before accessing `response`.
+            let status404 = false;
+            try {
+                if (e && typeof e === 'object' && 'response' in e) {
+                    const anyE: any = e;
+                    const resp = anyE.response;
+                    if (resp && typeof resp.status === 'number' && resp.status === 404) status404 = true;
+                }
+            } catch (_err) {
+                // ignore narrowing errors
+            }
+            if (status404) {
+                setError('No event found for that event number');
+            } else {
+                setError(String(e));
+            }
+        } finally {
+            setNavLoading(false);
+        }
+    };
+
     // Back button component placed in the header so users can return to Results
     const navigate = useNavigate();
     const BackButton: React.FC = () => {
         const handleBack = () => {
+            // Always navigate back to the Results page and ignore browser history entries.
+            // Preserve Results UI state (if any) stored in sessionStorage under `results_state_v1`.
             try {
-                if (window.history.length > 1) {
-                    navigate(-1);
-                } else {
-                    // Build fallback results URL using saved UI state (including scroll positions)
-                    try {
-                        const raw = sessionStorage.getItem('results_state_v1');
-                        const rs = new URLSearchParams();
-                        if (raw) {
-                            const obj = JSON.parse(raw);
-                            const keys = ['query','sortBy','sortDir','analysisType','avgType','filterType','aggType','cellAgg','scrollTop','scrollLeft'];
-                            keys.forEach(k => {
-                                if (obj && Object.prototype.hasOwnProperty.call(obj, k) && obj[k] !== undefined && obj[k] !== null) {
-                                    rs.set(`rs_${k}`, String(obj[k]));
-                                }
-                            });
+                const raw = sessionStorage.getItem('results_state_v1');
+                const rs = new URLSearchParams();
+                if (raw) {
+                    const obj = JSON.parse(raw);
+                    const keys = ['query','sortBy','sortDir','analysisType','avgType','filterType','aggType','cellAgg','scrollTop','scrollLeft'];
+                    keys.forEach(k => {
+                        if (obj && Object.prototype.hasOwnProperty.call(obj, k) && obj[k] !== undefined && obj[k] !== null) {
+                            rs.set(`rs_${k}`, String(obj[k]));
                         }
-                        const q = rs.toString();
-                        navigate(`/results${q ? `?${q}` : ''}`);
-                    } catch (e) {
-                        navigate('/results');
-                    }
+                    });
                 }
+                const q = rs.toString();
+                navigate(`/results${q ? `?${q}` : ''}`);
             } catch (e) {
                 navigate('/results');
             }
@@ -429,21 +529,16 @@ const Races: React.FC = () => {
             raf2 = requestAnimationFrame(() => {
                 try {
                     applyHeaderWidths();
-                    // Additionally, ensure sticky second-column left offset matches
-                    // the measured width of the first <col>. This prevents timing
-                    // or CSS variable rounding mismatches that caused the header
-                    // to overlap the next column.
+                    // Ensure sticky second-column left offset exactly matches the
+                    // rendered width of the first <col>. Using the measured width
+                    // prevents overlap from rounding differences (don't use a
+                    // visual shunt — it caused inconsistent overlap on mobile).
                     const table = tableRef.current;
                     if (table) {
                         const firstCol = table.querySelector<HTMLTableColElement>('col');
                         if (firstCol) {
                             const firstW = Math.max(0, Math.round(firstCol.getBoundingClientRect().width));
-                            // Small left-shift to visually nudge the second sticky column
-                            // closer to the first column. This counteracts a ~0.7cm
-                            // gap observed on typical displays (≈19px at 96dpi).
-                            const shuntPx = 19;
-                            const leftPx = Math.max(0, firstW - shuntPx);
-                            // Apply inline left pixels to all sticky-col-2 elements inside this table
+                            const leftPx = firstW; // position second sticky immediately after first
                             const sticky2 = table.querySelectorAll<HTMLElement>('.sticky-col-2, .sticky-corner-2-2');
                             sticky2.forEach(el => {
                                 try { el.style.left = `${leftPx}px`; } catch (e) { /* ignore */ }
@@ -455,7 +550,16 @@ const Races: React.FC = () => {
                 }
             });
         });
+        const onResize = () => {
+            // Recompute after layout stabilises
+            requestAnimationFrame(() => requestAnimationFrame(() => applyHeaderWidths()));
+        };
+        window.addEventListener('resize', onResize);
+        window.addEventListener('orientationchange', onResize);
+
         return () => {
+            window.removeEventListener('resize', onResize);
+            window.removeEventListener('orientationchange', onResize);
             if (raf1) cancelAnimationFrame(raf1);
             if (raf2) cancelAnimationFrame(raf2);
         };
@@ -472,7 +576,29 @@ const Races: React.FC = () => {
                         { (displayDate && (eventNumberVal || eventCodeVal)) && (
                             <span className="races-header-sep">|</span>
                         ) }
-                        { eventNumberVal ? `#${eventNumberVal}` : (eventCodeVal ? `code ${eventCodeVal}` : '') }
+                        { eventNumberVal ? (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                                <span>{`#${eventNumberVal}`}</span>
+                                <span style={{ display: 'inline-flex', flexDirection: 'column' }}>
+                                    <button
+                                        type="button"
+                                        onClick={() => changeEventNumber(-1)}
+                                        disabled={navLoading}
+                                        title="Previous event"
+                                        className="evnum-btn"
+                                        style={{ padding: '2px 6px', fontSize: '0.7rem' }}
+                                    >▲</button>
+                                    <button
+                                        type="button"
+                                        onClick={() => changeEventNumber(1)}
+                                        disabled={navLoading}
+                                        title="Next event"
+                                        className="evnum-btn"
+                                        style={{ padding: '2px 6px', fontSize: '0.7rem' }}
+                                    >▼</button>
+                                </span>
+                            </span>
+                        ) : (eventCodeVal ? `code ${eventCodeVal}` : '') }
                     </div>
                 </div>
             </div>
