@@ -747,14 +747,51 @@ select:focus {
 .results-table.races-table thead th.sticky-header {
   position: sticky !important;
   top: 0 !important;
-  z-index: 1200 !important; /* above `.races-header` and sticky cols */
+  z-index: 1200 !important; /* above `.races-header` and below sticky cols by design */
   background: #fff !important;
 }
 
 /* Ensure sticky column classes are below the header */
 .results-table.races-table .sticky-col,
 .results-table.races-table .sticky-col-2 {
-  z-index: 100 !important;
+  /* Make sticky columns render above the header so their content (Athlete)
+     remains dominant when horizontal scrolling on narrow viewports. Use a
+     higher z-index than the header but keep values consistent. */
+  z-index: 1300 !important;
+}
+
+.results-table.races-table .sticky-corner,
+.results-table.races-table .sticky-corner-2,
+.results-table.races-table .sticky-corner-2-1,
+.results-table.races-table .sticky-corner-2-2 {
+  z-index: 1350 !important;
+}
+
+/* Ensure non-sticky header cells stay behind sticky columns on all devices.
+   Mobile browsers sometimes promote sticky header rows into higher stacking
+   contexts which causes non-sticky header cells (e.g. Time) to paint over the
+   sticky Athlete column. The rules below enforce a clear stacking order and
+   create a compositing layer for sticky columns to avoid browser rendering
+   bugs (notably in mobile Safari/Chrome). */
+.results-table.races-table thead th:not(.sticky-col):not(.sticky-col-2) {
+  z-index: 1000 !important; /* below sticky columns */
+}
+
+.results-table.races-table .sticky-col,
+.results-table.races-table .sticky-col-2 {
+  z-index: 3000 !important; /* ensure sticky columns always render above headers */
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  will-change: left; /* hint to the browser this element will be moved */
+}
+
+/* Keep corner/sticky-first-row elements slightly higher than sticky cols */
+.results-table.races-table .sticky-corner,
+.results-table.races-table .sticky-corner-2,
+.results-table.races-table .sticky-corner-2-1,
+.results-table.races-table .sticky-corner-2-2 {
+  z-index: 3050 !important;
 }
 
 /* Races page header: keep above sticky table headers to avoid overlap */
