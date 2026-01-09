@@ -673,7 +673,7 @@ const Races: React.FC = () => {
                 </div>
             )}
             {!loading && rows === null && !error && (
-                <div>Click a cell in Results to view the selected event/date here.</div>
+                <div>Click a cell in Event Analysis to view the selected event/date here.</div>
             )}
         </div>
     );
