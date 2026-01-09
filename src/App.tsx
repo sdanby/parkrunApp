@@ -13,7 +13,7 @@ const headings: { [key: string]: string } = {
     '/': 'Home',
     '/login': 'Login',
     '/results': 'Event Analysis',
-    '/races': 'Races',
+    '/races': 'Single Event',
     '/courses': 'Courses',
     '/athletes': 'Athletes'
 };
