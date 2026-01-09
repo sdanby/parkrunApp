@@ -1,0 +1,89 @@
+.features-section {
+  margin-top: 1.5rem;
+}
+
+.feature-table-container {
+  max-height: calc(220px + 1cm);
+  overflow: auto;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+}
+
+.feature-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 700px;
+}
+
+.feature-table thead th {
+  position: sticky;
+  top: 0;
+  background: #f7f7f7;
+  z-index: 2;
+  padding: 10px 12px;
+  text-align: left;
+  border-bottom: 1px solid #d0d0d0;
+}
+
+.feature-table tbody td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #eee;
+  vertical-align: top;
+}
+
+.feature-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Small responsive tweak */
+@media (max-width: 640px) {
+  /* Allow the table to size to content on small screens so the Description
+     column's min-width can take effect. Previously the large fixed
+     min-width forced other columns to squeeze the Description. */
+  .feature-table {
+    min-width: auto;
+    table-layout: auto;
+  }
+
+  /* Force the Description column to be at least 3cm wide on mobile.
+     Use an explicit width with !important to override inline widths. */
+  .feature-table thead th:nth-child(2),
+  .feature-table thead th:nth-child(2),
+  .feature-table tbody td:nth-child(2) {
+    /* Increase description column on narrow screens (use 4cm to be more visible) */
+    min-width: 8cm;
+    width: 8cm !important;
+    white-space: normal;
+  }
+  /* Reduce other columns so Description has more room on narrow screens */
+  .feature-table thead th:nth-child(1),
+  .feature-table tbody td:nth-child(1) {
+    width: 2rem !important;
+    min-width: 2rem !important;
+  }
+  .feature-table thead th:nth-child(3),
+  .feature-table tbody td:nth-child(3) {
+    width: 4.5rem !important;
+    min-width: 3.5rem !important;
+  }
+  .feature-table thead th:nth-child(4),
+  .feature-table tbody td:nth-child(4),
+  .feature-table tbody td:nth-child(4) {
+    /* Increase description column on narrow screens (use 4cm to be more visible) */
+    min-width: 2.5cm;
+    width: 2.5cm !important;
+    white-space: normal;
+  }
+  .feature-table thead th:nth-child(5),
+  .feature-table tbody td:nth-child(5),
+  .feature-table thead th:nth-child(6),
+  .feature-table tbody td:nth-child(6) {
+    width: 4rem !important;
+    min-width: 3.5rem !important;
+  }
+
+  /* Allow horizontal scrolling if content still overflows */
+  .feature-table-container {
+    overflow-x: auto;
+  }
+}
