@@ -19,8 +19,11 @@ const analysisOptions = [
     { value: 'participants', label: 'Participants' },
     { value: '%Participants', label: '%Participants' },
     { value: '%Total', label: '%Total' },
+    { value: '%Deviation', label: '%Deviation' },
+    { value: '#Actual Deviation', label: '#Actual Deviation' },
     { value: 'Times', label: 'Times' },
     { value: 'Age', label: 'Age' },
+
 
     // Add more options here as needed
 ];
@@ -689,6 +692,8 @@ const ResultsPageComponent: React.FC = () => {
 
 // Helper function to get allowed aggTypes
 function getAllowedAggTypes(analysisType: string, filterType: string): string[] {
+    // For #Actual Deviation and %Deviation we only support cell-level comparisons: avg, max, min
+    if (analysisType === '#Actual Deviation' || analysisType === '%Deviation') return ['avg', 'max', 'min'];
     // For %Participants and %Total we don't allow Total or Growth (percent-of-column should be a simple aggregate)
     if (analysisType === '%Participants') {
         // allow growth for %Participants to show trend of the percentage over time
@@ -1538,6 +1543,165 @@ const sortedEventCodes = [...eventCodes].sort((a, b) => {
     }
     });
 
+// Compute per-row averages (used for #Actual Deviation)
+const rowAverages: { [code: string]: number } = {};
+eventCodes.forEach(code => {
+    const vals: number[] = [];
+    eventDates.forEach(d => {
+        const v = getCellNumericValue({
+            analysisType,
+            avgType,
+            filterType,
+            date: d,
+            code,
+            avgTimeLim12Lookup,
+            avgTimeLim5Lookup,
+            avgTimeLookup,
+            volunteers,
+            tourists,
+            coeff,
+            positionLookup,
+            event_number,
+            avgAgeLookup,
+            cellAgg
+        });
+        if (typeof v === 'number' && isFinite(v)) vals.push(Number(v));
+    });
+    rowAverages[code] = vals.length ? (vals.reduce((a, b) => a + b, 0) / vals.length) : 0;
+});
+
+    // NOTE: historic behavior — recomputing `eventTotals` from displayed
+    // #Actual Deviation diffs produced left-hand aggregates that average to 0
+    // (since mean(value - mean(value)) === 0). Keep the original underlying
+    // participant-based `eventTotals` by disabling that recomputation here.
+    // To re-enable in future, change the condition below.
+    if (false) {
+        // Recompute eventTotals per event code from diffs across dates
+        eventCodes.forEach(code => {
+            const diffs: number[] = [];
+            eventDates.forEach(d => {
+                const v = getCellNumericValue({
+                    analysisType,
+                    avgType,
+                    filterType,
+                    date: d,
+                    code,
+                    avgTimeLim12Lookup,
+                    avgTimeLim5Lookup,
+                    avgTimeLookup,
+                    volunteers,
+                    tourists,
+                    coeff,
+                    positionLookup,
+                    event_number,
+                    cellAgg,
+                    avgAgeLookup
+                });
+                if (typeof v === 'number' && isFinite(v) && typeof rowAverages[code] === 'number' && isFinite(rowAverages[code])) {
+                    const diff = Number(v) - Number(rowAverages[code]);
+                    if (isFinite(diff)) diffs.push(diff);
+                }
+            });
+            if (!diffs.length) {
+                eventTotals[code] = 0;
+            } else {
+                if (aggType === 'avg' || aggType === 'average') {
+                    const s = diffs.reduce((a, b) => a + b, 0) / diffs.length;
+                    eventTotals[code] = Math.round(s);
+                } else if (aggType === 'total') {
+                    const s = diffs.reduce((a, b) => a + b, 0);
+                    eventTotals[code] = Math.round(s);
+                } else if (aggType === 'max') {
+                    eventTotals[code] = Math.round(Math.max(...diffs));
+                } else if (aggType === 'min') {
+                    eventTotals[code] = Math.round(Math.min(...diffs));
+                } else if (aggType === 'range') {
+                    eventTotals[code] = Math.round(Math.max(...diffs) - Math.min(...diffs));
+                } else if (aggType === 'growth') {
+                    const ys = diffs.slice().reverse();
+                    const n = ys.length;
+                    if (n < 2) eventTotals[code] = 0;
+                    else {
+                        const meanX = (n - 1) / 2;
+                        const meanY = ys.reduce((a, b) => a + b, 0) / n;
+                        let num = 0, den = 0;
+                        for (let i = 0; i < n; i++) {
+                            num += (i - meanX) * (ys[i] - meanY);
+                            den += (i - meanX) * (i - meanX);
+                        }
+                        const slope = den !== 0 ? num / den : 0;
+                        eventTotals[code] = Math.round(slope);
+                    }
+                } else {
+                    const s = diffs.reduce((a, b) => a + b, 0) / diffs.length;
+                    eventTotals[code] = Math.round(s);
+                }
+            }
+        });
+
+        // Recompute grandTotalSum after overriding columnTotals
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        // (grandTotalSum used later only for display in some modes)
+    }
+
+    // Precompute per-row max/min diffs for #Actual Deviation and %Deviation so highlighting
+    // of max/min uses the actual displayed cell diffs (cell - rowAvg or percent-of-cell).
+    const rowMaxDiffs: { [code: string]: number | null } = {};
+    const rowMinDiffs: { [code: string]: number | null } = {};
+    if (analysisType === '#Actual Deviation' || analysisType === '%Deviation') {
+        eventCodes.forEach(code => {
+            const diffs: number[] = [];
+            eventDates.forEach(d => {
+                const v = getCellNumericValue({
+                    analysisType,
+                    avgType,
+                    filterType,
+                    date: d,
+                    code,
+                    avgTimeLim12Lookup,
+                    avgTimeLim5Lookup,
+                    avgTimeLookup,
+                    volunteers,
+                    tourists,
+                    coeff,
+                    positionLookup,
+                    event_number,
+                    cellAgg,
+                    avgAgeLookup
+                });
+                const rowAvg = rowAverages[code];
+                if (typeof v === 'number' && isFinite(v) && typeof rowAvg === 'number' && isFinite(rowAvg)) {
+                    if (analysisType === '#Actual Deviation') {
+                        if (String(filterType).startsWith('coeff')) {
+                            // For coefficient-style filters, express diffs as percentage points with one decimal
+                            const raw = Number(v) - Number(rowAvg);
+                            const pct = Number((raw * 100).toFixed(1));
+                            if (isFinite(pct)) diffs.push(pct);
+                        } else {
+                            const diff = Math.round(Number(v) - Number(rowAvg));
+                            if (isFinite(diff)) diffs.push(diff);
+                        }
+                    } else {
+                        // %Deviation: percent relative to row average: (v/rowAvg - 1) * 100
+                        if (Number(rowAvg) === 0) {
+                            // skip invalid row average
+                        } else {
+                            const pct = Math.round(((Number(v) / Number(rowAvg)) - 1) * 100);
+                            if (isFinite(pct)) diffs.push(pct);
+                        }
+                    }
+                }
+            });
+            if (!diffs.length) {
+                rowMaxDiffs[code] = null;
+                rowMinDiffs[code] = null;
+            } else {
+                rowMaxDiffs[code] = Math.max(...diffs);
+                rowMinDiffs[code] = Math.min(...diffs);
+            }
+        });
+    }
+
     return (
         <div className="page-content">
 
@@ -1685,6 +1849,105 @@ const sortedEventCodes = [...eventCodes].sort((a, b) => {
                                     } else {
                                         lookup = positionLookup;
                                     }
+                                    // When viewing `#Actual Deviation` or `%Deviation` compute the header aggregate
+                                    // from the displayed diffs so the top row reflects the same numbers
+                                    // shown in the matrix cells.
+                                    if (analysisType === '#Actual Deviation') {
+                                        const diffs: number[] = [];
+                                        eventCodes.forEach(code => {
+                                            const v = getCellNumericValue({
+                                                analysisType,
+                                                avgType,
+                                                filterType,
+                                                date,
+                                                code,
+                                                avgTimeLim12Lookup,
+                                                avgTimeLim5Lookup,
+                                                avgTimeLookup,
+                                                volunteers,
+                                                tourists,
+                                                coeff,
+                                                positionLookup,
+                                                event_number,
+                                                cellAgg,
+                                                avgAgeLookup
+                                            });
+                                            const rowAvg = rowAverages[code];
+                                            if (typeof v === 'number' && isFinite(v) && typeof rowAvg === 'number' && isFinite(rowAvg)) {
+                                                const diff = Number(v) - Number(rowAvg);
+                                                if (isFinite(diff)) diffs.push(diff);
+                                            }
+                                        });
+                                        if (diffs.length === 0) return <th key={date} className="sticky-header second-row"> </th>;
+                                        let hdrVal: number | null = null;
+                                        if (aggType === 'avg' || aggType === 'average') hdrVal = diffs.reduce((a, b) => a + b, 0) / diffs.length;
+                                        else if (aggType === 'total') hdrVal = diffs.reduce((a, b) => a + b, 0);
+                                        else if (aggType === 'max') hdrVal = Math.max(...diffs);
+                                        else if (aggType === 'min') hdrVal = Math.min(...diffs);
+                                        else if (aggType === 'range') hdrVal = Math.max(...diffs) - Math.min(...diffs);
+                                        else {
+                                            // growth and other unsupported header-level aggregations
+                                            return <th key={date} className="sticky-header second-row"> </th>;
+                                        }
+                                        if (hdrVal === null || !isFinite(Number(hdrVal))) return <th key={date} className="sticky-header second-row"> </th>;
+                                        const isCoeff = String(filterType).startsWith('coeff');
+                                        let out: any;
+                                        let color: string = 'inherit';
+                                        if (isCoeff) {
+                                            out = `${formatSignedFixed(hdrVal * 100, 1)}%`;
+                                            color = Number(hdrVal) > 0 ? 'red' : (Number(hdrVal) < 0 ? 'blue' : 'inherit');
+                                        } else {
+                                            out = formatSigned(Math.round(hdrVal));
+                                            color = Number(hdrVal) > 0 ? 'blue' : (Number(hdrVal) < 0 ? 'red' : 'inherit');
+                                        }
+                                        return <th key={date} className="sticky-header second-row"><span style={{ color }}>{out}</span></th>;
+                                    }
+                                        if (analysisType === '%Deviation') {
+                                            const diffs: number[] = [];
+                                            eventCodes.forEach(code => {
+                                                const v = getCellNumericValue({
+                                                    analysisType,
+                                                    avgType,
+                                                    filterType,
+                                                    date,
+                                                    code,
+                                                    avgTimeLim12Lookup,
+                                                    avgTimeLim5Lookup,
+                                                    avgTimeLookup,
+                                                    volunteers,
+                                                    tourists,
+                                                    coeff,
+                                                    positionLookup,
+                                                    event_number,
+                                                    cellAgg,
+                                                    avgAgeLookup
+                                                });
+                                                const rowAvg = rowAverages[code];
+                                                if (typeof v === 'number' && isFinite(v) && typeof rowAvg === 'number' && isFinite(rowAvg) && Number(rowAvg) !== 0) {
+                                                                            // use rowAvg as denominator: (v/rowAvg - 1) * 100
+                                                                            const pct = Math.round(((Number(v) / Number(rowAvg)) - 1) * 100);
+                                                                            if (isFinite(pct)) diffs.push(pct);
+                                                                        }
+                                            });
+                                            if (diffs.length === 0) return <th key={date} className="sticky-header second-row"> </th>;
+                                            let hdrVal: number | null = null;
+                                            if (aggType === 'avg' || aggType === 'average') hdrVal = diffs.reduce((a, b) => a + b, 0) / diffs.length;
+                                            else if (aggType === 'total') hdrVal = diffs.reduce((a, b) => a + b, 0);
+                                            else if (aggType === 'max') hdrVal = Math.max(...diffs);
+                                            else if (aggType === 'min') hdrVal = Math.min(...diffs);
+                                            else if (aggType === 'range') hdrVal = Math.max(...diffs) - Math.min(...diffs);
+                                            else {
+                                                return <th key={date} className="sticky-header second-row"> </th>;
+                                            }
+                                            if (hdrVal === null || !isFinite(Number(hdrVal))) return <th key={date} className="sticky-header second-row"> </th>;
+                                            const isCoeff = String(filterType).startsWith('coeff');
+                                            let out: any;
+                                            let color: string = 'inherit';
+                                            // %Deviation is a percentage (no decimal places)
+                                            out = `${formatSigned(Math.round(hdrVal))}%`;
+                                            color = Number(hdrVal) > 0 ? (isCoeff ? 'red' : 'blue') : (Number(hdrVal) < 0 ? (isCoeff ? 'blue' : 'red') : 'inherit');
+                                            return <th key={date} className="sticky-header second-row"><span style={{ color }}>{out}</span></th>;
+                                        }
                                     if (aggType === 'growth') {
                                         return <th key={date} className="sticky-header second-row"> </th>;
                                     }
@@ -1900,50 +2163,86 @@ const sortedEventCodes = [...eventCodes].sort((a, b) => {
                                     // compare numeric values; for sTourist percent mode compare formatted values (1dp) to avoid float mismatches
                                     let isEqual = false;
                                     if (numeric !== null && typeof eventTotals[code] === 'number' && aggType !== 'growth') {
-                                    if (analysisType === '%Participants' && percentOneDecimalFilters.includes(filterType)) {
-                                        // compare as displayed with 1 decimal
-                                        const a = formatPercent((percentOneDecimalFilters.includes(filterType) ? roundTo1(numeric, 3) : numeric), 1);
-                                        const b = formatPercent((percentOneDecimalFilters.includes(filterType) ? roundTo1(eventTotals[code], 3) : eventTotals[code]), 1);
-                                        isEqual = a === b;
-                                    } else if (analysisType === '%Total') {
-                                        // compute per-cell percent (numer / column total) and compare using appropriate precision
-                                        // Compute column denominator from the same numeric source used for cells
-                                        const computedDenom = eventCodes.reduce((acc, cc) => {
-                                            const v = getCellNumericValue({
-                                                analysisType,
-                                                avgType,
-                                                filterType,
-                                                date,
-                                                code: cc,
-                                                avgTimeLim12Lookup,
-                                                avgTimeLim5Lookup,
-                                                avgTimeLookup,
-                                                volunteers,
-                                                tourists,
-                                                coeff,
-                                                positionLookup,
-                                                event_number,
-                                                cellAgg
-                                            });
-                                            return acc + (typeof v === 'number' ? Number(v) : 0);
-                                        }, 0);
-                                        if (computedDenom && typeof numeric === 'number') {
-                                            const pct = (Number(numeric) / Number(computedDenom)) * 100;
-                                            if (String(filterType).startsWith('coeff')) {
-                                                const a = formatPercent(roundTo1(pct, 4), 1);
-                                                const b = formatPercent(roundTo1(Number(eventTotals[code]), 4), 1);
-                                                isEqual = a === b;
+                                        // Special-case comparison for #Actual Deviation: compare the
+                                        // cell's displayed diff (cell - rowAvg) to the row aggregate
+                                        // so highlighting (max/min) matches what's shown to the user.
+                                        if (analysisType === '#Actual Deviation' || analysisType === '%Deviation') {
+                                            const rowAvg = rowAverages[code];
+                                            if (typeof numeric === 'number' && isFinite(numeric) && typeof rowAvg === 'number' && isFinite(rowAvg)) {
+                                                let cellDiff: number | null = null;
+                                                if (analysisType === '#Actual Deviation') {
+                                                    if (String(filterType).startsWith('coeff')) {
+                                                        cellDiff = Number(((Number(numeric) - Number(rowAvg)) * 100).toFixed(1));
+                                                    } else {
+                                                        cellDiff = Math.round(Number(numeric) - Number(rowAvg));
+                                                    }
+                                                } else {
+                                                    // %Deviation: percent relative to row average: (numeric/rowAvg - 1) * 100
+                                                    if (Number(rowAvg) === 0) {
+                                                        cellDiff = null;
+                                                    } else {
+                                                        cellDiff = Math.round(((Number(numeric) / Number(rowAvg)) - 1) * 100);
+                                                    }
+                                                }
+                                                if (cellDiff === null) {
+                                                    isEqual = false;
+                                                } else {
+                                                    let aggVal: number | null = null;
+                                                    if (aggType === 'max') aggVal = (rowMaxDiffs && Object.prototype.hasOwnProperty.call(rowMaxDiffs, code)) ? rowMaxDiffs[code] : null;
+                                                    else if (aggType === 'min') aggVal = (rowMinDiffs && Object.prototype.hasOwnProperty.call(rowMinDiffs, code)) ? rowMinDiffs[code] : (typeof eventTotals[code] === 'number' ? Math.round(Number(eventTotals[code])) : null);
+                                                    if (aggVal === null || aggVal === undefined) {
+                                                        isEqual = false;
+                                                    } else {
+                                                        isEqual = Math.abs(Number(cellDiff) - Number(aggVal)) < 0.0001;
+                                                    }
+                                                }
                                             } else {
-                                                const a = formatPercent((percentOneDecimalFilters.includes(filterType) ? roundTo1(pct, 3) : pct), 1);
-                                                const b = formatPercent((percentOneDecimalFilters.includes(filterType) ? roundTo1(eventTotals[code], 3) : eventTotals[code]), 1);
-                                                isEqual = a === b;
+                                                isEqual = false;
+                                            }
+                                        } else if (analysisType === '%Participants' && percentOneDecimalFilters.includes(filterType)) {
+                                            // compare as displayed with 1 decimal
+                                            const a = formatPercent((percentOneDecimalFilters.includes(filterType) ? roundTo1(numeric, 3) : numeric), 1);
+                                            const b = formatPercent((percentOneDecimalFilters.includes(filterType) ? roundTo1(eventTotals[code], 3) : eventTotals[code]), 1);
+                                            isEqual = a === b;
+                                        } else if (analysisType === '%Total') {
+                                            // compute per-cell percent (numer / column total) and compare using appropriate precision
+                                            // Compute column denominator from the same numeric source used for cells
+                                            const computedDenom = eventCodes.reduce((acc, cc) => {
+                                                const v = getCellNumericValue({
+                                                    analysisType,
+                                                    avgType,
+                                                    filterType,
+                                                    date,
+                                                    code: cc,
+                                                    avgTimeLim12Lookup,
+                                                    avgTimeLim5Lookup,
+                                                    avgTimeLookup,
+                                                    volunteers,
+                                                    tourists,
+                                                    coeff,
+                                                    positionLookup,
+                                                    event_number,
+                                                    cellAgg
+                                                });
+                                                return acc + (typeof v === 'number' ? Number(v) : 0);
+                                            }, 0);
+                                            if (computedDenom && typeof numeric === 'number') {
+                                                const pct = (Number(numeric) / Number(computedDenom)) * 100;
+                                                if (String(filterType).startsWith('coeff')) {
+                                                    const a = formatPercent(roundTo1(pct, 4), 1);
+                                                    const b = formatPercent(roundTo1(Number(eventTotals[code]), 4), 1);
+                                                    isEqual = a === b;
+                                                } else {
+                                                    const a = formatPercent((percentOneDecimalFilters.includes(filterType) ? roundTo1(pct, 3) : pct), 1);
+                                                    const b = formatPercent((percentOneDecimalFilters.includes(filterType) ? roundTo1(eventTotals[code], 3) : eventTotals[code]), 1);
+                                                    isEqual = a === b;
+                                                }
+                                            } else {
+                                                isEqual = false;
                                             }
                                         } else {
-                                            isEqual = false;
+                                            isEqual = Math.abs(numeric - eventTotals[code]) < 0.0001;
                                         }
-                                    } else {
-                                        isEqual = Math.abs(numeric - eventTotals[code]) < 0.0001;
-                                    }
                                     }
                                     const cellStyle = isEqual
                                         ? (aggType === 'max' ? { backgroundColor: '#d4f5d4' }
@@ -2066,6 +2365,38 @@ const sortedEventCodes = [...eventCodes].sort((a, b) => {
                                                         cellAgg,
                                                         avgAgeLookup
                                                     });
+                                                }
+                                                // #Actual Deviation: show cell value minus row-average (integer output)
+                                                if (analysisType === '#Actual Deviation') {
+                                                    const rowAvg = rowAverages[code];
+                                                    if (numeric === null || rowAvg === 0 || !isFinite(Number(rowAvg))) return '';
+                                                    const diff = Number(numeric) - Number(rowAvg);
+                                                    if (!isFinite(diff)) return '';
+                                                    const isCoeff = String(filterType).startsWith('coeff');
+                                                    const color = isCoeff ? (diff > 0 ? 'red' : (diff < 0 ? 'blue' : 'inherit')) : (diff > 0 ? 'blue' : (diff < 0 ? 'red' : 'inherit'));
+                                                    // For coefficient-style filters show percentage-points with one decimal and inverted colour
+                                                    if (isCoeff) {
+                                                        const txt = `${formatSignedFixed(diff * 100, 1)}%`;
+                                                        return <span style={{ color }}>{txt}</span>;
+                                                    }
+                                                    // Always show integer difference (no decimal points) for non-coeff
+                                                    const txt = formatSigned(Math.round(diff));
+                                                    return <span style={{ color }}>{txt}</span>;
+                                                }
+                                                // %Deviation: show (cell - rowAvg) / cell as percent (no decimals)
+                                                if (analysisType === '%Deviation') {
+                                                    const rowAvg = rowAverages[code];
+                                                    if (numeric === null || !isFinite(Number(rowAvg))) return '';
+                                                    const raw = Number(numeric) - Number(rowAvg);
+                                                    if (!isFinite(raw)) return '';
+                                                    // denominator is rowAvg as requested
+                                                    if (Number(rowAvg) === 0) return '';
+                                                    const pct = Math.round(((Number(numeric) / Number(rowAvg)) - 1) * 100);
+                                                    const isCoeff = String(filterType).startsWith('coeff');
+                                                    const color = pct > 0 ? (isCoeff ? 'red' : 'blue') : (pct < 0 ? (isCoeff ? 'blue' : 'red') : 'inherit');
+                                                    const txt = `${formatSigned(Math.round(pct))}%`;
+                                                    // debug logging removed
+                                                    return <span style={{ color }}>{txt}</span>;
                                                 }
                                                 // If this is the Age analysis, prefer avgAgeLookup and format with two decimals
                                                 if (analysisType === 'Age') {
