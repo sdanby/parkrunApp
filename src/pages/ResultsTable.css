@@ -208,6 +208,14 @@ overflow: hidden;
   .sticky-header { min-width: 1.6cm; max-width: 1.6cm; width: 1.6cm; }
 }
 
+/* Make certain detailed columns wider on small screens and narrow tablets */
+@media (max-width: 1000px) {
+  .races-table col.mobile-wide {
+    min-width: 7.2cm !important;
+    width: 7.2cm !important;
+  }
+}
+
 /* Compact table mode: don't stretch to fill container (used for Qseason/Mseason) */
 .results-table.compact {
   table-layout: fixed;
