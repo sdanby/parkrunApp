@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { fetchEventPositions, fetchEventInfo, fetchEventByNumber } from '../api/backendAPI';
 import './ResultsTable.css';
@@ -11,10 +11,23 @@ const Races: React.FC = () => {
     const location = useLocation();
     const containerRef = useRef<HTMLDivElement | null>(null);
     const tableRef = useRef<HTMLTableElement | null>(null);
-    // Column widths in pixels for each table column (Pos, Athlete, Time, Age group, Age grade, Club, Detail)
-    // Columns 3+ start at ~1.5cm (≈57px at 96dpi) so table initial layout matches CSS
-    const defaultWidths = [60, 240, 57, 57, 57, 57, 57];
-    const [colWidths, setColWidths] = useState<number[]>(defaultWidths);
+    // Column widths in pixels for each table column (Pos, Athlete, ...)
+    // Start with sensible defaults; we'll expand when switching to Detailed view.
+    const defaultWidthsBase = [60, 240, 57, 57, 57, 57, 57];
+    const [colWidths, setColWidths] = useState<number[]>(() => {
+        try {
+            const saved = sessionStorage.getItem('races_col_widths_v1');
+            if (saved) return JSON.parse(saved);
+        } catch (e) { /* ignore */ }
+        return defaultWidthsBase.slice();
+    });
+    // View mode: 'basic' shows original columns, 'detailed' shows extra columns
+    const [viewMode, setViewMode] = useState<'basic' | 'detailed'>(() => {
+        try {
+            const s = sessionStorage.getItem('races_view_mode');
+            return (s === 'detailed') ? 'detailed' : 'basic';
+        } catch (e) { return 'basic'; }
+    });
     const resizingColRef = useRef<number | null>(null);
     const startXRef = useRef<number | null>(null);
     const startWidthRef = useRef<number | null>(null);
@@ -27,6 +40,52 @@ const Races: React.FC = () => {
     const [scrollbarHeight, setScrollbarHeight] = useState<number | null>(null);
     const thumbDragRef = useRef(false);
     const thumbRef = useRef<HTMLDivElement | null>(null);
+    // Sorting state
+    const [sortKey, setSortKey] = useState<string | null>(null);
+    const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+
+    const snakeToCamel = (s: string) => s.replace(/_(.)/g, (_m, g1) => g1.toUpperCase());
+    const getSortValue = (row: any, key: string) => {
+        if (!row) return null;
+        let v = row[key];
+        if (v === undefined) v = row[snakeToCamel(key)];
+        if (v === null || v === undefined) return null;
+        if (typeof v === 'number') return v;
+        const s = String(v).trim();
+        // numeric?
+        if (/^-?\d+(?:\.\d+)?$/.test(s)) return Number(s);
+        return s.toLowerCase();
+    };
+
+    const handleSort = (key: string) => {
+        if (sortKey === key) {
+            setSortDir(prev => prev === 'asc' ? 'desc' : 'asc');
+        } else {
+            setSortKey(key);
+            setSortDir('asc');
+        }
+    };
+
+    const sortedRows = useMemo(() => {
+        if (!rows || !sortKey) return rows;
+        const copy = (Array.isArray(rows) ? rows.slice() : []);
+        copy.sort((a, b) => {
+            const va = getSortValue(a, sortKey);
+            const vb = getSortValue(b, sortKey);
+            if (va === null && vb === null) return 0;
+            if (va === null) return 1;
+            if (vb === null) return -1;
+            if (typeof va === 'number' && typeof vb === 'number') {
+                return sortDir === 'asc' ? (va - vb) : (vb - va);
+            }
+            const sa = String(va);
+            const sb = String(vb);
+            if (sa < sb) return sortDir === 'asc' ? -1 : 1;
+            if (sa > sb) return sortDir === 'asc' ? 1 : -1;
+            return 0;
+        });
+        return copy;
+    }, [rows, sortKey, sortDir]);
 
     // Start dragging on the fast-scroll overlay
     const onFastMouseDown = (e: React.MouseEvent) => {
@@ -153,7 +212,7 @@ const Races: React.FC = () => {
         e.preventDefault();
         resizingColRef.current = colIndex;
         startXRef.current = e.clientX;
-        startWidthRef.current = colWidths[colIndex] ?? defaultWidths[colIndex] ?? 100;
+        startWidthRef.current = colWidths[colIndex] ?? defaultWidthsBase[colIndex] ?? 100;
         document.addEventListener('mousemove', onColResizerMouseMove);
         document.addEventListener('mouseup', onColResizerMouseUp);
     };
@@ -162,7 +221,7 @@ const Races: React.FC = () => {
         const col = resizingColRef.current;
         if (col === null) return;
         const startX = startXRef.current ?? e.clientX;
-        const startW = startWidthRef.current ?? (colWidths[col] ?? defaultWidths[col]);
+        const startW = startWidthRef.current ?? (colWidths[col] ?? defaultWidthsBase[col]);
         const dx = e.clientX - startX;
         //const newW = Math.max(40, Math.round(startW + dx));
         const newW = Math.max(40, Math.round(startW + dx));
@@ -190,6 +249,11 @@ const Races: React.FC = () => {
             } catch (e) {}
         };
     }, []);
+
+    // Persist column widths when they change
+    useEffect(() => {
+        try { sessionStorage.setItem('races_col_widths_v1', JSON.stringify(colWidths)); } catch (e) { /* ignore */ }
+    }, [colWidths]);
 
     const onThumbPointerMove = (e: React.PointerEvent) => {
         if (!thumbDragRef.current) return;
@@ -565,6 +629,39 @@ const Races: React.FC = () => {
         };
     }, [colWidths, rows]);
 
+    // Column definitions: base (basic) and additional (detailed)
+    const baseColumns = [
+        { k: 'time', label: 'Time' },
+        { k: 'age_group', label: 'Age group' },
+        { k: 'age_grade', label: 'Age grade' },
+        { k: 'club', label: 'Club' },
+        { k: 'comment', label: 'Detail' }
+    ];
+    const extraColumns = [
+        { k: 'total_runs', label: 'Total runs' },
+        { k: 'last_event_code_count_long', label: 'Local recent' },
+        { k: 'event_eligible_appearances', label: 'Eligible recent' },
+        { k: 'distinct_courses_long', label: 'Other events' }
+
+    ];
+    const columns = viewMode === 'detailed' ? [...baseColumns, ...extraColumns] : baseColumns;
+
+    // Ensure colWidths has entries for all columns (2 sticky + columns.length)
+    useEffect(() => {
+        const desired = 2 + columns.length;
+        setColWidths(prev => {
+            if (prev.length >= desired) return prev;
+            const copy = prev.slice();
+            while (copy.length < desired) copy.push(90);
+            return copy;
+        });
+    }, [viewMode, rows]);
+
+    // Persist view mode
+    useEffect(() => {
+        try { sessionStorage.setItem('races_view_mode', viewMode); } catch (e) { /* ignore */ }
+    }, [viewMode]);
+
     return (
         <div className="page-content">
             <div className="races-header" style={{ marginBottom: '0.6em', display: 'flex', alignItems: 'center' }}>
@@ -577,28 +674,43 @@ const Races: React.FC = () => {
                             <span className="races-header-sep">|</span>
                         ) }
                         { eventNumberVal ? (
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                                <span>{`#${eventNumberVal}`}</span>
-                                <span style={{ display: 'inline-flex', flexDirection: 'column' }}>
-                                    <button
-                                        type="button"
-                                        onClick={() => changeEventNumber(1)}
-                                        disabled={navLoading}
-                                        title="Previous event"
-                                        className="evnum-btn"
-                                        style={{ padding: '2px 6px', fontSize: '0.7rem' }}
-                                    >▲</button>
-                                    <button
-                                        type="button"
-                                        onClick={() => changeEventNumber(-1)}
-                                        disabled={navLoading}
-                                        title="Next event"
-                                        className="evnum-btn"
-                                        style={{ padding: '2px 6px', fontSize: '0.7rem' }}
-                                    >▼</button>
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                                    <span>{`#${eventNumberVal}`}</span>
+                                    <span style={{ display: 'inline-flex', flexDirection: 'column' }}>
+                                        <button
+                                            type="button"
+                                            onClick={() => changeEventNumber(1)}
+                                            disabled={navLoading}
+                                            title="Previous event"
+                                            className="evnum-btn"
+                                            style={{ padding: '2px 6px', fontSize: '0.7rem' }}
+                                        >▲</button>
+                                        <button
+                                            type="button"
+                                            onClick={() => changeEventNumber(-1)}
+                                            disabled={navLoading}
+                                            title="Next event"
+                                            className="evnum-btn"
+                                            style={{ padding: '2px 6px', fontSize: '0.7rem' }}
+                                        >▼</button>
+                                    </span>
+                                    <span style={{ marginLeft: '1cm', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                                        <label htmlFor="races-view-select" style={{ fontSize: '0.9rem' }}>View:</label>
+                                        <select
+                                            id="races-view-select"
+                                            value={viewMode}
+                                            onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
+                                                const v = e.target.value;
+                                                setViewMode(v === 'detailed' ? 'detailed' : 'basic');
+                                            }}
+                                            aria-label="Races view mode"
+                                        >
+                                            <option value="basic">Basic</option>
+                                            <option value="detailed">Detailed</option>
+                                        </select>
+                                    </span>
                                 </span>
-                            </span>
-                        ) : (eventCodeVal ? `code ${eventCodeVal}` : '') }
+                            ) : (eventCodeVal ? `code ${eventCodeVal}` : '') }
                     </div>
                 </div>
             </div>
@@ -610,14 +722,31 @@ const Races: React.FC = () => {
                     <table className="results-table races-table" ref={tableRef}>
                         {/* colgroup binds widths to state so columns can be resized by the user */}
                         <colgroup>
-                            {colWidths.map((w, i) => (
-                                <col key={i} style={{ width: `${w}px` }} />
-                            ))}
+                            {Array.from({ length: 2 + columns.length }).map((_, i) => {
+                                const w = colWidths[i] ?? (defaultWidthsBase[i] ?? 90);
+                                // Use the stored width on desktop so other columns (like Club)
+                                // are not squeezed. For the three detailed columns we add a
+                                // class so CSS can expand them only on mobile devices.
+                                const style: React.CSSProperties = { width: `${w}px` };
+                                let colClass: string | undefined = undefined;
+                                if (i >= 2) {
+                                    const colDef = columns[i - 2];
+                                    if (colDef && ['last_event_code_count_long', 'event_eligible_appearances', 'distinct_courses_long'].includes(colDef.k)) {
+                                        colClass = 'mobile-wide';
+                                    }
+                                }
+                                return <col key={i} className={colClass} style={style} />;
+                            })}
                         </colgroup>
                             <thead>
                             {/* Top header row: first two sticky headers then the remaining column headers */}
                             <tr>
-                                <th className="sticky-col sticky-header" style={{ fontWeight: 700, position: 'relative' }}>Pos
+                                <th
+                                    className="sticky-col sticky-header"
+                                    style={{ fontWeight: 700, position: 'relative', cursor: 'pointer' }}
+                                    onClick={() => handleSort('position')}
+                                >
+                                    <span>Pos{sortKey === 'position' ? (sortDir === 'asc' ? ' ▲' : ' ▼') : ''}</span>
                                     <div
                                         role="separator"
                                         aria-orientation="vertical"
@@ -625,7 +754,12 @@ const Races: React.FC = () => {
                                         style={{ position: 'absolute', right: 0, top: 0, width: 8, height: '100%', cursor: 'col-resize' }}
                                     />
                                 </th>
-                                    <th className="sticky-col-2 sticky-header" style={{ fontWeight: 700, textAlign: 'left' }}>Athlete
+                                    <th
+                                        className="sticky-col-2 sticky-header"
+                                        style={{ fontWeight: 700, textAlign: 'left', cursor: 'pointer' }}
+                                        onClick={() => handleSort('name')}
+                                    >
+                                        <span>Athlete{sortKey === 'name' ? (sortDir === 'asc' ? ' ▲' : ' ▼') : ''}</span>
                                         <div
                                             role="separator"
                                             aria-orientation="vertical"
@@ -633,16 +767,15 @@ const Races: React.FC = () => {
                                             style={{ position: 'absolute', right: 0, top: 0, width: 8, height: '100%', cursor: 'col-resize' }}
                                         />
                                     </th>
-                                    {/* Use explicit column ordering with friendly labels */}
-                                    {[
-                                        { k: 'time', label: 'Time' },
-                                        { k: 'age_group', label: 'Age group' },
-                                        { k: 'age_grade', label: 'Age grade' },
-                                        { k: 'club', label: 'Club' },
-                                        { k: 'comment', label: 'Detail' }
-                                    ].map((col, idx) => (
-                                        <th key={col.k} className="sticky-header" style={{ fontWeight: 700, position: 'relative' }}>
-                                            {col.label}
+                                    {/* Render columns based on selected view (basic/detailed) */}
+                                    {columns.map((col, idx) => (
+                                        <th
+                                            key={col.k}
+                                            className="sticky-header"
+                                            style={{ fontWeight: 700, position: 'relative', cursor: 'pointer' }}
+                                            onClick={() => handleSort(col.k)}
+                                        >
+                                            <span>{col.label}{sortKey === col.k ? (sortDir === 'asc' ? ' ▲' : ' ▼') : ''}</span>
                                             <div
                                                 role="separator"
                                                 aria-orientation="vertical"
@@ -654,17 +787,91 @@ const Races: React.FC = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            {rows.map((r: any, i: number) => (
+                            {(sortedRows ?? rows).map((r: any, i: number) => (
                                 <tr key={r.athlete_code || i}>
                                     {/* First two sticky columns: position, name */}
                                     <td className="sticky-col">{String(r['position'] ?? '')}</td>
-                                        <td className="sticky-col-2" style={{ textAlign: 'left' }}>{String(r['name'] ?? r['athlete_name'] ?? '')}</td>
-                                    {/* Remaining columns in requested order */}
-                                        <td>{String(r['time'] ?? '')}</td>
-                                        <td>{String(r['age_group'] ?? '')}</td>
-                                        <td>{String(r['age_grade'] ?? '')}</td>
-                                        <td style={{ textAlign: 'left' }}>{String(r['club'] ?? '')}</td>
-                                        <td style={{ textAlign: 'left' }}>{String(r['comment'] ?? r['detail'] ?? '')}</td>
+                                        {
+                                            (() => {
+                                                const athleteName = String(r['name'] ?? r['athlete_name'] ?? '');
+                                                const superTourVal = r['super_tourist'] ?? r['super_tourist'.replace(/_(.)/g, (_m, g1) => g1.toUpperCase())] ?? '';
+                                                const isSuperTour = (String(superTourVal) === 'T' || String(superTourVal) === '1' || superTourVal === 1);
+                                                const superReturnVal = r['super_returner'] ?? r['super_returner'.replace(/_(.)/g, (_m, g1) => g1.toUpperCase())] ?? '';
+                                                const isCommentBold = (String(superReturnVal) === 'T' || String(superReturnVal) === '1' || superReturnVal === 1);
+                                                // Crown: when Eligible recent > 10 or Local recent > 20 and Detail equals 'New PB!'
+                                                const eligibleRaw = r['event_eligible_appearances'] ?? r['eventEligibleAppearances'] ?? r['event_eligible_appearances'.replace(/_(.)/g, (_m, g1) => g1.toUpperCase())] ?? '';
+                                                const localRaw = r['last_event_code_count_long'] ?? r['lastEventCodeCountLong'] ?? r['last_event_code_count_long'.replace(/_(.)/g, (_m, g1) => g1.toUpperCase())] ?? '';
+                                                const eligibleNum = Number(eligibleRaw) || 0;
+                                                const localNum = Number(localRaw) || 0;
+                                                const commentRaw = String(r['comment'] ?? r['comment'.replace(/_(.)/g, (_m, g1) => g1.toUpperCase())] ?? '');
+                                                const showCrown = ( (eligibleNum > 10 || localNum > 20) && commentRaw === 'New PB!' );
+                                                return (
+                                                    <td className="sticky-col-2" style={{ textAlign: 'left' }}>
+                                                        {athleteName}
+                                                        {isSuperTour && (
+                                                            <span style={{ marginLeft: 6, fontSize: '0.55rem', color: '#0077cc', background: '#f0f0f0', padding: '1px 3px', borderRadius: 4, fontWeight: 700, display: 'inline-block' }}>ST</span>
+                                                        )}
+                                                        {isCommentBold && (
+                                                            <span title="Returner" style={{ marginLeft: 6, fontSize: '0.68rem', display: 'inline-block' }}>👋</span>
+                                                        )}
+                                                        {showCrown && (
+                                                            <span title="New PB" style={{ marginLeft: 6, fontSize: '0.58rem', color: '#b8860b', background: '#fff8e1', padding: '1px 3px', borderRadius: 4, fontWeight: 700, display: 'inline-block' }}>👑</span>
+                                                        )}
+                                                    </td>
+                                                );
+                                            })()
+                                        }
+                                    {/* Render remaining columns dynamically */}
+                                    {columns.map((col) => {
+                                        const rawVal = r[col.k] ?? r[col.k.replace(/_(.)/g, (_m, g1) => g1.toUpperCase())] ?? '';
+                                        const textAlign = (typeof rawVal === 'string') ? ((col.k === 'club' || col.k === 'comment') ? 'left' : undefined) : undefined;
+                                        const cellStyle: React.CSSProperties = { textAlign };
+                                        // If this is the Eligible recent column and the row is marked Regular === 'T', shade green
+                                        if (col.k === 'event_eligible_appearances') {
+                                            const regVal = r['regular'] ?? r['regular'.replace(/_(.)/g, (_m, g1) => g1.toUpperCase())] ?? '';
+                                            if (String(regVal) === 'T') {
+                                                cellStyle.backgroundColor = '#dff0d8';
+                                            }
+                                        }
+                                        // If this is the Other events column and the row is marked Tourist === 'T', shade green
+                                        if (col.k === 'distinct_courses_long') {
+                                            const tourVal = r['tourist_flag'] ?? r['tourist_flag'.replace(/_(.)/g, (_m, g1) => g1.toUpperCase())] ?? '';
+                                            if (String(tourVal) === 'T') {
+                                                cellStyle.backgroundColor = '#dff0d8';
+                                            }
+                                            // If the row is marked as super_tourist, make the Other events cell bold
+                                            const superTourVal = r['super_tourist'] ?? r['super_tourist'.replace(/_(.)/g, (_m, g1) => g1.toUpperCase())] ?? '';
+                                            if (String(superTourVal) === 'T' || String(superTourVal) === '1' || superTourVal === 1) {
+                                                cellStyle.fontWeight = '700';
+                                            }
+                                        }
+                                        // If this is the Detail column and row has returner/super_returner flags, style accordingly
+                                        if (col.k === 'comment') {
+                                            const returnerVal = r['returner'] ?? r['returner'.replace(/_(.)/g, (_m, g1) => g1.toUpperCase())] ?? '';
+                                            const superReturnerVal = r['super_returner'] ?? r['super_returner'.replace(/_(.)/g, (_m, g1) => g1.toUpperCase())] ?? '';
+                                            if (String(returnerVal) === 'T') {
+                                                cellStyle.backgroundColor = '#dff0d8';
+                                            }
+                                            if (String(superReturnerVal) === 'T') {
+                                                cellStyle.fontWeight = '700';
+                                            }
+                                            // Also make the comment bold when the crown condition applies
+                                            const eligibleRaw = r['event_eligible_appearances'] ?? r['eventEligibleAppearances'] ?? r['event_eligible_appearances'.replace(/_(.)/g, (_m, g1) => g1.toUpperCase())] ?? '';
+                                            const localRaw = r['last_event_code_count_long'] ?? r['lastEventCodeCountLong'] ?? r['last_event_code_count_long'.replace(/_(.)/g, (_m, g1) => g1.toUpperCase())] ?? '';
+                                            const eligibleNum = Number(eligibleRaw) || 0;
+                                            const localNum = Number(localRaw) || 0;
+                                            const commentRaw = String(r['comment'] ?? r['comment'.replace(/_(.)/g, (_m, g1) => g1.toUpperCase())] ?? '');
+                                            const showCrown = ( (eligibleNum > 10 || localNum > 20) && commentRaw === 'New PB!' );
+                                            if (showCrown) {
+                                                cellStyle.fontWeight = '700';
+                                            }
+                                        }
+                                        return (
+                                            <td key={col.k} style={cellStyle}>
+                                                {String(rawVal)}
+                                            </td>
+                                        );
+                                    })}
                                 </tr>
                             ))}
                         </tbody>
