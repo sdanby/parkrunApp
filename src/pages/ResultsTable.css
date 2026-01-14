@@ -11,6 +11,8 @@
   --col2-width: 4cm;
 }
 
+
+
 /* Small back button shown on the Races page header */
 .races-back-btn {
   display: inline-flex;
@@ -19,7 +21,7 @@
   width: 30px;
   height: 30px;
   margin-right: 0.6rem;
-  border: 1px solid rgba(0,0,0,0.08);
+  border: 1px solid rgba(0,0,0,1);
   background: white;
   color: #333;
   border-radius: 6px;
@@ -30,6 +32,15 @@
 }
 .races-back-btn:hover { background: #f4f6f8; }
 .races-back-btn:active { transform: translateX(-1px); }
+
+.results-table th {
+  background-color: rgba(224,224,224,0.98) !important;
+}
+
+/* Light blue background for All Time Adjustments headers */
+.sticky-header.adjustment-header {
+  background-color: #add8e6 !important; /* light blue */
+}
 
 /* apply to both headers and cells for column 1/2 */
 .results-table th:first-child,
@@ -208,14 +219,6 @@ overflow: hidden;
   .sticky-header { min-width: 1.6cm; max-width: 1.6cm; width: 1.6cm; }
 }
 
-/* Make certain detailed columns wider on small screens and narrow tablets */
-@media (max-width: 1000px) {
-  .races-table col.mobile-wide {
-    min-width: 7.2cm !important;
-    width: 7.2cm !important;
-  }
-}
-
 /* Compact table mode: don't stretch to fill container (used for Qseason/Mseason) */
 .results-table.compact {
   table-layout: fixed;
@@ -231,6 +234,7 @@ overflow: hidden;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  
 }
 
 /* Ensure columns 3 and onwards are at least 2.5cm so header dates can display */
@@ -303,22 +307,7 @@ select:focus {
     box-shadow: 0 0 2px #aaa; /* optional: subtle focus effect */
 }
 
-.results-table-container {
-  overflow-x: auto;
-  overflow-y: auto;      /* let native vertical scrollbar appear only when needed */
-  /* Make the container shrink to the table width so the scrollbar sits
-     immediately beside the table. Keep max-width to avoid overflow off-screen. */
-  display: inline-block;
-  vertical-align: top;
-  max-width: calc(100vw - 2rem);
-  margin-left: 0.5cm; /* Indent by 0.5cm */
-  height: 600px; /* fixed height so overflow works reliably */
-  padding-right: 6px; /* small reserve for horizontal scrollbar */
-  padding-bottom: 18px; /* reserve space so the horizontal native scrollbar can appear */
-  -webkit-overflow-scrolling: auto;
-  scrollbar-width: thin; /* Firefox */
-  scrollbar-color: rgba(0,0,0,0.35) rgba(0,0,0,0.06);
-}
+
 
 /* position context for absolute overlay */
 .results-table-container { position: relative; }
@@ -389,7 +378,7 @@ select:focus {
   border-collapse: collapse;
   width: 100%;
   min-width: 600px;
-  font-size: 0.95em;
+ 
   border-spacing: 0.1;
 }
 
@@ -423,6 +412,14 @@ select:focus {
   z-index: 220 !important;
   background: transparent !important;
 }
+@media (pointer: coarse) {
+  .races-table thead th {
+    touch-action: manipulation;     /* allow tap without triggering scroll */
+  }
+  .races-table thead th [role="separator"] {
+    pointer-events: none;
+  }
+}
 
 /* Ensure sticky header sits above body cells and doesn't get clipped */
 .races-table thead th {
@@ -430,6 +427,8 @@ select:focus {
   top: 0;
   z-index: 200;
   background: #fff;
+  min-height: 28px;        /* gives a taller tap target */
+  line-height: 20px;
 }
 
 /* Tooltip for small help popups over controls */
@@ -500,6 +499,7 @@ select:focus {
   top: 25px; /* Match the actual height of your first header row */
   z-index: 19;
   background-color: rgba(224,224,224,0.98);
+  
 }
 
 
@@ -528,6 +528,12 @@ select:focus {
 /* Override for sticky column */
 .results-table td.sticky-col {
   text-align: left;
+}
+
+/* Make the first two columns' body cells match the header's mid-grey background */
+.results-table td.sticky-col,
+.results-table td.sticky-col-2 {
+  background-color: rgba(224,224,224,0.98) !important; /* match header background */
 }
 
 .sticky-corner {
@@ -587,6 +593,26 @@ select:focus {
     max-width: 100px !important;
     width: 100px !important;
   }
+
+  /* Default position for loading and error messages (laptop/desktop) */
+.loading-message, .error-message {
+  position: absolute;
+  color: darkred;
+  transform: translate(-50%, -50%);
+}
+
+/* Mobile-specific position: push higher (adjust 10% as needed for your preference) */
+@media (max-width: 768px) {
+  .loading-message {
+    top: calc(10% - 0.1cm); /* higher on mobile */
+    left: 27%;
+  }
+  .error-message {
+
+    top: calc(10% + 0.5cm); /* higher on mobile */
+    left: 57%;
+  }
+}
 
 
 /* Races-specific enforcement: ensure the --col1/--col2 vars are applied
@@ -731,9 +757,20 @@ select:focus {
   display: inline-block; /* shrink-wrapping behavior so scrollbar will sit near the table */
 }
 .results-table-container {
-  /* allow horizontal scrolling when table is wider than viewport */
   overflow-x: auto;
-  white-space: normal;
+  overflow-y: auto;
+  display: inline-block;
+  vertical-align: top;
+  max-width: calc(100vw - 2rem);
+  margin-left: 0.5cm; /* Indent by 0.5cm */
+  margin-top: -0.5cm;
+  height: 600px;
+  padding-right: 6px;
+  padding-bottom: 18px;
+  -webkit-overflow-scrolling: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0,0,0,0.35) rgba(0,0,0,0.06);
+  position: relative;
 }
 
 /* Set a sensible starting size for columns 3+ in the Races view. This
@@ -755,8 +792,14 @@ select:focus {
 .results-table.races-table thead th.sticky-header {
   position: sticky !important;
   top: 0 !important;
-  z-index: 1200 !important; /* above `.races-header` and below sticky cols by design */
-  background: #fff !important;
+  z-index: 120 !important; /* above `.races-header` and below sticky cols by design */
+  /* background: #fff !important; */
+}
+
+@media (pointer: coarse) {
+  .results-table.races-table thead th [role="separator"] {
+    pointer-events: none !important;
+  }
 }
 
 /* Ensure sticky column classes are below the header */
@@ -765,7 +808,7 @@ select:focus {
   /* Make sticky columns render above the header so their content (Athlete)
      remains dominant when horizontal scrolling on narrow viewports. Use a
      higher z-index than the header but keep values consistent. */
-  z-index: 1300 !important;
+  z-index: 130 !important;
 }
 
 /* Ensure the header cells for the first two sticky columns remain stuck to
@@ -776,22 +819,22 @@ select:focus {
 .results-table.races-table thead th.sticky-col-2 {
   position: sticky !important;
   top: 0 !important;
-  z-index: 1400 !important; /* above other header rows and body cells */
-  background: #fff !important;
+  z-index: 500 !important; /* above other header rows and body cells */
+  /*background: #fff !important;*/
 }
 
 /* Keep the body cells for sticky columns slightly below the header z-index
    so header text remains visible when scrolling. */
 .results-table.races-table td.sticky-col,
 .results-table.races-table td.sticky-col-2 {
-  z-index: 1300 !important;
+  z-index: 130 !important;
 }
 
 .results-table.races-table .sticky-corner,
 .results-table.races-table .sticky-corner-2,
 .results-table.races-table .sticky-corner-2-1,
 .results-table.races-table .sticky-corner-2-2 {
-  z-index: 1350 !important;
+  z-index: 135 !important;
 }
 
 /* Ensure non-sticky header cells stay behind sticky columns on all devices.
@@ -801,12 +844,12 @@ select:focus {
    create a compositing layer for sticky columns to avoid browser rendering
    bugs (notably in mobile Safari/Chrome). */
 .results-table.races-table thead th:not(.sticky-col):not(.sticky-col-2) {
-  z-index: 1000 !important; /* below sticky columns */
+  z-index: 200 !important; /* below sticky columns */
 }
 
 .results-table.races-table .sticky-col,
 .results-table.races-table .sticky-col-2 {
-  z-index: 3000 !important; /* ensure sticky columns always render above headers */
+  z-index: 300 !important; /* ensure sticky columns always render above headers */
   -webkit-transform: translateZ(0);
   transform: translateZ(0);
   backface-visibility: hidden;
@@ -818,14 +861,15 @@ select:focus {
 .results-table.races-table .sticky-corner-2,
 .results-table.races-table .sticky-corner-2-1,
 .results-table.races-table .sticky-corner-2-2 {
-  z-index: 3050 !important;
+  z-index: 105 !important;
 }
 
 /* Races page header: keep above sticky table headers to avoid overlap */
 .races-header {
   position: relative;
-  z-index: 200; /* higher than table sticky headers (which use z-index ~80) */
+  z-index: 100; /* higher than table sticky headers (which use z-index ~80) */
   background: transparent;
+  overflow: visible; /* allow child controls to extend outside the header when nudged */
 }
 
 /* Limit the visible table width to roughly 18 columns to avoid the table
@@ -844,6 +888,11 @@ select:focus {
   width: auto !important;
 }
 
+/* Positioning: move Event Analysis tables down slightly so header controls
+  and other page chrome do not overlap the table on both desktop and mobile. */
+.results-table.analysis-table { margin-top: 0.3cm; }
+.results-table-container.analysis-container { margin-top: 0.3cm !important; }
+
 /* Limit the container for analysis tables so only ~16 columns are visible at once */
 .results-table-container.analysis-container {
   max-width: calc(var(--col1-width, 4cm) + var(--col2-width, 2.5cm) + 37cm) !important;
@@ -853,20 +902,98 @@ select:focus {
 /* Races header indentation and emphasis */
 .races-header .races-header-title,
 .races-header .races-header-sub {
-  /* increase indent: previous 0.5cm plus additional 3cm requested */
-  padding-left: 1.0cm; /* 0.5cm + 3cm */
+  /* shift elements further left by 0.5cm (now no left indent) */
+  padding-left: 0.3cm; /* was 0.5cm, now 0cm */
   font-weight: 700;    /* make both lines bold */
+  
+}
+@media (max-width: 768px) {
+  .races-header-title {
+    max-width: 11rem;          /* adjust as needed */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
 }
 .races-header .races-header-sub {
-  color: #444;         /* subdued color for the second line */
+  color: #444;
   margin-top: 2px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start; /* align to left; change to 'center' if you want centered */
+  gap: 0.7rem; /* small gap between date and number; adjust as needed */
+  transform: translateY(0.2cm); /* preserve any existing vertical nudge */
+  will-change: transform;
 }
+
 
 /* Stack title + sub vertically when placed next to the back button */
 .races-header-text {
   display: flex;
   flex-direction: column;
   line-height: 1.05;
+}
+
+/* Small helper class to nudge the View: control upward without using
+   large negative margins that can be clipped on small screens. Use
+   `position: relative; top: -X` so the element remains in normal flow
+   and header overflow can remain visible. */
+.races-view-control {
+  margin-left: 1.3cm; /* shifted left again by 0.5cm (now 0cm) */
+  display: flex;
+  flex-direction: column; /* stack controls vertically */
+  align-items: flex-start;
+  gap: 6px;
+  position: relative;
+  top: -3.1rem; /* keeps it above the title line; tweak if needed */
+  z-index: 1 !important;     /* greater than sticky columns (3000) */
+  transform: translateZ(0);     /* create compositing layer to stabilize stacking */
+  will-change: transform;
+}
+
+.races-view-control-item label {
+  display: block;
+  font-size: 0.8rem;
+  justify-self: end;
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-left: 1.0cm;  /* moves label text right without affecting the select */
+}
+
+
+/* Mobile-specific adjustments: move date and event name down by 0.3cm */
+@media (max-width: 768px) {
+  .races-header-title {
+    transform: translateY(-0.0cm); /* move event name down 0.3cm */
+    will-change: transform;
+  }
+  .races-header-sub {
+    transform: translateY(-0.2cm); /* adjust from -0.8cm to move date down 0.3cm */
+    will-change: transform;
+  }
+}
+
+
+/* Individual control row inside the view control container: fixed label column
+   so all selects align vertically under the same margin. */
+.races-view-control-item {
+  display: grid;
+  grid-template-columns: 6.0rem 2.3cm; /* label | select fixed to 2.3cm (2.1cm + 0.2cm) */
+  align-items: center;
+  column-gap: 28px;
+  font-size: 0.9rem;
+}
+
+.races-view-control-item select { font-size: 0.8rem; width: 100%; min-width: 4.0cm; max-width: 2.3cm; box-sizing: border-box; margin-left: -0.5cm; }
+
+@media (max-width: 768px) {
+  /* Use a small fixed label column on mobile so the select column lines up
+     vertically across all rows. Prevent label wrapping by truncating with
+     an ellipsis. */
+  .races-view-control-item { grid-template-columns: 4.3rem 2.3cm; }
+  .races-view-control-item label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block;}
 }
 
 /* separator shown between date and event number */
@@ -888,6 +1015,7 @@ select:focus {
     width: 100% !important;
     max-width: 100% !important;
     margin-left: 0 !important;
+   
     /* ensure horizontal gestures are handled by this container only */
     overscroll-behavior-x: contain;
     -webkit-overflow-scrolling: touch;
@@ -898,6 +1026,8 @@ select:focus {
     min-width: 100%;
   }
 }
+
+
 
 /* Force the Club column (6th) in the Races table to start at 1.5cm and
    always clip overflow with ellipsis. This high-specificity rule should
@@ -911,3 +1041,4 @@ select:focus {
   overflow: hidden !important;
   text-overflow: ellipsis !important;
 }
+
