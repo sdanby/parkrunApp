@@ -204,3 +204,15 @@ export async function fetchCoursesData() {
         { id: 2, name: "Sample Course 2", description: "Description 2" }
     ];
 }
+
+export const fetchEventTimeAdjustment = async (event_code: string | number, event_date: string) => {
+  const params = new URLSearchParams({
+    event_code: String(event_code),
+    event_date
+  });
+  const response = await fetch(`${API_BASE_URL}/api/eventTimeAdjustment?${params.toString()}`);
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+  }
+  return response.json();
+};
