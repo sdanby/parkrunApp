@@ -1,10 +1,11 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { fetchEventPositions, fetchEventInfo, fetchEventByNumber } from '../api/backendAPI';
+import { fetchEventPositions, fetchEventInfo, fetchEventByNumber, fetchEventTimeAdjustment } from '../api/backendAPI';
 import './ResultsTable.css';
 
 // Minimal Races page — shows the selected event/date (from query) and attempts to fetch event positions
 const Races: React.FC = () => {
+    const navigate = useNavigate();
     const [rows, setRows] = useState<any[] | null>(null);
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
@@ -22,12 +23,16 @@ const Races: React.FC = () => {
         return defaultWidthsBase.slice();
     });
     // View mode: 'basic' shows original columns, 'detailed' shows extra columns
-    const [viewMode, setViewMode] = useState<'basic' | 'detailed'>(() => {
+    const [viewMode, setViewMode] = useState<'basic' | 'detailed' | 'allTimeAdjustments'>(() => {
         try {
             const s = sessionStorage.getItem('races_view_mode');
-            return (s === 'detailed') ? 'detailed' : 'basic';
+            return (s === 'detailed') ? 'detailed' : (s === 'allTimeAdjustments') ? 'allTimeAdjustments' : 'basic';
         } catch (e) { return 'basic'; }
     });
+    // UI-only adjustment controls (no backend behavior wired yet)
+    //const [groupsAdj, setGroupsAdj] = useState<string>('none');
+    const [courseAdj, setCourseAdj] = useState<string>('none');
+    const [otherAdj, setOtherAdj] = useState<string>('none');
     const resizingColRef = useRef<number | null>(null);
     const startXRef = useRef<number | null>(null);
     const startWidthRef = useRef<number | null>(null);
@@ -309,71 +314,89 @@ const Races: React.FC = () => {
     const [resolvedDateDisplay, setResolvedDateDisplay] = useState<string | null>(null);
 
     useEffect(() => {
-        // If no identifier (event code/name) and no date, do nothing — keep page minimal
-        if (!rawEventParam && !date) return;
-        const load = async () => {
-                    setLoading(true);
-                    setError(null);
-                    // Clear any previously-fetched event info so the header doesn't show
-                    // stale data while we fetch the new event's info.
-                    setEventInfo(null);
-                    // Reset any previously-resolved date when starting a new load
-                    setResolvedDateDisplay(null);
-                    // Debug: log incoming params so we can trace unexpected results
-                    try {
-                        // logging intentionally removed in production
-                    } catch (err) {
-                        /* ignore */
-                    }
+    if (!rawEventParam && !date) return;
+
+    const load = async () => {
+        setLoading(true);
+        setError(null);
+        setEventInfo(null);
+        setResolvedDateDisplay(null);
+
+        try {
+        // Resolve the DD/MM/YYYY date string expected by the backend
+        let apiDate: string | null = date;
+        if (apiDate && /^\d{4}-\d{2}-\d{2}$/.test(apiDate)) {
+            const [yyyy, mm, dd] = apiDate.split('-');
+            apiDate = `${dd}/${mm}/${yyyy}`;
+        }
+
+        if (!apiDate && rawEventParam && paramEventNumber) {
             try {
-                // Normalize date to DD/MM/YYYY expected by backend (accept YYYY-MM-DD or DD/MM/YYYY)
-                let apiDate = date || '';
-                if (!apiDate && rawEventParam && paramEventNumber !== null) {
-                    // No explicit date provided: resolve it from event_code + event_number.
-                    try {
-                        const info = await fetchEventByNumber(Number(rawEventParam), paramEventNumber);
-                        const returnedDate = info && (info.event_date || info.eventDate) ? String(info.event_date || info.eventDate) : '';
-                        // fetchEventByNumber result logged during debugging — removed
-                        if (returnedDate) {
-                            apiDate = returnedDate;
-                            // Also expose for display in header
-                            setResolvedDateDisplay(returnedDate);
-                        }
-                    } catch (e) {
-                        // Let the existing error handling surface this to the user
-                        throw e;
-                    }
+            const info = await fetchEventByNumber(Number(rawEventParam), Number(paramEventNumber));
+            if (info?.event_date) {
+                const d = String(info.event_date);
+                if (/^\d{2}\/\d{2}\/\d{4}$/.test(d)) {
+                apiDate = d;
+                setResolvedDateDisplay(d);
+                } else if (/^\d{4}-\d{2}-\d{2}$/.test(d)) {
+                const [yyyy, mm, dd] = d.split('-');
+                apiDate = `${dd}/${mm}/${yyyy}`;
+                setResolvedDateDisplay(`${dd}/${mm}/${yyyy}`);
+                } else {
+                apiDate = d;
+                setResolvedDateDisplay(d);
                 }
-                if (/^\d{4}-\d{2}-\d{2}$/.test(apiDate)) {
-                    const parts = apiDate.split('-');
-                    apiDate = `${parts[2]}/${parts[1]}/${parts[0]}`;
-                }
-                // Use the centralized API helper which respects `API_BASE_URL`
-                try {
-                    const data = await fetchEventPositions(rawEventParam, apiDate);
-                    // fetchEventPositions result logging removed
-                    setRows(Array.isArray(data) ? data : []);
-                } catch (err) {
-                    console.error('[Races] fetchEventPositions failed:', err);
-                    throw err;
-                }
-                try {
-                    const info = await fetchEventInfo(rawEventParam, apiDate);
-                    // fetchEventInfo result logging removed
-                    setEventInfo(info && typeof info === 'object' ? info : null);
-                } catch (e) {
-                    console.warn('[Races] fetchEventInfo failed (optional):', e);
-                    // ignore — optional info
-                }
-            } catch (err) {
-                setError('Failed to fetch event positions — backend may not support this endpoint');
-                setRows(null);
-            } finally {
-                setLoading(false);
             }
-        };
-        load();
-    }, [rawEventParam, date, paramEventNumber]);
+            } catch (err) {
+            console.warn('fetchEventByNumber failed', err);
+            }
+        }
+
+        if (!apiDate) throw new Error('Event date is unknown — cannot load event positions');
+
+        const positionsPromise = fetchEventPositions(rawEventParam, apiDate);
+        const adjustmentsPromise =
+            viewMode === 'allTimeAdjustments' ? fetchEventTimeAdjustment(rawEventParam, apiDate) : Promise.resolve(null);
+
+        const [positionsRaw, adjustmentsRaw] = await Promise.all([positionsPromise, adjustmentsPromise]);
+
+        
+
+        const baseRows = Array.isArray(positionsRaw) ? positionsRaw : [];
+
+        const mergedRows =
+            viewMode === 'allTimeAdjustments' && Array.isArray(adjustmentsRaw)
+            ? (() => {
+                const key = (athleteCode?: any, time?: any) => `${athleteCode ?? ''}__${time ?? ''}`;
+                const adjMap = new Map(
+                    adjustmentsRaw.map((row: any) => [key(row.athlete_code, row.time), row])
+                );
+                return baseRows.map((row) => {
+                    const adj = adjMap.get(key(row.athlete_code, row.time));
+                    return adj ? { ...row, ...adj } : row;
+                });
+                })()
+            : baseRows;
+
+        setRows(mergedRows);
+
+        try {
+            const info = await fetchEventInfo(rawEventParam, apiDate);
+            setEventInfo(info && typeof info === 'object' ? info : null);
+        } catch (infoErr) {
+            console.warn('fetchEventInfo failed (optional):', infoErr);
+        }
+        } catch (err) {
+        console.error('[Races] load failed:', err);
+        setError('Failed to fetch event positions — backend may not support this endpoint');
+        setRows(null);
+        } finally {
+        setLoading(false);
+        }
+    };
+
+    load();
+    }, [rawEventParam, date, paramEventNumber, viewMode]);
 
     // wire scroll/resize to update custom thumb
     useEffect(() => {
@@ -449,6 +472,7 @@ const Races: React.FC = () => {
         }
         return date;
     })();
+    
 
     // Change event number by delta (-1 or +1). Will look up the date for the
     // requested event number for the same event_code, then navigate/update.
@@ -511,7 +535,7 @@ const Races: React.FC = () => {
     };
 
     // Back button component placed in the header so users can return to Results
-    const navigate = useNavigate();
+
     const BackButton: React.FC = () => {
         const handleBack = () => {
             // Always navigate back to the Results page and ignore browser history entries.
@@ -644,18 +668,32 @@ const Races: React.FC = () => {
         { k: 'distinct_courses_long', label: 'Other events' }
 
     ];
-    const columns = viewMode === 'detailed' ? [...baseColumns, ...extraColumns] : baseColumns;
+    const adjustmentColumns = [
+    { k: 'season_adj_time', label: 'Season' },
+    { k: 'event_adj_time', label: 'Event' },
+    { k: 'age_adj_time', label: 'Age' },
+    { k: 'sex_adj_time', label: 'Sex' },
+    { k: 'age_event_adj_time', label: 'Event+Age' },
+    { k: 'sex_event_adj_time', label: 'Event+Sex' },
+    { k: 'age_sex_adj_time', label: 'Age+Sex' },
+    { k: 'age_sex_event_adj_time', label: 'Event+Age+Sex' }
+    ];
+    // ...after adjustmentColumns definition
+    const columns = useMemo(() => {
+        if (viewMode === 'detailed') return [...baseColumns, ...extraColumns];
+        if (viewMode === 'allTimeAdjustments') return [...baseColumns, ...adjustmentColumns];
+        return baseColumns;
+    }, [viewMode]);
 
-    // Ensure colWidths has entries for all columns (2 sticky + columns.length)
+    // keep colWidths aligned with the current column count
     useEffect(() => {
-        const desired = 2 + columns.length;
-        setColWidths(prev => {
-            if (prev.length >= desired) return prev;
-            const copy = prev.slice();
-            while (copy.length < desired) copy.push(90);
-            return copy;
-        });
-    }, [viewMode, rows]);
+    const desired = 2 + columns.length;
+    setColWidths(prev => {
+        const copy = prev.slice(0, desired);
+        while (copy.length < desired) copy.push(90);
+        return copy;
+    });
+    }, [columns]);
 
     // Persist view mode
     useEffect(() => {
@@ -664,18 +702,18 @@ const Races: React.FC = () => {
 
     return (
         <div className="page-content">
-            <div className="races-header" style={{ marginBottom: '0.6em', display: 'flex', alignItems: 'center' }}>
+            <div className="races-header" style={{ marginBottom: '0.0em', display: 'flex', alignItems: 'normal',marginLeft: '1.0em' }}>
                 <BackButton />
                 <div className="races-header-text">
                     <div className="races-header-title">{eventName || <em>none</em>}</div>
                     <div className="races-header-sub">
                         {displayDate || ''}
                         { (displayDate && (eventNumberVal || eventCodeVal)) && (
-                            <span className="races-header-sep">|</span>
+                            <span className="races-header-sep"></span>
                         ) }
                         { eventNumberVal ? (
-                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                                    <span>{`#${eventNumberVal}`}</span>
+                                <span style={{ display: 'inline-flex', alignItems: 'start', gap: 6 , transform: 'translateY(-0.5cm)' }}>
+                                    <span style={{ marginLeft: '1.1rem',marginTop: '0.3cm'  }}>{`#${eventNumberVal}`}</span>  
                                     <span style={{ display: 'inline-flex', flexDirection: 'column' }}>
                                         <button
                                             type="button"
@@ -694,57 +732,74 @@ const Races: React.FC = () => {
                                             style={{ padding: '2px 6px', fontSize: '0.7rem' }}
                                         >▼</button>
                                     </span>
-                                    <span style={{ marginLeft: '1cm', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-                                        <label htmlFor="races-view-select" style={{ fontSize: '0.9rem' }}>View:</label>
-                                        <select
-                                            id="races-view-select"
-                                            value={viewMode}
-                                            onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
-                                                const v = e.target.value;
-                                                setViewMode(v === 'detailed' ? 'detailed' : 'basic');
-                                            }}
-                                            aria-label="Races view mode"
-                                        >
-                                            <option value="basic">Basic</option>
-                                            <option value="detailed">Detailed</option>
-                                        </select>
+                                    <span className="races-view-control">
+                                        <div className="races-view-control-item">
+                                            <label htmlFor="races-view-select">View:</label>
+                                            <select
+                                                id="races-view-select"
+                                                value={viewMode}
+                                                onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
+                                                    const v = e.target.value;
+                                                    setViewMode(v === 'detailed' ? 'detailed' : v === 'allTimeAdjustments' ? 'allTimeAdjustments' : 'basic');
+                                                }}
+                                                aria-label="Races view mode"
+                                            >
+                                                <option value="basic">Basic</option>
+                                                <option value="detailed">Detailed</option>
+                                                <option value="allTimeAdjustments">All Time Adjustments</option>
+                                            </select>
+                                         </div>
+
+                                        <div className="races-view-control-item">
+                                            <label htmlFor="course-adj-select">Course adj:</label>
+                                            <select id="course-adj-select" value={courseAdj} onChange={(e) => setCourseAdj(e.target.value)} aria-label="Course adjustment">
+                                                <option value="none">no adjustment (default)</option>
+                                                <option value="seasonal">seasonal adjustments</option>
+                                                <option value="full">full event adjustments</option>
+                                            </select>
+                                        </div>
+                                        <div className="races-view-control-item">
+                                            <label htmlFor="other-adj-select">Other adj:</label>
+                                            <select id="other-adj-select" value={otherAdj} onChange={(e) => setOtherAdj(e.target.value)} aria-label="Other adjustment">
+                                                <option value="none">no adjustment (default)</option>
+                                                <option value="age">age adjustments</option>
+                                                <option value="sex">sex adjustments</option>
+                                                <option value="age_sex">age & sex adjustment</option>
+                                            </select>
+                                        </div>
                                     </span>
                                 </span>
                             ) : (eventCodeVal ? `code ${eventCodeVal}` : '') }
                     </div>
                 </div>
             </div>
-            {loading && <div>Loading event positions…</div>}
-            {error && <div style={{ color: 'darkred' }}>{error}</div>}
-            {rows && rows.length === 0 && <div>No positions returned for this event/date.</div>}
+            {loading && <div className="loading-message" style={{ color: 'darkred', position: 'absolute', top: 'calc(20% - 0.1cm)', left: '6%', transform: 'translate(-50%, -50%)' }}>Loading event positions…</div>}
+            {error && <div className="error-message" style={{ color: 'darkred', position: 'absolute', top: 'calc(20% - 0.1cm)', left: '17%', transform: 'translate(-50%, -50%)' }}>{error}</div>}               {rows && rows.length === 0 && <div>No positions returned for this event/date.</div>}
             {rows && rows.length > 0 && (
-                <div className="results-table-container" ref={containerRef}>
-                    <table className="results-table races-table" ref={tableRef}>
-                        {/* colgroup binds widths to state so columns can be resized by the user */}
-                        <colgroup>
-                            {Array.from({ length: 2 + columns.length }).map((_, i) => {
-                                const w = colWidths[i] ?? (defaultWidthsBase[i] ?? 90);
-                                // Use the stored width on desktop so other columns (like Club)
-                                // are not squeezed. For the three detailed columns we add a
-                                // class so CSS can expand them only on mobile devices.
-                                const style: React.CSSProperties = { width: `${w}px` };
-                                let colClass: string | undefined = undefined;
-                                if (i >= 2) {
-                                    const colDef = columns[i - 2];
-                                    if (colDef && ['last_event_code_count_long', 'event_eligible_appearances', 'distinct_courses_long'].includes(colDef.k)) {
-                                        colClass = 'mobile-wide';
-                                    }
-                                }
-                                return <col key={i} className={colClass} style={style} />;
-                            })}
-                        </colgroup>
-                            <thead>
+                            <div className="results-table-container" ref={containerRef}>
+                            <table
+                                key={viewMode}                 // force remount when view changes
+                                className="results-table races-table"
+                                ref={tableRef}
+                            >
+                                {/* colgroup ... */}
+                                <colgroup>
+                                {Array.from({ length: 2 + columns.length }).map((_, i) => {
+                                    const w = colWidths[i] ?? (defaultWidthsBase[i] ?? 90);
+                                    return <col key={i} style={{ width: `${w}px` }} />;
+                                })}
+                                </colgroup>
+
+                                {/* ... */}
+
+                            <thead key={viewMode}>
                             {/* Top header row: first two sticky headers then the remaining column headers */}
                             <tr>
                                 <th
                                     className="sticky-col sticky-header"
                                     style={{ fontWeight: 700, position: 'relative', cursor: 'pointer' }}
                                     onClick={() => handleSort('position')}
+                                    onTouchEnd={(e) => { e.preventDefault(); handleSort('position'); }}
                                 >
                                     <span>Pos{sortKey === 'position' ? (sortDir === 'asc' ? ' ▲' : ' ▼') : ''}</span>
                                     <div
@@ -758,6 +813,7 @@ const Races: React.FC = () => {
                                         className="sticky-col-2 sticky-header"
                                         style={{ fontWeight: 700, textAlign: 'left', cursor: 'pointer' }}
                                         onClick={() => handleSort('name')}
+                                        onTouchEnd={(e) => { e.preventDefault(); handleSort('name'); }}
                                     >
                                         <span>Athlete{sortKey === 'name' ? (sortDir === 'asc' ? ' ▲' : ' ▼') : ''}</span>
                                         <div
@@ -769,23 +825,24 @@ const Races: React.FC = () => {
                                     </th>
                                     {/* Render columns based on selected view (basic/detailed) */}
                                     {columns.map((col, idx) => (
-                                        <th
-                                            key={col.k}
-                                            className="sticky-header"
-                                            style={{ fontWeight: 700, position: 'relative', cursor: 'pointer' }}
-                                            onClick={() => handleSort(col.k)}
-                                        >
-                                            <span>{col.label}{sortKey === col.k ? (sortDir === 'asc' ? ' ▲' : ' ▼') : ''}</span>
-                                            <div
-                                                role="separator"
-                                                aria-orientation="vertical"
-                                                onMouseDown={(e) => onColResizerMouseDown(e, idx + 2)}
-                                                style={{ position: 'absolute', right: 0, top: 0, width: 8, height: '100%', cursor: 'col-resize' }}
-                                            />
-                                        </th>
+                                    <th
+                                        key={col.k}
+                                        className={`sticky-header ${adjustmentColumns.find(ac => ac.k === col.k) ? 'adjustment-header' : ''}`}
+                                        style={{ fontWeight: 700, position: 'relative', cursor: 'pointer' }}
+                                        onClick={() => handleSort(col.k)}
+                                        onTouchEnd={(e) => { e.preventDefault(); handleSort(col.k); }}  // add this
+                                    >
+                                        <span>{col.label}{sortKey === col.k ? (sortDir === 'asc' ? ' ▲' : ' ▼') : ''}</span>
+                                        <div
+                                        role="separator"
+                                        aria-orientation="vertical"
+                                        onMouseDown={(e) => onColResizerMouseDown(e, idx + 2)}
+                                        style={{ position: 'absolute', right: 0, top: 0, width: 8, height: '100%', cursor: 'col-resize' }}
+                                        />
+                                    </th>
                                     ))}
-                            </tr>
-                        </thead>
+                                </tr>
+                                </thead>
                         <tbody>
                             {(sortedRows ?? rows).map((r: any, i: number) => (
                                 <tr key={r.athlete_code || i}>
@@ -805,17 +862,32 @@ const Races: React.FC = () => {
                                                 const localNum = Number(localRaw) || 0;
                                                 const commentRaw = String(r['comment'] ?? r['comment'.replace(/_(.)/g, (_m, g1) => g1.toUpperCase())] ?? '');
                                                 const showCrown = ( (eligibleNum > 10 || localNum > 20) && commentRaw === 'New PB!' );
+                                                const otherRaw = r['distinct_courses_long'] ?? r['distinctCoursesLong'] ?? r['distinct_courses_long'.replace(/_(.)/g, (_m, g1) => g1.toUpperCase())] ?? '';
+                                                const otherNum = Number(otherRaw) || 0;
+                                                const totalRaw = r['total_runs'] ?? r['totalRuns'] ?? r['total_runs'.replace(/_(.)/g, (_m, g1) => g1.toUpperCase())] ?? null;
+                                                // First-timer badge conditions (shared match). Two variants:
+                                                //  - firstEver: total_runs is null/absent → '1st ever Parkrun'
+                                                //  - firstAtEvent: total_runs present → 'First time at this event'
+                                                const isFirstTimerMatch = (commentRaw === 'First Timer!' && localNum === 1 && otherNum === 1);
+                                                const showFirstBadgeFirstEver = isFirstTimerMatch && (totalRaw == null);
+                                                const showFirstBadgeEventOnly = isFirstTimerMatch && (totalRaw != null);
                                                 return (
                                                     <td className="sticky-col-2" style={{ textAlign: 'left' }}>
                                                         {athleteName}
                                                         {isSuperTour && (
-                                                            <span style={{ marginLeft: 6, fontSize: '0.55rem', color: '#0077cc', background: '#f0f0f0', padding: '1px 3px', borderRadius: 4, fontWeight: 700, display: 'inline-block' }}>ST</span>
+                                                            <span title="Super Tourist" style={{ marginLeft: 6, fontSize: '0.55rem', color: '#0077cc', background: '#f0f0f0', padding: '1px 3px', borderRadius: 4, fontWeight: 700, display: 'inline-block' }}>ST</span>
                                                         )}
                                                         {isCommentBold && (
                                                             <span title="Returner" style={{ marginLeft: 6, fontSize: '0.68rem', display: 'inline-block' }}>👋</span>
                                                         )}
                                                         {showCrown && (
                                                             <span title="New PB" style={{ marginLeft: 6, fontSize: '0.58rem', color: '#b8860b', background: '#fff8e1', padding: '1px 3px', borderRadius: 4, fontWeight: 700, display: 'inline-block' }}>👑</span>
+                                                        )}
+                                                        {showFirstBadgeFirstEver && (
+                                                            <span title="1st ever Parkrun" aria-label="First timer" role="img" style={{ marginLeft: 6, fontSize: '0.55rem', color: '#0077cc', background: '#f0f0f0', padding: '1px 3px', borderRadius: 4, fontWeight: 700, display: 'inline-block' }}>🥇 1st</span>
+                                                        )}
+                                                        {showFirstBadgeEventOnly && (
+                                                            <span title="First time at this event" aria-label="First time at this event" role="img" style={{ marginLeft: 6, fontSize: '0.55rem', color: '#0077cc', background: '#f0f0f0', padding: '1px 3px', borderRadius: 4, fontWeight: 700, display: 'inline-block' }}>1st</span>
                                                         )}
                                                     </td>
                                                 );
