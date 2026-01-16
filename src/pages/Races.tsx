@@ -3,6 +3,65 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { fetchEventPositions, fetchEventInfo, fetchEventByNumber, fetchEventTimeAdjustment } from '../api/backendAPI';
 import './ResultsTable.css';
 
+type CourseAdjOption = 'none' | 'seasonal' | 'full';
+type OtherAdjOption = 'none' | 'age' | 'sex' | 'age_sex';
+
+const adjustmentColumnMatrix: Record<CourseAdjOption, Record<OtherAdjOption, string[]>> = {
+    none: {
+        none: [],
+        age: ['age_adj_time'],
+        sex: ['sex_adj_time'],
+        age_sex: ['age_sex_adj_time']
+    },
+    seasonal: {
+        none: ['season_adj_time'],
+        age: ['age_adj_time'],
+        sex: ['sex_adj_time'],
+        age_sex: ['age_sex_adj_time']
+    },
+    full: {
+        none: ['event_adj_time'],
+        age: ['age_event_adj_time'],
+        sex: ['sex_event_adj_time'],
+        age_sex: ['age_sex_event_adj_time']
+    }
+};
+
+const getAdjustmentKeys = (course: CourseAdjOption, other: OtherAdjOption): string[] => {
+    const courseMap = adjustmentColumnMatrix[course];
+    if (!courseMap) return [];
+    return courseMap[other] ?? [];
+};
+
+const normalizeCourseAdj = (val: string): CourseAdjOption => {
+    if (val === 'seasonal' || val === 'full') return val;
+    return 'none';
+};
+
+const normalizeOtherAdj = (val: string): OtherAdjOption => {
+    if (val === 'age' || val === 'sex' || val === 'age_sex') return val;
+    return 'none';
+};
+
+const courseAdjDisplay: Record<CourseAdjOption, string> = {
+    none: 'default',
+    seasonal: 'season',
+    full: 'event'
+};
+
+const otherAdjDisplay: Record<OtherAdjOption, string> = {
+    none: 'default',
+    age: 'age adjustment',
+    sex: 'sex adjustment',
+    age_sex: 'age & sex adjustment'
+};
+
+const viewModeDisplay: Record<'basic' | 'detailed' | 'allTimeAdjustments', string> = {
+    basic: 'Basic',
+    detailed: 'Detailed',
+    allTimeAdjustments: 'All Time Adjustments'
+};
+
 // Minimal Races page — shows the selected event/date (from query) and attempts to fetch event positions
 const Races: React.FC = () => {
     const navigate = useNavigate();
@@ -22,17 +81,45 @@ const Races: React.FC = () => {
         } catch (e) { /* ignore */ }
         return defaultWidthsBase.slice();
     });
-    // View mode: 'basic' shows original columns, 'detailed' shows extra columns
     const [viewMode, setViewMode] = useState<'basic' | 'detailed' | 'allTimeAdjustments'>(() => {
         try {
-            const s = sessionStorage.getItem('races_view_mode');
-            return (s === 'detailed') ? 'detailed' : (s === 'allTimeAdjustments') ? 'allTimeAdjustments' : 'basic';
-        } catch (e) { return 'basic'; }
+            const stored = sessionStorage.getItem('races_view_mode');
+            if (stored === 'detailed' || stored === 'allTimeAdjustments') return stored;
+            return 'basic';
+        } catch (_err) {
+            return 'basic';
+        }
     });
-    // UI-only adjustment controls (no backend behavior wired yet)
-    //const [groupsAdj, setGroupsAdj] = useState<string>('none');
-    const [courseAdj, setCourseAdj] = useState<string>('none');
-    const [otherAdj, setOtherAdj] = useState<string>('none');
+    const [courseAdj, setCourseAdj] = useState<CourseAdjOption>('none');
+    const [otherAdj, setOtherAdj] = useState<OtherAdjOption>('none');
+    const adjustmentKeys = useMemo(() => getAdjustmentKeys(courseAdj, otherAdj), [courseAdj, otherAdj]);
+    const adjustmentsActive = courseAdj !== 'none' || otherAdj !== 'none';
+    const ensureBasicViewForAdjustments = (nextCourse: CourseAdjOption, nextOther: OtherAdjOption) => {
+        if ((nextCourse !== 'none' || nextOther !== 'none') && viewMode !== 'basic') {
+            setViewMode('basic');
+        }
+    };
+    const handleViewModeChange = (nextMode: 'basic' | 'detailed' | 'allTimeAdjustments') => {
+        if (nextMode !== 'basic') {
+            if (courseAdj !== 'none') setCourseAdj('none');
+            if (otherAdj !== 'none') setOtherAdj('none');
+        }
+        setViewMode(nextMode);
+    };
+    const handleCourseAdjChange = (value: CourseAdjOption) => {
+        setCourseAdj(value);
+        ensureBasicViewForAdjustments(value, otherAdj);
+    };
+    const handleOtherAdjChange = (value: OtherAdjOption) => {
+        setOtherAdj(value);
+        ensureBasicViewForAdjustments(courseAdj, value);
+    };
+    const onCourseAdjSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        handleCourseAdjChange(normalizeCourseAdj(e.target.value));
+    };
+    const onOtherAdjSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        handleOtherAdjChange(normalizeOtherAdj(e.target.value));
+    };
     const resizingColRef = useRef<number | null>(null);
     const startXRef = useRef<number | null>(null);
     const startWidthRef = useRef<number | null>(null);
@@ -355,8 +442,9 @@ const Races: React.FC = () => {
         if (!apiDate) throw new Error('Event date is unknown — cannot load event positions');
 
         const positionsPromise = fetchEventPositions(rawEventParam, apiDate);
+        const needsAdjustmentData = viewMode === 'allTimeAdjustments' || adjustmentKeys.length > 0;
         const adjustmentsPromise =
-            viewMode === 'allTimeAdjustments' ? fetchEventTimeAdjustment(rawEventParam, apiDate) : Promise.resolve(null);
+            needsAdjustmentData ? fetchEventTimeAdjustment(rawEventParam, apiDate) : Promise.resolve(null);
 
         const [positionsRaw, adjustmentsRaw] = await Promise.all([positionsPromise, adjustmentsPromise]);
 
@@ -365,7 +453,7 @@ const Races: React.FC = () => {
         const baseRows = Array.isArray(positionsRaw) ? positionsRaw : [];
 
         const mergedRows =
-            viewMode === 'allTimeAdjustments' && Array.isArray(adjustmentsRaw)
+            needsAdjustmentData && Array.isArray(adjustmentsRaw)
             ? (() => {
                 const key = (athleteCode?: any, time?: any) => `${athleteCode ?? ''}__${time ?? ''}`;
                 const adjMap = new Map(
@@ -396,7 +484,13 @@ const Races: React.FC = () => {
     };
 
     load();
-    }, [rawEventParam, date, paramEventNumber, viewMode]);
+    }, [rawEventParam, date, paramEventNumber, viewMode, adjustmentKeys]);
+
+    useEffect(() => {
+        if (adjustmentsActive && viewMode !== 'basic') {
+            setViewMode('basic');
+        }
+    }, [adjustmentsActive, viewMode]);
 
     // wire scroll/resize to update custom thumb
     useEffect(() => {
@@ -668,8 +762,9 @@ const Races: React.FC = () => {
         { k: 'distinct_courses_long', label: 'Other events' }
 
     ];
+    const seasonalColumn = { k: 'season_adj_time', label: 'Season' };
     const adjustmentColumns = [
-    { k: 'season_adj_time', label: 'Season' },
+    seasonalColumn,
     { k: 'event_adj_time', label: 'Event' },
     { k: 'age_adj_time', label: 'Age' },
     { k: 'sex_adj_time', label: 'Sex' },
@@ -682,8 +777,22 @@ const Races: React.FC = () => {
     const columns = useMemo(() => {
         if (viewMode === 'detailed') return [...baseColumns, ...extraColumns];
         if (viewMode === 'allTimeAdjustments') return [...baseColumns, ...adjustmentColumns];
-        return baseColumns;
-    }, [viewMode]);
+        let selected = [...baseColumns];
+        if (adjustmentKeys.length > 0) {
+            adjustmentKeys.forEach(key => {
+                const col = adjustmentColumns.find(c => c.k === key);
+                if (col && !selected.some(existing => existing.k === col.k)) {
+                    selected = [...selected, col];
+                }
+            });
+        }
+        return selected;
+    }, [viewMode, adjustmentKeys]);
+    const adjustmentLabelMap: Record<string, string> = {};
+    adjustmentColumns.forEach(col => {
+        adjustmentLabelMap[col.k] = col.label;
+    });
+
 
     // keep colWidths aligned with the current column count
     useEffect(() => {
@@ -699,6 +808,8 @@ const Races: React.FC = () => {
     useEffect(() => {
         try { sessionStorage.setItem('races_view_mode', viewMode); } catch (e) { /* ignore */ }
     }, [viewMode]);
+
+    const statusMessage: string | null = loading ? 'Loading event positions…' : (error ?? null);
 
     return (
         <div className="page-content">
@@ -740,7 +851,8 @@ const Races: React.FC = () => {
                                                 value={viewMode}
                                                 onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
                                                     const v = e.target.value;
-                                                    setViewMode(v === 'detailed' ? 'detailed' : v === 'allTimeAdjustments' ? 'allTimeAdjustments' : 'basic');
+                                                    const next = v === 'detailed' ? 'detailed' : v === 'allTimeAdjustments' ? 'allTimeAdjustments' : 'basic';
+                                                    handleViewModeChange(next);
                                                 }}
                                                 aria-label="Races view mode"
                                             >
@@ -752,7 +864,7 @@ const Races: React.FC = () => {
 
                                         <div className="races-view-control-item">
                                             <label htmlFor="course-adj-select">Course adj:</label>
-                                            <select id="course-adj-select" value={courseAdj} onChange={(e) => setCourseAdj(e.target.value)} aria-label="Course adjustment">
+                                            <select id="course-adj-select" value={courseAdj} onChange={onCourseAdjSelect} aria-label="Course adjustment">
                                                 <option value="none">no adjustment (default)</option>
                                                 <option value="seasonal">seasonal adjustments</option>
                                                 <option value="full">full event adjustments</option>
@@ -760,7 +872,7 @@ const Races: React.FC = () => {
                                         </div>
                                         <div className="races-view-control-item">
                                             <label htmlFor="other-adj-select">Other adj:</label>
-                                            <select id="other-adj-select" value={otherAdj} onChange={(e) => setOtherAdj(e.target.value)} aria-label="Other adjustment">
+                                            <select id="other-adj-select" value={otherAdj} onChange={onOtherAdjSelect} aria-label="Other adjustment">
                                                 <option value="none">no adjustment (default)</option>
                                                 <option value="age">age adjustments</option>
                                                 <option value="sex">sex adjustments</option>
@@ -773,10 +885,28 @@ const Races: React.FC = () => {
                     </div>
                 </div>
             </div>
-            {loading && <div className="loading-message" style={{ color: 'darkred', position: 'absolute', top: 'calc(20% - 0.1cm)', left: '6%', transform: 'translate(-50%, -50%)' }}>Loading event positions…</div>}
-            {error && <div className="error-message" style={{ color: 'darkred', position: 'absolute', top: 'calc(20% - 0.1cm)', left: '17%', transform: 'translate(-50%, -50%)' }}>{error}</div>}               {rows && rows.length === 0 && <div>No positions returned for this event/date.</div>}
+                <div
+                    className="races-output-box"
+                    style={{
+                        backgroundColor: '#fff',
+                        border: 'none',
+                        borderRadius: '8px',
+                        padding: '0.35rem 0.6rem',
+                        minHeight: '0.3rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        boxShadow: 'none',
+                        color: loading ? '#333' : (error ? '#8b0000' : '#333'),
+                        fontSize: '0.85rem'
+                    }}
+                >
+                    {statusMessage ? (
+                        <span style={loading ? { fontStyle: 'italic' } : undefined}>{statusMessage}</span>
+                    ) : null}
+                </div>
+            {rows && rows.length === 0 && <div>No positions returned for this event/date.</div>}
             {rows && rows.length > 0 && (
-                            <div className="results-table-container" ref={containerRef}>
+                            <div className="results-table-container" ref={containerRef} style={{ marginTop: '0.1cm' }}>
                             <table
                                 key={viewMode}                 // force remount when view changes
                                 className="results-table races-table"
