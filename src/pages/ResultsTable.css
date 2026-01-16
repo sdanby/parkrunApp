@@ -33,6 +33,21 @@
 .races-back-btn:hover { background: #f4f6f8; }
 .races-back-btn:active { transform: translateX(-1px); }
 
+.races-output-box {
+  margin-top: -1cm;
+  margin-bottom: 0.1cm;
+  margin-left: 0.3cm;
+  margin-right: auto;
+  width: min(740px, calc(100% - 0.5rem));
+}
+
+@media (max-width: 640px) {
+  .races-output-box {
+    margin-top: -1.35cm;
+    width: calc(100% - 2.6rem);
+  }
+}
+
 .results-table th {
   background-color: rgba(224,224,224,0.98) !important;
 }
