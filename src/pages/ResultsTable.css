@@ -39,6 +39,9 @@
   margin-left: 0.3cm;
   margin-right: auto;
   width: min(740px, calc(100% - 0.5rem));
+  position: relative;
+  z-index: 0;
+  pointer-events: none;
 }
 
 @media (max-width: 640px) {
@@ -325,7 +328,7 @@ select:focus {
 
 
 /* position context for absolute overlay */
-.results-table-container { position: relative; }
+.results-table-container { position: relative; z-index: 5; }
 
 /* small right-edge overlay to support faster vertical scrolling */
 .fast-scroll {
@@ -786,6 +789,7 @@ select:focus {
   scrollbar-width: thin;
   scrollbar-color: rgba(0,0,0,0.35) rgba(0,0,0,0.06);
   position: relative;
+  z-index: 5;
 }
 
 /* Set a sensible starting size for columns 3+ in the Races view. This
@@ -885,6 +889,12 @@ select:focus {
   z-index: 100; /* higher than table sticky headers (which use z-index ~80) */
   background: transparent;
   overflow: visible; /* allow child controls to extend outside the header when nudged */
+  pointer-events: none; /* allow table header clicks when the layout overlaps */
+}
+
+.races-header button,
+.races-header select {
+  pointer-events: auto;
 }
 
 /* Limit the visible table width to roughly 18 columns to avoid the table
@@ -905,7 +915,7 @@ select:focus {
 
 /* Positioning: move Event Analysis tables down slightly so header controls
   and other page chrome do not overlap the table on both desktop and mobile. */
-.results-table.analysis-table { margin-top: 0.3cm; }
+.results-table.analysis-table { margin-top: 1.0cm; }
 .results-table-container.analysis-container { margin-top: 0.3cm !important; }
 
 /* Limit the container for analysis tables so only ~16 columns are visible at once */
