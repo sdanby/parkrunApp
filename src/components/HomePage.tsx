@@ -47,32 +47,32 @@ const HomePage: React.FC = () => {
                                 </td>
                                 <td>enhancement</td>
                                 <td>27-Dec-25</td>
-                                <td>Pending</td>
-                                <td>-</td>
+                                <td>Complete</td>
+                                <td>10-Jan-26</td>
                             </tr>
                             <tr>
                                 <td>2</td>
                                 <td>Is it possible to collect volunteers per event and store them by athlete code. Will require looping through scraping</td>
                                 <td>enhancement</td>
                                 <td>28-Dec-25</td>
-                                <td>Pending</td>
-                                <td>-</td>
+                                <td>Complete</td>
+                                <td>10-Jan-26</td>
                             </tr>
                             <tr>
                                 <td>3</td>
                                 <td>Add more data to Single Event page - make it toggleable.</td>
                                 <td>enhancement</td>
                                 <td>28-Dec-25</td>
-                                <td>Pending</td>
-                                <td>-</td>
+                                <td>Complete</td>
+                                <td>15-Jan-26</td>
                             </tr>
                             <tr>
                                 <td>4</td>
                                 <td>Make it filterable within Single Event page to reduce the number of athletes displayed.</td>
                                 <td>enhancement</td>
                                 <td>28-Dec-25</td>
-                                <td>Pending</td>
-                                <td>-</td>
+                                <td>Complete</td>
+                                <td>15-Jan-26</td>
                             </tr>
                             <tr>
                                 <td>5</td>
