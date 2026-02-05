@@ -11,6 +11,25 @@
   --col2-width: 4cm;
 }
 
+.races-athlete-button {
+  border: none;
+  background: none;
+  color: #0a5ad1;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+.races-athlete-button:disabled {
+  color: #777;
+  cursor: default;
+}
+.races-athlete-button:not(:disabled):hover,
+.races-athlete-button:not(:disabled):focus-visible {
+  text-decoration: underline;
+}
+
 
 
 /* Small back button shown on the Races page header */
