@@ -114,6 +114,24 @@ const Races: React.FC = () => {
         setOtherAdj(value);
         ensureBasicViewForAdjustments(courseAdj, value);
     };
+    const handleAthleteNavigate = (row: any) => {
+        const athleteCode = row?.athlete_code ?? row?.athleteCode;
+        if (!athleteCode) {
+            return;
+        }
+        const params = new URLSearchParams();
+        params.set('athlete_code', String(athleteCode));
+        navigate(`/athletes?${params.toString()}`, {
+            state: {
+                athleteCode: String(athleteCode),
+                from: 'races',
+                returnTo: {
+                    pathname: '/races',
+                    search: location.search || ''
+                }
+            }
+        });
+    };
     const onCourseAdjSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
         handleCourseAdjChange(normalizeCourseAdj(e.target.value));
     };
@@ -981,6 +999,7 @@ const Races: React.FC = () => {
                                         {
                                             (() => {
                                                 const athleteName = String(r['name'] ?? r['athlete_name'] ?? '');
+                                                const athleteCodeValue = r['athlete_code'] ?? r['athleteCode'];
                                                 const superTourVal = r['super_tourist'] ?? r['super_tourist'.replace(/_(.)/g, (_m, g1) => g1.toUpperCase())] ?? '';
                                                 const isSuperTour = (String(superTourVal) === 'T' || String(superTourVal) === '1' || superTourVal === 1);
                                                 const superReturnVal = r['super_returner'] ?? r['super_returner'.replace(/_(.)/g, (_m, g1) => g1.toUpperCase())] ?? '';
@@ -1001,9 +1020,22 @@ const Races: React.FC = () => {
                                                 const isFirstTimerMatch = (commentRaw === 'First Timer!' && localNum === 1 && otherNum === 1);
                                                 const showFirstBadgeFirstEver = isFirstTimerMatch && (totalRaw == null);
                                                 const showFirstBadgeEventOnly = isFirstTimerMatch && (totalRaw != null);
+                                                const athleteLabel = athleteName || 'Unknown athlete';
+                                                const hasAthleteCode = athleteCodeValue !== undefined && athleteCodeValue !== null && athleteCodeValue !== '';
                                                 return (
                                                     <td className="sticky-col-2" style={{ textAlign: 'left' }}>
-                                                        {athleteName}
+                                                        {hasAthleteCode ? (
+                                                            <button
+                                                                type="button"
+                                                                className="races-athlete-button"
+                                                                onClick={() => handleAthleteNavigate(r)}
+                                                                title="View athlete details"
+                                                            >
+                                                                {athleteLabel}
+                                                            </button>
+                                                        ) : (
+                                                            athleteLabel
+                                                        )}
                                                         {isSuperTour && (
                                                             <span title="Super Tourist" style={{ marginLeft: 6, fontSize: '0.55rem', color: '#0077cc', background: '#f0f0f0', padding: '1px 3px', borderRadius: 4, fontWeight: 700, display: 'inline-block' }}>ST</span>
                                                         )}
