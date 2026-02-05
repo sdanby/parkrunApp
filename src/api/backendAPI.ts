@@ -216,3 +216,18 @@ export const fetchEventTimeAdjustment = async (event_code: string | number, even
   }
   return response.json();
 };
+
+export const fetchAthleteRuns = async (athleteCode: string) => {
+    if (!athleteCode) {
+        throw new Error('athleteCode is required');
+    }
+    try {
+        const params = new URLSearchParams({ athlete_code: String(athleteCode) });
+        const url = `${API_BASE_URL}/api/athlete_runs?${params.toString()}`;
+        const response = await axios.get(url);
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching athlete runs:', error);
+        throw error;
+    }
+};
