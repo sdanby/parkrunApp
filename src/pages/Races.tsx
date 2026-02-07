@@ -795,16 +795,24 @@ const Races: React.FC = () => {
     const columns = useMemo(() => {
         if (viewMode === 'detailed') return [...baseColumns, ...extraColumns];
         if (viewMode === 'allTimeAdjustments') return [...baseColumns, ...adjustmentColumns];
-        let selected = [...baseColumns];
-        if (adjustmentKeys.length > 0) {
-            adjustmentKeys.forEach(key => {
-                const col = adjustmentColumns.find(c => c.k === key);
-                if (col && !selected.some(existing => existing.k === col.k)) {
-                    selected = [...selected, col];
-                }
-            });
-        }
-        return selected;
+
+        const selected = [...baseColumns];
+        if (adjustmentKeys.length === 0) return selected;
+
+        const adjustmentCols = adjustmentKeys
+            .map(key => adjustmentColumns.find(c => c.k === key))
+            .filter((col): col is typeof adjustmentColumns[number] => Boolean(col))
+            .filter((col, idx, arr) => arr.findIndex(c => c.k === col.k) === idx);
+
+        if (adjustmentCols.length === 0) return selected;
+
+        const timeIndex = selected.findIndex(col => col.k === 'time');
+        const insertAt = timeIndex === -1 ? 0 : timeIndex + 1;
+        return [
+            ...selected.slice(0, insertAt),
+            ...adjustmentCols,
+            ...selected.slice(insertAt)
+        ];
     }, [viewMode, adjustmentKeys]);
     const adjustmentLabelMap: Record<string, string> = {};
     adjustmentColumns.forEach(col => {
