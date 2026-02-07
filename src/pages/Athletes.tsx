@@ -148,28 +148,33 @@ const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep
 
 const formatDateValue = (value: unknown): string => {
     if (value === undefined || value === null) return '';
+    const compact = (day: string, month: string, year: string) => {
+        const dd = day.padStart(2, '0');
+        const mm = month;
+        const yy = year.slice(-2);
+        return `${dd}${mm}${yy}`;
+    };
     const raw = String(value).trim();
     const iso = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
     if (iso) {
         const year = iso[1];
         const month = monthNames[Number(iso[2]) - 1] || iso[2];
         const day = iso[3];
-        return `${day} ${month} ${year}`;
+        return compact(day, month, year);
     }
     const slash = raw.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
     if (slash) {
         const day = slash[1];
         const month = monthNames[Number(slash[2]) - 1] || slash[2];
         const year = slash[3];
-        return `${day} ${month} ${year}`;
+        return compact(day, month, year);
     }
     const parsed = new Date(raw);
     if (!Number.isNaN(parsed.getTime())) {
-        return parsed.toLocaleDateString('en-GB', {
-            day: '2-digit',
-            month: 'short',
-            year: 'numeric'
-        });
+        const day = String(parsed.getUTCDate()).padStart(2, '0');
+        const month = monthNames[parsed.getUTCMonth()] || parsed.toLocaleString('en-GB', { month: 'short' });
+        const year = String(parsed.getUTCFullYear());
+        return compact(day, month, year);
     }
     return raw;
 };
@@ -225,11 +230,159 @@ const formatAgeEstimate = (value: unknown): string | undefined => {
     return String(value);
 };
 
+const useMediaQuery = (query: string): boolean => {
+    const [matches, setMatches] = useState<boolean>(() => {
+        if (typeof window === 'undefined') return false;
+        return window.matchMedia(query).matches;
+    });
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        const media = window.matchMedia(query);
+        const listener = (event: MediaQueryListEvent) => setMatches(event.matches);
+        setMatches(media.matches);
+        try {
+            media.addEventListener('change', listener);
+        } catch (_err) {
+            if (typeof media.addListener === 'function') media.addListener(listener);
+        }
+        return () => {
+            try {
+                media.removeEventListener('change', listener);
+            } catch (_err) {
+                if (typeof media.removeListener === 'function') media.removeListener(listener);
+            }
+        };
+    }, [query]);
+
+    return matches;
+};
+
+type AthleteViewMode = 'basic' | 'detailed' | 'allTimeAdjustments';
+type CourseAdjOption = 'none' | 'seasonal' | 'full';
+type OtherAdjOption = 'none' | 'age' | 'sex' | 'age_sex';
+
+const normalizeViewMode = (value: string): AthleteViewMode => {
+    if (value === 'detailed' || value === 'allTimeAdjustments') return value;
+    return 'basic';
+};
+
+const normalizeCourseAdjOption = (value: string): CourseAdjOption => {
+    if (value === 'seasonal' || value === 'full') return value;
+    return 'none';
+};
+
+const normalizeOtherAdjOption = (value: string): OtherAdjOption => {
+    if (value === 'age' || value === 'sex' || value === 'age_sex') return value;
+    return 'none';
+};
+
+type ColumnKey = 'date' | 'event_display' | 'position' | 'age_group' | 'age_grade' | 'time' | 'comment';
+
+type ColumnDef = {
+    key: ColumnKey;
+    label: string;
+    sticky?: boolean;
+    align?: 'left' | 'center';
+    desktopWidth?: number;
+    mobileWidth?: number;
+};
+
+const athleteTableColumns: ColumnDef[] = [
+    { key: 'date', label: 'Date', sticky: true, align: 'left', desktopWidth: 60, mobileWidth: 60 },
+    { key: 'event_display', label: 'Event name', align: 'left', desktopWidth: 90, mobileWidth: 90 },
+    { key: 'position', label: 'Pos', align: 'center', desktopWidth: 30 ,mobileWidth: 30},
+    { key: 'age_group', label: 'Age grp', align: 'center', desktopWidth: 60 ,mobileWidth: 60},
+    { key: 'age_grade', label: 'Age grd', align: 'center', desktopWidth: 60 ,mobileWidth: 60},
+    { key: 'time', label: 'Time', align: 'center', desktopWidth: 40 ,mobileWidth: 40},
+    { key: 'comment', label: 'Detail', align: 'left', desktopWidth: 80 ,mobileWidth: 80}
+];
+
+const parseDateSortValue = (value: unknown): number | null => {
+    if (value === undefined || value === null || value === '') return null;
+    if (typeof value === 'number' && Number.isFinite(value)) return value;
+    const raw = String(value).trim();
+    if (!raw) return null;
+    const isoMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (isoMatch) {
+        const parsed = Date.parse(`${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}T00:00:00Z`);
+        if (!Number.isNaN(parsed)) return parsed;
+    }
+    const slashMatch = raw.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if (slashMatch) {
+        const parsed = Date.parse(`${slashMatch[3]}-${slashMatch[2]}-${slashMatch[1]}T00:00:00Z`);
+        if (!Number.isNaN(parsed)) return parsed;
+    }
+    const parsed = Date.parse(raw);
+    return Number.isNaN(parsed) ? null : parsed;
+};
+
+const parseNumericSortValue = (value: unknown): number | null => {
+    if (value === undefined || value === null || value === '') return null;
+    if (typeof value === 'number' && Number.isFinite(value)) return value;
+    const cleaned = String(value).replace(/[^0-9.-]/g, '').trim();
+    if (!cleaned) return null;
+    const parsed = Number(cleaned);
+    return Number.isNaN(parsed) ? null : parsed;
+};
+
+const parseTimeSortValue = (value: unknown): number | null => {
+    if (value === undefined || value === null || value === '') return null;
+    if (typeof value === 'number' && Number.isFinite(value)) return value;
+    const raw = String(value).trim();
+    if (!raw) return null;
+    if (/^\d+(?:\.\d+)?$/.test(raw)) {
+        return Number(raw);
+    }
+    const timeParts = raw.split(':').map((part) => Number(part));
+    if (timeParts.length === 0 || timeParts.some((num) => Number.isNaN(num))) return null;
+    return timeParts.reduce((total, part) => (total * 60) + part, 0);
+};
+
+const parseStringSortValue = (value: unknown): string | null => {
+    if (value === undefined || value === null) return null;
+    const str = String(value).trim();
+    if (!str) return null;
+    return str.toLowerCase();
+};
+
+const resolveColumnSortValue = (row: AthleteRecord, column: ColumnKey): number | string | null => {
+    switch (column) {
+        case 'date':
+            return parseDateSortValue(pickField(row, ['formatted_date', 'event_date', 'date']));
+        case 'event_display':
+            return parseStringSortValue(
+                pickField(row, ['event_display', 'eventDisplay', 'event_name', 'eventName', 'event'])
+            );
+        case 'position':
+            return parseNumericSortValue(pickField(row, ['position', 'overall_position']));
+        case 'age_group':
+            return parseStringSortValue(pickField(row, ['age_group', 'ageGroup']));
+        case 'age_grade':
+            return parseNumericSortValue(pickField(row, ['age_grade', 'ageGrade']));
+        case 'time':
+            return parseTimeSortValue(
+                pickField(row, ['time', 'time_display', 'finish_time', 'gun_time']) ??
+                pickField(row, ['time_seconds', 'adj_time_seconds'])
+            );
+        case 'comment':
+            return parseStringSortValue(pickField(row, ['comment', 'notes', 'note', 'remark']));
+        default:
+            return null;
+    }
+};
+
 const Athletes: React.FC = () => {
     const [runs, setRuns] = useState<AthleteRecord[]>([]);
     const [summary, setSummary] = useState<AthleteSummary | null>(null);
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
+    const [viewMode, setViewMode] = useState<AthleteViewMode>('basic');
+    const [courseAdj, setCourseAdj] = useState<CourseAdjOption>('none');
+    const [otherAdj, setOtherAdj] = useState<OtherAdjOption>('none');
+    const [sortKey, setSortKey] = useState<ColumnKey>('date');
+    const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+    const isMobile = useMediaQuery('(max-width: 640px)');
     const location = useLocation();
     const navigate = useNavigate();
     const locationState = toAthletesLocationState(location.state ?? {});
@@ -288,6 +441,18 @@ const Athletes: React.FC = () => {
         }
     };
 
+    const handleViewModeSelect = (event: React.ChangeEvent<HTMLSelectElement>) => {
+        setViewMode(normalizeViewMode(event.target.value));
+    };
+
+    const handleCourseAdjSelect = (event: React.ChangeEvent<HTMLSelectElement>) => {
+        setCourseAdj(normalizeCourseAdjOption(event.target.value));
+    };
+
+    const handleOtherAdjSelect = (event: React.ChangeEvent<HTMLSelectElement>) => {
+        setOtherAdj(normalizeOtherAdjOption(event.target.value));
+    };
+
     const latestRun = useMemo(() => (runs.length > 0 ? runs[runs.length - 1] : null), [runs]);
     const rawLatestAge = pickField(latestRun, ['current_age_estimate', 'currentAgeEstimate', 'age_estimate', 'age']) ??
         summary?.current_age_estimate;
@@ -319,6 +484,63 @@ const Athletes: React.FC = () => {
         return str.trim() === '' ? '--' : str;
     };
 
+    const getCellDisplayValue = (row: AthleteRecord, key: ColumnKey): string => {
+        switch (key) {
+            case 'date':
+                return renderCell(formatDateValue(pickField(row, ['formatted_date', 'event_date', 'date'])));
+            case 'event_display':
+                return renderCell(
+                    pickField(row, ['event_display', 'eventDisplay', 'event_name', 'eventName', 'event'])
+                );
+            case 'position':
+                return renderCell(pickField(row, ['position', 'overall_position']));
+            case 'age_group':
+                return renderCell(pickField(row, ['age_group', 'ageGroup']));
+            case 'age_grade':
+                return renderCell(formatAgeGradeValue(pickField(row, ['age_grade', 'ageGrade'])));
+            case 'time':
+                return renderCell(
+                    formatTimeValue(
+                        pickField(row, ['time', 'time_display', 'finish_time', 'gun_time']) ??
+                        pickField(row, ['time_seconds', 'adj_time_seconds'])
+                    )
+                );
+            case 'comment':
+                return renderCell(pickField(row, ['comment', 'notes', 'note', 'remark']));
+            default:
+                return '--';
+        }
+    };
+
+    const handleSort = (column: ColumnKey) => {
+        setSortDir(prev => (column === sortKey ? (prev === 'asc' ? 'desc' : 'asc') : 'asc'));
+        setSortKey(column);
+    };
+
+    const sortedRuns = useMemo(() => {
+        if (runs.length === 0) return [] as AthleteRecord[];
+        const decorated = runs.map((row, index) => ({ row, index }));
+        decorated.sort((a, b) => {
+            const va = resolveColumnSortValue(a.row, sortKey);
+            const vb = resolveColumnSortValue(b.row, sortKey);
+            if (va === null && vb === null) return a.index - b.index;
+            if (va === null) return 1;
+            if (vb === null) return -1;
+            if (typeof va === 'number' && typeof vb === 'number') {
+                if (va === vb) return a.index - b.index;
+                return sortDir === 'asc' ? va - vb : vb - va;
+            }
+            const sa = String(va).toLowerCase();
+            const sb = String(vb).toLowerCase();
+            if (sa === sb) return a.index - b.index;
+            if (sortDir === 'asc') return sa.localeCompare(sb);
+            return sb.localeCompare(sa);
+        });
+        return decorated.map(({ row }) => row);
+    }, [runs, sortKey, sortDir]);
+
+    const rowsToRender = runs.length > 0 ? sortedRuns : [];
+
     return (
         <div className="page-content athletes-page">
             {showHeader && (
@@ -334,29 +556,73 @@ const Athletes: React.FC = () => {
                             ←
                         </button>
                     )}
-                    <div className="athlete-header-text">
-                        <div className="athlete-header-title" title="Athlete Name">
-                            {detailTitle}
-                            {sexSymbol && <span className="athlete-header-sex" aria-label="Athlete sex"> {sexSymbol}</span>}
+                    <div className="athlete-header-main">
+                        <div className="athlete-header-text">
+                            <div className="athlete-header-title" title="Athlete Name">
+                                {detailTitle}
+                                {sexSymbol && <span className="athlete-header-sex" aria-label="Athlete sex"> {sexSymbol}</span>}
+                            </div>
+                            {headerCode && (
+                                <div className="athlete-header-code" title="Athlete Code">
+                                    {headerCode}
+                                </div>
+                            )}
+                            <div className="athlete-header-club" title="Athlete's Club">
+                                {headerClub}
+                            </div>
+                            {formattedLatestAge && (
+                                <div className="athlete-header-age" title="Estimated Age">
+                                    Estm.Age: {formattedLatestAge}
+                                </div>
+                            )}
+                            {totalRunsCount !== undefined && (
+                                <div className="athlete-header-total-runs" title="Total runs recorded">
+                                    Total runs: {totalRunsCount}
+                                </div>
+                            )}
                         </div>
-                        {headerCode && (
-                            <div className="athlete-header-code" title="Athlete Code">
-                                {headerCode}
+                        <div className="athlete-view-control races-view-control">
+                            <div className="races-view-control-item">
+                                <label htmlFor="athletes-view-select">View:</label>
+                                <select
+                                    id="athletes-view-select"
+                                    value={viewMode}
+                                    onChange={handleViewModeSelect}
+                                    aria-label="Athletes view mode"
+                                >
+                                    <option value="basic">Basic</option>
+                                    <option value="detailed">Detailed</option>
+                                    <option value="allTimeAdjustments">All Time Adjustments</option>
+                                </select>
                             </div>
-                        )}
-                        <div className="athlete-header-club" title="Athlete's Club">
-                            {headerClub}
+                            <div className="races-view-control-item">
+                                <label htmlFor="athletes-course-adj-select">Course adj:</label>
+                                <select
+                                    id="athletes-course-adj-select"
+                                    value={courseAdj}
+                                    onChange={handleCourseAdjSelect}
+                                    aria-label="Course adjustment"
+                                >
+                                    <option value="none">no adjustment (default)</option>
+                                    <option value="seasonal">seasonal adjustments</option>
+                                    <option value="full">full event adjustments</option>
+                                </select>
+                            </div>
+                            <div className="races-view-control-item">
+                                <label htmlFor="athletes-other-adj-select">Other adj:</label>
+                                <select
+                                    id="athletes-other-adj-select"
+                                    value={otherAdj}
+                                    onChange={handleOtherAdjSelect}
+                                    aria-label="Other adjustment"
+                                >
+                                    <option value="none">no adjustment (default)</option>
+                                    <option value="age">age adjustments</option>
+                                    <option value="sex">sex adjustments</option>
+                                    <option value="age_sex">age & sex adjustment</option>
+                                </select>
+                            </div>
                         </div>
-                        {formattedLatestAge && (
-                            <div className="athlete-header-age" title="Estimated Age">
-                                Estm.Age: {formattedLatestAge}
-                            </div>
-                        )}
-                        {totalRunsCount !== undefined && (
-                            <div className="athlete-header-total-runs" title="Total runs recorded">
-                                Total runs: {totalRunsCount}
-                            </div>
-                        )}
                     </div>
                 </div>
             )}
@@ -374,36 +640,51 @@ const Athletes: React.FC = () => {
             {!loading && !error && selectedCode && (
                 <>
                     <section className="athlete-runs-section">
-                        <div className="athlete-runs-header">
-                            <h3>Run history</h3>
-                        </div>
                         <div className="athlete-runs-table-wrapper">
                             {runs.length > 0 ? (
                                 <table className="athlete-runs-table">
                                     <thead>
                                         <tr>
-                                            <th>Date</th>
-                                            <th>Event code</th>
-                                            <th>Position</th>
-                                            <th>Age group</th>
-                                            <th>Age grade</th>
-                                            <th>Time</th>
-                                            <th>Comment</th>
+                                            {athleteTableColumns.map((col) => {
+                                                const isSorted = sortKey === col.key;
+                                                const headerClasses = ['athlete-table-header'];
+                                                if (col.sticky) headerClasses.push('athlete-date-header');
+                                                const sortIndicator = isSorted ? (sortDir === 'asc' ? '▲' : '▼') : '';
+                                                const style: React.CSSProperties = { textAlign: col.align ?? 'left' };
+                                                const targetWidth = isMobile
+                                                    ? (col.mobileWidth ?? col.desktopWidth)
+                                                    : (col.desktopWidth ?? col.mobileWidth);
+                                                if (typeof targetWidth === 'number') {
+                                                    const px = `${targetWidth}px`;
+                                                    style.width = px;
+                                                    style.minWidth = px;
+                                                    style.maxWidth = px;
+                                                }
+                                                return (
+                                                    <th
+                                                        key={col.key}
+                                                        className={headerClasses.join(' ')}
+                                                        onClick={() => handleSort(col.key)}
+                                                        onKeyDown={(event) => {
+                                                            if (event.key === 'Enter' || event.key === ' ') {
+                                                                event.preventDefault();
+                                                                handleSort(col.key);
+                                                            }
+                                                        }}
+                                                        tabIndex={0}
+                                                        scope="col"
+                                                        aria-sort={isSorted ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
+                                                        style={style}
+                                                    >
+                                                        <span>{col.label}</span>
+                                                        <span className="athlete-sort-indicator">{sortIndicator}</span>
+                                                    </th>
+                                                );
+                                            })}
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {runs.map((row, index) => {
-                                            const date = formatDateValue(pickField(row, ['formatted_date', 'event_date', 'date']));
-                                            const eventCode = pickField(row, ['event_code', 'eventCode', 'course_code', 'event']);
-                                            const position = pickField(row, ['position', 'overall_position']);
-                                            const ageGroup = pickField(row, ['age_group', 'ageGroup']);
-                                            const ageGrade = formatAgeGradeValue(pickField(row, ['age_grade', 'ageGrade']));
-                                            const timeValue = formatTimeValue(
-                                                pickField(row, ['time', 'time_display', 'finish_time', 'gun_time']) ??
-                                                    pickField(row, ['time_seconds', 'adj_time_seconds'])
-                                            );
-                                            const comment = pickField(row, ['comment', 'notes', 'note', 'remark']);
-
+                                        {rowsToRender.map((row, index) => {
                                             const keyParts = [
                                                 pickField(row, ['event_code', 'eventCode']),
                                                 pickField(row, ['formatted_date', 'event_date']),
@@ -412,13 +693,37 @@ const Athletes: React.FC = () => {
 
                                             return (
                                                 <tr key={keyParts.filter(Boolean).join('-') || index}>
-                                                    <td>{renderCell(date)}</td>
-                                                    <td>{renderCell(eventCode)}</td>
-                                                    <td>{renderCell(position)}</td>
-                                                    <td>{renderCell(ageGroup)}</td>
-                                                    <td>{renderCell(ageGrade)}</td>
-                                                    <td>{renderCell(timeValue)}</td>
-                                                    <td className="comment-cell">{renderCell(comment)}</td>
+                                                    {athleteTableColumns.map((col) => {
+                                                        const value = getCellDisplayValue(row, col.key);
+                                                        const alignmentStyle: React.CSSProperties = col.align ? { textAlign: col.align } : {};
+                                                        const targetWidth = isMobile
+                                                            ? (col.mobileWidth ?? col.desktopWidth)
+                                                            : (col.desktopWidth ?? col.mobileWidth);
+                                                        if (typeof targetWidth === 'number') {
+                                                            const px = `${targetWidth}px`;
+                                                            alignmentStyle.width = px;
+                                                            alignmentStyle.minWidth = px;
+                                                            alignmentStyle.maxWidth = px;
+                                                        }
+                                                        if (col.key === 'date') {
+                                                            return (
+                                                                <th
+                                                                    key={col.key}
+                                                                    scope="row"
+                                                                    className="athlete-date-cell"
+                                                                    style={alignmentStyle}
+                                                                >
+                                                                    {value}
+                                                                </th>
+                                                            );
+                                                        }
+                                                        const cellClass = col.key === 'comment' ? 'comment-cell' : undefined;
+                                                        return (
+                                                            <td key={col.key} className={cellClass} style={alignmentStyle}>
+                                                                {value}
+                                                            </td>
+                                                        );
+                                                    })}
                                                 </tr>
                                             );
                                         })}
