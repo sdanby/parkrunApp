@@ -15,7 +15,7 @@ const headings: { [key: string]: string } = {
     '/results': 'Event Analysis',
     '/races': 'Single Event',
     '/courses': 'Courses',
-    '/athletes': 'Athletes'
+    '/athletes': 'Athletes - Run History'
 };
 
 const TopBar: React.FC = () => {
