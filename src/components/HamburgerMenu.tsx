@@ -23,7 +23,7 @@ const HamburgerMenu: React.FC = () => {
                     <li onClick={() => handleMenuClick('/results')}>Event Analysis</li>
                     <li onClick={() => handleMenuClick('/races')}>Single Event</li>
                     <li onClick={() => handleMenuClick('/courses')}>Courses</li>
-                    <li onClick={() => handleMenuClick('/athletes')}>Athletes</li>
+                    <li onClick={() => handleMenuClick('/athletes')}>Athletes - Run History</li>
                 </ul>
             )}
         </div>
