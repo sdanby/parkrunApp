@@ -48,11 +48,19 @@ const helpTextMap: { [key: string]: string } = {
     growth: 'Linear slope (least-squares) showing trend across the selected dates.'
 };
 
+// Global page load time to prevent help popups on mobile
+let pageLoadTime = Date.now();
+
 // Small tooltip component that shows short help text for control options and supports a 'More' drilldown
 const HelpTooltip: React.FC<{ label: string; options: { value: string; label: string }[] }> = ({ label, options }) => {
     const [expanded, setExpanded] = useState<string | null>(null);
     const [open, setOpen] = useState(false);
     const wrapperRef = useRef<HTMLSpanElement | null>(null);
+
+    // Check if enough time has passed since page load to prevent mobile accidents
+    const isRecentPageLoad = () => {
+        return Date.now() - pageLoadTime < 1500; // 1.5 seconds
+    };
 
     useEffect(() => {
         const onDocClick = (e: any) => {
@@ -65,9 +73,22 @@ const HelpTooltip: React.FC<{ label: string; options: { value: string; label: st
         return () => document.removeEventListener('click', onDocClick);
     }, [open]);
 
-    const toggle = (e: React.MouseEvent) => {
-        e.stopPropagation();
+    const handleClick = (e: React.MouseEvent) => {
+        // Prevent accidental mobile touch triggers but allow normal clicks
+        if (isRecentPageLoad()) {
+            e.preventDefault();
+            return;
+        }
         setOpen(s => !s);
+    };
+
+    const handleTouch = (e: React.TouchEvent) => {
+        // More aggressive prevention for touch events (mobile)
+        if (isRecentPageLoad()) {
+            e.preventDefault();
+            e.stopPropagation();
+            return;
+        }
     };
 
     return (
@@ -77,28 +98,40 @@ const HelpTooltip: React.FC<{ label: string; options: { value: string; label: st
                 aria-label={`${label} help`}
                 aria-expanded={open}
                 className="help-trigger"
-                onClick={toggle}
-                onKeyDown={(e) => { if (e.key === 'Escape') setOpen(false); }}
+                onClick={handleClick}
+                onTouchStart={handleTouch}
+                onKeyDown={(e) => { 
+                    if (e.key === 'Escape') setOpen(false);
+                    if (e.key === 'Enter' && !isRecentPageLoad()) setOpen(s => !s);
+                }}
+                style={{ 
+                    userSelect: 'none',
+                    WebkitUserSelect: 'none',
+                    WebkitTouchCallout: 'none'
+                }}
+                title={`${label} help`}
             >
                 ?
             </button>
-            <div className="help-content" role="dialog" aria-hidden={!open}>
-                <div className="help-title">{label} - quick help</div>
-                <div className="close-x" onClick={() => setOpen(false)} aria-label="Close">✕</div>
-                <div style={{ marginTop: 6 }}>
-                    {options.slice(0, 8).map(opt => (
-                        <div key={opt.value} className="help-item"><span className="help-key">{opt.label}</span><span className="help-desc">{helpTextMap[opt.value] || ''}</span></div>
-                    ))}
-                </div>
-                {expanded ? (
+            {open && (
+                <div className="help-content" role="dialog" aria-hidden={!open}>
+                    <div className="help-title">{label} - quick help</div>
+                    <div className="close-x" onClick={() => setOpen(false)} aria-label="Close">✕</div>
                     <div style={{ marginTop: 6 }}>
-                        <div style={{ fontSize: '0.85em' }}>{helpTextMap[expanded]}</div>
-                        <div className="more-link" onClick={() => setExpanded(null)}>Less</div>
+                        {options.slice(0, 8).map(opt => (
+                            <div key={opt.value} className="help-item"><span className="help-key">{opt.label}</span><span className="help-desc">{helpTextMap[opt.value] || ''}</span></div>
+                        ))}
                     </div>
-                ) : (
-                    <div className="more-link" onClick={() => setExpanded(options[0]?.value || null)}>More...</div>
-                )}
-            </div>
+                    {expanded ? (
+                        <div style={{ marginTop: 6 }}>
+                            <div style={{ fontSize: '0.85em' }}>{helpTextMap[expanded]}</div>
+                            <div className="more-link" onClick={() => setExpanded(null)}>Less</div>
+                        </div>
+                    ) : (
+                        <div className="more-link" onClick={() => setExpanded(options[0]?.value || null)}>More...</div>
+                    )}
+                </div>
+            )}
         </span>
     );
 };
@@ -386,6 +419,12 @@ const ResultsPageComponent: React.FC = () => {
     const [results, setResults] = useState<any[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
         const [error, setError] = useState<string | null>(null);
+    
+    // Reset page load time when component mounts
+    useEffect(() => {
+        pageLoadTime = Date.now();
+    }, []);
+    
     const [query, setQuery] = useState<string>(() => {
         try {
             // Prefer explicit rs_query in URL (when returning via Back), else sessionStorage saved state
