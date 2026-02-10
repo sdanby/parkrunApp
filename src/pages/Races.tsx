@@ -121,6 +121,17 @@ const Races: React.FC = () => {
         }
         const params = new URLSearchParams();
         params.set('athlete_code', String(athleteCode));
+        
+        // Add source event information for row highlighting  
+        const sourceEventName = eventInfo?.event_name;
+        const sourceEventDate = resolvedDateDisplay || date;
+        if (sourceEventName) {
+            params.set('source_event', sourceEventName);
+        }
+        if (sourceEventDate) {
+            params.set('source_date', sourceEventDate);
+        }
+        
         navigate(`/athletes?${params.toString()}`, {
             state: {
                 athleteCode: String(athleteCode),
@@ -128,6 +139,10 @@ const Races: React.FC = () => {
                 returnTo: {
                     pathname: '/races',
                     search: location.search || ''
+                },
+                sourceEvent: {
+                    eventName: sourceEventName,
+                    eventDate: sourceEventDate
                 }
             }
         });
@@ -411,6 +426,8 @@ const Races: React.FC = () => {
     // `event_code`/`event_number` query params.
     const paramEventNumberRaw = params.get('event_number') || params.get('eventNumber') || null;
     const paramEventNumber = paramEventNumberRaw ? Number(paramEventNumberRaw) : null;
+    // Get athlete code for highlighting if coming from Athletes table
+    const highlightAthleteCode = params.get('highlight_athlete') || '';
     const [eventInfo, setEventInfo] = useState<{ event_name?: string; event_number?: number; event_code?: number } | null>(null);
     const [navLoading, setNavLoading] = useState<boolean>(false);
     // If the URL doesn't include a `date`, we may resolve it from
@@ -1000,8 +1017,20 @@ const Races: React.FC = () => {
                                 </tr>
                                 </thead>
                         <tbody>
-                            {(sortedRows ?? rows).map((r: any, i: number) => (
-                                <tr key={r.athlete_code || i}>
+                            {(sortedRows ?? rows).map((r: any, i: number) => {
+                                // Check if this row should be highlighted (athlete from Athletes table)
+                                const rowAthleteCode = r['athlete_code'] ?? r['athleteCode'];
+                                const isHighlightedAthlete = highlightAthleteCode && 
+                                    String(rowAthleteCode) === String(highlightAthleteCode);
+                                
+                                return (
+                                <tr 
+                                    key={r.athlete_code || i}
+                                    style={{
+                                        backgroundColor: isHighlightedAthlete ? '#e6f3ff' : undefined,
+                                        fontWeight: isHighlightedAthlete ? 'bold' : undefined
+                                    }}
+                                >
                                     {/* First two sticky columns: position, name */}
                                     <td className="sticky-col">{String(r['position'] ?? '')}</td>
                                         {
@@ -1115,7 +1144,8 @@ const Races: React.FC = () => {
                                         );
                                     })}
                                 </tr>
-                            ))}
+                                );
+                            })}
                         </tbody>
                     </table>
                     {/* Native scrollbars are used instead of custom fast-scroll/always-visible thumb. */}
