@@ -70,7 +70,9 @@ h1, h2, h3 {
 }
 
 .athletes-page {
-    max-width: 860px;
+    max-width: 1500px;
+
+    margin-right: auto;
 }
 
 .athlete-header {
@@ -78,6 +80,9 @@ h1, h2, h3 {
     align-items: center;
     gap: 0.4rem;
     margin: 0 0 0.8rem 1em;
+    width: 860px;
+    max-width: 860px;
+    margin-right: auto;
     position: sticky;
     top: 0;
     z-index: 40;
@@ -353,9 +358,9 @@ h1, h2, h3 {
     max-height: 70vh;
 }
 .athlete-runs-table {
-    width: auto;
-    min-width: unset;
-    max-width: 100%;
+    width: max-content;
+    min-width: 100%;
+    max-width: none;
     border-collapse: collapse;
     font-size: 0.78rem;
     color: #1f2933;
@@ -467,6 +472,11 @@ body.mobile-view-adjust {
         flex-direction: column;
         align-items: stretch;
         gap: 0.4rem;
+    }
+
+    .athlete-header {
+        width: 100%;
+        max-width: 100%;
     }
 
 
