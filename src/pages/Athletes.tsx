@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { fetchAthleteRuns } from '../api/backendAPI';
+import './ResultsTable.css';
 
 type AthleteRecord = { [key: string]: any };
 
@@ -8,6 +9,10 @@ type AthletesLocationState = {
     athleteCode?: string;
     from?: string;
     returnTo?: { pathname: string; search?: string };
+    sourceEvent?: {
+        eventName?: string;
+        eventDate?: string;
+    };
 };
 
 const toAthletesLocationState = (value: unknown): AthletesLocationState => {
@@ -28,6 +33,15 @@ const toAthletesLocationState = (value: unknown): AthletesLocationState => {
             next.returnTo = {
                 pathname: rt.pathname,
                 search: typeof rt.search === 'string' ? rt.search : undefined
+            };
+        }
+    }
+    if (possible.sourceEvent && typeof possible.sourceEvent === 'object') {
+        const se: any = possible.sourceEvent;
+        if (typeof se.eventName === 'string' || typeof se.eventDate === 'string') {
+            next.sourceEvent = {
+                eventName: typeof se.eventName === 'string' ? se.eventName : undefined,
+                eventDate: typeof se.eventDate === 'string' ? se.eventDate : undefined
             };
         }
     }
@@ -258,12 +272,39 @@ const useMediaQuery = (query: string): boolean => {
     return matches;
 };
 
-type AthleteViewMode = 'basic' | 'detailed' | 'allTimeAdjustments';
+type AthleteViewMode = 'basic' | 'detailed' | 'all_time_adjustments';
 type CourseAdjOption = 'none' | 'seasonal' | 'full';
 type OtherAdjOption = 'none' | 'age' | 'sex' | 'age_sex';
 
+const adjustmentColumnMatrix: Record<CourseAdjOption, Record<OtherAdjOption, string[]>> = {
+    none: {
+        none: [],
+        age: ['age_adj_time'],
+        sex: ['sex_adj_time'],
+        age_sex: ['age_sex_adj_time']
+    },
+    seasonal: {
+        none: ['season_adj_time'],
+        age: ['age_adj_time'],
+        sex: ['sex_adj_time'],
+        age_sex: ['age_sex_adj_time']
+    },
+    full: {
+        none: ['event_adj_time'],
+        age: ['event_age_adj_time'],
+        sex: ['event_sex_adj_time'],
+        age_sex: ['event_age_sex_adj_time']
+    }
+};
+
+const getAdjustmentKeys = (course: CourseAdjOption, other: OtherAdjOption): string[] => {
+    const courseMap = adjustmentColumnMatrix[course];
+    if (!courseMap) return [];
+    return courseMap[other] ?? [];
+};
+
 const normalizeViewMode = (value: string): AthleteViewMode => {
-    if (value === 'detailed' || value === 'allTimeAdjustments') return value;
+    if (value === 'detailed' || value === 'all_time_adjustments') return value;
     return 'basic';
 };
 
@@ -277,7 +318,31 @@ const normalizeOtherAdjOption = (value: string): OtherAdjOption => {
     return 'none';
 };
 
-type ColumnKey = 'date' | 'event_display' | 'position' | 'age_group' | 'age_grade' | 'time' | 'comment';
+type ColumnKey =
+    | 'date'
+    | 'event_display'
+    | 'position'
+    | 'age_group'
+    | 'age_grade'
+    | 'time'
+    | 'comment'
+    | 'season_adj_time'
+    | 'event_adj_time'
+    | 'age_adj_time'
+    | 'sex_adj_time'
+    | 'event_age_adj_time'
+    | 'event_sex_adj_time'
+    | 'event_age_sex_adj_time'
+    | 'age_sex_adj_time'
+    | 'last_position'
+    | 'event_number'
+    | 'total_runs_long'
+    | 'event_eligible_appearances'
+    | 'last_event_code_count_long'
+    | 'distinct_courses_long'
+    | 'tourist_flag'
+    | 'super_tourist'
+    | 'returner';
 
 type ColumnDef = {
     key: ColumnKey;
@@ -288,14 +353,37 @@ type ColumnDef = {
     mobileWidth?: number;
 };
 
-const athleteTableColumns: ColumnDef[] = [
+const baseAthleteColumns: ColumnDef[] = [
     { key: 'date', label: 'Date', sticky: true, align: 'left', desktopWidth: 60, mobileWidth: 60 },
     { key: 'event_display', label: 'Event name', align: 'left', desktopWidth: 90, mobileWidth: 90 },
     { key: 'position', label: 'Pos', align: 'center', desktopWidth: 30 ,mobileWidth: 30},
+    { key: 'time', label: 'Time', align: 'center', desktopWidth: 40 ,mobileWidth: 40},
     { key: 'age_group', label: 'Age grp', align: 'center', desktopWidth: 60 ,mobileWidth: 60},
     { key: 'age_grade', label: 'Age grd', align: 'center', desktopWidth: 60 ,mobileWidth: 60},
-    { key: 'time', label: 'Time', align: 'center', desktopWidth: 40 ,mobileWidth: 40},
     { key: 'comment', label: 'Detail', align: 'left', desktopWidth: 80 ,mobileWidth: 80}
+];
+
+const adjustmentColumns: ColumnDef[] = [
+    { key: 'season_adj_time', label: 'Season', align: 'center', desktopWidth: 70, mobileWidth: 70 },
+    { key: 'event_adj_time', label: 'Event', align: 'center', desktopWidth: 70, mobileWidth: 70 },
+    { key: 'age_adj_time', label: 'Age', align: 'center', desktopWidth: 70, mobileWidth: 70 },
+    { key: 'sex_adj_time', label: 'Sex', align: 'center', desktopWidth: 70, mobileWidth: 70 },
+    { key: 'event_age_adj_time', label: 'Event+Age', align: 'center', desktopWidth: 80, mobileWidth: 80 },
+    { key: 'event_sex_adj_time', label: 'Event+Sex', align: 'center', desktopWidth: 80, mobileWidth: 80 },
+    { key: 'event_age_sex_adj_time', label: 'Event+Age+Sex', align: 'center', desktopWidth: 100, mobileWidth: 100 },
+    { key: 'age_sex_adj_time', label: 'Age+Sex', align: 'center', desktopWidth: 80, mobileWidth: 80 }
+];
+
+const detailedColumns: ColumnDef[] = [
+    { key: 'last_position', label: 'Event total', align: 'center', desktopWidth: 80, mobileWidth: 70 },
+    { key: 'event_number', label: 'Event No', align: 'center', desktopWidth: 70, mobileWidth: 60 },
+    { key: 'total_runs_long', label: 'Runs in 1Y', align: 'center', desktopWidth: 80, mobileWidth: 70 },
+    { key: 'event_eligible_appearances', label: 'Eligible events', align: 'center', desktopWidth: 100, mobileWidth: 90 },
+    { key: 'last_event_code_count_long', label: 'Event Count', align: 'center', desktopWidth: 90, mobileWidth: 80 },
+    { key: 'distinct_courses_long', label: 'Distinct events', align: 'center', desktopWidth: 110, mobileWidth: 100 },
+    { key: 'tourist_flag', label: 'Tourist', align: 'center', desktopWidth: 60, mobileWidth: 60 },
+    { key: 'super_tourist', label: 'Super tourist', align: 'center', desktopWidth: 90, mobileWidth: 80 },
+    { key: 'returner', label: 'Returner', align: 'center', desktopWidth: 70, mobileWidth: 60 }
 ];
 
 const parseDateSortValue = (value: unknown): number | null => {
@@ -339,6 +427,57 @@ const parseTimeSortValue = (value: unknown): number | null => {
     return timeParts.reduce((total, part) => (total * 60) + part, 0);
 };
 
+const coerceNumber = (value: unknown): number | null => {
+    if (value === undefined || value === null || value === '') return null;
+    if (typeof value === 'number' && Number.isFinite(value)) return value;
+    const cleaned = String(value).replace(/[^0-9.-]/g, '').trim();
+    if (!cleaned) return null;
+    const parsed = Number(cleaned);
+    return Number.isNaN(parsed) ? null : parsed;
+};
+
+const getRowTimeSeconds = (row: AthleteRecord): number | null => {
+    const raw = pickField(row, ['time_seconds', 'timeSeconds', 'time', 'time_display', 'finish_time', 'gun_time']);
+    return parseTimeSortValue(raw);
+};
+
+const getAdjustmentSeconds = (row: AthleteRecord, key: ColumnKey): number | null => {
+    const timeSeconds = getRowTimeSeconds(row);
+    if (timeSeconds === null) return null;
+    const coeff = coerceNumber(pickField(row, ['coeff']));
+    const coeffEvent = coerceNumber(pickField(row, ['coeff_event', 'coeffEvent']));
+    const ageRatioMale = coerceNumber(pickField(row, ['age_ratio_male', 'ageRatioMale']));
+    const ageRatioSex = coerceNumber(pickField(row, ['age_ratio_sex', 'ageRatioSex']));
+    const sexRatio = ageRatioMale && ageRatioSex ? ageRatioSex / ageRatioMale : null;
+
+    const coeffProduct = coeff && coeffEvent ? coeff * coeffEvent : null;
+    const safeDivide = (numerator: number, denominator: number | null): number | null => {
+        if (!denominator) return null;
+        return numerator / denominator;
+    };
+
+    switch (key) {
+        case 'season_adj_time':
+            return safeDivide(timeSeconds, coeff);
+        case 'event_adj_time':
+            return safeDivide(timeSeconds, coeffProduct);
+        case 'age_adj_time':
+            return safeDivide(timeSeconds, ageRatioMale);
+        case 'sex_adj_time':
+            return safeDivide(timeSeconds, sexRatio);
+        case 'event_age_adj_time':
+            return safeDivide(timeSeconds, coeffProduct && ageRatioMale ? coeffProduct * ageRatioMale : null);
+        case 'event_sex_adj_time':
+            return safeDivide(timeSeconds, coeffProduct && sexRatio ? coeffProduct * sexRatio : null);
+        case 'event_age_sex_adj_time':
+            return safeDivide(timeSeconds, coeffProduct && ageRatioSex ? coeffProduct * ageRatioSex : null);
+        case 'age_sex_adj_time':
+            return safeDivide(timeSeconds, ageRatioSex);
+        default:
+            return null;
+    }
+};
+
 const parseStringSortValue = (value: unknown): string | null => {
     if (value === undefined || value === null) return null;
     const str = String(value).trim();
@@ -367,6 +506,33 @@ const resolveColumnSortValue = (row: AthleteRecord, column: ColumnKey): number |
             );
         case 'comment':
             return parseStringSortValue(pickField(row, ['comment', 'notes', 'note', 'remark']));
+        case 'season_adj_time':
+        case 'event_adj_time':
+        case 'age_adj_time':
+        case 'sex_adj_time':
+        case 'event_age_adj_time':
+        case 'event_sex_adj_time':
+        case 'event_age_sex_adj_time':
+        case 'age_sex_adj_time':
+            return getAdjustmentSeconds(row, column);
+        case 'last_position':
+            return parseNumericSortValue(pickField(row, ['last_position', 'lastPosition']));
+        case 'event_number':
+            return parseNumericSortValue(pickField(row, ['event_number', 'eventNumber']));
+        case 'total_runs_long':
+            return parseNumericSortValue(pickField(row, ['total_runs_long', 'totalRunsLong']));
+        case 'event_eligible_appearances':
+            return parseNumericSortValue(pickField(row, ['event_eligible_appearances', 'eventEligibleAppearances']));
+        case 'last_event_code_count_long':
+            return parseNumericSortValue(pickField(row, ['last_event_code_count_long', 'lastEventCodeCountLong']));
+        case 'distinct_courses_long':
+            return parseNumericSortValue(pickField(row, ['distinct_courses_long', 'distinctCoursesLong'])); 
+        case 'tourist_flag':
+            return parseStringSortValue(pickField(row, ['tourist_flag', 'touristFlag']));
+        case 'super_tourist':
+            return parseStringSortValue(pickField(row, ['super_tourist', 'superTourist']));
+        case 'returner':
+            return parseStringSortValue(pickField(row, ['returner']));
         default:
             return null;
     }
@@ -380,6 +546,7 @@ const Athletes: React.FC = () => {
     const [viewMode, setViewMode] = useState<AthleteViewMode>('basic');
     const [courseAdj, setCourseAdj] = useState<CourseAdjOption>('none');
     const [otherAdj, setOtherAdj] = useState<OtherAdjOption>('none');
+    const adjustmentKeys = useMemo(() => getAdjustmentKeys(courseAdj, otherAdj), [courseAdj, otherAdj]);
     const [sortKey, setSortKey] = useState<ColumnKey>('date');
     const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
     const isMobile = useMediaQuery('(max-width: 640px)');
@@ -390,6 +557,25 @@ const Athletes: React.FC = () => {
     const selectedCode = locationState.athleteCode || searchParams.get('athlete_code') || undefined;
     const fromRaces = locationState.from === 'races';
     const returnTarget = locationState.returnTo;
+    const sourceEvent = locationState.sourceEvent || {
+        eventName: searchParams.get('source_event'),
+        eventDate: searchParams.get('source_date')
+    };
+
+    // Function to check if a row matches the source event
+    const isHighlightedRow = (row: AthleteRecord): boolean => {
+        if (!sourceEvent?.eventName && !sourceEvent?.eventDate) return false;
+        
+        const rowEventName = pickField(row, ['event_display', 'eventDisplay', 'event_name', 'eventName', 'event']);
+        const rowDate = pickField(row, ['formatted_date', 'event_date', 'date']);
+        
+        const eventMatches = !sourceEvent.eventName || 
+            (rowEventName && String(rowEventName).toLowerCase().includes(sourceEvent.eventName.toLowerCase()));
+        const dateMatches = !sourceEvent.eventDate || 
+            (rowDate && formatDateValue(rowDate) === formatDateValue(sourceEvent.eventDate));
+            
+        return eventMatches && dateMatches;
+    };
 
     useEffect(() => {
         let cancelled = false;
@@ -433,6 +619,24 @@ const Athletes: React.FC = () => {
         };
     }, [selectedCode]);
 
+    // Auto-scroll to highlighted row when coming from Single Event
+    useEffect(() => {
+        if (!runs.length) return;
+        
+        // Small delay to ensure DOM is updated after rendering
+        const scrollTimeout = setTimeout(() => {
+            const highlightedRow = document.querySelector('.highlighted-source-row');
+            if (highlightedRow) {
+                highlightedRow.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'center'
+                });
+            }
+        }, 100);
+
+        return () => clearTimeout(scrollTimeout);
+    }, [runs, sourceEvent]);
+
     const handleBackToRaces = () => {
         if (returnTarget?.pathname) {
             navigate(`${returnTarget.pathname}${returnTarget.search || ''}`);
@@ -442,15 +646,50 @@ const Athletes: React.FC = () => {
     };
 
     const handleViewModeSelect = (event: React.ChangeEvent<HTMLSelectElement>) => {
-        setViewMode(normalizeViewMode(event.target.value));
+        const newViewMode = normalizeViewMode(event.target.value);
+        setViewMode(newViewMode);
+        
+        // If 'All Time Adjustments' is selected, reset the course and other adj dropdowns
+        if (newViewMode === 'all_time_adjustments') {
+            setCourseAdj('none');
+            setOtherAdj('none');
+        }
     };
 
     const handleCourseAdjSelect = (event: React.ChangeEvent<HTMLSelectElement>) => {
         setCourseAdj(normalizeCourseAdjOption(event.target.value));
+        
+        // If course adj is used, reset view mode to Basic
+        if (event.target.value !== 'none') {
+            setViewMode('basic');
+        }
     };
 
     const handleOtherAdjSelect = (event: React.ChangeEvent<HTMLSelectElement>) => {
         setOtherAdj(normalizeOtherAdjOption(event.target.value));
+        
+        // If other adj is used, reset view mode to Basic
+        if (event.target.value !== 'none') {
+            setViewMode('basic');
+        }
+    };
+
+    const handleRowClick = (row: AthleteRecord) => {
+        // Extract event_code and date from the clicked row
+        const eventCode = pickField(row, ['event_code', 'eventCode']);
+        const eventDate = pickField(row, ['formatted_date', 'event_date', 'date']);
+        const athleteCode = pickField(row, ['athlete_code', 'athleteCode']) || selectedCode;
+        
+        if (eventCode && eventDate) {
+            // Navigate to Single Event page with the selected event data and athlete code for highlighting
+            const params = new URLSearchParams();
+            params.set('event_code', String(eventCode));
+            params.set('date', String(eventDate));
+            if (athleteCode) {
+                params.set('highlight_athlete', String(athleteCode));
+            }
+            navigate(`/races?${params.toString()}`);
+        }
     };
 
     const latestRun = useMemo(() => (runs.length > 0 ? runs[runs.length - 1] : null), [runs]);
@@ -507,6 +746,35 @@ const Athletes: React.FC = () => {
                 );
             case 'comment':
                 return renderCell(pickField(row, ['comment', 'notes', 'note', 'remark']));
+            case 'season_adj_time':
+            case 'event_adj_time':
+            case 'age_adj_time':
+            case 'sex_adj_time':
+            case 'event_age_adj_time':
+            case 'event_sex_adj_time':
+            case 'event_age_sex_adj_time':
+            case 'age_sex_adj_time': {
+                const seconds = getAdjustmentSeconds(row, key);
+                return renderCell(formatTimeValue(seconds));
+            }
+            case 'last_position':
+                return renderCell(pickField(row, ['last_position', 'lastPosition']));
+            case 'event_number':
+                return renderCell(pickField(row, ['event_number', 'eventNumber']));
+            case 'total_runs_long':
+                return renderCell(pickField(row, ['total_runs_long', 'totalRunsLong'])); 
+            case 'event_eligible_appearances':
+                return renderCell(pickField(row, ['event_eligible_appearances', 'eventEligibleAppearances']));
+            case 'last_event_code_count_long':
+                return renderCell(pickField(row, ['last_event_code_count_long', 'lastEventCodeCountLong']));
+            case 'distinct_courses_long':
+                return renderCell(pickField(row, ['distinct_courses_long', 'distinctCoursesLong']));
+            case 'tourist_flag':
+                return renderCell(pickField(row, ['tourist_flag', 'touristFlag']));
+            case 'super_tourist':
+                return renderCell(pickField(row, ['super_tourist', 'superTourist']));
+            case 'returner':
+                return renderCell(pickField(row, ['returner']));
             default:
                 return '--';
         }
@@ -538,6 +806,35 @@ const Athletes: React.FC = () => {
         });
         return decorated.map(({ row }) => row);
     }, [runs, sortKey, sortDir]);
+
+    const tableColumns = useMemo(() => {
+        // If 'All Time Adjustments' view is selected, show all adjustment columns at the end
+        if (viewMode === 'all_time_adjustments') {
+            return [...baseAthleteColumns, ...adjustmentColumns];
+        }
+        
+        // If 'Detailed' view is selected, show detailed columns at the end
+        if (viewMode === 'detailed') {
+            return [...baseAthleteColumns, ...detailedColumns];
+        }
+        
+        // Otherwise, use the existing logic for dynamic adjustment columns
+        const selectedAdjColumns = adjustmentKeys
+            .map(key => adjustmentColumns.find(c => c.key === key))
+            .filter((col): col is ColumnDef => Boolean(col));
+        
+        if (selectedAdjColumns.length === 0) {
+            return baseAthleteColumns;
+        }
+
+        // Insert adjustment column after Time (position 3)
+        const insertAt = 4;
+        return [
+            ...baseAthleteColumns.slice(0, insertAt),
+            ...selectedAdjColumns,
+            ...baseAthleteColumns.slice(insertAt)
+        ];
+    }, [viewMode, adjustmentKeys]);
 
     const rowsToRender = runs.length > 0 ? sortedRuns : [];
 
@@ -592,7 +889,7 @@ const Athletes: React.FC = () => {
                                 >
                                     <option value="basic">Basic</option>
                                     <option value="detailed">Detailed</option>
-                                    <option value="allTimeAdjustments">All Time Adjustments</option>
+                                    <option value="all_time_adjustments">All Time Adjustments</option>
                                 </select>
                             </div>
                             <div className="races-view-control-item">
@@ -645,10 +942,17 @@ const Athletes: React.FC = () => {
                                 <table className="athlete-runs-table">
                                     <thead>
                                         <tr>
-                                            {athleteTableColumns.map((col) => {
+                                            {tableColumns.map((col) => {
                                                 const isSorted = sortKey === col.key;
                                                 const headerClasses = ['athlete-table-header'];
                                                 if (col.sticky) headerClasses.push('athlete-date-header');
+                                                
+                                                // Add blue header styling for adjustment columns
+                                                const isAdjustmentColumn = col.key.includes('_adj_time');
+                                                if (isAdjustmentColumn) {
+                                                    headerClasses.push('sticky-header', 'adjustment-header');
+                                                }
+                                                
                                                 const sortIndicator = isSorted ? (sortDir === 'asc' ? '▲' : '▼') : '';
                                                 const style: React.CSSProperties = { textAlign: col.align ?? 'left' };
                                                 const targetWidth = isMobile
@@ -684,7 +988,7 @@ const Athletes: React.FC = () => {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {rowsToRender.map((row, index) => {
+                                            {rowsToRender.map((row, index) => {
                                             const keyParts = [
                                                 pickField(row, ['event_code', 'eventCode']),
                                                 pickField(row, ['formatted_date', 'event_date']),
@@ -692,8 +996,17 @@ const Athletes: React.FC = () => {
                                             ];
 
                                             return (
-                                                <tr key={keyParts.filter(Boolean).join('-') || index}>
-                                                    {athleteTableColumns.map((col) => {
+                                                <tr 
+                                                    key={keyParts.filter(Boolean).join('-') || index}
+                                                    className={isHighlightedRow(row) ? 'highlighted-source-row' : ''}
+                                                    style={{
+                                                        ...(isHighlightedRow(row) ? { fontWeight: 'bold' } : {}),
+                                                        cursor: 'pointer'
+                                                    }}
+                                                    onClick={() => handleRowClick(row)}
+                                                    title="Click to view this event"
+                                                >
+                                                    {tableColumns.map((col) => {
                                                         const value = getCellDisplayValue(row, col.key);
                                                         const alignmentStyle: React.CSSProperties = col.align ? { textAlign: col.align } : {};
                                                         const targetWidth = isMobile
@@ -705,6 +1018,12 @@ const Athletes: React.FC = () => {
                                                             alignmentStyle.minWidth = px;
                                                             alignmentStyle.maxWidth = px;
                                                         }
+                                                        
+                                                        // Apply highlight background to individual cells
+                                                        if (isHighlightedRow(row)) {
+                                                            alignmentStyle.backgroundColor = '#e6f3ff';
+                                                        }
+                                                        
                                                         if (col.key === 'date') {
                                                             return (
                                                                 <th
