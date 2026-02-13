@@ -1,3 +1,17 @@
+/* Set Age Grd column (7th column) to 1cm wide */
+.lists-table th:nth-child(7),
+.lists-table td:nth-child(7) {
+    width: 1cm;
+    min-width: 1cm;
+    max-width: 1cm;
+}
+/* Center the Event Name header, left-justify the body */
+.lists-table th.event-name-header-col {
+    text-align: center !important;
+}
+.lists-table td.event-name-body-col {
+    text-align: left !important;
+}
 /* Styles for the table on the Lists page */
 /* Widen the list selection box for all devices */
 .lists-page #list-select {
@@ -167,20 +181,61 @@
     max-width: 1.6cm;
 }
 
+/* Set column 4 (Date) to a fixed width of 2cm for both header and cells */
+.lists-table th:nth-child(4),
+.lists-table td:nth-child(4) {
+    width: 2.0cm;
+    min-width: 2.0cm;
+    max-width: 2.0cm;
+}
+
+
 /* Set column 5 (Time) to a fixed width of 2cm for both header and cells */
 .lists-table th:nth-child(5),
 .lists-table td:nth-child(5) {
-    width: 1.4cm;
-    min-width: 1.4cm;
-    max-width: 1.4cm;
+    width: 1.2cm;
+    min-width: 1.2cm;
+    max-width: 1.2cm;
 }
 
 /* Set column 6 (Time) to a fixed width of 2cm for both header and cells */
 .lists-table th:nth-child(6),
 .lists-table td:nth-child(6) {
-    width: 1.2cm;
-    min-width: 1.2cm;
-    max-width: 1.2cm;
+    width: 2.2cm;
+    min-width: 2.2cm;
+    max-width: 2.2cm;
+}
+
+/* Set column 7 (Time) to a fixed width of 2cm for both header and cells */
+.lists-table th:nth-child(7),
+.lists-table td:nth-child(7) {
+    width: 2.2cm;
+    min-width: 2.2cm;
+    max-width: 2.2cm;
+}
+
+/* Set column 8 (Time) to a fixed width of 2cm for both header and cells */
+.lists-table th:nth-child(8),
+.lists-table td:nth-child(8) {
+    width: 2.2cm;
+    min-width: 2.2cm;
+    max-width: 3.2cm;
+}
+
+/* Set column 9 (Time) to a fixed width of 2cm for both header and cells */
+.lists-table th:nth-child(9),
+.lists-table td:nth-child(9) {
+    width: 2.2cm;
+    min-width: 2.2cm;
+    max-width: 2.2cm;
+}
+
+/* Set column 10 (Time) to a fixed width of 2cm for both header and cells */
+.lists-table th:nth-child(10),
+.lists-table td:nth-child(10) {
+    width: 4.2cm;
+    min-width: 4.2cm;
+    max-width: 4.2cm;
 }
 
 /* Ensure the Rank header cell is sticky and stays visible when scrolling up */
