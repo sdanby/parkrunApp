@@ -7,6 +7,7 @@ import Results from './pages/Results';
 import Races from './pages/Races';
 import Courses from './pages/Courses';
 import Athletes from './pages/Athletes';
+import Lists from './pages/Lists';
 import './styles/main.css';
 
 const headings: { [key: string]: string } = {
@@ -15,7 +16,8 @@ const headings: { [key: string]: string } = {
     '/results': 'Event Analysis',
     '/races': 'Single Event',
     '/courses': 'Courses',
-    '/athletes': 'Athletes - Run History'
+    '/athletes': 'Athletes - Run History',
+    '/lists': 'Lists'
 };
 
 const TopBar: React.FC = () => {
@@ -53,7 +55,8 @@ const router = createBrowserRouter([
             { path: 'results', element: <Results /> },
             { path: 'races', element: <Races /> },
             { path: 'courses', element: <Courses /> },
-            { path: 'athletes', element: <Athletes /> }
+            { path: 'athletes', element: <Athletes /> },
+            { path: 'lists', element: <Lists /> }
         ]
     }
 ], _futureOptions);
