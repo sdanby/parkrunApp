@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './lists.css'; // Import the new CSS file
 import './ResultsTable.css';
 
@@ -44,6 +45,7 @@ const formatDate = (dateString: string): string => {
 };
 
 const Lists: React.FC = () => {
+    const navigate = useNavigate();
     const [selectedList, setSelectedList] = useState<string>('fastest_runs');
     const [runs, setRuns] = useState<Run[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
@@ -181,13 +183,22 @@ const Lists: React.FC = () => {
         window.location.href = `/races?${params.toString()}`;
     };
 
+    // Navigation for name click
+    const handleNameClick = (e: React.MouseEvent, run: Run) => {
+        e.stopPropagation();
+        const params = new URLSearchParams();
+        params.set('athlete_code', String(run.athlete_code));
+        params.set('from_list', '1');
+        navigate(`/athletes?${params.toString()}`);
+    };
+
     return (
         <div className="page-content athletes-page lists-page">
             <div className="athlete-header">
                 <div className="athlete-header-main">
                     <div className="athlete-header-text">
                         <div className="athlete-header-title">
-                            List
+                            Top 1000 List
                         </div>
                     </div>
                     <div className="athlete-view-control races-view-control">
@@ -199,7 +210,7 @@ const Lists: React.FC = () => {
                                 onChange={handleListSelect}
                                 aria-label="List selection"
                             >
-                                <option value="fastest_runs">Fastest Athlete PBs</option>
+                                <option value="fastest_runs">Fastest Athletes by Time</option>
                                 {/* Add other <option> elements for new lists here */}
                             </select>
                         </div>
@@ -243,7 +254,14 @@ const Lists: React.FC = () => {
                                         title="Click to view this event"
                                     >
                                         <td className="sticky-col">{run.originalRank ?? (index + 1)}</td>
-                                        <td className="sticky-col-2" title={run.name}>{run.name}</td>
+                                        <td
+                                            className="sticky-col-2"
+                                            title={run.name}
+                                            style={{ color: '#0077cc', textDecoration: 'underline', cursor: 'pointer' }}
+                                            onClick={e => handleNameClick(e, run)}
+                                        >
+                                            {run.name}
+                                        </td>
                                         <td>{run.time}</td>
                                         <td>{formatDate(run.event_date)}</td>
                                         <td>{run.event_code}</td>
