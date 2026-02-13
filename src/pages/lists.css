@@ -1,0 +1,182 @@
+/* Styles for the table on the Lists page */
+
+/* Define column widths specifically for the lists table */
+:root {
+    --list-col1-width: 1.3cm;
+    --list-col2-width: 4.5cm;
+}
+
+.lists-table {
+    width: auto !important;
+    border-collapse: collapse;
+    table-layout: fixed;
+    font-size: 0.7rem;
+    text-align: left;
+}
+
+.lists-table th,
+.lists-table td {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.4rem;
+    border: 1px solid #eee;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    box-sizing: border-box;
+}
+
+
+@media (min-width: 769px) {
+    .lists-page .races-view-control {
+        position: relative;
+        left: 5cm;
+        top: -0.5cm;
+    }
+}
+
+/* Lists page specific styling */
+.lists-page {
+    max-width: 1500px;
+    margin-left: 0.5cm;
+    margin-right: auto;
+}
+
+.lists-page .athlete-header-title {
+    position: relative;
+    top: 1.2cm;
+}
+
+
+.lists-page .athlete-runs-section {
+    margin-top: 1.0cm;
+}
+
+
+/* Sticky Header */
+.lists-table .sticky-header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+/* First sticky column */
+/* First sticky column (Rank) - ensure header stays above column 2 */
+/* First sticky column (Rank) - ensure header stays above column 2 and remains visible when scrolling up */
+.lists-table th.sticky-corner-2-1 {
+    position: sticky;
+    left: 0;
+    top: 0;
+    z-index: 50;
+    background: #f5f5f5 !important;
+    font-weight: bold;
+}
+.lists-table .sticky-col,
+.lists-table .sticky-corner-2-1 {
+    position: sticky;
+    left: 0;
+    top: 0;
+    z-index: 30;
+    width: var(--list-col1-width) !important;
+    min-width: var(--list-col1-width) !important;
+    max-width: var(--list-col1-width) !important;
+    background: #f5f5f5 !important;
+    font-weight: bold;
+}
+
+/* Second sticky column */
+.lists-table .sticky-col-2,
+.lists-table .sticky-corner-2-2 {
+    position: sticky;
+    left: var(--list-col1-width) !important; /* Positioned after the first column, !important to override conflicts */
+    z-index: 5;
+    width: var(--list-col2-width) !important;
+    min-width: var(--list-col2-width) !important;
+    max-width: var(--list-col2-width) !important;
+    background: #fff;
+    font-weight: bold;
+}
+
+/* Ensure sticky header cells have a higher z-index to stay on top */
+.lists-table th.sticky-col,
+.lists-table th.sticky-col-2,
+.lists-table th.sticky-corner-2-1{
+    font-weight: bold;
+}
+.lists-table th.sticky-corner-2-2 {
+    z-index: 15;
+    background-color: rgba(224, 224, 224, 0.98) !important;
+}
+
+
+/* Make only the Name header (column 2) bold, but not the contents of column 2 */
+.lists-table th.sticky-corner-2-2 {
+    font-weight: bold;
+}
+.lists-table td.sticky-col-2 {
+    font-weight: normal;
+    background: #f5f5f5 !important;
+}
+
+
+/* Center text in columns 3 to 8 for both headers and cells */
+.lists-table th:nth-child(1),
+
+.lists-table th:nth-child(2),
+.lists-table th:nth-child(n+3):nth-child(-n+8) {
+    background: #dce2de !important;
+}
+.lists-table th:nth-child(n+3):nth-child(-n+8),
+.lists-table td:nth-child(n+3):nth-child(-n+8) {
+    text-align: center;
+}
+
+/* Set column 3 (Time) to a fixed width of 2cm for both header and cells */
+.lists-table th:nth-child(3),
+.lists-table td:nth-child(3) {
+    width: 1.6cm;
+    min-width: 1.6cm;
+    max-width: 1.6cm;
+}
+
+/* Set column 5 (Time) to a fixed width of 2cm for both header and cells */
+.lists-table th:nth-child(5),
+.lists-table td:nth-child(5) {
+    width: 1.4cm;
+    min-width: 1.4cm;
+    max-width: 1.4cm;
+}
+
+/* Set column 6 (Time) to a fixed width of 2cm for both header and cells */
+.lists-table th:nth-child(6),
+.lists-table td:nth-child(6) {
+    width: 1.2cm;
+    min-width: 1.2cm;
+    max-width: 1.2cm;
+}
+
+/* Ensure the Rank header cell is sticky and stays visible when scrolling up */
+/* Sticky positioning for column 2 header and cells */
+.lists-table .sticky-col-2,
+.lists-table .sticky-corner-2-2 {
+    position: sticky;
+    left: var(--list-col1-width) !important;
+    z-index: 5;
+    width: var(--list-col2-width) !important;
+    min-width: var(--list-col2-width) !important;
+    max-width: var(--list-col2-width) !important;
+    background: #f5f5f5 !important;
+    font-weight: normal;
+}
+
+.lists-table th.sticky-col-2,
+.lists-table th.sticky-corner-2-2 {
+    position: sticky;
+    left: var(--list-col1-width) !important;
+    z-index: 15;
+    width: var(--list-col2-width) !important;
+    min-width: var(--list-col2-width) !important;
+    max-width: var(--list-col2-width) !important;
+
+    font-weight: bold;
+}
+
