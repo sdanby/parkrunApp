@@ -539,6 +539,11 @@ const resolveColumnSortValue = (row: AthleteRecord, column: ColumnKey): number |
 };
 
 const Athletes: React.FC = () => {
+    const location = useLocation();
+    const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
+    // Detect if coming from Lists page via query string
+    const fromList = searchParams.get('from_list') === '1';
+    // (Removed duplicate useState and related variable declarations)
     const [runs, setRuns] = useState<AthleteRecord[]>([]);
     const [summary, setSummary] = useState<AthleteSummary | null>(null);
     const [loading, setLoading] = useState<boolean>(false);
@@ -550,10 +555,8 @@ const Athletes: React.FC = () => {
     const [sortKey, setSortKey] = useState<ColumnKey>('date');
     const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
     const isMobile = useMediaQuery('(max-width: 640px)');
-    const location = useLocation();
     const navigate = useNavigate();
     const locationState = toAthletesLocationState(location.state ?? {});
-    const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
     const selectedCode = locationState.athleteCode || searchParams.get('athlete_code') || undefined;
     const fromRaces = locationState.from === 'races';
     const returnTarget = locationState.returnTo;
@@ -842,20 +845,35 @@ const Athletes: React.FC = () => {
         <div className="page-content athletes-page">
             {showHeader && (
                 <div className="athlete-header">
-                    {fromRaces && (
+                    {(fromRaces || fromList) && (
                         <button
                             type="button"
                             className="athletes-back-button"
-                            aria-label="Back to race"
-                            title="Back to race"
-                            onClick={handleBackToRaces}
+                            aria-label={fromRaces ? "Back to race" : "Back to lists"}
+                            title={fromRaces ? "Back to race" : "Back to lists"}
+                            onClick={fromRaces ? handleBackToRaces : () => navigate('/lists')}
+                            style={{
+                                marginRight: '0.5em',
+                 
+                                fontSize: '1.2rem',
+                                border: '1px solid #222',
+                                borderRadius: '8px',
+                                background: '#fff',
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                boxSizing: 'border-box',
+                                width: '30px',
+                                height: '30px',
+                            }}
                         >
-                            ←
+                            &#8592;
                         </button>
                     )}
                     <div className="athlete-header-main">
                         <div className="athlete-header-text">
-                            <div className="athlete-header-title" title="Athlete Name">
+                            <div className="athlete-header-title" title="Athlete Name" style={{ display: 'flex', alignItems: 'center', gap: '0.5em' }}>
                                 {detailTitle}
                                 {sexSymbol && <span className="athlete-header-sex" aria-label="Athlete sex"> {sexSymbol}</span>}
                             </div>
