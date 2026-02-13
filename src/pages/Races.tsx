@@ -666,7 +666,13 @@ const Races: React.FC = () => {
     // Back button component placed in the header so users can return to Results
 
     const BackButton: React.FC = () => {
+        const params = new URLSearchParams(location.search);
+        const fromList = params.get('from_list') === '1';
         const handleBack = () => {
+            if (fromList) {
+                navigate('/lists');
+                return;
+            }
             // Always navigate back to the Results page and ignore browser history entries.
             // Preserve Results UI state (if any) stored in sessionStorage under `results_state_v1`.
             try {
@@ -690,10 +696,10 @@ const Races: React.FC = () => {
         return (
             <button
                 type="button"
-                aria-label="Back to Event Analysis"
+                aria-label={fromList ? 'Back to Lists' : 'Back to Event Analysis'}
                 className="races-back-btn"
                 onClick={handleBack}
-                title="Back to Event Analysis"
+                title={fromList ? 'Back to Lists' : 'Back to Event Analysis'}
             >
                 ←
             </button>
