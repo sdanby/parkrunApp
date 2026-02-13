@@ -1,4 +1,33 @@
 /* Styles for the table on the Lists page */
+/* Widen the list selection box for all devices */
+.lists-page #list-select {
+    width: 3.5cm;
+    min-width: 5cm;  /* This controls the size of the list box on the laptop */
+    max-width: 6cm;
+    margin-left: -2.5cm; /* The move the list box on the laptop */
+}
+.lists-page label[for="list-select"] {
+    position: relative;
+    left: -2.5cm;
+}
+@media (max-width: 768px) {
+    .lists-page .athlete-view-control.races-view-control {
+        margin-top: -0.5cm;
+        margin-left: -0.5cm;
+    }
+
+        .lists-page #list-select {
+            margin-top: -0.2cm;
+            position: relative;
+            margin-left: -0.2cm;
+    }
+    .lists-page label[for="list-select"] {
+           margin-top: -0.2cm;
+           position: relative;
+           left: -0.2cm;
+    }
+
+}
 
 /* Define column widths specifically for the lists table */
 :root {
@@ -30,7 +59,7 @@
     .lists-page .races-view-control {
         position: relative;
         left: 5cm;
-        top: -0.5cm;
+        top: -0.54cm;
     }
 }
 
