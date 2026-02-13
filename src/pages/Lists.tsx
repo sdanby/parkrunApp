@@ -12,6 +12,7 @@ type Run = {
     comment: string;
     event_code: number;
     event_date: string;
+    event_name?: string;
     name: string;
     position: number;
     time: string;
@@ -94,10 +95,10 @@ const Lists: React.FC = () => {
         { key: 'Name', label: 'Name', className: 'sticky-header sticky-col-2' },
         { key: 'Time', label: 'Time', className: 'sticky-header' },
         { key: 'Date', label: 'Date', className: 'sticky-header' },
-        { key: 'Event', label: 'Event', className: 'sticky-header' },
         { key: 'Pos', label: 'Pos', className: 'sticky-header' },
         { key: 'Age Grd', label: 'Age Grd', className: 'sticky-header' },
         { key: 'Age Grp', label: 'Age Grp', className: 'sticky-header' },
+        { key: 'Event', label: 'Event Name', className: 'sticky-header event-name-header-col' },
         { key: 'Comment', label: 'Comment', className: 'sticky-header' },
         { key: 'Club', label: 'Club', className: 'sticky-header' },
     ];
@@ -129,7 +130,7 @@ const Lists: React.FC = () => {
                 case 'Name': return run.name;
                 case 'Time': return run.time;
                 case 'Date': return getIsoDate(run.event_date);
-                case 'Event': return run.event_code;
+                case 'Event': return run.event_name || run.event_code;
                 case 'Pos': return run.position;
                 case 'Age Grd': return run.age_grade;
                 case 'Age Grp': return run.age_group;
@@ -264,10 +265,10 @@ const Lists: React.FC = () => {
                                         </td>
                                         <td>{run.time}</td>
                                         <td>{formatDate(run.event_date)}</td>
-                                        <td>{run.event_code}</td>
                                         <td>{run.position}</td>
                                         <td>{run.age_grade}</td>
                                         <td>{run.age_group}</td>
+                                        <td className="event-name-body-col">{run.event_name || run.event_code}</td>
                                         <td>{run.comment}</td>
                                         <td>{run.club}</td>
                                     </tr>
