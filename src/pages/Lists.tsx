@@ -17,6 +17,14 @@ type Run = {
     position: number;
     time: string;
     originalRank?: number;
+    season_adj_time?: string;
+    event_adj_time?: string;
+    age_adj_time?: string;
+    sex_adj_time?: string;
+    age_event_adj_time?: string;
+    sex_event_adj_time?: string;
+    age_sex_adj_time?: string;
+    age_sex_event_adj_time?: string;
 };
 
 // Map list keys to API endpoints
@@ -101,6 +109,15 @@ const Lists: React.FC = () => {
         { key: 'Event', label: 'Event Name', className: 'sticky-header event-name-header-col' },
         { key: 'Comment', label: 'Comment', className: 'sticky-header' },
         { key: 'Club', label: 'Club', className: 'sticky-header' },
+        { key: 'Season', label: 'Season', className: 'sticky-header' },
+        { key: 'EventAdj', label: 'Event', className: 'sticky-header' },
+        { key: 'AgeAdj', label: 'Age', className: 'sticky-header' },
+        { key: 'SexAdj', label: 'Sex', className: 'sticky-header' },
+        { key: 'EventAgeAdj', label: 'Ev+Age', className: 'sticky-header' },
+        { key: 'EventSexAdj', label: 'Ev+Sx', className: 'sticky-header' },
+        { key: 'AgeSexAdj', label: 'Age+Sx', className: 'sticky-header' },
+        { key: 'EventAgeSexAdj', label: 'Ev+A+Sx', className: 'sticky-header' },
+
     ];
 
     // Helper to get ISO date for sorting
@@ -136,6 +153,14 @@ const Lists: React.FC = () => {
                 case 'Age Grp': return run.age_group;
                 case 'Comment': return run.comment;
                 case 'Club': return run.club;
+                case 'Season': return run.season_adj_time ?? '';
+                case 'EventAdj': return run.event_adj_time ?? '';
+                case 'AgeAdj': return run.age_adj_time ?? '';
+                case 'SexAdj': return run.sex_adj_time ?? '';
+                case 'EventAgeAdj': return run.age_event_adj_time ?? '';
+                case 'EventSexAdj': return run.sex_event_adj_time ?? '';
+                case 'AgeSexAdj': return run.age_sex_adj_time ?? '';
+                case 'EventAgeSexAdj': return run.age_sex_event_adj_time ?? '';
                 default: return '';
             }
         };
@@ -190,6 +215,7 @@ const Lists: React.FC = () => {
         const params = new URLSearchParams();
         params.set('athlete_code', String(run.athlete_code));
         params.set('from_list', '1');
+        params.set('event_date', String(run.event_date)); // Pass the event date for highlighting
         navigate(`/athletes?${params.toString()}`);
     };
 
@@ -270,7 +296,16 @@ const Lists: React.FC = () => {
                                         <td>{run.age_group}</td>
                                         <td className="event-name-body-col">{run.event_name || run.event_code}</td>
                                         <td>{run.comment}</td>
-                                        <td>{run.club}</td>
+                                        <td>{run.club}</td>                                        
+                                        <td>{run.season_adj_time ?? ''}</td>
+                                        <td>{run.event_adj_time ?? ''}</td>
+                                        <td>{run.age_adj_time ?? ''}</td>
+                                        <td>{run.sex_adj_time ?? ''}</td>
+                                        <td>{run.age_event_adj_time ?? ''}</td>
+                                        <td>{run.sex_event_adj_time ?? ''}</td>
+                                        <td>{run.age_sex_adj_time ?? ''}</td>
+                                        <td>{run.age_sex_event_adj_time ?? ''}</td>
+
                                     </tr>
                                 ))}
                             </tbody>
