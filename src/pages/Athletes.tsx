@@ -560,9 +560,10 @@ const Athletes: React.FC = () => {
     const selectedCode = locationState.athleteCode || searchParams.get('athlete_code') || undefined;
     const fromRaces = locationState.from === 'races';
     const returnTarget = locationState.returnTo;
+    // Use event_date from query string if coming from Lists
     const sourceEvent = locationState.sourceEvent || {
         eventName: searchParams.get('source_event'),
-        eventDate: searchParams.get('source_date')
+        eventDate: searchParams.get('event_date') || searchParams.get('source_date')
     };
 
     // Function to check if a row matches the source event
@@ -1012,13 +1013,24 @@ const Athletes: React.FC = () => {
                                                 pickField(row, ['formatted_date', 'event_date']),
                                                 index
                                             ];
-
+                                            // Highlight only if both athlete_code and event (date) match (from Single Event or Lists)
+                                            const rowAthleteCode = pickField(row, ['athlete_code', 'athleteCode']);
+                                            const rowEventDate = pickField(row, ['formatted_date', 'event_date', 'date']);
+                                            // Use sourceEvent if present (from Single Event), otherwise just highlight first match for athlete_code (from Lists)
+                                            let highlight = false;
+                                            if (sourceEvent?.eventDate) {
+                                                // Coming from Single Event: highlight only if both athlete and event match
+                                                highlight = String(rowAthleteCode) === String(selectedCode) && formatDateValue(rowEventDate) === formatDateValue(sourceEvent.eventDate);
+                                            } else {
+                                                // Coming from Lists: highlight only the first match for athlete_code
+                                                highlight = String(rowAthleteCode) === String(selectedCode) && index === rowsToRender.findIndex(r => String(pickField(r, ['athlete_code', 'athleteCode'])) === String(selectedCode));
+                                            }
                                             return (
                                                 <tr 
                                                     key={keyParts.filter(Boolean).join('-') || index}
-                                                    className={isHighlightedRow(row) ? 'highlighted-source-row' : ''}
+                                                    className={highlight ? 'highlighted-source-row' : ''}
                                                     style={{
-                                                        ...(isHighlightedRow(row) ? { fontWeight: 'bold' } : {}),
+                                                        ...(highlight ? { fontWeight: 'bold' } : {}),
                                                         cursor: 'pointer'
                                                     }}
                                                     onClick={() => handleRowClick(row)}
@@ -1036,12 +1048,10 @@ const Athletes: React.FC = () => {
                                                             alignmentStyle.minWidth = px;
                                                             alignmentStyle.maxWidth = px;
                                                         }
-                                                        
                                                         // Apply highlight background to individual cells
-                                                        if (isHighlightedRow(row)) {
+                                                        if (highlight) {
                                                             alignmentStyle.backgroundColor = '#e6f3ff';
                                                         }
-                                                        
                                                         if (col.key === 'date') {
                                                             return (
                                                                 <th
