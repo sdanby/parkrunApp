@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { fetchAthleteRuns } from '../api/backendAPI';
 import './ResultsTable.css';
+import AthleteSearch from '../components/AthleteSearch';
 
 type AthleteRecord = { [key: string]: any };
 
@@ -844,8 +845,8 @@ const Athletes: React.FC = () => {
 
     return (
         <div className="page-content athletes-page">
-            {showHeader && (
-                <div className="athlete-header">
+            
+            <div className="athlete-header">
                     {(fromRaces || fromList) && (
                         <button
                             type="button"
@@ -873,6 +874,7 @@ const Athletes: React.FC = () => {
                         </button>
                     )}
                     <div className="athlete-header-main">
+                        {showHeader && (
                         <div className="athlete-header-text">
                             <div className="athlete-header-title" title="Athlete Name" style={{ display: 'flex', alignItems: 'center', gap: '0.5em' }}>
                                 {detailTitle}
@@ -897,61 +899,74 @@ const Athletes: React.FC = () => {
                                 </div>
                             )}
                         </div>
+                        )}
+                        
                         <div className="athlete-view-control races-view-control">
-                            <div className="races-view-control-item">
-                                <label htmlFor="athletes-view-select">View:</label>
-                                <select
-                                    id="athletes-view-select"
-                                    value={viewMode}
-                                    onChange={handleViewModeSelect}
-                                    aria-label="Athletes view mode"
-                                >
-                                    <option value="basic">Basic</option>
-                                    <option value="detailed">Detailed</option>
-                                    <option value="all_time_adjustments">All Time Adjustments</option>
-                                </select>
+                            <div className="races-view-control-item" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginLeft: '1.2cm' }}>
+                                {!selectedCode && (
+                                    <div style={{ marginRight: '0.6rem', color: '#333', fontWeight: 'bold', marginTop: '-0.1cm' }}>
+                                        Start typing the athlete's name or code to select
+                                    </div>
+                                )}
+                                <label htmlFor="athletes-search-input">Search:</label>
+                                <div style={{ minWidth: '12rem' }}>
+                                    <AthleteSearch inputId="athletes-search-input" onSelect={(athleteCode) => {
+                                        navigate(`/athletes?athlete_code=${encodeURIComponent(String(athleteCode))}`);
+                                    }} placeholder="Search athletes..." />
+                                </div>
                             </div>
-                            <div className="races-view-control-item">
-                                <label htmlFor="athletes-course-adj-select">Course adj:</label>
-                                <select
-                                    id="athletes-course-adj-select"
-                                    value={courseAdj}
-                                    onChange={handleCourseAdjSelect}
-                                    aria-label="Course adjustment"
-                                >
-                                    <option value="none">no adjustment (default)</option>
-                                    <option value="seasonal">seasonal adjustments</option>
-                                    <option value="full">full event adjustments</option>
-                                </select>
-                            </div>
-                            <div className="races-view-control-item">
-                                <label htmlFor="athletes-other-adj-select">Other adj:</label>
-                                <select
-                                    id="athletes-other-adj-select"
-                                    value={otherAdj}
-                                    onChange={handleOtherAdjSelect}
-                                    aria-label="Other adjustment"
-                                >
-                                    <option value="none">no adjustment (default)</option>
-                                    <option value="age">age adjustments</option>
-                                    <option value="sex">sex adjustments</option>
-                                    <option value="age_sex">age & sex adjustment</option>
-                                </select>
-                            </div>
+                            {showHeader && (
+                                <>
+                                    <div className="races-view-control-item">
+                                        <label htmlFor="athletes-view-select">View:</label>
+                                        <select
+                                            id="athletes-view-select"
+                                            value={viewMode}
+                                            onChange={handleViewModeSelect}
+                                            aria-label="Athletes view mode"
+                                        >
+                                            <option value="basic">Basic</option>
+                                            <option value="detailed">Detailed</option>
+                                            <option value="all_time_adjustments">All Time Adjustments</option>
+                                        </select>
+                                    </div>
+                                    <div className="races-view-control-item">
+                                        <label htmlFor="athletes-course-adj-select">Course adj:</label>
+                                        <select
+                                            id="athletes-course-adj-select"
+                                            value={courseAdj}
+                                            onChange={handleCourseAdjSelect}
+                                            aria-label="Course adjustment"
+                                        >
+                                            <option value="none">no adjustment (default)</option>
+                                            <option value="seasonal">seasonal adjustments</option>
+                                            <option value="full">full event adjustments</option>
+                                        </select>
+                                    </div>
+                                    <div className="races-view-control-item">
+                                        <label htmlFor="athletes-other-adj-select">Other adj:</label>
+                                        <select
+                                            id="athletes-other-adj-select"
+                                            value={otherAdj}
+                                            onChange={handleOtherAdjSelect}
+                                            aria-label="Other adjustment"
+                                        >
+                                            <option value="none">no adjustment (default)</option>
+                                            <option value="age">age adjustments</option>
+                                            <option value="sex">sex adjustments</option>
+                                            <option value="age_sex">age & sex adjustment</option>
+                                        </select>
+                                    </div>
+                                </>
+                            )}
                         </div>
                     </div>
                 </div>
-            )}
 
             {selectedCode && loading && <p>Loading athlete data…</p>}
             {error && <p className="athlete-error">{error}</p>}
 
-            {!selectedCode && !loading && !error && (
-                <div className="athlete-empty-state">
-                    <h2>Find an athlete</h2>
-                    <p>Select a runner from the Races page to view their profile and run history here.</p>
-                </div>
-            )}
+            {/* When no athlete selected, we show only the search box in the header above. Empty message removed. */}
 
             {!loading && !error && selectedCode && (
                 <>
