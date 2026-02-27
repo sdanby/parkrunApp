@@ -2,7 +2,7 @@ body {
     margin: 0;
     font-family: Arial, sans-serif;
     background-color: #f4f4f4;
-    --races-control-right: 9.5cm;
+    --races-control-right: 7.5cm;
     --races-select-margin-left: 0cm;
     --races-mobile-select-margin-left: 0.0cm;
     --races-mobile-label-padding-left: 8.5cm;
@@ -434,7 +434,7 @@ h1, h2, h3 {
 }
 
 body.browser-view-adjust {
-    --races-control-right: 5.5cm;
+    --races-control-right: 3.5cm;
     --races-select-margin-left: -0.4cm;
 }
 
@@ -445,7 +445,7 @@ body.mobile-view-adjust {
 
 @media (max-width: 640px) {
     body {
-        --races-control-right: 1.0cm;
+        --races-control-right: 0cm;
         --races-mobile-select-width: 4.2cm;
     }
 
