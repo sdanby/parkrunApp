@@ -103,7 +103,7 @@ h1, h2, h3 {
 
 .athlete-view-control.races-view-control {
     margin-left: 0 !important;
-    margin-right: 0;
+    margin-right: 0!important;
     position: absolute !important;
     right: var(--races-control-right);
     top: 0.4cm;
@@ -114,13 +114,20 @@ h1, h2, h3 {
     white-space: nowrap;
 }
 
+@media (max-width: 640px) {
+.athlete-view-control.races-view-control {
+    margin-right: -3.5cm !important;
+    top: -0.2cm
+}
+}
+
 .athlete-view-control .races-view-control-item {
     display: grid;
-
     align-items: center;
     gap: 0.2rem;
     margin: 0;
 }
+
 
 .athlete-view-control .races-view-control-item label {
     text-align: right;
@@ -154,12 +161,30 @@ h1, h2, h3 {
     font-weight: 700;
     letter-spacing: -0.01em;
     line-height: 1.1;
-    padding-left: 0.2cm;
+    
     color: #0b1526;
     transform: translateY(-0.2cm);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+@media (max-width: 640px) {
+/* Truncate the athlete name itself so the sex symbol remains visible */
+.athlete-header-name {
+    display: inline-block;
+    max-width: 3.5cm;
+    min-width: 12ch; /* ensure short names occupy ~12 characters worth of space on mobile */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    vertical-align: middle;
+}
+}
+
+/* Small global nudge so the athlete name sits slightly right of container start */
+.athlete-header-name {
+    margin-left: 0.2cm;
 }
 
 .athlete-header-sex {
@@ -445,7 +470,7 @@ body.mobile-view-adjust {
 
 @media (max-width: 640px) {
     body {
-        --races-control-right: 0cm;
+        --races-control-right: 2cm;
         --races-mobile-select-width: 4.2cm;
     }
 
@@ -461,16 +486,30 @@ body.mobile-view-adjust {
 
     }
 
+    /* Move the Search: label left on narrow screens */
+    .athlete-view-control .races-view-control-item label[for="athletes-search-input"] {
+        margin-left: -5.4cm !important;
+        display: inline-block;
+    }
+
     .athlete-view-control .races-view-control-item select {
         justify-self: start;
         margin-left: var(--races-mobile-select-margin-left);
         width: var(--races-mobile-select-width);
         max-width: var(--races-mobile-select-width);
+     }
+
+    /* Ensure the back button stays on top and is clickable on narrow screens */
+    .athletes-back-button {
+        position: relative;
+        z-index: 10050; /* above header overlays */
+        pointer-events: auto;
+        touch-action: manipulation;
     }
 
     .athlete-header-main {
         flex-direction: column;
-        align-items: stretch;
+        align-items: stretc62h;
         gap: 0.4rem;
     }
 
