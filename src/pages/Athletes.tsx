@@ -716,6 +716,8 @@ const Athletes: React.FC = () => {
     const headerName = pickField(latestRun, ['athlete_name', 'name']) || summary?.athlete_name;
     const fallbackName = summary?.athlete_code ? `Athlete ${summary.athlete_code}` : selectedCode ? `Athlete ${selectedCode}` : 'Athlete';
     const detailTitle = headerName || fallbackName;
+    // Display name (CSS handles width/padding on mobile)
+    const displayName = detailTitle;
 
     const showHeader = Boolean(selectedCode);
     const headerCode = pickField(latestRun, ['athlete_code', 'athleteCode', 'runner_code', 'code']) || summary?.athlete_code || selectedCode || '';
@@ -877,8 +879,8 @@ const Athletes: React.FC = () => {
                         {showHeader && (
                         <div className="athlete-header-text">
                             <div className="athlete-header-title" title="Athlete Name" style={{ display: 'flex', alignItems: 'center', gap: '0.5em' }}>
-                                {detailTitle}
-                                {sexSymbol && <span className="athlete-header-sex" aria-label="Athlete sex"> {sexSymbol}</span>}
+                                <span className="athlete-header-name">{displayName}</span>
+                                {sexSymbol && <span className="athlete-header-sex" aria-label="Athlete sex">{sexSymbol}</span>}
                             </div>
                             {headerCode && (
                                 <div className="athlete-header-code" title="Athlete Code">
