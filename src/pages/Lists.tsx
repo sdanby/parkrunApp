@@ -61,6 +61,8 @@ const Lists: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [sortKey, setSortKey] = useState<string>('Rank');
     const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+    const [courseAdj, setCourseAdj] = useState<'1' | '2' | '3'>('1');
+    const [otherAdj, setOtherAdj] = useState<'1' | '2' | '3' | '4'>('1');
 
     useEffect(() => {
         const fetchRuns = async () => {
@@ -75,11 +77,44 @@ const Lists: React.FC = () => {
             }
 
             try {
-                const response = await fetch(endpoint);
-                if (!response.ok) {
-                    throw new Error(`Failed to fetch data: ${response.statusText}`);
-                }
-                const data: Run[] = await response.json();
+                    // If the selected list is the server-side "fastest_runs", request the
+                    // extended API with sorting and a sensible limit to match server expectations.
+                    let url = endpoint;
+                    if (selectedList === 'fastest_runs') {
+                        // Determine sort field from courseAdj/otherAdj selections
+                        const getSortField = (course: string, other: string): string => {
+                            // course: '1' none, '2' season, '3' full
+                            // other: '1' none, '2' age, '3' sex, '4' age+sex
+                            if (course === '1' && other === '1') return 'time_seconds';
+                            if (course === '2') return 'season_adj_time_seconds';
+                            if (course === '3' && other === '1') return 'event_adj_time_seconds';
+                            if (course === '1' && other === '2') return 'age_adj_time_seconds';
+                            if (course === '3' && other === '2') return 'age_event_adj_time_seconds';
+                            if (course === '1' && other === '3') return 'sex_adj_time_seconds';
+                            if (course === '3' && other === '3') return 'sex_event_adj_time_seconds';
+                            if (course === '1' && other === '4') return 'age_sex_adj_time_seconds';
+                            if (course === '3' && other === '4') return 'age_sex_event_adj_time_seconds';
+                            // Fallback
+                            return 'time_seconds';
+                        };
+
+                        // If course seasonal (2) was chosen, otherAdj should default to '1'
+                        const effectiveOther = courseAdj === '2' ? '1' : otherAdj;
+                        const sortField = getSortField(courseAdj, effectiveOther);
+
+                        const params = new URLSearchParams({
+                            sort: sortField,
+                            direction: 'asc',
+                            limit: '1000'
+                        });
+                        url = `${endpoint}?${params.toString()}`;
+                    }
+
+                    const response = await fetch(url);
+                    if (!response.ok) {
+                        throw new Error(`Failed to fetch data: ${response.statusText}`);
+                    }
+                    const data: Run[] = await response.json();
                 // Attach original rank to each run
                 const ranked = data.map((run, idx) => ({ ...run, originalRank: idx + 1 }));
                 setRuns(ranked);
@@ -91,10 +126,22 @@ const Lists: React.FC = () => {
         };
 
         fetchRuns();
-    }, [selectedList]);
+    }, [selectedList, courseAdj, otherAdj]);
 
     const handleListSelect = (event: React.ChangeEvent<HTMLSelectElement>) => {
         setSelectedList(event.target.value);
+    };
+
+    const handleCourseAdjSelect = (event: React.ChangeEvent<HTMLSelectElement>) => {
+        const v = event.target.value as '1' | '2' | '3';
+        setCourseAdj(v);
+        // If seasonal chosen, reset otherAdj to '1' (no adjustment)
+        if (v === '2') setOtherAdj('1');
+    };
+
+    const handleOtherAdjSelect = (event: React.ChangeEvent<HTMLSelectElement>) => {
+        const v = event.target.value as '1' | '2' | '3' | '4';
+        setOtherAdj(v);
     };
 
     // Column definitions for sorting
@@ -239,6 +286,33 @@ const Lists: React.FC = () => {
                             >
                                 <option value="fastest_runs">Fastest Athletes by Time</option>
                                 {/* Add other <option> elements for new lists here */}
+                            </select>
+                        </div>
+                        <div className="races-view-control-item">
+                            <label htmlFor="lists-course-adj-select">Course adj:</label>
+                            <select
+                                id="lists-course-adj-select"
+                                value={courseAdj}
+                                onChange={handleCourseAdjSelect}
+                                aria-label="Course adjustment"
+                            >
+                                <option value="1">no adjustment (default)</option>
+                                <option value="2">seasonal adjustments</option>
+                                <option value="3">full event adjustments</option>
+                            </select>
+                        </div>
+                        <div className="races-view-control-item">
+                            <label htmlFor="lists-other-adj-select">Other adj:</label>
+                            <select
+                                id="lists-other-adj-select"
+                                value={otherAdj}
+                                onChange={handleOtherAdjSelect}
+                                aria-label="Other adjustment"
+                            >
+                                <option value="1">no adjustment (default)</option>
+                                <option value="2">age adjustments</option>
+                                <option value="3">sex adjustments</option>
+                                <option value="4">age & sex adjustment</option>
                             </select>
                         </div>
                     </div>
