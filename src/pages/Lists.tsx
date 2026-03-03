@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import './lists.css'; // Import the new CSS file
 import './ResultsTable.css';
 
@@ -55,14 +55,31 @@ const formatDate = (dateString: string): string => {
 
 const Lists: React.FC = () => {
     const navigate = useNavigate();
-    const [selectedList, setSelectedList] = useState<string>('fastest_runs');
+    const location = useLocation();
+
+    // Initialize selections from URL params or sessionStorage so state is preserved when navigating back
+    const urlParamsInit = new URLSearchParams(location.search);
+    const storedList = sessionStorage.getItem('lists:selectedList');
+    const storedCourse = sessionStorage.getItem('lists:courseAdj');
+    const storedOther = sessionStorage.getItem('lists:otherAdj');
+    const initialList = urlParamsInit.get('list') || storedList || 'fastest_runs';
+    const initialCourse = ((): '1' | '2' | '3' => {
+        const v = urlParamsInit.get('courseAdj') || storedCourse;
+        return v === '2' || v === '3' ? (v as '2' | '3') : '1';
+    })();
+    const initialOther = ((): '1' | '2' | '3' | '4' => {
+        const v = urlParamsInit.get('otherAdj') || storedOther;
+        return v === '2' || v === '3' || v === '4' ? (v as '2' | '3' | '4') : '1';
+    })();
+
+    const [selectedList, setSelectedList] = useState<string>(initialList);
     const [runs, setRuns] = useState<Run[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
     const [sortKey, setSortKey] = useState<string>('Rank');
     const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
-    const [courseAdj, setCourseAdj] = useState<'1' | '2' | '3'>('1');
-    const [otherAdj, setOtherAdj] = useState<'1' | '2' | '3' | '4'>('1');
+    const [courseAdj, setCourseAdj] = useState<'1' | '2' | '3'>(initialCourse);
+    const [otherAdj, setOtherAdj] = useState<'1' | '2' | '3' | '4'>(initialOther);
 
     useEffect(() => {
         const fetchRuns = async () => {
@@ -129,20 +146,74 @@ const Lists: React.FC = () => {
     }, [selectedList, courseAdj, otherAdj]);
 
     const handleListSelect = (event: React.ChangeEvent<HTMLSelectElement>) => {
-        setSelectedList(event.target.value);
+        const v = event.target.value;
+        setSelectedList(v);
+        sessionStorage.setItem('lists:selectedList', v);
     };
 
     const handleCourseAdjSelect = (event: React.ChangeEvent<HTMLSelectElement>) => {
         const v = event.target.value as '1' | '2' | '3';
         setCourseAdj(v);
+        sessionStorage.setItem('lists:courseAdj', v);
         // If seasonal chosen, reset otherAdj to '1' (no adjustment)
-        if (v === '2') setOtherAdj('1');
+        if (v === '2') {
+            setOtherAdj('1');
+            sessionStorage.setItem('lists:otherAdj', '1');
+        }
     };
 
     const handleOtherAdjSelect = (event: React.ChangeEvent<HTMLSelectElement>) => {
         const v = event.target.value as '1' | '2' | '3' | '4';
         setOtherAdj(v);
+        sessionStorage.setItem('lists:otherAdj', v);
     };
+
+    // Keep URL query params in sync so selections persist across navigation/back
+    React.useEffect(() => {
+        const params = new URLSearchParams(location.search);
+        params.set('list', selectedList);
+        params.set('courseAdj', courseAdj);
+        params.set('otherAdj', otherAdj);
+        // replace so history isn't noisy
+        navigate(`${location.pathname}?${params.toString()}`, { replace: true });
+        // persist selections so Back/Forward can restore even if URL entries differ
+        sessionStorage.setItem('lists:selectedList', selectedList);
+        sessionStorage.setItem('lists:courseAdj', courseAdj);
+        sessionStorage.setItem('lists:otherAdj', otherAdj);
+    }, [selectedList, courseAdj, otherAdj]);
+
+    // When the location.search changes (e.g., user hits Back/Forward), restore selections
+    React.useEffect(() => {
+        const params = new URLSearchParams(location.search);
+        const list = params.get('list') || null;
+        const course = params.get('courseAdj') || null;
+        const other = params.get('otherAdj') || null;
+
+        const savedList = sessionStorage.getItem('lists:selectedList');
+        const savedCourse = sessionStorage.getItem('lists:courseAdj');
+        const savedOther = sessionStorage.getItem('lists:otherAdj');
+
+        // If URL explicitly provides values, prefer them. If they are missing or default and we have saved values, restore saved.
+        if (list) {
+            if (list !== selectedList) setSelectedList(list);
+        } else if (savedList && savedList !== selectedList) {
+            setSelectedList(savedList);
+        }
+
+        if (course) {
+            const c = (course === '2' || course === '3') ? (course as '2' | '3') : '1';
+            if (c !== courseAdj) setCourseAdj(c);
+        } else if (savedCourse && savedCourse !== courseAdj) {
+            setCourseAdj(savedCourse as '1' | '2' | '3');
+        }
+
+        if (other) {
+            const o = (other === '2' || other === '3' || other === '4') ? (other as '2' | '3' | '4') : '1';
+            if (o !== otherAdj) setOtherAdj(o);
+        } else if (savedOther && savedOther !== otherAdj) {
+            setOtherAdj(savedOther as '1' | '2' | '3' | '4');
+        }
+    }, [location.search]);
 
     // Column definitions for sorting
     const columns = [
@@ -241,6 +312,23 @@ const Lists: React.FC = () => {
         return runs.slice().sort((a, b) => compare(a, b, runs.indexOf(a), runs.indexOf(b)));
     }, [runs, sortKey, sortDir]);
 
+    // Determine which header should be highlighted based on current list/course/other selections
+    const getActiveHeaderKey = (): string => {
+        if (selectedList !== 'fastest_runs') return '';
+        // course: '1' none, '2' season, '3' full
+        // other: '1' none, '2' age, '3' sex, '4' age+sex
+        if (courseAdj === '1' && otherAdj === '1') return 'Time';
+        if (courseAdj === '2' && otherAdj === '1') return 'Season';
+        if (courseAdj === '3' && otherAdj === '1') return 'EventAdj';
+        if (courseAdj === '1' && otherAdj === '2') return 'AgeAdj';
+        if (courseAdj === '3' && otherAdj === '2') return 'EventAgeAdj';
+        if (courseAdj === '1' && otherAdj === '3') return 'SexAdj';
+        if (courseAdj === '3' && otherAdj === '3') return 'EventSexAdj';
+        if (courseAdj === '1' && otherAdj === '4') return 'AgeSexAdj';
+        if (courseAdj === '3' && otherAdj === '4') return 'EventAgeSexAdj';
+        return '';
+    };
+
     const handleSort = (colKey: string) => {
         setSortKey(colKey);
         setSortDir(prev => (colKey === sortKey ? (prev === 'asc' ? 'desc' : 'asc') : 'asc'));
@@ -263,6 +351,10 @@ const Lists: React.FC = () => {
         params.set('athlete_code', String(run.athlete_code));
         params.set('from_list', '1');
         params.set('event_date', String(run.event_date)); // Pass the event date for highlighting
+        // Preserve current list/course/other selections so they can be restored on return
+        params.set('list', selectedList);
+        params.set('courseAdj', courseAdj);
+        params.set('otherAdj', otherAdj);
         navigate(`/athletes?${params.toString()}`);
     };
 
@@ -330,10 +422,12 @@ const Lists: React.FC = () => {
                                     {columns.map(col => {
                                         const isSorted = sortKey === col.key;
                                         const sortIndicator = isSorted ? (sortDir === 'asc' ? '▲' : '▼') : '';
+                                        const activeKey = getActiveHeaderKey();
+                                        const extraClass = (col.key === activeKey) ? ' active-selected-header' : '';
                                         return (
                                             <th
                                                 key={col.key}
-                                                className={col.className}
+                                                className={col.className + extraClass}
                                                 onClick={() => handleSort(col.key)}
                                                 style={{ cursor: 'pointer', userSelect: 'none' }}
                                                 tabIndex={0}
