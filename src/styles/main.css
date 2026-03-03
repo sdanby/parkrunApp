@@ -9,6 +9,13 @@ body {
     --races-mobile-select-width: 5.05cm;
 }
 
+/* Desktop / laptop: move the List selection label left by 1.0cm */
+@media (min-width: 641px) {
+    .lists-page .athlete-view-control .races-view-control-item label[for="list-select"] {
+        transform: translateX(-1.35cm) !important;
+    }
+}
+
 h1, h2, h3 {
     color: #333;
 }
@@ -79,15 +86,15 @@ h1, h2, h3 {
     display: flex;
     align-items: center;
     gap: 0.4rem;
-    margin: 0 0 0.8rem 1em;
-    width: 860px;
-    max-width: 860px;
-    margin-right: auto;
+    margin: 0 0 0.4rem 0.6rem; /* reduce vertical space */
+    width: 100%;
+    max-width: 100%;
+    margin-right: 0;
     position: sticky;
     top: 0;
     z-index: 40;
     background: #f4f4f4;
-    padding: 0.4rem 0.6rem;
+    padding: 0.08rem 0.4rem; /* shrink padding so header area is smaller */
     border-bottom: none;
 }
 
@@ -116,8 +123,19 @@ h1, h2, h3 {
 
 @media (max-width: 640px) {
 .athlete-view-control.races-view-control {
-    margin-right: -3.5cm !important;
-    top: -0.2cm
+    /* Avoid absolute positioning on narrow screens - keep controls in normal flow */
+    position: static !important;
+    right: auto !important;
+    margin-right: 0 !important;
+    top: auto !important;
+    transform: none !important;
+    width: auto !important;
+    padding-left: 0 !important;
+}
+
+/* Specific padding for Lists page controls to nudge them into view */
+.lists-page .athlete-view-control.races-view-control {
+    padding-left: 0cm !important;
 }
 }
 
@@ -146,6 +164,47 @@ h1, h2, h3 {
     max-width: 100%;
 }
 
+/* Move the List selection, Course adj and Other adj controls left by 3cm on all viewports */
+.lists-page label[for="list-select"],
+.lists-page #list-select,
+.lists-page label[for="lists-course-adj-select"],
+.lists-page #lists-course-adj-select,
+.lists-page label[for="lists-other-adj-select"],
+.lists-page #lists-other-adj-select {
+    transform: translateX(-1.45cm) !important;
+}
+
+/* Ensure labels sit immediately next to their selects on the Lists page */
+.lists-page .athlete-view-control .races-view-control-item {
+    grid-template-columns: min-content 1fr; /* label takes only needed width */
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.lists-page .athlete-view-control .races-view-control-item label,
+.lists-page .athlete-view-control .races-view-control-item select {
+    transform: translateX(-3.7cm) !important;
+}
+
+.lists-page .athlete-view-control .races-view-control-item label {
+    margin-right: 0.25rem;
+    justify-self: end;
+}
+
+/* Move only the "Other adj" label 0.5cm to the right (relative to the -3.7cm baseline) */
+.lists-page .athlete-view-control .races-view-control-item label[for="lists-other-adj-select"] {
+    transform: translateX(-3.4cm) !important;
+}
+
+/* Move only the "Course adj" select 1cm to the left (relative to the -3.7cm baseline)
+   i.e. make the course select sit 1cm further left than other selects */
+.lists-page .athlete-view-control .races-view-control-item #lists-course-adj-select {
+    transform: translateX(-3.50cm) !important;
+}
+.lists-page .athlete-view-control .races-view-control-item #lists-other-adj-select {
+    transform: translateX(-3.25cm) !important;
+}
+
 .athlete-header-text {
     display: flex;
     flex-direction: column;
@@ -153,17 +212,17 @@ h1, h2, h3 {
     pointer-events: auto;
     flex: 1 1 auto;
     min-width: 0;
-    padding-right: 9cm; /* reserve space for control stack */
+    padding-right: 6cm; /* reduce reserved space for control stack */
 }
 
 .athlete-header-title {
-    font-size: 1rem;
+    font-size: 0.98rem;
     font-weight: 700;
     letter-spacing: -0.01em;
-    line-height: 1.1;
-    
+    line-height: 1.0;
     color: #0b1526;
-    transform: translateY(-0.2cm);
+    transform: none; /* remove vertical transform to avoid extra header height */
+    margin: 0;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -375,7 +434,7 @@ h1, h2, h3 {
     border-radius: 12px;
     background: #fff;
     box-shadow: 0 10px 18px rgba(15, 23, 42, 0.08);
-    margin-top: 0.1cm;
+    margin-top: 0.4cm; /* moved down 0.2cm */
     position: relative;
     display: inline-block;
     width: auto;
@@ -400,6 +459,15 @@ h1, h2, h3 {
     text-align: left;
     background: #fff;
 }
+
+/* Reduce the visible width of the Name column by 0.2cm
+   (we reduce horizontal padding by 0.1cm on each side) */
+.athlete-runs-table th.sticky-col-2,
+.athlete-runs-table td.sticky-col-2 {
+    padding-left: calc(0.4rem + 0.0cm);
+    padding-right: calc(0.2rem + 0cm);  
+}
+
 .athlete-runs-table thead th {
     background: #e0e0e0;
     font-weight: 600;
@@ -410,6 +478,18 @@ h1, h2, h3 {
     z-index: 2;
     text-transform: none;
     letter-spacing: normal;
+}
+
+/* Active header when a metric is selected via the List/Course/Other selects */
+.athlete-runs-table thead th.active-selected-header {
+    /* use the lighter Single Event blue for background, with dark-blue text */
+    background-color: #add8e6 !important; /* light blue */
+    color: #0a5ad1 !important; /* darker blue for text */
+}
+
+.athlete-runs-table thead th.active-selected-header span,
+.athlete-runs-table thead th.active-selected-header .athlete-sort-indicator {
+    color: #0a5ad1 !important;
 }
 .athlete-table-header {
     cursor: pointer;
@@ -525,6 +605,50 @@ body.mobile-view-adjust {
         gap: 0.2rem;
     }
 
+    /* Move the List selection label and select left by 3cm on mobile to align with the list box */
+    .lists-page .athlete-view-control .races-view-control-item label[for="list-select"],
+    .lists-page .athlete-view-control .races-view-control-item #list-select {
+        transform: translateX(-0.0cm) !important;
+        display: inline-block;
+    }
 
+
+}
+
+/* Mobile-only precise adjustments requested by user */
+@media (max-width: 640px) {
+    /* 1-2) List selection: move 5cm left and 0.5cm up */
+    .lists-page .athlete-view-control .races-view-control-item label[for="list-select"],
+    .lists-page .athlete-view-control .races-view-control-item #list-select {
+        transform: translate(-7.4cm, -0.0cm) !important;
+    }
+
+    /* 3-4) Course adj: move 3cm left and 0.5cm up */
+    .lists-page .athlete-view-control .races-view-control-item label[for="lists-course-adj-select"],
+    .lists-page .athlete-view-control .races-view-control-item #lists-course-adj-select {
+        transform: translate(-7.2cm, -0.0cm) !important;
+    }
+
+    /* 5-6) Other adj: move 3cm left and 0.5cm up */
+    .lists-page .athlete-view-control .races-view-control-item label[for="lists-other-adj-select"],
+    .lists-page .athlete-view-control .races-view-control-item #lists-other-adj-select {
+        transform: translate(-6.9cm, -0.0cm) !important;
+    }
+}
+
+/* Mobile-only: nudge the Top 1000 List title down slightly so it sits lower on small viewports */
+@media (max-width: 640px) {
+    .lists-page .athlete-header-title {
+        transform: translateY(0.7cm) !important;
+    }
+}
+
+/* Mobile-only: move the table up slightly so it sits 0.3cm higher on small viewports */
+@media (max-width: 640px) {
+    .lists-page .athlete-runs-table-wrapper {
+        transform: translateY(-0.3cm) !important;
+        /* reduce the extra margin so layout remains consistent */
+        margin-top: 0.1cm !important;
+    }
 }
 
