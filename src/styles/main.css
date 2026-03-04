@@ -80,6 +80,12 @@ h1, h2, h3 {
     max-width: 1500px;
 
     margin-right: auto;
+    --athletes-table-shift-desktop: 0cm;
+}
+
+/* Athletes - Run History: move right-side controls ~10cm left */
+.athletes-page {
+    --races-control-right: 17.5cm;
 }
 
 .athlete-header {
@@ -133,6 +139,35 @@ h1, h2, h3 {
     padding-left: 0 !important;
 }
 
+/* Lists page: move dropdown boxes right by 4cm (labels unchanged) */
+@media (min-width: 641px) {
+    .lists-page .athlete-view-control .races-view-control-item #list-select {
+        transform: translateX(0.3cm) !important;
+    }
+
+    .lists-page .athlete-view-control .races-view-control-item #lists-course-adj-select {
+        transform: translateX(0.5cm) !important;
+    }
+
+    .lists-page .athlete-view-control .races-view-control-item #lists-other-adj-select {
+        transform: translateX(0.75cm) !important;
+    }
+}
+
+@media (max-width: 640px) {
+    .lists-page .athlete-view-control .races-view-control-item #list-select {
+        transform: translateX(-3.4cm) !important;
+    }
+
+    .lists-page .athlete-view-control .races-view-control-item #lists-course-adj-select {
+        transform: translateX(-3.2cm) !important;
+    }
+
+    .lists-page .athlete-view-control .races-view-control-item #lists-other-adj-select {
+        transform: translateX(-2.9cm) !important;
+    }
+}
+
 /* Specific padding for Lists page controls to nudge them into view */
 .lists-page .athlete-view-control.races-view-control {
     padding-left: 0cm !important;
@@ -171,7 +206,12 @@ h1, h2, h3 {
 .lists-page #lists-course-adj-select,
 .lists-page label[for="lists-other-adj-select"],
 .lists-page #lists-other-adj-select {
-    transform: translateX(-1.45cm) !important;
+    transform: translateX(3.6cm) !important;
+}
+/* Final Lists override: move only 'List selection' label 2cm right */
+
+.lists-page .athlete-view-control .races-view-control-item label[for="list-select"] {
+    transform: translateX(3.7cm) !important;
 }
 
 /* Ensure labels sit immediately next to their selects on the Lists page */
@@ -181,34 +221,35 @@ h1, h2, h3 {
     gap: 0.25rem;
 }
 
-.lists-page .athlete-view-control .races-view-control-item label,
-.lists-page .athlete-view-control .races-view-control-item select {
-    transform: translateX(-3.7cm) !important;
-}
+
 
 .lists-page .athlete-view-control .races-view-control-item label {
     margin-right: 0.25rem;
     justify-self: end;
 }
 
-/* Move only the "Other adj" label 0.5cm to the right (relative to the -3.7cm baseline) */
-.lists-page .athlete-view-control .races-view-control-item label[for="lists-other-adj-select"] {
-    transform: translateX(-3.4cm) !important;
+.lists-page .athlete-view-control .races-view-control-item label,
+.lists-page .athlete-view-control .races-view-control-item select {
+    transform: translateX(1.6cm) !important;
 }
-
 /* Move only the "Course adj" select 1cm to the left (relative to the -3.7cm baseline)
    i.e. make the course select sit 1cm further left than other selects */
 .lists-page .athlete-view-control .races-view-control-item #lists-course-adj-select {
-    transform: translateX(-3.50cm) !important;
+    transform: translateX(1.5cm) !important;
+}
+/* Move only the "Other adj" label 0.5cm to the right (relative to the -3.7cm baseline) */
+.lists-page .athlete-view-control .races-view-control-item label[for="lists-other-adj-select"] {
+    transform: translateX(1.9cm) !important;
 }
 .lists-page .athlete-view-control .races-view-control-item #lists-other-adj-select {
-    transform: translateX(-3.25cm) !important;
+    transform: translateX(1.8cm) !important;
 }
+
 
 .athlete-header-text {
     display: flex;
     flex-direction: column;
-    line-height: 1.05;
+    line-height: 1.1;
     pointer-events: auto;
     flex: 1 1 auto;
     min-width: 0;
@@ -219,13 +260,22 @@ h1, h2, h3 {
     font-size: 0.98rem;
     font-weight: 700;
     letter-spacing: -0.01em;
-    line-height: 1.0;
+    line-height: 1.3;
     color: #0b1526;
     transform: none; /* remove vertical transform to avoid extra header height */
     margin: 0;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+.athlete-header-code {
+    font-size: 0.95rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    padding-left: 0.2cm;
+    color: #4b5563;
+    transform: translateY(0.1cm);
 }
 
 @media (max-width: 640px) {
@@ -237,7 +287,7 @@ h1, h2, h3 {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    vertical-align: middle;
+
 }
 }
 
@@ -254,14 +304,7 @@ h1, h2, h3 {
     text-shadow: 0 0 1.0px rgba(0, 0, 0, 0.35);
 }
 
-.athlete-header-code {
-    font-size: 0.95rem;
-    font-weight: 600;
-    letter-spacing: -0.01em;
-    padding-left: 0.2cm;
-    color: #4b5563;
-    transform: translateY(-0.0cm);
-}
+
 
 .athletes-back-button {
     display: inline-flex;
@@ -272,7 +315,7 @@ h1, h2, h3 {
     margin-top: -0.1cm;
     margin-left: -0.2cm;
     margin-right: 0.5rem;
-    margin-bottom: calc(1rem + 1.1cm);
+    margin-bottom: calc(1rem + 1.0cm);
     border: 1px solid rgba(0, 0, 0, 1);
     background: #fff;
     color: #333;
@@ -281,6 +324,15 @@ h1, h2, h3 {
     font-size: 1.05rem;
     line-height: 1;
     font-weight: 700;
+}
+@media (max-width: 640px) {
+  .athletes-back-button {
+    margin-top: -0.6cm !important;   /* more negative = moves up */
+    margin-bottom: calc(1rem + 2.4cm) !important; /* optional: keeps spacing balanced */
+    /* alternative instead of margin-top:
+    transform: translateY(-0.5cm);
+    */
+  }
 }
 .athletes-back-button:hover {
     background: #f4f6f8;
@@ -297,17 +349,7 @@ h1, h2, h3 {
     box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
     margin-bottom: 1.5rem;
 }
-.athlete-header-club {
-    font-size: 0.95rem;
-    font-weight: 600;
-    letter-spacing: -0.01em;
-    padding-left: 0.25cm;
-    color: #4b5563;
-    transform: translateY(1.6cm);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
+
 
 .athlete-header-age {
     font-size: 0.95rem;
@@ -317,7 +359,17 @@ h1, h2, h3 {
     color: #4b5563;
     transform: translateY(0.45cm);
 }
-
+.athlete-header-club {
+    font-size: 0.95rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    padding-left: 0.25cm;
+    color: #4b5563;
+    transform: translateY(1.5cm);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
 .athlete-header-total-runs {
     font-size: 0.95rem;
     font-weight: 600;
@@ -441,6 +493,21 @@ h1, h2, h3 {
     max-width: 100%;
     max-height: 70vh;
 }
+
+.lists-page .athlete-runs-table-wrapper {
+    margin-top: 0.9cm !important;
+}
+
+
+@media (max-width: 640px) and (orientation: portrait) {
+    .athletes-page .athlete-runs-section {
+        margin-top: 0rem !important;
+    }
+
+    .athletes-page .athlete-runs-table-wrapper {
+        margin-top: 0 !important;
+    }
+}
 .athlete-runs-table {
     width: max-content;
     min-width: 100%;
@@ -543,6 +610,11 @@ body.browser-view-adjust {
     --races-select-margin-left: -0.4cm;
 }
 
+.athletes-page .athlete-view-control.races-view-control {
+    right: 3.5cm !important;
+    transform: translateX(-5cm) !important;
+}
+
 body.mobile-view-adjust {
     --races-mobile-select-margin-left: -0.3cm;
     --races-mobile-label-padding-left: 0.4cm;
@@ -552,6 +624,12 @@ body.mobile-view-adjust {
     body {
         --races-control-right: 2cm;
         --races-mobile-select-width: 4.2cm;
+    }
+
+    .athletes-page .athlete-view-control.races-view-control {
+        position: static !important;
+        right: auto !important;
+        transform: translateX(19cm) !important;
     }
 
     .athlete-view-control .races-view-control-item {
@@ -643,12 +721,81 @@ body.mobile-view-adjust {
     }
 }
 
-/* Mobile-only: move the table up slightly so it sits 0.3cm higher on small viewports */
+/* Mobile-only: keep Lists table pushed down by 0.5cm */
 @media (max-width: 640px) {
     .lists-page .athlete-runs-table-wrapper {
-        transform: translateY(-0.3cm) !important;
-        /* reduce the extra margin so layout remains consistent */
-        margin-top: 0.1cm !important;
+        transform: none !important;
+        margin-top: 0.9cm !important;
     }
 }
+    .athletes-page .athlete-view-control .races-view-control-item label[for="athletes-view-select"] {
+        transform: translateX(-18cm)
+    }
+    #athletes-view-select { transform: translateX(-18cm) !important; }
+    .athletes-page .athlete-view-control .races-view-control-item label[for="athletes-course-adj-select"] {
+        transform: translateX(-18cm)
+    }
+    #athletes-course-adj-select { transform: translateX(-18cm) !important; }
+    .athletes-page .athlete-view-control .races-view-control-item label[for="athletes-other-adj-select"] {
+        transform: translateX(-18cm)
+    }
+    #athletes-other-adj-select { transform: translateX(-18cm) !important; }
+
+/* Athletes page mobile reset: keep filter controls visible in portrait and landscape */
+@media (max-width: 640px) {
+    .athletes-page .athlete-view-control.races-view-control {
+        position: static !important;
+        right: auto !important;
+        transform: none !important;
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+
+    .athletes-page .athlete-view-control .races-view-control-item {
+        grid-template-columns: max-content minmax(0, 1fr) !important;
+    }
+
+    .athletes-page .athlete-view-control .races-view-control-item label[for="athletes-search-input"] {
+        margin-left: -5.4cm !important;
+    }
+    .athletes-page .athlete-view-control .races-view-control-item label[for="athletes-search-input"],
+    .athletes-page .athlete-view-control .races-view-control-item label[for="athletes-search-input"] + div {
+        transform: translateY(-1.4cm) !important;
+    }
+    .athletes-page .athlete-view-control .races-view-control-item label[for="athletes-view-select"] {
+        margin-left: -3.7cm !important;
+    }
+    .athletes-page .athlete-view-control .races-view-control-item label[for="athletes-view-select"],
+    .athletes-page .athlete-view-control .races-view-control-item label[for="athletes-view-select"] + select {
+        transform: translateY(-1.8cm) !important;
+    }
+    #athletes-view-select { transform: translateY(-1.8cm) !important; }
+    .athletes-page .athlete-view-control .races-view-control-item label[for="athletes-course-adj-select"] {
+        margin-left: -4.7cm !important;
+    }
+    .athletes-page .athlete-view-control .races-view-control-item label[for="athletes-course-adj-select"],
+    .athletes-page .athlete-view-control .races-view-control-item label[for="athletes-course-adj-select"] + select {
+        transform: translateY(-1.8cm) !important;
+    }
+    #athletes-course-adj-select { transform: translateY(-1.8cm) !important; }
+    .athletes-page .athlete-view-control .races-view-control-item label[for="athletes-other-adj-select"] {
+        margin-left: -4.4cm !important;
+    }
+    .athletes-page .athlete-view-control .races-view-control-item label[for="athletes-other-adj-select"],
+    .athletes-page .athlete-view-control .races-view-control-item label[for="athletes-other-adj-select"] + select {
+        transform: translateY(-1.8cm) !important;
+    }
+     #athletes-other-adj-select { transform: translateY(-1.8cm) !important; }
+
+    .athletes-page .athlete-view-control .races-view-control-item select {
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+}
+
+
+
+
+
+
 
