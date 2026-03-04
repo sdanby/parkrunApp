@@ -116,6 +116,7 @@ const Races: React.FC = () => {
     };
     const handleAthleteNavigate = (row: any) => {
         const athleteCode = row?.athlete_code ?? row?.athleteCode;
+        const athleteName = row?.name ?? row?.athlete_name;
         if (!athleteCode) {
             return;
         }
@@ -135,6 +136,7 @@ const Races: React.FC = () => {
         navigate(`/athletes?${params.toString()}`, {
             state: {
                 athleteCode: String(athleteCode),
+                athleteName: athleteName ? String(athleteName) : undefined,
                 from: 'races',
                 returnTo: {
                     pathname: '/races',
@@ -434,6 +436,17 @@ const Races: React.FC = () => {
     // `event_code` + `event_number` via the backend. Store the resolved
     // display date here (DD/MM/YYYY) so the header can show it.
     const [resolvedDateDisplay, setResolvedDateDisplay] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (!highlightAthleteCode) return;
+        const timer = window.setTimeout(() => {
+            const row = document.querySelector('tr.highlighted-athlete-row') as HTMLElement | null;
+            if (row) {
+                row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }, 120);
+        return () => window.clearTimeout(timer);
+    }, [highlightAthleteCode, sortedRows]);
 
     useEffect(() => {
     if (!rawEventParam && !date) return;
@@ -1032,6 +1045,7 @@ const Races: React.FC = () => {
                                 return (
                                 <tr 
                                     key={r.athlete_code || i}
+                                    className={isHighlightedAthlete ? 'highlighted-athlete-row' : undefined}
                                     style={{
                                         backgroundColor: isHighlightedAthlete ? '#e6f3ff' : undefined,
                                         fontWeight: isHighlightedAthlete ? 'bold' : undefined
