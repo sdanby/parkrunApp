@@ -12,9 +12,11 @@ type Props = {
   onSelect?: (athleteCode: string) => void;
   placeholder?: string;
   inputId?: string;
+  initialQuery?: string;
+  suppressInitialSearch?: boolean;
 };
 
-const AthleteSearch: React.FC<Props> = ({ onSelect, placeholder, inputId }) => {
+const AthleteSearch: React.FC<Props> = ({ onSelect, placeholder, inputId, initialQuery, suppressInitialSearch = false }) => {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Athlete[]>([]);
   const [open, setOpen] = useState(false);
@@ -22,6 +24,16 @@ const AthleteSearch: React.FC<Props> = ({ onSelect, placeholder, inputId }) => {
   const [highlight, setHighlight] = useState<number>(-1);
   const debounceRef = useRef<number | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const prefilledOnEntryRef = useRef(false);
+
+  useEffect(() => {
+    if (typeof initialQuery !== 'string') return;
+    const trimmed = initialQuery.trim();
+    if (!trimmed) return;
+    if (query.trim() !== '') return;
+    setQuery(initialQuery);
+    prefilledOnEntryRef.current = true;
+  }, [initialQuery]);
 
   useEffect(() => {
     const onClick = (ev: MouseEvent) => {
@@ -38,6 +50,17 @@ const AthleteSearch: React.FC<Props> = ({ onSelect, placeholder, inputId }) => {
     if (!query) {
       setResults([]);
       setLoading(false);
+      return;
+    }
+    if (
+      suppressInitialSearch &&
+      prefilledOnEntryRef.current &&
+      typeof initialQuery === 'string' &&
+      query.trim() === initialQuery.trim()
+    ) {
+      setResults([]);
+      setLoading(false);
+      setOpen(false);
       return;
     }
     setLoading(true);
@@ -82,6 +105,8 @@ const AthleteSearch: React.FC<Props> = ({ onSelect, placeholder, inputId }) => {
       if (highlight >= 0 && highlight < results.length) {
         const sel = results[highlight];
         choose(sel);
+      } else if (results.length > 0) {
+        choose(results[0]);
       }
     } else if (e.key === 'Escape') {
       setOpen(false);
@@ -89,7 +114,7 @@ const AthleteSearch: React.FC<Props> = ({ onSelect, placeholder, inputId }) => {
   };
 
   const choose = (ath: Athlete) => {
-    setQuery(ath.name ? `${ath.name} (${ath.athlete_code})` : String(ath.athlete_code));
+    setQuery(ath.name ? String(ath.name) : String(ath.athlete_code));
     setOpen(false);
     if (onSelect) onSelect(String(ath.athlete_code));
   };
@@ -101,10 +126,28 @@ const AthleteSearch: React.FC<Props> = ({ onSelect, placeholder, inputId }) => {
         aria-label="Search athletes"
         placeholder={placeholder || 'Type athlete name or code...'}
         value={query}
-        onChange={(e) => { setQuery(e.target.value); }}
-        onFocus={() => { if (results.length) setOpen(true); }}
+        onChange={(e) => {
+          prefilledOnEntryRef.current = false;
+          setQuery(e.target.value);
+        }}
+        onFocus={() => {
+          if (prefilledOnEntryRef.current && suppressInitialSearch) {
+            return;
+          }
+          if (results.length) setOpen(true);
+        }}
         onKeyDown={handleKeyDown}
-        style={{ width: '154px', height: '20px', padding: '8px 6px', boxSizing: 'border-box' }}
+        style={{
+          width: 'calc(154px + 2cm)',
+          height: '20px',
+          padding: '8px 6px',
+          boxSizing: 'border-box',
+          fontSize: '0.95rem',
+          fontWeight: 600,
+          letterSpacing: '-0.01em',
+          color: '#4b5563',
+          fontFamily: 'inherit'
+        }}
       />
       {open && (results.length > 0 || loading) && (
         <div
