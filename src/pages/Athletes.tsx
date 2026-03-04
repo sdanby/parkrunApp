@@ -8,6 +8,8 @@ type AthleteRecord = { [key: string]: any };
 
 type AthletesLocationState = {
     athleteCode?: string;
+    athleteName?: string;
+    fromSearchSelection?: boolean;
     from?: string;
     returnTo?: { pathname: string; search?: string };
     sourceEvent?: {
@@ -24,6 +26,12 @@ const toAthletesLocationState = (value: unknown): AthletesLocationState => {
     const next: AthletesLocationState = {};
     if (typeof possible.athleteCode === 'string') {
         next.athleteCode = possible.athleteCode;
+    }
+    if (typeof possible.athleteName === 'string') {
+        next.athleteName = possible.athleteName;
+    }
+    if (typeof possible.fromSearchSelection === 'boolean') {
+        next.fromSearchSelection = possible.fromSearchSelection;
     }
     if (typeof possible.from === 'string') {
         next.from = possible.from;
@@ -566,6 +574,7 @@ const Athletes: React.FC = () => {
         eventName: searchParams.get('source_event'),
         eventDate: searchParams.get('event_date') || searchParams.get('source_date')
     };
+    const hasSourceEvent = Boolean(sourceEvent?.eventName || sourceEvent?.eventDate);
 
     // Function to check if a row matches the source event
     const isHighlightedRow = (row: AthleteRecord): boolean => {
@@ -643,8 +652,33 @@ const Athletes: React.FC = () => {
     }, [runs, sourceEvent]);
 
     const handleBackToRaces = () => {
+        if (fromRaces && (locationState.fromSearchSelection || !hasSourceEvent) && runs.length > 0) {
+            const mostRecentRow = sortedRuns.length > 0 ? sortedRuns[0] : runs[0];
+            const eventCode = pickField(mostRecentRow, ['event_code', 'eventCode']);
+            const eventName = pickField(mostRecentRow, ['event_name', 'eventName', 'event_display', 'eventDisplay', 'event']);
+            const eventDate = pickField(mostRecentRow, ['formatted_date', 'event_date', 'date']);
+            if ((eventCode || eventName) && eventDate) {
+                const params = new URLSearchParams();
+                if (eventCode) {
+                    params.set('event_code', String(eventCode));
+                } else if (eventName) {
+                    params.set('event_name', String(eventName));
+                }
+                params.set('date', String(eventDate));
+                if (selectedCode) {
+                    params.set('highlight_athlete', String(selectedCode));
+                }
+                navigate(`/races?${params.toString()}`);
+                return;
+            }
+        }
         if (returnTarget?.pathname) {
-            navigate(`${returnTarget.pathname}${returnTarget.search || ''}`);
+            const params = new URLSearchParams(returnTarget.search || '');
+            if (selectedCode) {
+                params.set('highlight_athlete', String(selectedCode));
+            }
+            const qs = params.toString();
+            navigate(`${returnTarget.pathname}${qs ? `?${qs}` : ''}`);
         } else {
             navigate('/races');
         }
@@ -876,47 +910,45 @@ const Athletes: React.FC = () => {
                         </button>
                     )}
                     <div className="athlete-header-main">
-                        {showHeader && (
                         <div className="athlete-header-text">
-                            <div className="athlete-header-title" title="Athlete Name" style={{ display: 'flex', alignItems: 'center', gap: '0.5em' }}>
-                                <span className="athlete-header-name">{displayName}</span>
-                                {sexSymbol && <span className="athlete-header-sex" aria-label="Athlete sex">{sexSymbol}</span>}
+                            <div className="athlete-header-title" title="Athlete Search" style={{ display: 'flex', alignItems: 'center', gap: '0.5em', overflow: 'visible' }}>
+                                <AthleteSearch inputId="athletes-search-input" onSelect={(athleteCode) => {
+                                    const params = new URLSearchParams();
+                                    params.set('athlete_code', String(athleteCode));
+                                    navigate(`/athletes?${params.toString()}`, {
+                                        state: {
+                                            athleteCode: String(athleteCode),
+                                            fromSearchSelection: true,
+                                            from: locationState.from,
+                                            returnTo: locationState.returnTo,
+                                        }
+                                    });
+                                }} placeholder="Search athletes..." initialQuery={fromRaces ? locationState.athleteName : undefined} suppressInitialSearch={fromRaces} />
+                                {showHeader && sexSymbol && <span className="athlete-header-sex" aria-label="Athlete sex">{sexSymbol}</span>}
                             </div>
-                            {headerCode && (
+                            {showHeader && headerCode && (
                                 <div className="athlete-header-code" title="Athlete Code">
                                     {headerCode}
                                 </div>
                             )}
-                            <div className="athlete-header-club" title="Athlete's Club">
-                                {headerClub}
-                            </div>
-                            {formattedLatestAge && (
+                            {showHeader && (
+                                <div className="athlete-header-club" title="Athlete's Club">
+                                    {headerClub}
+                                </div>
+                            )}
+                            {showHeader && formattedLatestAge && (
                                 <div className="athlete-header-age" title="Estimated Age">
                                     Estm.Age: {formattedLatestAge}
                                 </div>
                             )}
-                            {totalRunsCount !== undefined && (
+                            {showHeader && totalRunsCount !== undefined && (
                                 <div className="athlete-header-total-runs" title="Total runs recorded">
                                     Total runs: {totalRunsCount}
                                 </div>
                             )}
                         </div>
-                        )}
                         
                         <div className="athlete-view-control races-view-control">
-                            <div className="races-view-control-item" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginLeft: '1.2cm' }}>
-                                {!selectedCode && (
-                                    <div style={{ marginRight: '0.6rem', color: '#333', fontWeight: 'bold', marginTop: '-0.1cm' }}>
-                                        Start typing the athlete's name or code to select
-                                    </div>
-                                )}
-                                <label htmlFor="athletes-search-input">Search:</label>
-                                <div style={{ minWidth: '12rem' }}>
-                                    <AthleteSearch inputId="athletes-search-input" onSelect={(athleteCode) => {
-                                        navigate(`/athletes?athlete_code=${encodeURIComponent(String(athleteCode))}`);
-                                    }} placeholder="Search athletes..." />
-                                </div>
-                            </div>
                             {showHeader && (
                                 <>
                                     <div className="races-view-control-item">
