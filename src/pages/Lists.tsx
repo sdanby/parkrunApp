@@ -355,7 +355,21 @@ const Lists: React.FC = () => {
         params.set('list', selectedList);
         params.set('courseAdj', courseAdj);
         params.set('otherAdj', otherAdj);
-        navigate(`/athletes?${params.toString()}`);
+        navigate(`/athletes?${params.toString()}`, {
+            state: {
+                athleteCode: String(run.athlete_code),
+                athleteName: String(run.name || ''),
+                from: 'lists',
+                returnTo: {
+                    pathname: '/lists',
+                    search: `?${new URLSearchParams({
+                        list: selectedList,
+                        courseAdj,
+                        otherAdj
+                    }).toString()}`
+                }
+            }
+        });
     };
 
     return (
