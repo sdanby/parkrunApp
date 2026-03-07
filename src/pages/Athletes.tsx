@@ -567,6 +567,8 @@ const Athletes: React.FC = () => {
     const navigate = useNavigate();
     const locationState = toAthletesLocationState(location.state ?? {});
     const selectedCode = locationState.athleteCode || searchParams.get('athlete_code') || undefined;
+    const initialSearchQuery = locationState.athleteName;
+    const shouldSuppressInitialSearch = Boolean(initialSearchQuery && initialSearchQuery.trim());
     const fromRaces = locationState.from === 'races';
     const returnTarget = locationState.returnTo;
     // Use event_date from query string if coming from Lists
@@ -923,7 +925,7 @@ const Athletes: React.FC = () => {
                                             returnTo: locationState.returnTo,
                                         }
                                     });
-                                }} placeholder="Search athletes..." initialQuery={fromRaces ? locationState.athleteName : undefined} suppressInitialSearch={fromRaces} />
+                                }} placeholder="Search athletes..." initialQuery={initialSearchQuery} suppressInitialSearch={shouldSuppressInitialSearch} />
                                 {showHeader && sexSymbol && <span className="athlete-header-sex" aria-label="Athlete sex">{sexSymbol}</span>}
                             </div>
                             {showHeader && headerCode && (
