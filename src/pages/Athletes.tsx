@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { fetchAthleteRuns } from '../api/backendAPI';
 import './ResultsTable.css';
@@ -563,6 +563,7 @@ const Athletes: React.FC = () => {
     const adjustmentKeys = useMemo(() => getAdjustmentKeys(courseAdj, otherAdj), [courseAdj, otherAdj]);
     const [sortKey, setSortKey] = useState<ColumnKey>('date');
     const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+    const lastSortTouchAtRef = useRef<number>(0);
     const isMobile = useMediaQuery('(max-width: 640px)');
     const navigate = useNavigate();
     const locationState = toAthletesLocationState(location.state ?? {});
@@ -911,7 +912,7 @@ const Athletes: React.FC = () => {
                             &#8592;
                         </button>
                     )}
-                    <div className="athlete-header-main">
+                    <div className={`athlete-header-main ${showHeader ? 'athlete-header-main--selected' : 'athlete-header-main--search'}`}>
                         <div className="athlete-header-text">
                             <div className="athlete-header-title" title="Athlete Search" style={{ display: 'flex', alignItems: 'center', gap: '0.5em', overflow: 'visible' }}>
                                 <AthleteSearch inputId="athletes-search-input" onSelect={(athleteCode) => {
@@ -1038,7 +1039,18 @@ const Athletes: React.FC = () => {
                                                     <th
                                                         key={col.key}
                                                         className={headerClasses.join(' ')}
-                                                        onClick={() => handleSort(col.key)}
+                                                        onClick={() => {
+                                                            const now = Date.now();
+                                                            if (now - lastSortTouchAtRef.current < 500) {
+                                                                return;
+                                                            }
+                                                            handleSort(col.key);
+                                                        }}
+                                                        onTouchEnd={(event) => {
+                                                            event.preventDefault();
+                                                            lastSortTouchAtRef.current = Date.now();
+                                                            handleSort(col.key);
+                                                        }}
                                                         onKeyDown={(event) => {
                                                             if (event.key === 'Enter' || event.key === ' ') {
                                                                 event.preventDefault();
