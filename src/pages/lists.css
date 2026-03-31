@@ -15,9 +15,9 @@
 /* Styles for the table on the Lists page */
 /* Widen the list selection box for all devices */
 .lists-page #list-select {
-    width: 3.5cm;
-    min-width: 5cm;  /* This controls the size of the list box on the laptop */
-    max-width: 6cm;
+    width: 4.5cm;
+    min-width: 6cm;  /* This controls the size of the list box on the laptop */
+    max-width: 7cm;
     margin-left: -2.5cm; /* The move the list box on the laptop */
 }
 .lists-page label[for="list-select"] {
