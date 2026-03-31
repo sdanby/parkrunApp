@@ -526,7 +526,7 @@ h1, h2, h3 {
     }
 
     .athletes-page .athlete-runs-table-wrapper {
-        margin-top: 0.25cm !important;
+        margin-top: -0.4cm !important;
     }
 }
 .athlete-runs-table {
@@ -685,6 +685,7 @@ body.mobile-view-adjust {
         z-index: 10050; /* above header overlays */
         pointer-events: auto;
         touch-action: manipulation;
+        transform: translateY(-1.5cm)
     }
 
     .athlete-header-main.athlete-header-main--search {
