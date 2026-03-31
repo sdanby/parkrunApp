@@ -560,11 +560,13 @@ const Athletes: React.FC = () => {
     const [viewMode, setViewMode] = useState<AthleteViewMode>('basic');
     const [courseAdj, setCourseAdj] = useState<CourseAdjOption>('none');
     const [otherAdj, setOtherAdj] = useState<OtherAdjOption>('none');
+    const [showProfile, setShowProfile] = useState<boolean>(false);
     const adjustmentKeys = useMemo(() => getAdjustmentKeys(courseAdj, otherAdj), [courseAdj, otherAdj]);
     const [sortKey, setSortKey] = useState<ColumnKey>('date');
     const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
     const lastSortTouchAtRef = useRef<number>(0);
     const isMobile = useMediaQuery('(max-width: 640px)');
+    const isMobileButtonLayout = useMediaQuery('(max-width: 900px), (pointer: coarse)');
     const navigate = useNavigate();
     const locationState = toAthletesLocationState(location.state ?? {});
     const selectedCode = locationState.athleteCode || searchParams.get('athlete_code') || undefined;
@@ -601,6 +603,7 @@ const Athletes: React.FC = () => {
             setSummary(null);
             setError(null);
             setLoading(false);
+            setShowProfile(false);
             return () => {
                 cancelled = true;
             };
@@ -881,6 +884,9 @@ const Athletes: React.FC = () => {
     }, [viewMode, adjustmentKeys]);
 
     const rowsToRender = runs.length > 0 ? sortedRuns : [];
+    const profileButtonTransform = isMobileButtonLayout
+        ? 'translateX(7.5cm) translateY(-2.5cm)'
+        : 'translateX(-16cm)';
 
     return (
         <div className="page-content athletes-page">
@@ -993,6 +999,29 @@ const Athletes: React.FC = () => {
                                             <option value="sex">sex adjustments</option>
                                             <option value="age_sex">age & sex adjustment</option>
                                         </select>
+                                        <button
+                                            id="athletes-profile-toggle-btn"
+                                            type="button"
+                                            onClick={() => setShowProfile((prev) => !prev)}
+                                            title={showProfile ? 'Table' : 'Profile'}
+                                            aria-label={showProfile ? 'Show table' : 'Show profile'}
+                                            style={{
+                                                width: '1cm',
+                                                height: '1cm',
+                                                marginTop: '0.12cm',
+                                                border: '1px solid #777',
+                                                borderRadius: '6px',
+                                                background: '#fff',
+                                                cursor: 'pointer',
+                                                fontSize: '0.5rem',
+                                                fontWeight: 700,
+                                                lineHeight: 1,
+                                                padding: 0,
+                                                transform: profileButtonTransform
+                                            }}
+                                        >
+                                            {showProfile ? 'Table' : 'Profile'}
+                                        </button>
                                     </div>
                                 </>
                             )}
@@ -1008,8 +1037,51 @@ const Athletes: React.FC = () => {
             {!loading && !error && selectedCode && (
                 <>
                     <section className="athlete-runs-section">
-                        <div className="athlete-runs-table-wrapper">
-                            {runs.length > 0 ? (
+                        {showProfile ? (
+                            <div
+                                className="athlete-runs-table-wrapper"
+                                style={{
+                                    background: 'transparent',
+                                    boxShadow: 'none',
+                                    border: 'none',
+                                    padding: 0
+                                }}
+                            >
+                                <div
+                                    style={{
+                                        border: '2px solid #9ca3af',
+                                        borderRadius: '12px',
+                                        background: '#fff',
+                                        minHeight: '6cm',
+                                        marginLeft: '0.5cm',
+                                        marginRight: '0.5cm',
+                                        overflow: 'hidden',
+                                        boxShadow: '0 10px 18px rgba(15, 23, 42, 0.08)'
+                                    }}
+                                >
+                                    <div
+                                        style={{
+                                            background: '#e5e7eb',
+                                            borderBottom: '1px solid #d1d5db',
+                                            padding: '0.55rem 0.8rem',
+                                            textAlign: 'center',
+                                            fontSize: '1.05rem',
+                                            fontWeight: 700
+                                        }}
+                                    >
+                                        {displayName}
+                                    </div>
+                                    <div style={{ color: '#4b5563', fontSize: '0.92rem', display: 'flex', gap: '1rem', flexWrap: 'wrap', padding: '0.8rem 1rem' }}>
+                                        <span>Code: {headerCode || '--'}</span>
+                                        <span>Club: {headerClub || '--'}</span>
+                                        <span>Estm.Age: {formattedLatestAge || '--'}</span>
+                                        <span>Total runs: {totalRunsCount ?? '--'}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="athlete-runs-table-wrapper">
+                                {runs.length > 0 ? (
                                 <table className="athlete-runs-table">
                                     <thead>
                                         <tr>
@@ -1070,26 +1142,23 @@ const Athletes: React.FC = () => {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                            {rowsToRender.map((row, index) => {
+                                        {rowsToRender.map((row, index) => {
                                             const keyParts = [
                                                 pickField(row, ['event_code', 'eventCode']),
                                                 pickField(row, ['formatted_date', 'event_date']),
                                                 index
                                             ];
-                                            // Highlight only if both athlete_code and event (date) match (from Single Event or Lists)
                                             const rowAthleteCode = pickField(row, ['athlete_code', 'athleteCode']);
                                             const rowEventDate = pickField(row, ['formatted_date', 'event_date', 'date']);
-                                            // Use sourceEvent if present (from Single Event), otherwise just highlight first match for athlete_code (from Lists)
                                             let highlight = false;
                                             if (sourceEvent?.eventDate) {
-                                                // Coming from Single Event: highlight only if both athlete and event match
                                                 highlight = String(rowAthleteCode) === String(selectedCode) && formatDateValue(rowEventDate) === formatDateValue(sourceEvent.eventDate);
                                             } else {
-                                                // Coming from Lists: highlight only the first match for athlete_code
                                                 highlight = String(rowAthleteCode) === String(selectedCode) && index === rowsToRender.findIndex(r => String(pickField(r, ['athlete_code', 'athleteCode'])) === String(selectedCode));
                                             }
+
                                             return (
-                                                <tr 
+                                                <tr
                                                     key={keyParts.filter(Boolean).join('-') || index}
                                                     className={highlight ? 'highlighted-source-row' : ''}
                                                     style={{
@@ -1111,7 +1180,6 @@ const Athletes: React.FC = () => {
                                                             alignmentStyle.minWidth = px;
                                                             alignmentStyle.maxWidth = px;
                                                         }
-                                                        // Apply highlight background to individual cells
                                                         if (highlight) {
                                                             alignmentStyle.backgroundColor = '#e6f3ff';
                                                         }
@@ -1142,7 +1210,8 @@ const Athletes: React.FC = () => {
                             ) : (
                                 <p className="athlete-runs-empty">No run data returned for this athlete.</p>
                             )}
-                        </div>
+                            </div>
+                        )}
                     </section>
                 </>
             )}
