@@ -30,6 +30,7 @@ type Run = {
 // Map list keys to API endpoints
 const listApiEndpoints: { [key: string]: string } = {
     fastest_runs: 'https://hello-world-9yb9.onrender.com/api/lists/fastest_runs',
+    fastest_runs_last_year: 'https://hello-world-9yb9.onrender.com/api/lists/fastest_runs',
     // Add other list endpoints here in the future
 };
 
@@ -97,7 +98,7 @@ const Lists: React.FC = () => {
                     // If the selected list is the server-side "fastest_runs", request the
                     // extended API with sorting and a sensible limit to match server expectations.
                     let url = endpoint;
-                    if (selectedList === 'fastest_runs') {
+                    if (selectedList === 'fastest_runs' || selectedList === 'fastest_runs_last_year') {
                         // Determine sort field from courseAdj/otherAdj selections
                         const getSortField = (course: string, other: string): string => {
                             // course: '1' none, '2' season, '3' full
@@ -121,6 +122,7 @@ const Lists: React.FC = () => {
 
                         const params = new URLSearchParams({
                             sort: sortField,
+                            period: selectedList === 'fastest_runs_last_year' ? 'last_year' : 'all_time',
                             direction: 'asc',
                             limit: '1000'
                         });
@@ -314,7 +316,7 @@ const Lists: React.FC = () => {
 
     // Determine which header should be highlighted based on current list/course/other selections
     const getActiveHeaderKey = (): string => {
-        if (selectedList !== 'fastest_runs') return '';
+        if (selectedList !== 'fastest_runs' && selectedList !== 'fastest_runs_last_year') return '';
         // course: '1' none, '2' season, '3' full
         // other: '1' none, '2' age, '3' sex, '4' age+sex
         if (courseAdj === '1' && otherAdj === '1') return 'Time';
@@ -390,7 +392,8 @@ const Lists: React.FC = () => {
                                 onChange={handleListSelect}
                                 aria-label="List selection"
                             >
-                                <option value="fastest_runs">Fastest Athletes by Time</option>
+                                <option value="fastest_runs">Fastest Athletes - All Time</option>
+                                <option value="fastest_runs_last_year">Fastest Athletes - Over last 1 Year</option>
                                 {/* Add other <option> elements for new lists here */}
                             </select>
                         </div>
