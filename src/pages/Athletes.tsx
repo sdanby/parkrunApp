@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { fetchAthleteRuns } from '../api/backendAPI';
+import { fetchAthleteBestSummary, fetchAthleteRuns } from '../api/backendAPI';
 import './ResultsTable.css';
 import AthleteSearch from '../components/AthleteSearch';
 
@@ -77,6 +77,14 @@ type AthleteSummary = {
     current_age_estimate?: number | string;
     sex?: string;
     total_runs?: number;
+};
+
+type AthleteBestSummaryRow = {
+    athlete_code?: string;
+    best_type?: string;
+    event_date?: string;
+    rank?: number | string;
+    time?: string | number;
 };
 
 type SummaryField = 'athlete_code' | 'athlete_name' | 'club' | 'current_age_estimate' | 'sex' | 'total_runs';
@@ -561,6 +569,9 @@ const Athletes: React.FC = () => {
     const [courseAdj, setCourseAdj] = useState<CourseAdjOption>('none');
     const [otherAdj, setOtherAdj] = useState<OtherAdjOption>('none');
     const [showProfile, setShowProfile] = useState<boolean>(false);
+    const [profileRows, setProfileRows] = useState<AthleteBestSummaryRow[]>([]);
+    const [profileLoading, setProfileLoading] = useState<boolean>(false);
+    const [profileError, setProfileError] = useState<string | null>(null);
     const adjustmentKeys = useMemo(() => getAdjustmentKeys(courseAdj, otherAdj), [courseAdj, otherAdj]);
     const [sortKey, setSortKey] = useState<ColumnKey>('date');
     const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
@@ -638,6 +649,41 @@ const Athletes: React.FC = () => {
             cancelled = true;
         };
     }, [selectedCode]);
+
+    useEffect(() => {
+        let cancelled = false;
+        if (!showProfile || !selectedCode) {
+            return () => {
+                cancelled = true;
+            };
+        }
+
+        const loadProfile = async () => {
+            try {
+                setProfileLoading(true);
+                setProfileError(null);
+                const payload = await fetchAthleteBestSummary(selectedCode);
+                if (!cancelled) {
+                    setProfileRows(Array.isArray(payload) ? payload : []);
+                }
+            } catch (err) {
+                if (!cancelled) {
+                    console.error('Error fetching athlete best summary:', err);
+                    setProfileError('Unable to load profile summary right now.');
+                    setProfileRows([]);
+                }
+            } finally {
+                if (!cancelled) {
+                    setProfileLoading(false);
+                }
+            }
+        };
+
+        loadProfile();
+        return () => {
+            cancelled = true;
+        };
+    }, [showProfile, selectedCode]);
 
     // Auto-scroll to highlighted row when coming from Single Event
     useEffect(() => {
@@ -768,6 +814,20 @@ const Athletes: React.FC = () => {
         if (value === undefined || value === null) return '--';
         const str = String(value);
         return str.trim() === '' ? '--' : str;
+    };
+
+    const profileTypeMap = useMemo(() => {
+        const map: Record<string, AthleteBestSummaryRow> = {};
+        for (const row of profileRows) {
+            if (!row || !row.best_type) continue;
+            map[String(row.best_type)] = row;
+        }
+        return map;
+    }, [profileRows]);
+
+    const formatProfileTime = (value: unknown): string => {
+        if (value === undefined || value === null || value === '') return '--';
+        return renderCell(formatTimeValue(value));
     };
 
     const getCellDisplayValue = (row: AthleteRecord, key: ColumnKey): string => {
@@ -1053,8 +1113,8 @@ const Athletes: React.FC = () => {
                                         borderRadius: '12px',
                                         background: '#fff',
                                         minHeight: '6cm',
-                                        marginLeft: '0.5cm',
-                                        marginRight: '0.5cm',
+                                        marginLeft: '0.3cm',
+                                        marginRight: '0.3cm',
                                         overflow: 'hidden',
                                         boxShadow: '0 10px 18px rgba(15, 23, 42, 0.08)'
                                     }}
@@ -1071,11 +1131,77 @@ const Athletes: React.FC = () => {
                                     >
                                         {displayName}
                                     </div>
-                                    <div style={{ color: '#4b5563', fontSize: '0.92rem', display: 'flex', gap: '1rem', flexWrap: 'wrap', padding: '0.8rem 1rem' }}>
-                                        <span>Code: {headerCode || '--'}</span>
-                                        <span>Club: {headerClub || '--'}</span>
-                                        <span>Estm.Age: {formattedLatestAge || '--'}</span>
-                                        <span>Total runs: {totalRunsCount ?? '--'}</span>
+                                    <div style={{ padding: '0.2rem 1rem 1rem 1rem' }}>
+                                        {profileLoading ? (
+                                            <div style={{ color: '#6b7280', fontSize: '0.9rem' }}>Loading profile summary…</div>
+                                        ) : profileError ? (
+                                            <div style={{ color: '#b91c1c', fontSize: '0.9rem' }}>{profileError}</div>
+                                        ) : profileRows.length === 0 ? (
+                                            <div style={{ color: '#6b7280', fontSize: '0.9rem' }}>No profile summary returned.</div>
+                                        ) : (
+                                            <div style={{ overflowX: 'auto' }}>
+                                                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                                                    <thead>
+                                                        <tr>
+                                                            <th style={{ border: '1px solid #d1d5db', padding: '0.3rem', textAlign: 'center', background: '#f3f4f6' }}></th>
+                                                            <th colSpan={4} style={{ border: '1px solid #d1d5db', padding: '0.3rem', textAlign: 'center', background: '#f3f4f6', fontWeight: 700 }}>Adjusted for (Rank, Date, Time):</th>
+                                                            <th style={{ border: '1px solid #d1d5db', padding: '0.3rem', textAlign: 'center', background: '#f3f4f6' }}></th>
+                                                        </tr>
+                                                        <tr>
+                                                            <th style={{ border: '1px solid #d1d5db', padding: '0.4rem', textAlign: 'center', background: '#f3f4f6' }}>Best Event</th>
+                                                            <th style={{ border: '1px solid #d1d5db', padding: '0.4rem', textAlign: 'center', background: '#f3f4f6' }}>Ev<br /></th>
+                                                            <th style={{ border: '1px solid #d1d5db', padding: '0.4rem', textAlign: 'center', background: '#f3f4f6' }}>Ev &amp; Age<br /></th>
+                                                            <th style={{ border: '1px solid #d1d5db', padding: '0.4rem', textAlign: 'center', background: '#f3f4f6' }}>Ev &amp; Sex<br /></th>
+                                                            <th style={{ border: '1px solid #d1d5db', padding: '0.4rem', textAlign: 'center', background: '#f3f4f6' }}>Ev &amp; Age &amp; Sex<br /></th>
+                                                            <th style={{ border: '1px solid #d1d5db', padding: '0.4rem', textAlign: 'center', background: '#f3f4f6' }}>Total Runs</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {[
+                                                            {
+                                                                label: 'Recent (1Y)',
+                                                                event: profileTypeMap['event_1y'],
+                                                                age: profileTypeMap['age_event_1y'],
+                                                                sex: profileTypeMap['sex_event_1y'],
+                                                                ageSex: profileTypeMap['age_sex_event_1y'],
+                                                                runs: profileTypeMap['recent_runs']
+                                                            },
+                                                            {
+                                                                label: 'All Time',
+                                                                event: profileTypeMap['event_all_time'],
+                                                                age: profileTypeMap['age_event_all_time'],
+                                                                sex: profileTypeMap['sex_event_all_time'],
+                                                                ageSex: profileTypeMap['age_sex_event_all_time'],
+                                                                runs: profileTypeMap['total_runs']
+                                                            }
+                                                        ].map((row, idx) => {
+                                                            const renderRankTimeCell = (cell?: AthleteBestSummaryRow) => (
+                                                                <td style={{ border: '1px solid #d1d5db', padding: '0.35rem', textAlign: 'center' }}>
+                                                                    <div style={{ fontSize: '1.7rem', lineHeight: 1.05 }}>{cell?.rank ?? '--'}</div>
+                                                                    <div style={{ marginTop: '0.15rem', color: '#111827', lineHeight: 1.2 }}>
+                                                                        <div>{formatDateValue(cell?.event_date)}</div>
+                                                                        <div>{formatProfileTime(cell?.time)}</div>
+                                                                    </div>
+                                                                </td>
+                                                            );
+
+                                                            return (
+                                                                <tr key={`${row.label}-${idx}`}>
+                                                                    <th style={{ border: '1px solid #d1d5db', padding: '0.35rem', textAlign: 'left', background: '#f9fafb' }}>{row.label}</th>
+                                                                    {renderRankTimeCell(row.event)}
+                                                                    {renderRankTimeCell(row.age)}
+                                                                    {renderRankTimeCell(row.sex)}
+                                                                    {renderRankTimeCell(row.ageSex)}
+                                                                    <td style={{ border: '1px solid #d1d5db', padding: '0.35rem', textAlign: 'center', fontSize: '1.1rem', fontWeight: 600 }}>
+                                                                        {row.runs?.time ?? '--'}
+                                                                    </td>
+                                                                </tr>
+                                                            );
+                                                        })}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </div>
