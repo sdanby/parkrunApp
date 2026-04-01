@@ -231,3 +231,18 @@ export const fetchAthleteRuns = async (athleteCode: string) => {
         throw error;
     }
 };
+
+export const fetchAthleteBestSummary = async (athleteCode: string) => {
+    if (!athleteCode) {
+        throw new Error('athleteCode is required');
+    }
+    try {
+        const params = new URLSearchParams({ athlete_code: String(athleteCode) });
+        const url = `${API_BASE_URL}/api/athlete_best_summary?${params.toString()}`;
+        const response = await axios.get(url);
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching athlete best summary:', error);
+        throw error;
+    }
+};
