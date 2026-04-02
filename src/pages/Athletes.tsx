@@ -736,6 +736,14 @@ const Athletes: React.FC = () => {
         }
     };
 
+    const handleBackNavigation = () => {
+        if (fromRaces) {
+            handleBackToRaces();
+            return;
+        }
+        navigate('/lists');
+    };
+
     const handleViewModeSelect = (event: React.ChangeEvent<HTMLSelectElement>) => {
         const newViewMode = normalizeViewMode(event.target.value);
         setViewMode(newViewMode);
@@ -945,24 +953,30 @@ const Athletes: React.FC = () => {
 
     const rowsToRender = runs.length > 0 ? sortedRuns : [];
     const profileButtonTransform = isMobileButtonLayout
-        ? 'translateX(7.5cm) translateY(-2.5cm)'
-        : 'translateX(-16cm)';
+        ? 'translateX(-1.2cm) translateY(-3.5cm)'
+        : 'translateX(-26.5cm)';
+    const showBackButton = fromRaces || fromList;
 
     return (
         <div className="page-content athletes-page">
             
             <div className="athlete-header">
-                    {(fromRaces || fromList) && (
+                    {showBackButton && (
                         <button
                             type="button"
                             className="athletes-back-button"
                             aria-label={fromRaces ? "Back to race" : "Back to lists"}
                             title={fromRaces ? "Back to race" : "Back to lists"}
-                            onClick={fromRaces ? handleBackToRaces : () => navigate('/lists')}
+                            onClick={handleBackNavigation}
+                            onTouchEnd={(event) => {
+                                event.preventDefault();
+                                event.stopPropagation();
+                                handleBackNavigation();
+                            }}
                             style={{
                                 marginRight: '0.5em',
-                 
-                                fontSize: '1.2rem',
+
+                                fontSize: isMobile ? '1.35rem' : '1.2rem',
                                 border: '1px solid #222',
                                 borderRadius: '8px',
                                 background: '#fff',
@@ -971,8 +985,17 @@ const Athletes: React.FC = () => {
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 boxSizing: 'border-box',
-                                width: '30px',
-                                height: '30px',
+                                width: isMobile ? '30px' : '30px',
+                                height: isMobile ? '30px' : '30px',
+                                minWidth: isMobile ? '30px' : '30px',
+                                minHeight: isMobile ? '30x' : '30px',
+                                position: 'relative',
+                                flexShrink: 0,
+                                zIndex: 1200,
+                                pointerEvents: 'auto',
+                                touchAction: 'manipulation',
+                                WebkitTapHighlightColor: 'transparent',
+                                userSelect: 'none',
                             }}
                         >
                             &#8592;
