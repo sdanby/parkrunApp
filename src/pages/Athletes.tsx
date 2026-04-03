@@ -581,8 +581,9 @@ const Athletes: React.FC = () => {
     const navigate = useNavigate();
     const locationState = toAthletesLocationState(location.state ?? {});
     const selectedCode = locationState.athleteCode || searchParams.get('athlete_code') || undefined;
+    const activeSelectedCode = selectedCode;
     const initialSearchQuery = locationState.athleteName;
-    const shouldSuppressInitialSearch = Boolean(initialSearchQuery && initialSearchQuery.trim());
+    const shouldSuppressInitialSearch = Boolean((initialSearchQuery && initialSearchQuery.trim()) || activeSelectedCode);
     const fromRaces = locationState.from === 'races';
     const returnTarget = locationState.returnTo;
     // Use event_date from query string if coming from Lists
@@ -609,7 +610,7 @@ const Athletes: React.FC = () => {
 
     useEffect(() => {
         let cancelled = false;
-        if (!selectedCode) {
+        if (!activeSelectedCode) {
             setRuns([]);
             setSummary(null);
             setError(null);
@@ -624,9 +625,9 @@ const Athletes: React.FC = () => {
             try {
                 setLoading(true);
                 setError(null);
-                const payload = await fetchAthleteRuns(selectedCode);
+                const payload = await fetchAthleteRuns(activeSelectedCode);
                 if (!cancelled) {
-                    const normalized = normalizeAthleteResponse(payload, selectedCode);
+                    const normalized = normalizeAthleteResponse(payload, activeSelectedCode);
                     setRuns(normalized.runs);
                     setSummary(normalized.summary);
                 }
@@ -635,7 +636,7 @@ const Athletes: React.FC = () => {
                     console.error('Error fetching athlete runs:', err);
                     setError('Unable to load athlete runs right now.');
                     setRuns([]);
-                    setSummary(selectedCode ? { athlete_code: selectedCode } : null);
+                    setSummary(activeSelectedCode ? { athlete_code: activeSelectedCode } : null);
                 }
             } finally {
                 if (!cancelled) {
@@ -648,11 +649,11 @@ const Athletes: React.FC = () => {
         return () => {
             cancelled = true;
         };
-    }, [selectedCode]);
+    }, [activeSelectedCode]);
 
     useEffect(() => {
         let cancelled = false;
-        if (!showProfile || !selectedCode) {
+        if (!showProfile || !activeSelectedCode) {
             return () => {
                 cancelled = true;
             };
@@ -662,7 +663,7 @@ const Athletes: React.FC = () => {
             try {
                 setProfileLoading(true);
                 setProfileError(null);
-                const payload = await fetchAthleteBestSummary(selectedCode);
+                const payload = await fetchAthleteBestSummary(activeSelectedCode);
                 if (!cancelled) {
                     setProfileRows(Array.isArray(payload) ? payload : []);
                 }
@@ -683,7 +684,7 @@ const Athletes: React.FC = () => {
         return () => {
             cancelled = true;
         };
-    }, [showProfile, selectedCode]);
+    }, [showProfile, activeSelectedCode]);
 
     // Auto-scroll to highlighted row when coming from Single Event
     useEffect(() => {
@@ -717,8 +718,8 @@ const Athletes: React.FC = () => {
                     params.set('event_name', String(eventName));
                 }
                 params.set('date', String(eventDate));
-                if (selectedCode) {
-                    params.set('highlight_athlete', String(selectedCode));
+                if (activeSelectedCode) {
+                    params.set('highlight_athlete', String(activeSelectedCode));
                 }
                 navigate(`/races?${params.toString()}`);
                 return;
@@ -726,8 +727,8 @@ const Athletes: React.FC = () => {
         }
         if (returnTarget?.pathname) {
             const params = new URLSearchParams(returnTarget.search || '');
-            if (selectedCode) {
-                params.set('highlight_athlete', String(selectedCode));
+            if (activeSelectedCode) {
+                params.set('highlight_athlete', String(activeSelectedCode));
             }
             const qs = params.toString();
             navigate(`${returnTarget.pathname}${qs ? `?${qs}` : ''}`);
@@ -777,7 +778,7 @@ const Athletes: React.FC = () => {
         // Extract event_code and date from the clicked row
         const eventCode = pickField(row, ['event_code', 'eventCode']);
         const eventDate = pickField(row, ['formatted_date', 'event_date', 'date']);
-        const athleteCode = pickField(row, ['athlete_code', 'athleteCode']) || selectedCode;
+        const athleteCode = pickField(row, ['athlete_code', 'athleteCode']) || activeSelectedCode;
         
         if (eventCode && eventDate) {
             // Navigate to Single Event page with the selected event data and athlete code for highlighting
@@ -808,13 +809,13 @@ const Athletes: React.FC = () => {
     const totalRunsCount = summary?.total_runs ?? (runs.length > 0 ? runs.length : undefined);
 
     const headerName = pickField(latestRun, ['athlete_name', 'name']) || summary?.athlete_name;
-    const fallbackName = summary?.athlete_code ? `Athlete ${summary.athlete_code}` : selectedCode ? `Athlete ${selectedCode}` : 'Athlete';
+    const fallbackName = summary?.athlete_code ? `Athlete ${summary.athlete_code}` : activeSelectedCode ? `Athlete ${activeSelectedCode}` : 'Athlete';
     const detailTitle = headerName || fallbackName;
     // Display name (CSS handles width/padding on mobile)
     const displayName = detailTitle;
 
-    const showHeader = Boolean(selectedCode);
-    const headerCode = pickField(latestRun, ['athlete_code', 'athleteCode', 'runner_code', 'code']) || summary?.athlete_code || selectedCode || '';
+    const showHeader = Boolean(activeSelectedCode);
+    const headerCode = pickField(latestRun, ['athlete_code', 'athleteCode', 'runner_code', 'code']) || summary?.athlete_code || activeSelectedCode || '';
     const headerClubRaw = pickField(latestRun, ['club']) || summary?.club;
     const headerClub = headerClubRaw ? String(headerClubRaw) : '<no club>';
 
@@ -955,7 +956,7 @@ const Athletes: React.FC = () => {
     const profileButtonTransform = isMobileButtonLayout
         ? 'translateX(-1.2cm) translateY(-3.5cm)'
         : 'translateX(-26.5cm)';
-    const showBackButton = fromRaces || fromList;
+    const showBackButton = showHeader;
 
     return (
         <div className="page-content athletes-page">
@@ -1015,7 +1016,7 @@ const Athletes: React.FC = () => {
                                             returnTo: locationState.returnTo,
                                         }
                                     });
-                                }} placeholder="Search athletes..." initialQuery={initialSearchQuery} suppressInitialSearch={shouldSuppressInitialSearch} />
+                                }} placeholder="Enter Search" initialQuery={initialSearchQuery} suppressInitialSearch={shouldSuppressInitialSearch} />
                                 {showHeader && sexSymbol && <span className="athlete-header-sex" aria-label="Athlete sex">{sexSymbol}</span>}
                             </div>
                             {showHeader && headerCode && (
@@ -1112,12 +1113,12 @@ const Athletes: React.FC = () => {
                     </div>
                 </div>
 
-            {selectedCode && loading && <p>Loading athlete data…</p>}
+            {activeSelectedCode && loading && <p>Loading athlete data…</p>}
             {error && <p className="athlete-error">{error}</p>}
 
             {/* When no athlete selected, we show only the search box in the header above. Empty message removed. */}
 
-            {!loading && !error && selectedCode && (
+            {!loading && !error && activeSelectedCode && (
                 <>
                     <section className="athlete-runs-section">
                         {showProfile ? (
@@ -1163,26 +1164,29 @@ const Athletes: React.FC = () => {
                                             <div style={{ color: '#6b7280', fontSize: '0.9rem' }}>No profile summary returned.</div>
                                         ) : (
                                             <div style={{ overflowX: 'auto' }}>
-                                                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                                                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: isMobile ? '0.8rem' : '0.85rem' }}>
                                                     <thead>
                                                         <tr>
                                                             <th style={{ border: '1px solid #d1d5db', padding: '0.3rem', textAlign: 'center', background: '#f3f4f6' }}></th>
-                                                            <th colSpan={4} style={{ border: '1px solid #d1d5db', padding: '0.3rem', textAlign: 'center', background: '#f3f4f6', fontWeight: 700 }}>Adjusted for (Rank, Date, Time):</th>
+                                                            <th style={{ border: '1px solid #d1d5db', padding: '0.3rem', textAlign: 'center', background: '#f3f4f6' }}></th>
+                                                            <th colSpan={4} style={{ border: '1px solid #d1d5db', padding: '0.3rem', textAlign: 'center', background: '#f3f4f6', fontWeight: 700 }}>Rank, Date & Time.   Adjusted for:</th>
                                                             <th style={{ border: '1px solid #d1d5db', padding: '0.3rem', textAlign: 'center', background: '#f3f4f6' }}></th>
                                                         </tr>
                                                         <tr>
-                                                            <th style={{ border: '1px solid #d1d5db', padding: '0.4rem', textAlign: 'center', background: '#f3f4f6' }}>Best Event</th>
-                                                            <th style={{ border: '1px solid #d1d5db', padding: '0.4rem', textAlign: 'center', background: '#f3f4f6' }}>Ev<br /></th>
-                                                            <th style={{ border: '1px solid #d1d5db', padding: '0.4rem', textAlign: 'center', background: '#f3f4f6' }}>Ev &amp; Age<br /></th>
-                                                            <th style={{ border: '1px solid #d1d5db', padding: '0.4rem', textAlign: 'center', background: '#f3f4f6' }}>Ev &amp; Sex<br /></th>
-                                                            <th style={{ border: '1px solid #d1d5db', padding: '0.4rem', textAlign: 'center', background: '#f3f4f6' }}>Ev &amp; Age &amp; Sex<br /></th>
-                                                            <th style={{ border: '1px solid #d1d5db', padding: '0.4rem', textAlign: 'center', background: '#f3f4f6' }}>Total Runs</th>
+                                                            <th style={{ border: '1px solid #d1d5db', padding: isMobile ? '0.15rem' : '0.25rem', textAlign: 'center', background: '#f3f4f6', width: isMobile ? '34px' : '42px', writingMode: 'vertical-rl', transform: 'rotate(180deg)', whiteSpace: 'nowrap', lineHeight: 1, letterSpacing: '0.02em' }}>Best Ev</th>
+                                                            <th style={{ border: '1px solid #d1d5db', padding: isMobile ? '0.25rem' : '0.4rem', textAlign: 'center', background: '#f3f4f6', width: isMobile ? '40px' : '48px' }}>Act</th>
+                                                            <th style={{ border: '1px solid #d1d5db', padding: isMobile ? '0.25rem' : '0.4rem', textAlign: 'center', background: '#f3f4f6' }}>Evnt<br /></th>
+                                                            <th style={{ border: '1px solid #d1d5db', padding: isMobile ? '0.25rem' : '0.4rem', textAlign: 'center', background: '#f3f4f6' }}>Evnt &amp; Sex<br /></th>
+                                                            <th style={{ border: '1px solid #d1d5db', padding: isMobile ? '0.25rem' : '0.4rem', textAlign: 'center', background: '#f3f4f6' }}>Evnt &amp; Age<br /></th>
+                                                            <th style={{ border: '1px solid #d1d5db', padding: isMobile ? '0.25rem' : '0.4rem', textAlign: 'center', background: '#f3f4f6' }}>Evnt &amp; Age &amp; Sex<br /></th>
+                                                            <th style={{ border: '1px solid #d1d5db', padding: isMobile ? '0.25rem' : '0.4rem', textAlign: 'center', background: '#f3f4f6', width: isMobile ? '46px' : '70px' }}>Total Runs</th>
                                                         </tr>
                                                     </thead>
                                                     <tbody>
                                                         {[
                                                             {
-                                                                label: 'Recent (1Y)',
+                                                                label: '1Y',
+                                                                act: profileTypeMap['best_1y'],
                                                                 event: profileTypeMap['event_1y'],
                                                                 age: profileTypeMap['age_event_1y'],
                                                                 sex: profileTypeMap['sex_event_1y'],
@@ -1190,7 +1194,8 @@ const Athletes: React.FC = () => {
                                                                 runs: profileTypeMap['recent_runs']
                                                             },
                                                             {
-                                                                label: 'All Time',
+                                                                label: 'All',
+                                                                act: profileTypeMap['best_all_time'],
                                                                 event: profileTypeMap['event_all_time'],
                                                                 age: profileTypeMap['age_event_all_time'],
                                                                 sex: profileTypeMap['sex_event_all_time'],
@@ -1200,8 +1205,8 @@ const Athletes: React.FC = () => {
                                                         ].map((row, idx) => {
                                                             const renderRankTimeCell = (cell?: AthleteBestSummaryRow) => (
                                                                 <td style={{ border: '1px solid #d1d5db', padding: '0.35rem', textAlign: 'center' }}>
-                                                                    <div style={{ fontSize: '1.7rem', lineHeight: 1.05 }}>{cell?.rank ?? '--'}</div>
-                                                                    <div style={{ marginTop: '0.15rem', color: '#111827', lineHeight: 1.2 }}>
+                                                                    <div style={{ fontSize: isMobile ? '1.45rem' : '1.7rem', lineHeight: 1.05 }}>{cell?.rank ?? '--'}</div>
+                                                                    <div style={{ marginTop: '0.1rem', color: '#111827', lineHeight: 1.12, fontSize: isMobile ? '0.72rem' : '0.76rem' }}>
                                                                         <div>{formatDateValue(cell?.event_date)}</div>
                                                                         <div>{formatProfileTime(cell?.time)}</div>
                                                                     </div>
@@ -1210,12 +1215,13 @@ const Athletes: React.FC = () => {
 
                                                             return (
                                                                 <tr key={`${row.label}-${idx}`}>
-                                                                    <th style={{ border: '1px solid #d1d5db', padding: '0.35rem', textAlign: 'left', background: '#f9fafb' }}>{row.label}</th>
+                                                                    <th style={{ border: '1px solid #d1d5db', padding: isMobile ? '0.15rem' : '0.25rem', textAlign: 'center', background: '#f9fafb', width: isMobile ? '34px' : '42px', writingMode: 'vertical-rl', transform: 'rotate(180deg)', whiteSpace: 'nowrap', lineHeight: 1, letterSpacing: '0.02em' }}>{row.label}</th>
+                                                                    {renderRankTimeCell(row.act)}
                                                                     {renderRankTimeCell(row.event)}
-                                                                    {renderRankTimeCell(row.age)}
                                                                     {renderRankTimeCell(row.sex)}
+                                                                    {renderRankTimeCell(row.age)}
                                                                     {renderRankTimeCell(row.ageSex)}
-                                                                    <td style={{ border: '1px solid #d1d5db', padding: '0.35rem', textAlign: 'center', fontSize: '1.1rem', fontWeight: 600 }}>
+                                                                    <td style={{ border: '1px solid #d1d5db', padding: isMobile ? '0.28rem' : '0.35rem', textAlign: 'center', fontSize: isMobile ? '1rem' : '1.1rem', fontWeight: 600, width: isMobile ? '56px' : '70px' }}>
                                                                         {row.runs?.time ?? '--'}
                                                                     </td>
                                                                 </tr>
@@ -1301,9 +1307,9 @@ const Athletes: React.FC = () => {
                                             const rowEventDate = pickField(row, ['formatted_date', 'event_date', 'date']);
                                             let highlight = false;
                                             if (sourceEvent?.eventDate) {
-                                                highlight = String(rowAthleteCode) === String(selectedCode) && formatDateValue(rowEventDate) === formatDateValue(sourceEvent.eventDate);
+                                                highlight = String(rowAthleteCode) === String(activeSelectedCode) && formatDateValue(rowEventDate) === formatDateValue(sourceEvent.eventDate);
                                             } else {
-                                                highlight = String(rowAthleteCode) === String(selectedCode) && index === rowsToRender.findIndex(r => String(pickField(r, ['athlete_code', 'athleteCode'])) === String(selectedCode));
+                                                highlight = String(rowAthleteCode) === String(activeSelectedCode) && index === rowsToRender.findIndex(r => String(pickField(r, ['athlete_code', 'athleteCode'])) === String(activeSelectedCode));
                                             }
 
                                             return (
