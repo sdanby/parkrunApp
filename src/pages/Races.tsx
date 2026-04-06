@@ -509,7 +509,15 @@ const Races: React.FC = () => {
                 );
                 return baseRows.map((row) => {
                     const adj = adjMap.get(key(row.athlete_code, row.time));
-                    return adj ? { ...row, ...adj } : row;
+                    const merged = adj ? { ...row, ...adj } : { ...row };
+
+                    const baseRank = row?.best_curve_ranking_current ?? row?.bestCurveRankingCurrent ?? row?.rank;
+                    const mergedRank = merged?.best_curve_ranking_current ?? merged?.bestCurveRankingCurrent ?? merged?.rank;
+                    if ((mergedRank === null || mergedRank === undefined || mergedRank === '') && baseRank !== null && baseRank !== undefined && baseRank !== '') {
+                        merged.best_curve_ranking_current = baseRank;
+                    }
+
+                    return merged;
                 });
                 })()
             : baseRows;
@@ -806,6 +814,7 @@ const Races: React.FC = () => {
         { k: 'time', label: 'Time' },
         { k: 'age_group', label: 'Age group' },
         { k: 'age_grade', label: 'Age grade' },
+        { k: 'best_curve_ranking_current', label: 'Rank' },
         { k: 'club', label: 'Club' },
         { k: 'comment', label: 'Detail' }
     ];
@@ -1117,6 +1126,34 @@ const Races: React.FC = () => {
                                         const rawVal = r[col.k] ?? r[col.k.replace(/_(.)/g, (_m, g1) => g1.toUpperCase())] ?? '';
                                         const textAlign = (typeof rawVal === 'string') ? ((col.k === 'club' || col.k === 'comment') ? 'left' : undefined) : undefined;
                                         const cellStyle: React.CSSProperties = { textAlign };
+
+                                        if (col.k === 'best_curve_ranking_current') {
+                                            const currentRankRaw = r['best_curve_ranking_current'] ?? r['bestCurveRankingCurrent'] ?? r['rank'];
+                                            const historicRankRaw = r['best_curve_ranking_historic'] ?? r['bestCurveRankingHistoric'];
+                                            const rankTypeRaw = r['best_curve_ranking_current_type'] ?? r['bestCurveRankingCurrentType'] ?? '';
+
+                                            const currentRank = Number(currentRankRaw);
+                                            const historicRank = Number(historicRankRaw);
+                                            const hasCurrent = Number.isFinite(currentRank);
+                                            const hasHistoric = Number.isFinite(historicRank);
+
+                                            const rankType = String(rankTypeRaw || '').trim() || '*';
+                                            const delta = hasCurrent && hasHistoric ? currentRank - historicRank : null;
+                                            const deltaText = delta === null ? '' : `${delta >= 0 ? '+' : ''}${delta}`;
+
+                                            return (
+                                                <td key={col.k} style={{ ...cellStyle, textAlign: 'center' }}>
+                                                    <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+                                                        <span>{hasCurrent ? String(currentRank) : ''}</span>
+                                                        <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', lineHeight: 1.02 }}>
+                                                            <span style={{ fontSize: '0.62rem', opacity: 0.9 }}>{rankType}</span>
+                                                            <span style={{ fontSize: '0.62rem', opacity: 0.9 }}>{deltaText}</span>
+                                                        </span>
+                                                    </div>
+                                                </td>
+                                            );
+                                        }
+
                                         // If this is the Eligible recent column and the row is marked Regular === 'T', shade green
                                         if (col.k === 'event_eligible_appearances') {
                                             const regVal = r['regular'] ?? r['regular'.replace(/_(.)/g, (_m, g1) => g1.toUpperCase())] ?? '';
