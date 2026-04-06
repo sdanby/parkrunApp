@@ -341,6 +341,7 @@ type ColumnKey =
     | 'position'
     | 'age_group'
     | 'age_grade'
+    | 'best_curve_ranking_current'
     | 'time'
     | 'comment'
     | 'season_adj_time'
@@ -377,6 +378,7 @@ const baseAthleteColumns: ColumnDef[] = [
     { key: 'time', label: 'Time', align: 'center', desktopWidth: 40 ,mobileWidth: 40},
     { key: 'age_group', label: 'Age grp', align: 'center', desktopWidth: 60 ,mobileWidth: 60},
     { key: 'age_grade', label: 'Age grd', align: 'center', desktopWidth: 60 ,mobileWidth: 60},
+    { key: 'best_curve_ranking_current', label: 'Rank', align: 'center', desktopWidth: 58, mobileWidth: 58},
     { key: 'comment', label: 'Detail', align: 'left', desktopWidth: 80 ,mobileWidth: 80}
 ];
 
@@ -516,6 +518,10 @@ const resolveColumnSortValue = (row: AthleteRecord, column: ColumnKey): number |
             return parseStringSortValue(pickField(row, ['age_group', 'ageGroup']));
         case 'age_grade':
             return parseNumericSortValue(pickField(row, ['age_grade', 'ageGrade']));
+        case 'best_curve_ranking_current':
+            return parseNumericSortValue(
+                pickField(row, ['best_curve_ranking_current', 'bestCurveRankingCurrent', 'rank'])
+            );
         case 'time':
             return parseTimeSortValue(
                 pickField(row, ['time', 'time_display', 'finish_time', 'gun_time']) ??
@@ -857,6 +863,8 @@ const Athletes: React.FC = () => {
                 return renderCell(pickField(row, ['age_group', 'ageGroup']));
             case 'age_grade':
                 return renderCell(formatAgeGradeValue(pickField(row, ['age_grade', 'ageGrade'])));
+            case 'best_curve_ranking_current':
+                return renderCell(pickField(row, ['best_curve_ranking_current', 'bestCurveRankingCurrent', 'rank']));
             case 'time':
                 return renderCell(
                     formatTimeValue(
@@ -1401,7 +1409,6 @@ const Athletes: React.FC = () => {
                                                     title="Click to view this event"
                                                 >
                                                     {tableColumns.map((col) => {
-                                                        const value = getCellDisplayValue(row, col.key);
                                                         const alignmentStyle: React.CSSProperties = col.align ? { textAlign: col.align } : {};
                                                         const targetWidth = isMobile
                                                             ? (col.mobileWidth ?? col.desktopWidth)
@@ -1418,6 +1425,7 @@ const Athletes: React.FC = () => {
                                                             alignmentStyle.backgroundColor = '#fff7d6';
                                                         }
                                                         if (col.key === 'date') {
+                                                            const value = getCellDisplayValue(row, col.key);
                                                             return (
                                                                 <th
                                                                     key={col.key}
@@ -1429,6 +1437,35 @@ const Athletes: React.FC = () => {
                                                                 </th>
                                                             );
                                                         }
+
+                                                        if (col.key === 'best_curve_ranking_current') {
+                                                            const currentRankRaw = pickField(row, ['best_curve_ranking_current', 'bestCurveRankingCurrent', 'rank']);
+                                                            const historicRankRaw = pickField(row, ['best_curve_ranking_historic', 'bestCurveRankingHistoric']);
+                                                            const rankTypeRaw = pickField(row, ['best_curve_ranking_current_type', 'bestCurveRankingCurrentType']);
+
+                                                            const currentRank = Number(currentRankRaw);
+                                                            const historicRank = Number(historicRankRaw);
+                                                            const hasCurrent = Number.isFinite(currentRank);
+                                                            const hasHistoric = Number.isFinite(historicRank);
+
+                                                            const rankType = String(rankTypeRaw ?? '').trim() || '*';
+                                                            const delta = hasCurrent && hasHistoric ? currentRank - historicRank : null;
+                                                            const deltaText = delta === null ? '' : `${delta >= 0 ? '+' : ''}${delta}`;
+
+                                                            return (
+                                                                <td key={col.key} style={{ ...alignmentStyle, textAlign: 'center' }}>
+                                                                    <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+                                                                        <span>{hasCurrent ? String(currentRank) : ''}</span>
+                                                                        <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', lineHeight: 1.02 }}>
+                                                                            <span style={{ fontSize: '0.62rem', opacity: 0.9 }}>{rankType}</span>
+                                                                            <span style={{ fontSize: '0.62rem', opacity: 0.9 }}>{deltaText}</span>
+                                                                        </span>
+                                                                    </div>
+                                                                </td>
+                                                            );
+                                                        }
+
+                                                        const value = getCellDisplayValue(row, col.key);
                                                         const cellClass = col.key === 'comment' ? 'comment-cell' : undefined;
                                                         return (
                                                             <td key={col.key} className={cellClass} style={alignmentStyle}>
