@@ -385,9 +385,9 @@ const adjustmentColumns: ColumnDef[] = [
     { key: 'event_adj_time', label: 'Event', align: 'center', desktopWidth: 70, mobileWidth: 70 },
     { key: 'age_adj_time', label: 'Age', align: 'center', desktopWidth: 70, mobileWidth: 70 },
     { key: 'sex_adj_time', label: 'Sex', align: 'center', desktopWidth: 70, mobileWidth: 70 },
-    { key: 'event_age_adj_time', label: 'Event+Age', align: 'center', desktopWidth: 80, mobileWidth: 80 },
-    { key: 'event_sex_adj_time', label: 'Event+Sex', align: 'center', desktopWidth: 80, mobileWidth: 80 },
-    { key: 'event_age_sex_adj_time', label: 'Event+Age+Sex', align: 'center', desktopWidth: 100, mobileWidth: 100 },
+    { key: 'event_age_adj_time', label: 'Ev+Age', align: 'center', desktopWidth: 80, mobileWidth: 80 },
+    { key: 'event_sex_adj_time', label: 'Ev+Sex', align: 'center', desktopWidth: 80, mobileWidth: 80 },
+    { key: 'event_age_sex_adj_time', label: 'Ev+Age+Sex', align: 'center', desktopWidth: 100, mobileWidth: 100 },
     { key: 'age_sex_adj_time', label: 'Age+Sex', align: 'center', desktopWidth: 80, mobileWidth: 80 }
 ];
 
@@ -572,10 +572,14 @@ const Athletes: React.FC = () => {
     const [profileRows, setProfileRows] = useState<AthleteBestSummaryRow[]>([]);
     const [profileLoading, setProfileLoading] = useState<boolean>(false);
     const [profileError, setProfileError] = useState<string | null>(null);
+    const [profileJumpDate, setProfileJumpDate] = useState<string | null>(null);
+    const [profileJumpRequest, setProfileJumpRequest] = useState<{ date: string; stamp: number } | null>(null);
     const adjustmentKeys = useMemo(() => getAdjustmentKeys(courseAdj, otherAdj), [courseAdj, otherAdj]);
     const [sortKey, setSortKey] = useState<ColumnKey>('date');
     const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
     const lastSortTouchAtRef = useRef<number>(0);
+    const tableRowRefs = useRef<Record<string, HTMLTableRowElement | null>>({});
+    const runsTableWrapperRef = useRef<HTMLDivElement | null>(null);
     const isMobile = useMediaQuery('(max-width: 640px)');
     const isMobileButtonLayout = useMediaQuery('(max-width: 900px), (pointer: coarse)');
     const navigate = useNavigate();
@@ -926,7 +930,11 @@ const Athletes: React.FC = () => {
     const tableColumns = useMemo(() => {
         // If 'All Time Adjustments' view is selected, show all adjustment columns at the end
         if (viewMode === 'all_time_adjustments') {
-            return [...baseAthleteColumns, ...adjustmentColumns];
+            const allTimeAdjustmentColumns = [
+                ...adjustmentColumns.filter((col) => col.key !== 'event_age_sex_adj_time'),
+                ...adjustmentColumns.filter((col) => col.key === 'event_age_sex_adj_time')
+            ];
+            return [...baseAthleteColumns, ...allTimeAdjustmentColumns];
         }
         
         // If 'Detailed' view is selected, show detailed columns at the end
@@ -953,6 +961,55 @@ const Athletes: React.FC = () => {
     }, [viewMode, adjustmentKeys]);
 
     const rowsToRender = runs.length > 0 ? sortedRuns : [];
+
+    const makeTableRowKey = (row: AthleteRecord, index: number): string => {
+        const keyParts = [
+            pickField(row, ['event_code', 'eventCode']),
+            pickField(row, ['formatted_date', 'event_date']),
+            index
+        ];
+        return keyParts.filter(Boolean).join('-') || String(index);
+    };
+
+    const handleProfileRankCellClick = (cell?: AthleteBestSummaryRow) => {
+        if (!cell?.event_date || rowsToRender.length === 0) {
+            return;
+        }
+        const targetDate = formatDateValue(cell.event_date);
+
+        const targetIndex = rowsToRender.findIndex((row) => {
+            const rowDate = formatDateValue(pickField(row, ['formatted_date', 'event_date', 'date']));
+            return rowDate === targetDate;
+        });
+
+        if (targetIndex < 0) {
+            return;
+        }
+
+        setShowProfile(false);
+        setProfileJumpDate(targetDate);
+        setProfileJumpRequest({ date: targetDate, stamp: Date.now() });
+    };
+
+    useEffect(() => {
+        if (showProfile || !profileJumpRequest) {
+            return;
+        }
+        const rowElement = runsTableWrapperRef.current?.querySelector<HTMLTableRowElement>(`tr[data-run-date="${profileJumpRequest.date}"]`);
+        if (!rowElement) {
+            return;
+        }
+
+        rowElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        const clearRequestTimer = window.setTimeout(() => setProfileJumpRequest(null), 250);
+        const clearHighlightTimer = window.setTimeout(() => setProfileJumpDate(null), 3500);
+
+        return () => {
+            window.clearTimeout(clearRequestTimer);
+            window.clearTimeout(clearHighlightTimer);
+        };
+    }, [showProfile, profileJumpRequest, rowsToRender]);
+
     const profileButtonTransform = isMobileButtonLayout
         ? 'translateX(-1.2cm) translateY(-3.5cm)'
         : 'translateX(-26.5cm)';
@@ -1204,7 +1261,17 @@ const Athletes: React.FC = () => {
                                                             }
                                                         ].map((row, idx) => {
                                                             const renderRankTimeCell = (cell?: AthleteBestSummaryRow) => (
-                                                                <td style={{ border: '1px solid #d1d5db', padding: '0.35rem', textAlign: 'center' }}>
+                                                                <td
+                                                                    style={{
+                                                                        border: '1px solid #d1d5db',
+                                                                        padding: '0.35rem',
+                                                                        textAlign: 'center',
+                                                                        cursor: cell?.event_date ? 'pointer' : 'default',
+                                                                        userSelect: 'none'
+                                                                    }}
+                                                                    onClick={() => handleProfileRankCellClick(cell)}
+                                                                    title={cell?.event_date ? 'Jump to this run in the table' : undefined}
+                                                                >
                                                                     <div style={{ fontSize: isMobile ? '1.45rem' : '1.7rem', lineHeight: 1.05 }}>{cell?.rank ?? '--'}</div>
                                                                     <div style={{ marginTop: '0.1rem', color: '#111827', lineHeight: 1.12, fontSize: isMobile ? '0.72rem' : '0.76rem' }}>
                                                                         <div>{formatDateValue(cell?.event_date)}</div>
@@ -1235,7 +1302,7 @@ const Athletes: React.FC = () => {
                                 </div>
                             </div>
                         ) : (
-                            <div className="athlete-runs-table-wrapper">
+                            <div className="athlete-runs-table-wrapper" ref={runsTableWrapperRef}>
                                 {runs.length > 0 ? (
                                 <table className="athlete-runs-table">
                                     <thead>
@@ -1298,26 +1365,36 @@ const Athletes: React.FC = () => {
                                     </thead>
                                     <tbody>
                                         {rowsToRender.map((row, index) => {
-                                            const keyParts = [
-                                                pickField(row, ['event_code', 'eventCode']),
-                                                pickField(row, ['formatted_date', 'event_date']),
-                                                index
-                                            ];
+                                            const rowKey = makeTableRowKey(row, index);
                                             const rowAthleteCode = pickField(row, ['athlete_code', 'athleteCode']);
                                             const rowEventDate = pickField(row, ['formatted_date', 'event_date', 'date']);
+                                            const rowDisplayDate = formatDateValue(rowEventDate);
+                                            const isProfileJumpTarget = Boolean(profileJumpDate) && rowDisplayDate === profileJumpDate;
                                             let highlight = false;
                                             if (sourceEvent?.eventDate) {
                                                 highlight = String(rowAthleteCode) === String(activeSelectedCode) && formatDateValue(rowEventDate) === formatDateValue(sourceEvent.eventDate);
                                             } else {
                                                 highlight = String(rowAthleteCode) === String(activeSelectedCode) && index === rowsToRender.findIndex(r => String(pickField(r, ['athlete_code', 'athleteCode'])) === String(activeSelectedCode));
                                             }
+                                            const sourceHighlightActive = highlight && !profileJumpDate;
 
                                             return (
                                                 <tr
-                                                    key={keyParts.filter(Boolean).join('-') || index}
-                                                    className={highlight ? 'highlighted-source-row' : ''}
+                                                    ref={(element) => {
+                                                        tableRowRefs.current[rowKey] = element;
+                                                    }}
+                                                    data-run-date={rowDisplayDate}
+                                                    key={rowKey}
+                                                    className={[sourceHighlightActive ? 'highlighted-source-row' : '', isProfileJumpTarget ? 'profile-jump-row' : ''].filter(Boolean).join(' ')}
                                                     style={{
-                                                        ...(highlight ? { fontWeight: 'bold' } : {}),
+                                                        ...(sourceHighlightActive ? { fontWeight: 'bold' } : {}),
+                                                        ...(isProfileJumpTarget
+                                                            ? {
+                                                                outline: '2px solid #f59e0b',
+                                                                outlineOffset: '-2px',
+                                                                backgroundColor: '#fff7d6'
+                                                            }
+                                                            : {}),
                                                         cursor: 'pointer'
                                                     }}
                                                     onClick={() => handleRowClick(row)}
@@ -1335,8 +1412,10 @@ const Athletes: React.FC = () => {
                                                             alignmentStyle.minWidth = px;
                                                             alignmentStyle.maxWidth = px;
                                                         }
-                                                        if (highlight) {
+                                                        if (sourceHighlightActive) {
                                                             alignmentStyle.backgroundColor = '#e6f3ff';
+                                                        } else if (isProfileJumpTarget) {
+                                                            alignmentStyle.backgroundColor = '#fff7d6';
                                                         }
                                                         if (col.key === 'date') {
                                                             return (
