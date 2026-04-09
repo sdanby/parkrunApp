@@ -1268,25 +1268,31 @@ const Athletes: React.FC = () => {
                                                                 runs: profileTypeMap['total_runs']
                                                             }
                                                         ].map((row, idx) => {
-                                                            const renderRankTimeCell = (cell?: AthleteBestSummaryRow) => (
-                                                                <td
-                                                                    style={{
-                                                                        border: '1px solid #d1d5db',
-                                                                        padding: '0.35rem',
-                                                                        textAlign: 'center',
-                                                                        cursor: cell?.event_date ? 'pointer' : 'default',
-                                                                        userSelect: 'none'
-                                                                    }}
-                                                                    onClick={() => handleProfileRankCellClick(cell)}
-                                                                    title={cell?.event_date ? 'Jump to this run in the table' : undefined}
-                                                                >
-                                                                    <div style={{ fontSize: isMobile ? '1.45rem' : '1.7rem', lineHeight: 1.05 }}>{cell?.rank ?? '--'}</div>
-                                                                    <div style={{ marginTop: '0.1rem', color: '#111827', lineHeight: 1.12, fontSize: isMobile ? '0.72rem' : '0.76rem' }}>
-                                                                        <div>{formatDateValue(cell?.event_date)}</div>
-                                                                        <div>{formatProfileTime(cell?.time)}</div>
-                                                                    </div>
-                                                                </td>
-                                                            );
+                                                            const renderRankTimeCell = (cell?: AthleteBestSummaryRow) => {
+                                                                const rawRank = cell?.rank;
+                                                                const parsedRank = rawRank === undefined || rawRank === null || rawRank === '' ? NaN : Number(rawRank);
+                                                                const rankDisplay = Number.isFinite(parsedRank) ? String(Math.ceil(parsedRank)) : '--';
+
+                                                                return (
+                                                                    <td
+                                                                        style={{
+                                                                            border: '1px solid #d1d5db',
+                                                                            padding: '0.35rem',
+                                                                            textAlign: 'center',
+                                                                            cursor: cell?.event_date ? 'pointer' : 'default',
+                                                                            userSelect: 'none'
+                                                                        }}
+                                                                        onClick={() => handleProfileRankCellClick(cell)}
+                                                                        title={cell?.event_date ? 'Jump to this run in the table' : undefined}
+                                                                    >
+                                                                        <div style={{ fontSize: isMobile ? '1.45rem' : '1.7rem', lineHeight: 1.05 }}>{rankDisplay}</div>
+                                                                        <div style={{ marginTop: '0.1rem', color: '#111827', lineHeight: 1.12, fontSize: isMobile ? '0.72rem' : '0.76rem' }}>
+                                                                            <div>{formatDateValue(cell?.event_date)}</div>
+                                                                            <div>{formatProfileTime(cell?.time)}</div>
+                                                                        </div>
+                                                                    </td>
+                                                                );
+                                                            };
 
                                                             return (
                                                                 <tr key={`${row.label}-${idx}`}>
