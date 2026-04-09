@@ -15,6 +15,7 @@ type Run = {
     event_name?: string;
     name: string;
     position: number;
+    rank?: number | string;
     time: string;
     originalRank?: number;
     season_adj_time?: string;
@@ -224,6 +225,7 @@ const Lists: React.FC = () => {
         { key: 'Time', label: 'Time', className: 'sticky-header' },
         { key: 'Date', label: 'Date', className: 'sticky-header' },
         { key: 'Pos', label: 'Pos', className: 'sticky-header' },
+        { key: 'CurveRank', label: 'Rank', className: 'sticky-header' },
         { key: 'Age Grd', label: 'Age Grd', className: 'sticky-header' },
         { key: 'Age Grp', label: 'Age Grp', className: 'sticky-header' },
         { key: 'Event', label: 'Event Name', className: 'sticky-header event-name-header-col' },
@@ -269,6 +271,7 @@ const Lists: React.FC = () => {
                 case 'Date': return getIsoDate(run.event_date);
                 case 'Event': return run.event_name || run.event_code;
                 case 'Pos': return run.position;
+                case 'CurveRank': return run.rank ?? '';
                 case 'Age Grd': return run.age_grade;
                 case 'Age Grp': return run.age_group;
                 case 'Comment': return run.comment;
@@ -287,7 +290,7 @@ const Lists: React.FC = () => {
         const compare = (a: Run, b: Run, idxA: number, idxB: number) => {
             const valA = getValue(a, sortKey, idxA);
             const valB = getValue(b, sortKey, idxB);
-            if (sortKey === 'Rank' || sortKey === 'Event' || sortKey === 'Pos') {
+            if (sortKey === 'Rank' || sortKey === 'Event' || sortKey === 'Pos' || sortKey === 'CurveRank') {
                 const numA = Number(valA);
                 const numB = Number(valB);
                 if (!isNaN(numA) && !isNaN(numB)) {
@@ -477,6 +480,7 @@ const Lists: React.FC = () => {
                                         <td>{run.time}</td>
                                         <td>{formatDate(run.event_date)}</td>
                                         <td>{run.position}</td>
+                                        <td>{run.rank ?? ''}</td>
                                         <td>{run.age_grade}</td>
                                         <td>{run.age_group}</td>
                                         <td className="event-name-body-col">{run.event_name || run.event_code}</td>
