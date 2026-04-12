@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { fetchAthleteBestSummary, fetchAthleteRuns } from '../api/backendAPI';
 import './ResultsTable.css';
 import AthleteSearch from '../components/AthleteSearch';
+import ReactECharts from 'echarts-for-react';
 
 type AthleteRecord = { [key: string]: any };
 
@@ -207,6 +208,53 @@ const formatDateValue = (value: unknown): string => {
         const year = String(parsed.getUTCFullYear());
         return compact(day, month, year);
     }
+    return raw;
+};
+
+const formatMonthYearValue = (value: unknown): string => {
+    if (value === undefined || value === null || value === '') return '';
+
+    if (typeof value === 'number' && Number.isFinite(value)) {
+        const parsed = new Date(value);
+        if (!Number.isNaN(parsed.getTime())) {
+            const month = monthNames[parsed.getUTCMonth()] || '';
+            const year = String(parsed.getUTCFullYear()).slice(-2);
+            return `${month}-${year}`;
+        }
+    }
+
+    const raw = String(value).trim();
+    const iso = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (iso) {
+        const month = monthNames[Number(iso[2]) - 1] || iso[2];
+        const year = iso[1].slice(-2);
+        return `${month}-${year}`;
+    }
+
+    const slash = raw.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if (slash) {
+        const month = monthNames[Number(slash[2]) - 1] || slash[2];
+        const year = slash[3].slice(-2);
+        return `${month}-${year}`;
+    }
+
+    const numericRaw = Number(raw);
+    if (!Number.isNaN(numericRaw) && raw !== '') {
+        const parsed = new Date(numericRaw);
+        if (!Number.isNaN(parsed.getTime())) {
+            const month = monthNames[parsed.getUTCMonth()] || '';
+            const year = String(parsed.getUTCFullYear()).slice(-2);
+            return `${month}-${year}`;
+        }
+    }
+
+    const parsed = new Date(raw);
+    if (!Number.isNaN(parsed.getTime())) {
+        const month = monthNames[parsed.getUTCMonth()] || '';
+        const year = String(parsed.getUTCFullYear()).slice(-2);
+        return `${month}-${year}`;
+    }
+
     return raw;
 };
 
@@ -574,6 +622,7 @@ const Athletes: React.FC = () => {
     const [viewMode, setViewMode] = useState<AthleteViewMode>('basic');
     const [courseAdj, setCourseAdj] = useState<CourseAdjOption>('none');
     const [otherAdj, setOtherAdj] = useState<OtherAdjOption>('none');
+    const [showPlot, setShowPlot] = useState<boolean>(false);
     const [showProfile, setShowProfile] = useState<boolean>(false);
     const [profileRows, setProfileRows] = useState<AthleteBestSummaryRow[]>([]);
     const [profileLoading, setProfileLoading] = useState<boolean>(false);
@@ -583,9 +632,13 @@ const Athletes: React.FC = () => {
     const adjustmentKeys = useMemo(() => getAdjustmentKeys(courseAdj, otherAdj), [courseAdj, otherAdj]);
     const [sortKey, setSortKey] = useState<ColumnKey>('date');
     const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+    const [selectedPlotLegendKey, setSelectedPlotLegendKey] = useState<string | null>(null);
+    const [plotXZoom, setPlotXZoom] = useState<{ start: number; end: number }>({ start: 0, end: 100 });
+    const [plotYZoom, setPlotYZoom] = useState<{ start: number; end: number }>({ start: 0, end: 100 });
     const lastSortTouchAtRef = useRef<number>(0);
     const tableRowRefs = useRef<Record<string, HTMLTableRowElement | null>>({});
     const runsTableWrapperRef = useRef<HTMLDivElement | null>(null);
+    const plotChartRef = useRef<any>(null);
     const isMobile = useMediaQuery('(max-width: 640px)');
     const isMobileButtonLayout = useMediaQuery('(max-width: 900px), (pointer: coarse)');
     const navigate = useNavigate();
@@ -625,6 +678,7 @@ const Athletes: React.FC = () => {
             setSummary(null);
             setError(null);
             setLoading(false);
+            setShowPlot(false);
             setShowProfile(false);
             return () => {
                 cancelled = true;
@@ -970,6 +1024,320 @@ const Athletes: React.FC = () => {
 
     const rowsToRender = runs.length > 0 ? sortedRuns : [];
 
+    const plotPoints = useMemo(() => {
+        const points = runs
+            .map((row) => {
+                const rawDate = pickField(row, ['formatted_date', 'event_date', 'date']);
+                const x = parseDateSortValue(rawDate);
+                const rawTime =
+                    pickField(row, ['time', 'time_display', 'finish_time', 'gun_time']) ??
+                    pickField(row, ['time_seconds', 'adj_time_seconds']);
+                const y = parseTimeSortValue(rawTime);
+                if (x === null || y === null) {
+                    return null;
+                }
+                return { x, y, row };
+            })
+            .filter((point): point is { x: number; y: number; row: AthleteRecord } => point !== null)
+            .sort((a, b) => a.x - b.x);
+
+        return points;
+    }, [runs]);
+
+    const plotChartHeight = isMobile ? '8.5cm' : '11cm';
+    const plotPanelMaxWidth = isMobile ? '100%' : '20cm';
+    const plotChartMinWidth = isMobile ? '10cm' : '100%';
+
+    const getPlotEventName = (row: AthleteRecord): string => {
+        const raw = pickField(row, ['event_display', 'eventDisplay', 'event_name', 'eventName', 'event']);
+        const name = raw === undefined || raw === null ? '' : String(raw).trim();
+        return name || 'Unknown event';
+    };
+
+    const plotEventPalette = ['#00B0FF', '#00E676', '#FFEA00', '#FF6D00', '#FF1744'];
+    const plotOtherEventColor = '#6b7280';
+    const plotOtherLegendKey = '__other_events__';
+
+    const plotEventLegendEntries = useMemo(() => {
+        const counts = new Map<string, number>();
+        plotPoints.forEach((point) => {
+            const eventName = getPlotEventName(point.row);
+            counts.set(eventName, (counts.get(eventName) ?? 0) + 1);
+        });
+
+        const ranked = Array.from(counts.entries())
+            .sort((a, b) => (b[1] - a[1]) || a[0].localeCompare(b[0]))
+            .slice(0, 5);
+
+        return ranked.map(([eventName, count], index) => ({
+            eventName,
+            count,
+            color: plotEventPalette[index]
+        }));
+    }, [plotPoints]);
+
+    const plotEventColorByName = useMemo(() => {
+        const colorMap = new Map<string, string>();
+        plotEventLegendEntries.forEach((entry) => {
+            colorMap.set(entry.eventName, entry.color);
+        });
+        return colorMap;
+    }, [plotEventLegendEntries]);
+
+    const plotOtherEventCount = useMemo(() => {
+        let count = 0;
+        plotPoints.forEach((point) => {
+            const eventName = getPlotEventName(point.row);
+            if (!plotEventColorByName.has(eventName)) {
+                count += 1;
+            }
+        });
+        return count;
+    }, [plotPoints, plotEventColorByName]);
+
+    const isPointVisibleForLegendSelection = (row: AthleteRecord): boolean => {
+        if (!selectedPlotLegendKey) {
+            return true;
+        }
+        const eventName = getPlotEventName(row);
+        if (selectedPlotLegendKey === plotOtherLegendKey) {
+            return !plotEventColorByName.has(eventName);
+        }
+        return eventName === selectedPlotLegendKey;
+    };
+
+    const toggleLegendSelection = (legendKey: string) => {
+        setSelectedPlotLegendKey((prev) => (prev === legendKey ? null : legendKey));
+    };
+    
+
+    const clampPercent = (value: number) => Math.max(0, Math.min(100, value));
+
+    const normalizeZoomWindow = (start: number, end: number, minWindow = 2) => {
+        let nextStart = clampPercent(start);
+        let nextEnd = clampPercent(end);
+        if (nextEnd < nextStart) {
+            [nextStart, nextEnd] = [nextEnd, nextStart];
+        }
+        let windowSize = nextEnd - nextStart;
+        if (windowSize < minWindow) {
+            const center = (nextStart + nextEnd) / 2;
+            nextStart = clampPercent(center - minWindow / 2);
+            nextEnd = clampPercent(center + minWindow / 2);
+            windowSize = nextEnd - nextStart;
+            if (windowSize < minWindow) {
+                if (nextStart === 0) {
+                    nextEnd = minWindow;
+                } else if (nextEnd === 100) {
+                    nextStart = 100 - minWindow;
+                }
+            }
+        }
+        return { start: clampPercent(nextStart), end: clampPercent(nextEnd) };
+    };
+
+    const updateAxisZoom = (axis: 'x' | 'y', nextRange: { start: number; end: number }) => {
+        const normalized = normalizeZoomWindow(nextRange.start, nextRange.end);
+        if (axis === 'x') {
+            setPlotXZoom(normalized);
+        } else {
+            setPlotYZoom(normalized);
+        }
+
+        const chart = plotChartRef.current?.getEchartsInstance?.();
+        if (chart) {
+            chart.dispatchAction({
+                type: 'dataZoom',
+                dataZoomId: axis === 'x' ? 'xZoom' : 'yZoom',
+                start: normalized.start,
+                end: normalized.end
+            });
+            chart.dispatchAction({
+                type: 'dataZoom',
+                dataZoomId: axis === 'x' ? 'xZoomSlider' : 'yZoomSlider',
+                start: normalized.start,
+                end: normalized.end
+            });
+        }
+    };
+
+    const zoomAxisIn = (axis: 'x' | 'y') => {
+        const source = axis === 'x' ? plotXZoom : plotYZoom;
+        const windowSize = source.end - source.start;
+        const delta = windowSize * 0.12;
+        updateAxisZoom(axis, { start: source.start + delta, end: source.end - delta });
+    };
+
+    const zoomAxisOut = (axis: 'x' | 'y') => {
+        const source = axis === 'x' ? plotXZoom : plotYZoom;
+        const windowSize = source.end - source.start;
+        const delta = windowSize * 0.15;
+        updateAxisZoom(axis, { start: source.start - delta, end: source.end + delta });
+    };
+
+    const shiftAxisLeft = (axis: 'x' | 'y') => {
+        const source = axis === 'x' ? plotXZoom : plotYZoom;
+        const windowSize = source.end - source.start;
+        const delta = Math.max(windowSize * 0.2, 1);
+        updateAxisZoom(axis, { start: source.start - delta, end: source.end - delta });
+    };
+
+    const shiftAxisRight = (axis: 'x' | 'y') => {
+        const source = axis === 'x' ? plotXZoom : plotYZoom;
+        const windowSize = source.end - source.start;
+        const delta = Math.max(windowSize * 0.2, 1);
+        updateAxisZoom(axis, { start: source.start + delta, end: source.end + delta });
+    };
+
+    const shiftYAxisUp = () => {
+        shiftAxisLeft('y');
+    };
+
+    const shiftYAxisDown = () => {
+        shiftAxisRight('y');
+    };
+
+    useEffect(() => {
+        setPlotXZoom({ start: 0, end: 100 });
+        setPlotYZoom({ start: 0, end: 100 });
+        setSelectedPlotLegendKey(null);
+    }, [activeSelectedCode, showPlot]);
+
+    const handlePlotDataZoom = (params: any) => {
+        const events = Array.isArray(params?.batch) ? params.batch : [params];
+        events.forEach((event: any) => {
+            const id = String(event?.dataZoomId ?? '');
+            const start = Number(event?.start);
+            const end = Number(event?.end);
+            if (!Number.isFinite(start) || !Number.isFinite(end)) {
+                return;
+            }
+            const normalized = normalizeZoomWindow(start, end);
+            if (id.startsWith('xZoom')) {
+                setPlotXZoom((prev) =>
+                    prev.start === normalized.start && prev.end === normalized.end ? prev : normalized
+                );
+            }
+            if (id.startsWith('yZoom')) {
+                setPlotYZoom((prev) =>
+                    prev.start === normalized.start && prev.end === normalized.end ? prev : normalized
+                );
+            }
+        });
+    };
+
+    const plotOption = useMemo(() => {
+        if (plotPoints.length === 0) return null;
+
+        const minX = plotPoints[0].x;
+        const maxX = plotPoints[plotPoints.length - 1].x;
+        const yStepSeconds = 5 * 60;
+        const rawMinY = Math.min(...plotPoints.map((point) => point.y));
+        const rawMaxY = Math.max(...plotPoints.map((point) => point.y));
+        const minY = Math.floor(rawMinY / yStepSeconds) * yStepSeconds;
+        const maxYBase = Math.ceil(rawMaxY / yStepSeconds) * yStepSeconds;
+        const maxY = maxYBase === minY ? minY + yStepSeconds : maxYBase;
+
+        return {
+            animation: false,
+            grid: {
+                left: 56,
+                right: 56,
+                top: 22,
+                bottom: 66,
+                containLabel: false,
+            },
+            tooltip: {
+                trigger: 'item',
+                formatter: (params: any) => {
+                    const row = params?.data?.row;
+                    const eventDate = formatDateValue(pickField(row, ['formatted_date', 'event_date', 'date']));
+                    const eventName = String(pickField(row, ['event_display', 'eventDisplay', 'event_name', 'eventName', 'event']) ?? 'Event');
+                    const timeValue = formatTimeValue(
+                        pickField(row, ['time', 'time_display', 'finish_time', 'gun_time']) ??
+                        params?.value?.[1]
+                    );
+                    return `${eventDate}<br/>${timeValue}<br/>${eventName}`;
+                }
+            },
+            xAxis: {
+                type: 'time',
+                min: minX,
+                max: maxX,
+                splitNumber: 10,
+                splitLine: {
+                    show: true,
+                    lineStyle: {
+                        color: '#d1d5db',
+                        width: 0.6
+                    }
+                },
+                name: 'Date',
+                nameLocation: 'middle',
+                nameGap: 38,
+                axisLabel: {
+                    formatter: (value: number) => formatMonthYearValue(value)
+                }
+            },
+            yAxis: {
+                type: 'value',
+                min: minY,
+                max: maxY,
+                splitNumber: 12,
+                minInterval: 60,
+                minorTick: {
+                    show: true,
+                    splitNumber: 4
+                },
+                minorSplitLine: {
+                    show: true,
+                    lineStyle: {
+                        color: '#e5e7eb',
+                        width: 0.4
+                    }
+                },
+                splitLine: {
+                    show: true,
+                    lineStyle: {
+                        color: '#d1d5db',
+                        width: 0.6
+                    }
+                },
+                inverse: true,
+                name: 'Time',
+                nameLocation: 'middle',
+                nameGap: 46,
+                axisLabel: {
+                    formatter: (value: number) => formatTimeValue(value)
+                }
+            },
+            dataZoom: [
+                { id: 'xZoom', type: 'inside', xAxisIndex: 0, filterMode: 'none', start: plotXZoom.start, end: plotXZoom.end },
+                { id: 'yZoom', type: 'inside', yAxisIndex: 0, filterMode: 'none', start: plotYZoom.start, end: plotYZoom.end },
+                { id: 'xZoomSlider', type: 'slider', xAxisIndex: 0, filterMode: 'none', start: plotXZoom.start, end: plotXZoom.end, height: 16, bottom: 18 },
+                { id: 'yZoomSlider', type: 'slider', yAxisIndex: 0, filterMode: 'none', start: plotYZoom.start, end: plotYZoom.end, width: 14, right: 8 }
+            ],
+            series: [
+                {
+                    type: 'scatter',
+                    symbolSize: isMobile ? 8 : 7,
+                    itemStyle: {
+                        borderColor: '#1e3a8a',
+                        borderWidth: 0.8,
+                    },
+                    data: plotPoints.map((point) => ({
+                        
+                        value: [point.x, point.y],
+                        row: point.row,
+                        itemStyle: {
+                            color: plotEventColorByName.get(getPlotEventName(point.row)) ?? plotOtherEventColor
+                        }
+                    })).filter((point) => isPointVisibleForLegendSelection(point.row)),
+                }
+            ]
+        };
+    }, [plotPoints, isMobile, plotXZoom, plotYZoom, plotEventColorByName, selectedPlotLegendKey]);
+
     const makeTableRowKey = (row: AthleteRecord, index: number): string => {
         const keyParts = [
             pickField(row, ['event_code', 'eventCode']),
@@ -1021,6 +1389,24 @@ const Athletes: React.FC = () => {
     const profileButtonTransform = isMobileButtonLayout
         ? 'translateX(-1.2cm) translateY(-3.5cm)'
         : 'translateX(-26.5cm)';
+    const currentPanelMode: 'table' | 'profile' | 'plot' = showProfile ? 'profile' : (showPlot ? 'plot' : 'table');
+    const nextPanelMode: 'table' | 'profile' | 'plot' =
+        currentPanelMode === 'table' ? 'profile' : (currentPanelMode === 'profile' ? 'plot' : 'table');
+    const panelToggleLabel = nextPanelMode === 'table' ? 'Table' : (nextPanelMode === 'profile' ? 'Profile' : 'Plot');
+    const handlePanelCycle = () => {
+        if (!showProfile && !showPlot) {
+            setShowProfile(true);
+            setShowPlot(false);
+            return;
+        }
+        if (showProfile) {
+            setShowProfile(false);
+            setShowPlot(true);
+            return;
+        }
+        setShowPlot(false);
+        setShowProfile(false);
+    };
     const showBackButton = showHeader;
 
     return (
@@ -1149,15 +1535,14 @@ const Athletes: React.FC = () => {
                                             <option value="age_sex">age & sex adjustment</option>
                                         </select>
                                         <button
-                                            id="athletes-profile-toggle-btn"
+                                            id="athletes-view-cycle-btn"
                                             type="button"
-                                            onClick={() => setShowProfile((prev) => !prev)}
-                                            title={showProfile ? 'Table' : 'Profile'}
-                                            aria-label={showProfile ? 'Show table' : 'Show profile'}
+                                            onClick={handlePanelCycle}
+                                            title={`Show ${panelToggleLabel.toLowerCase()}`}
+                                            aria-label={`Show ${panelToggleLabel.toLowerCase()}`}
                                             style={{
                                                 width: '1cm',
                                                 height: '1cm',
-                                                marginTop: '0.12cm',
                                                 border: '1px solid #777',
                                                 borderRadius: '6px',
                                                 background: '#fff',
@@ -1169,7 +1554,7 @@ const Athletes: React.FC = () => {
                                                 transform: profileButtonTransform
                                             }}
                                         >
-                                            {showProfile ? 'Table' : 'Profile'}
+                                            {panelToggleLabel}
                                         </button>
                                     </div>
                                 </>
@@ -1186,7 +1571,151 @@ const Athletes: React.FC = () => {
             {!loading && !error && activeSelectedCode && (
                 <>
                     <section className="athlete-runs-section">
-                        {showProfile ? (
+                        {showPlot ? (
+                            <div
+                                className="athlete-runs-table-wrapper"
+                                style={{
+                                    background: 'transparent',
+                                    boxShadow: 'none',
+                                    border: 'none',
+                                    padding: 0,
+                                    display: 'block',
+                                    width: '100%',
+                                    maxWidth: plotPanelMaxWidth,
+                                    overflowX: 'auto'
+                                }}
+                            >
+                                <div
+                                    style={{
+                                        border: '2px solid #9ca3af',
+                                        borderRadius: '12px',
+                                        background: '#fff',
+                                        marginLeft: '0.3cm',
+                                        marginRight: '0.3cm',
+                                        overflow: 'hidden',
+                                        boxShadow: '0 10px 18px rgba(15, 23, 42, 0.08)'
+                                    }}
+                                >
+                                    <div
+                                        style={{
+                                            background: '#e5e7eb',
+                                            borderBottom: '1px solid #d1d5db',
+                                            padding: '0.55rem 0.8rem',
+                                            textAlign: 'center',
+                                            fontSize: '1.05rem',
+                                            fontWeight: 700
+                                        }}
+                                    >
+                                        Time by Date
+                                    </div>
+                                    <div style={{ padding: '0.6rem 0.8rem 0.9rem 0.8rem' }}>
+                                        {plotPoints.length === 0 ? (
+                                            <div style={{ color: '#6b7280', fontSize: '0.9rem' }}>No plot data available.</div>
+                                        ) : (
+                                            <>
+                                            <div style={{ width: '100%', overflowX: isMobile ? 'auto' : 'hidden' }}>
+                                                <ReactECharts
+                                                    ref={plotChartRef}
+                                                    option={plotOption ?? {}}
+                                                    notMerge
+                                                    lazyUpdate
+                                                    style={{ width: '100%', minWidth: plotChartMinWidth, height: plotChartHeight }}
+                                                    onEvents={{
+                                                        datazoom: handlePlotDataZoom,
+                                                        click: (params: any) => {
+                                                            const row = params?.data?.row;
+                                                            if (row) {
+                                                                handleRowClick(row);
+                                                            }
+                                                        }
+                                                    }}
+                                                />
+                                            </div>
+                                            <div
+                                                style={{
+                                                    marginTop: '0.45rem',
+                                                    display: isMobile ? 'flex' : 'grid',
+                                                    gridTemplateColumns: isMobile ? undefined : 'auto 1fr auto',
+                                                    justifyContent: isMobile ? 'space-between' : undefined,
+                                                    alignItems: 'center',
+                                                    gap: '0.6rem',
+                                                    flexWrap: 'wrap'
+                                                }}
+                                            >
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', justifySelf: 'start' }}>
+                                                    <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#374151', marginRight: '0.15rem' }}>X</span>
+                                                    <button type="button" onClick={() => zoomAxisIn('x')} style={{ minWidth: '1.6rem', height: '1.6rem', border: '1px solid #9ca3af', borderRadius: '5px', background: '#fff', fontWeight: 700, cursor: 'pointer' }}>+</button>
+                                                    <button type="button" onClick={() => zoomAxisOut('x')} style={{ minWidth: '1.6rem', height: '1.6rem', border: '1px solid #9ca3af', borderRadius: '5px', background: '#fff', fontWeight: 700, cursor: 'pointer' }}>-</button>
+                                                    <button type="button" onClick={() => shiftAxisLeft('x')} style={{ minWidth: '1.6rem', height: '1.6rem', border: '1px solid #9ca3af', borderRadius: '5px', background: '#fff', fontWeight: 700, cursor: 'pointer' }}>{'←'}</button>
+                                                    <button type="button" onClick={() => shiftAxisRight('x')} style={{ minWidth: '1.6rem', height: '1.6rem', border: '1px solid #9ca3af', borderRadius: '5px', background: '#fff', fontWeight: 700, cursor: 'pointer' }}>{'→'}</button>
+                                                </div>
+                                                <div
+                                                    style={{
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        gap: '0.45rem',
+                                                        flexWrap: 'wrap',
+                                                        fontSize: '0.72rem',
+                                                        color: '#374151',
+                                                        minWidth: 0
+                                                    }}
+                                                >
+                                                    {plotEventLegendEntries.map((entry) => (
+                                                        <button
+                                                            type="button"
+                                                            key={entry.eventName}
+                                                            onClick={() => toggleLegendSelection(entry.eventName)}
+                                                            title={`${entry.eventName} (${entry.count})`}
+                                                            style={{
+                                                                display: 'inline-flex',
+                                                                alignItems: 'center',
+                                                                gap: '0.2rem',
+                                                                maxWidth: isMobile ? '5.2rem' : '7rem',
+                                                                border: selectedPlotLegendKey === entry.eventName ? '1px solid #1f2937' : '1px solid transparent',
+                                                                borderRadius: '4px',
+                                                                background: '#fff',
+                                                                cursor: 'pointer',
+                                                                padding: '0.04rem 0.15rem'
+                                                            }}
+                                                        >
+                                                            <span style={{ width: '0.5rem', height: '0.5rem', borderRadius: '999px', background: entry.color, flexShrink: 0 }} />
+                                                            <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{entry.eventName}</span>
+                                                        </button>
+                                                    ))}
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => toggleLegendSelection(plotOtherLegendKey)}
+                                                        title={`Other (${plotOtherEventCount})`}
+                                                        style={{
+                                                            display: 'inline-flex',
+                                                            alignItems: 'center',
+                                                            gap: '0.2rem',
+                                                            border: selectedPlotLegendKey === plotOtherLegendKey ? '1px solid #1f2937' : '1px solid transparent',
+                                                            borderRadius: '4px',
+                                                            background: '#fff',
+                                                            cursor: 'pointer',
+                                                            padding: '0.04rem 0.15rem'
+                                                        }}
+                                                    >
+                                                        <span style={{ width: '0.5rem', height: '0.5rem', borderRadius: '999px', background: plotOtherEventColor, flexShrink: 0 }} />
+                                                        <span>Other</span>
+                                                    </button>
+                                                </div>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', justifySelf: 'end' }}>
+                                                    <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#374151', marginRight: '0.15rem' }}>Y</span>
+                                                    <button type="button" onClick={() => zoomAxisIn('y')} style={{ minWidth: '1.6rem', height: '1.6rem', border: '1px solid #9ca3af', borderRadius: '5px', background: '#fff', fontWeight: 700, cursor: 'pointer' }}>+</button>
+                                                    <button type="button" onClick={() => zoomAxisOut('y')} style={{ minWidth: '1.6rem', height: '1.6rem', border: '1px solid #9ca3af', borderRadius: '5px', background: '#fff', fontWeight: 700, cursor: 'pointer' }}>-</button>
+                                                    <button type="button" onClick={shiftYAxisUp} style={{ minWidth: '1.6rem', height: '1.6rem', border: '1px solid #9ca3af', borderRadius: '5px', background: '#fff', fontWeight: 700, cursor: 'pointer' }}>{'↑'}</button>
+                                                    <button type="button" onClick={shiftYAxisDown} style={{ minWidth: '1.6rem', height: '1.6rem', border: '1px solid #9ca3af', borderRadius: '5px', background: '#fff', fontWeight: 700, cursor: 'pointer' }}>{'↓'}</button>
+                                                </div>
+                                            </div>
+                                            </>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        ) : showProfile ? (
                             <div
                                 className="athlete-runs-table-wrapper"
                                 style={{
