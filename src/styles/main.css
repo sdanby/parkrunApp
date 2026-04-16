@@ -507,6 +507,10 @@ h1, h2, h3 {
     .athletes-page .athlete-runs-table-wrapper {
         margin-top: 0.5cm !important;
     }
+
+    .athletes-page .athlete-runs-table-wrapper.athlete-runs-table-wrapper--plot {
+        margin-top: -0.3cm !important;
+    }
 }
 
 
@@ -529,11 +533,20 @@ h1, h2, h3 {
         margin-top: -1.2cm !important;
     }
 
+    .athletes-page .athlete-runs-table-wrapper.athlete-runs-table-wrapper--plot {
+        margin-top: -1.7cm !important;
+    }
+
     /* Keep mobile table viewport stable for short result sets (1-3 rows) */
     .athletes-page .athlete-runs-table-wrapper {
         min-height: 58vh !important;
         max-height: 58vh !important;
         overflow-y: auto !important;
+    }
+
+    .athletes-page .athlete-runs-table-wrapper.athlete-runs-table-wrapper--plot {
+        min-height: auto !important;
+        max-height: none !important;
     }
 }
 .athlete-runs-table {
