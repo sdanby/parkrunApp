@@ -545,6 +545,72 @@ const getAdjustmentSeconds = (row: AthleteRecord, key: ColumnKey): number | null
     }
 };
 
+const getAdjustmentSeriesSeconds = (row: AthleteRecord, key: string): number | null => {
+    const aliasCandidates: Record<string, string[]> = {
+        season_adj_time: ['season_adj_time_seconds', 'season_adj_seconds', 'season_adj_time'],
+        event_adj_time: ['event_adj_time_seconds', 'event_adj_seconds', 'event_adj_time'],
+        age_adj_time: ['age_adj_time_seconds', 'age_adj_seconds', 'age_adj_time'],
+        sex_adj_time: ['sex_adj_time_seconds', 'sex_adj_seconds', 'sex_adj_time'],
+        event_age_adj_time: [
+            'event_age_adj_time_seconds',
+            'age_event_adj_time_seconds',
+            'event_age_adj_seconds',
+            'age_event_adj_seconds',
+            'event_age_adj_time',
+            'age_event_adj_time'
+        ],
+        event_sex_adj_time: [
+            'event_sex_adj_time_seconds',
+            'sex_event_adj_time_seconds',
+            'event_sex_adj_seconds',
+            'sex_event_adj_seconds',
+            'event_sex_adj_time',
+            'sex_event_adj_time'
+        ],
+        event_age_sex_adj_time: [
+            'event_age_sex_adj_time_seconds',
+            'age_sex_event_adj_time_seconds',
+            'event_age_sex_adj_seconds',
+            'age_sex_event_adj_seconds',
+            'event_age_sex_adj_time',
+            'age_sex_event_adj_time'
+        ],
+        age_sex_adj_time: ['age_sex_adj_time_seconds', 'age_sex_adj_seconds', 'age_sex_adj_time']
+    };
+
+    const directCandidates = aliasCandidates[key] ?? [key];
+    const directValue = pickField(row, directCandidates);
+    const parsedDirect = parseTimeSortValue(directValue);
+    if (parsedDirect !== null) {
+        return parsedDirect;
+    }
+
+    const normalizedKey =
+        key === 'age_event_adj_time' ? 'event_age_adj_time' :
+        key === 'sex_event_adj_time' ? 'event_sex_adj_time' :
+        key === 'age_sex_event_adj_time' ? 'event_age_sex_adj_time' :
+        key;
+
+    const adjustmentKey = [
+        'season_adj_time',
+        'event_adj_time',
+        'age_adj_time',
+        'sex_adj_time',
+        'event_age_adj_time',
+        'event_sex_adj_time',
+        'event_age_sex_adj_time',
+        'age_sex_adj_time'
+    ].includes(normalizedKey)
+        ? (normalizedKey as ColumnKey)
+        : null;
+
+    if (!adjustmentKey) {
+        return null;
+    }
+
+    return getAdjustmentSeconds(row, adjustmentKey);
+};
+
 const parseStringSortValue = (value: unknown): string | null => {
     if (value === undefined || value === null) return null;
     const str = String(value).trim();
@@ -632,6 +698,7 @@ const Athletes: React.FC = () => {
     const adjustmentKeys = useMemo(() => getAdjustmentKeys(courseAdj, otherAdj), [courseAdj, otherAdj]);
     const [sortKey, setSortKey] = useState<ColumnKey>('date');
     const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+    const [plotEligibilityMode, setPlotEligibilityMode] = useState<'all' | 'eligible' | 'best'>('all');
     const [selectedPlotLegendKey, setSelectedPlotLegendKey] = useState<string | null>(null);
     const [plotXZoom, setPlotXZoom] = useState<{ start: number; end: number }>({ start: 0, end: 100 });
     const [plotYZoom, setPlotYZoom] = useState<{ start: number; end: number }>({ start: 0, end: 100 });
@@ -1024,15 +1091,24 @@ const Athletes: React.FC = () => {
 
     const rowsToRender = runs.length > 0 ? sortedRuns : [];
 
+    const selectedPlotAdjustmentKey = useMemo(() => {
+        if (courseAdj === 'none' && otherAdj === 'none') {
+            return null;
+        }
+        return adjustmentKeys[0] ?? null;
+    }, [courseAdj, otherAdj, adjustmentKeys]);
+
     const plotPoints = useMemo(() => {
         const points = runs
             .map((row) => {
                 const rawDate = pickField(row, ['formatted_date', 'event_date', 'date']);
                 const x = parseDateSortValue(rawDate);
-                const rawTime =
-                    pickField(row, ['time', 'time_display', 'finish_time', 'gun_time']) ??
-                    pickField(row, ['time_seconds', 'adj_time_seconds']);
-                const y = parseTimeSortValue(rawTime);
+                const y = selectedPlotAdjustmentKey
+                    ? getAdjustmentSeriesSeconds(row, selectedPlotAdjustmentKey)
+                    : parseTimeSortValue(
+                        pickField(row, ['time', 'time_display', 'finish_time', 'gun_time']) ??
+                        pickField(row, ['time_seconds', 'adj_time_seconds'])
+                    );
                 if (x === null || y === null) {
                     return null;
                 }
@@ -1042,11 +1118,51 @@ const Athletes: React.FC = () => {
             .sort((a, b) => a.x - b.x);
 
         return points;
-    }, [runs]);
+    }, [runs, selectedPlotAdjustmentKey]);
 
-    const plotChartHeight = isMobile ? '8.5cm' : '11cm';
-    const plotPanelMaxWidth = isMobile ? '100%' : '20cm';
+    const plotChartHeight = isMobile ? '8.5cm' : '10cm';
+    const plotPanelMaxWidth = isMobile ? '100%' : '18cm';
     const plotChartMinWidth = isMobile ? '10cm' : '100%';
+
+    const hasTimeRatioForPlot = (row: AthleteRecord): boolean => {
+        const timeRatio = pickField(row, ['time_ratio', 'timeRatio']);
+        return !(timeRatio === undefined || timeRatio === null || String(timeRatio).trim() === '');
+    };
+
+    const plotPointsFilteredByEligibility = useMemo(() => {
+        if (plotEligibilityMode === 'all') {
+            return plotPoints;
+        }
+
+        if (plotEligibilityMode === 'eligible') {
+            return plotPoints.filter((point) => hasTimeRatioForPlot(point.row));
+        }
+
+        const rollingWindowMs = 90 * 24 * 60 * 60 * 1000;
+        const bestPointKeys = new Set<string>();
+
+        for (let startIndex = 0; startIndex < plotPoints.length; startIndex += 1) {
+            const windowStart = plotPoints[startIndex].x;
+            const windowEnd = windowStart + rollingWindowMs;
+
+            let bestIndex = startIndex;
+            let scanIndex = startIndex;
+
+            while (scanIndex < plotPoints.length && plotPoints[scanIndex].x <= windowEnd) {
+                const candidate = plotPoints[scanIndex];
+                const currentBest = plotPoints[bestIndex];
+                if (candidate.y < currentBest.y || (candidate.y === currentBest.y && candidate.x < currentBest.x)) {
+                    bestIndex = scanIndex;
+                }
+                scanIndex += 1;
+            }
+
+            const bestPoint = plotPoints[bestIndex];
+            bestPointKeys.add(`${bestPoint.x}-${bestPoint.y}-${bestIndex}`);
+        }
+
+        return plotPoints.filter((point, index) => bestPointKeys.has(`${point.x}-${point.y}-${index}`));
+    }, [plotPoints, plotEligibilityMode]);
 
     const getPlotEventName = (row: AthleteRecord): string => {
         const raw = pickField(row, ['event_display', 'eventDisplay', 'event_name', 'eventName', 'event']);
@@ -1060,7 +1176,7 @@ const Athletes: React.FC = () => {
 
     const plotEventLegendEntries = useMemo(() => {
         const counts = new Map<string, number>();
-        plotPoints.forEach((point) => {
+        plotPointsFilteredByEligibility.forEach((point) => {
             const eventName = getPlotEventName(point.row);
             counts.set(eventName, (counts.get(eventName) ?? 0) + 1);
         });
@@ -1074,7 +1190,7 @@ const Athletes: React.FC = () => {
             count,
             color: plotEventPalette[index]
         }));
-    }, [plotPoints]);
+    }, [plotPointsFilteredByEligibility]);
 
     const plotEventColorByName = useMemo(() => {
         const colorMap = new Map<string, string>();
@@ -1086,14 +1202,14 @@ const Athletes: React.FC = () => {
 
     const plotOtherEventCount = useMemo(() => {
         let count = 0;
-        plotPoints.forEach((point) => {
+        plotPointsFilteredByEligibility.forEach((point) => {
             const eventName = getPlotEventName(point.row);
             if (!plotEventColorByName.has(eventName)) {
                 count += 1;
             }
         });
         return count;
-    }, [plotPoints, plotEventColorByName]);
+    }, [plotPointsFilteredByEligibility, plotEventColorByName]);
 
     const isPointVisibleForLegendSelection = (row: AthleteRecord): boolean => {
         if (!selectedPlotLegendKey) {
@@ -1152,12 +1268,6 @@ const Athletes: React.FC = () => {
                 start: normalized.start,
                 end: normalized.end
             });
-            chart.dispatchAction({
-                type: 'dataZoom',
-                dataZoomId: axis === 'x' ? 'xZoomSlider' : 'yZoomSlider',
-                start: normalized.start,
-                end: normalized.end
-            });
         }
     };
 
@@ -1197,11 +1307,42 @@ const Athletes: React.FC = () => {
         shiftAxisRight('y');
     };
 
+    const resetPlotZoom = () => {
+        const resetRange = { start: 0, end: 100 };
+        setPlotXZoom(resetRange);
+        setPlotYZoom(resetRange);
+
+        const chart = plotChartRef.current?.getEchartsInstance?.();
+        if (chart) {
+            chart.dispatchAction({
+                type: 'dataZoom',
+                dataZoomId: 'xZoom',
+                start: resetRange.start,
+                end: resetRange.end
+            });
+            chart.dispatchAction({
+                type: 'dataZoom',
+                dataZoomId: 'yZoom',
+                start: resetRange.start,
+                end: resetRange.end
+            });
+        }
+    };
+
     useEffect(() => {
         setPlotXZoom({ start: 0, end: 100 });
         setPlotYZoom({ start: 0, end: 100 });
+        setPlotEligibilityMode('all');
         setSelectedPlotLegendKey(null);
     }, [activeSelectedCode, showPlot]);
+
+    const cyclePlotEligibilityMode = () => {
+        setPlotEligibilityMode((prev) => {
+            if (prev === 'all') return 'eligible';
+            if (prev === 'eligible') return 'best';
+            return 'all';
+        });
+    };
 
     const handlePlotDataZoom = (params: any) => {
         const events = Array.isArray(params?.batch) ? params.batch : [params];
@@ -1226,14 +1367,29 @@ const Athletes: React.FC = () => {
         });
     };
 
-    const plotOption = useMemo(() => {
-        if (plotPoints.length === 0) return null;
+    const jumpToRunHistoryRow = (row: AthleteRecord | null | undefined) => {
+        if (!row) return;
+        const rowDate = pickField(row, ['formatted_date', 'event_date', 'date']);
+        const targetDate = formatDateValue(rowDate);
+        if (!targetDate) return;
 
-        const minX = plotPoints[0].x;
-        const maxX = plotPoints[plotPoints.length - 1].x;
+        setShowProfile(false);
+        setShowPlot(false);
+        setProfileJumpDate(targetDate);
+        setProfileJumpRequest({ date: targetDate, stamp: Date.now() });
+    };
+
+    const plotOption = useMemo(() => {
+        if (plotPointsFilteredByEligibility.length === 0) return null;
+
+        const minX = plotPointsFilteredByEligibility[0].x;
+        const maxX = plotPointsFilteredByEligibility[plotPointsFilteredByEligibility.length - 1].x;
+        const fullXRange = Math.max(1, maxX - minX);
+        const visibleXRange = Math.max(1, fullXRange * ((plotXZoom.end - plotXZoom.start) / 100));
+        const xAxisIntervalMs = Math.max(1, Math.ceil(visibleXRange / 9));
         const yStepSeconds = 5 * 60;
-        const rawMinY = Math.min(...plotPoints.map((point) => point.y));
-        const rawMaxY = Math.max(...plotPoints.map((point) => point.y));
+        const rawMinY = Math.min(...plotPointsFilteredByEligibility.map((point) => point.y));
+        const rawMaxY = Math.max(...plotPointsFilteredByEligibility.map((point) => point.y));
         const minY = Math.floor(rawMinY / yStepSeconds) * yStepSeconds;
         const maxYBase = Math.ceil(rawMaxY / yStepSeconds) * yStepSeconds;
         const maxY = maxYBase === minY ? minY + yStepSeconds : maxYBase;
@@ -1249,15 +1405,77 @@ const Athletes: React.FC = () => {
             },
             tooltip: {
                 trigger: 'item',
+                confine: true,
+                extraCssText: 'z-index: 5000; pointer-events: none;',
+                position: (point: number[], _params: any, _dom: any, _rect: any, size: any) => {
+                    const margin = 10;
+                    const viewSize: number[] = size?.viewSize ?? [0, 0];
+                    const contentSize: number[] = size?.contentSize ?? [0, 0];
+                    const pointX = Array.isArray(point) ? Number(point[0] ?? 0) : 0;
+                    const pointY = Array.isArray(point) ? Number(point[1] ?? 0) : 0;
+
+                    let x = pointX + margin;
+                    let y = pointY - contentSize[1] - margin;
+
+                    if (y < margin) {
+                        y = pointY + margin;
+                    }
+                    if (x + contentSize[0] > viewSize[0] - margin) {
+                        x = Math.max(margin, pointX - contentSize[0] - margin);
+                    }
+
+                    x = Math.max(margin, Math.min(x, Math.max(margin, viewSize[0] - contentSize[0] - margin)));
+                    y = Math.max(margin, Math.min(y, Math.max(margin, viewSize[1] - contentSize[1] - margin)));
+
+                    return [x, y];
+                },
                 formatter: (params: any) => {
                     const row = params?.data?.row;
                     const eventDate = formatDateValue(pickField(row, ['formatted_date', 'event_date', 'date']));
                     const eventName = String(pickField(row, ['event_display', 'eventDisplay', 'event_name', 'eventName', 'event']) ?? 'Event');
-                    const timeValue = formatTimeValue(
+                    const rawTime =
                         pickField(row, ['time', 'time_display', 'finish_time', 'gun_time']) ??
-                        params?.value?.[1]
-                    );
-                    return `${eventDate}<br/>${timeValue}<br/>${eventName}`;
+                        pickField(row, ['time_seconds', 'adj_time_seconds']) ??
+                        params?.value?.[1];
+
+                    const eventAdj = formatTimeValue(getAdjustmentSeriesSeconds(row, 'event_adj_time'));
+                    const ageAdj = formatTimeValue(getAdjustmentSeriesSeconds(row, 'age_adj_time'));
+                    const sexAdj = formatTimeValue(getAdjustmentSeriesSeconds(row, 'sex_adj_time'));
+                    const ageEventAdj = formatTimeValue(getAdjustmentSeriesSeconds(row, 'event_age_adj_time'));
+                    const ageSexAdj = formatTimeValue(getAdjustmentSeriesSeconds(row, 'age_sex_adj_time'));
+                    const sexEventAdj = formatTimeValue(getAdjustmentSeriesSeconds(row, 'event_sex_adj_time'));
+                    const ageSexEventAdj = formatTimeValue(getAdjustmentSeriesSeconds(row, 'event_age_sex_adj_time'));
+
+                    const escapeHtml = (value: unknown): string => String(value ?? '')
+                        .replace(/&/g, '&amp;')
+                        .replace(/</g, '&lt;')
+                        .replace(/>/g, '&gt;')
+                        .replace(/"/g, '&quot;')
+                        .replace(/'/g, '&#39;');
+
+                    const tooltipRows: Array<{ label: string; value: string }> = [
+                        { label: 'Date', value: eventDate },
+                        { label: 'Event', value: eventName },
+                        { label: 'Time', value: formatTimeValue(rawTime) },
+                        { label: 'Event Adj', value: eventAdj },
+                        { label: 'Age Adj', value: ageAdj },
+                        { label: 'Sex Adj', value: sexAdj },
+                        { label: 'Age_event_adj', value: ageEventAdj },
+                        { label: 'Age_sex_adj', value: ageSexAdj },
+                        { label: 'Sex_event_adj', value: sexEventAdj },
+                        { label: 'Age_sex_event_adj', value: ageSexEventAdj }
+                    ];
+
+                    const rowsHtml = tooltipRows
+                        .map(({ label, value }) => (
+                            `<div style="display:grid;grid-template-columns:auto minmax(6.5ch,1fr);column-gap:0.6rem;align-items:baseline;line-height:1.2;">` +
+                            `<span style="font-weight:700;white-space:nowrap;">${escapeHtml(label)}:</span>` +
+                            `<span style="text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;">${escapeHtml(value)}</span>` +
+                            `</div>`
+                        ))
+                        .join('');
+
+                    return `<div style="font-size:12px;line-height:1.2;">${rowsHtml}</div>`;
                 }
             },
             xAxis: {
@@ -1265,6 +1483,8 @@ const Athletes: React.FC = () => {
                 min: minX,
                 max: maxX,
                 splitNumber: 10,
+                interval: xAxisIntervalMs,
+                minInterval: xAxisIntervalMs,
                 splitLine: {
                     show: true,
                     lineStyle: {
@@ -1276,6 +1496,7 @@ const Athletes: React.FC = () => {
                 nameLocation: 'middle',
                 nameGap: 38,
                 axisLabel: {
+                    hideOverlap: true,
                     formatter: (value: number) => formatMonthYearValue(value)
                 }
             },
@@ -1314,8 +1535,8 @@ const Athletes: React.FC = () => {
             dataZoom: [
                 { id: 'xZoom', type: 'inside', xAxisIndex: 0, filterMode: 'none', start: plotXZoom.start, end: plotXZoom.end },
                 { id: 'yZoom', type: 'inside', yAxisIndex: 0, filterMode: 'none', start: plotYZoom.start, end: plotYZoom.end },
-                { id: 'xZoomSlider', type: 'slider', xAxisIndex: 0, filterMode: 'none', start: plotXZoom.start, end: plotXZoom.end, height: 16, bottom: 18 },
-                { id: 'yZoomSlider', type: 'slider', yAxisIndex: 0, filterMode: 'none', start: plotYZoom.start, end: plotYZoom.end, width: 14, right: 8 }
+                // { id: 'xZoomSlider', type: 'slider', xAxisIndex: 0, filterMode: 'none', start: plotXZoom.start, end: plotXZoom.end, height: 16, bottom: 18 },
+                // { id: 'yZoomSlider', type: 'slider', yAxisIndex: 0, filterMode: 'none', start: plotYZoom.start, end: plotYZoom.end, width: 14, right: 8 }
             ],
             series: [
                 {
@@ -1325,7 +1546,7 @@ const Athletes: React.FC = () => {
                         borderColor: '#1e3a8a',
                         borderWidth: 0.8,
                     },
-                    data: plotPoints.map((point) => ({
+                    data: plotPointsFilteredByEligibility.map((point) => ({
                         
                         value: [point.x, point.y],
                         row: point.row,
@@ -1336,7 +1557,7 @@ const Athletes: React.FC = () => {
                 }
             ]
         };
-    }, [plotPoints, isMobile, plotXZoom, plotYZoom, plotEventColorByName, selectedPlotLegendKey]);
+    }, [plotPointsFilteredByEligibility, isMobile, plotXZoom, plotYZoom, plotEventColorByName, selectedPlotLegendKey]);
 
     const makeTableRowKey = (row: AthleteRecord, index: number): string => {
         const keyParts = [
@@ -1572,8 +1793,62 @@ const Athletes: React.FC = () => {
                 <>
                     <section className="athlete-runs-section">
                         {showPlot ? (
+                            <>
                             <div
-                                className="athlete-runs-table-wrapper"
+                                style={{
+                                    width: '100%',
+                                    maxWidth: plotPanelMaxWidth,
+                                    display: 'flex',
+                                    position: 'relative',
+                                    zIndex: isMobile ? 10 : 1400,
+                                    justifyContent: 'flex-end',
+                                    paddingLeft: '0.3cm',
+                                    paddingRight: isMobile ? '2.5cm' : '5.3cm',
+                                    boxSizing: 'border-box',
+                                    marginBottom: '0.2rem',
+                                    overflow: 'visible'
+                                }}
+                            >
+                                <div
+                                    style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '0.35rem',
+                                        position: 'relative',
+                                        zIndex: isMobile ? 20 : 1401,
+                                        transform: isMobile ? 'translateY(-2cm)' : 'translateY(-0.7cm)'
+                                    }}
+                                >
+                                    <span
+                                        style={{
+                                            fontSize: '0.78rem',
+                                            fontWeight: 700,
+                                            color: '#111827'
+                                        }}
+                                    >
+                                        Show:
+                                    </span>
+                                    <button
+                                        type="button"
+                                        onClick={cyclePlotEligibilityMode}
+                                        style={{
+                                            height: '1.9rem',
+                                            border: '1px solid #9ca3af',
+                                            borderRadius: '6px',
+                                            background: '#fff',
+                                            color: '#111827',
+                                            fontSize: '0.78rem',
+                                            fontWeight: 700,
+                                            cursor: 'pointer',
+                                            padding: '0 0.65rem'
+                                        }}
+                                    >
+                                        {plotEligibilityMode === 'all' ? 'All' : plotEligibilityMode === 'eligible' ? 'Eligible' : 'Best'}
+                                    </button>
+                                </div>
+                            </div>
+                            <div
+                                className="athlete-runs-table-wrapper athlete-runs-table-wrapper--plot"
                                 style={{
                                     background: 'transparent',
                                     boxShadow: 'none',
@@ -1609,7 +1884,7 @@ const Athletes: React.FC = () => {
                                         Time by Date
                                     </div>
                                     <div style={{ padding: '0.6rem 0.8rem 0.9rem 0.8rem' }}>
-                                        {plotPoints.length === 0 ? (
+                                        {plotPointsFilteredByEligibility.length === 0 ? (
                                             <div style={{ color: '#6b7280', fontSize: '0.9rem' }}>No plot data available.</div>
                                         ) : (
                                             <>
@@ -1625,7 +1900,7 @@ const Athletes: React.FC = () => {
                                                         click: (params: any) => {
                                                             const row = params?.data?.row;
                                                             if (row) {
-                                                                handleRowClick(row);
+                                                                jumpToRunHistoryRow(row);
                                                             }
                                                         }
                                                     }}
@@ -1634,31 +1909,56 @@ const Athletes: React.FC = () => {
                                             <div
                                                 style={{
                                                     marginTop: '0.45rem',
-                                                    display: isMobile ? 'flex' : 'grid',
-                                                    gridTemplateColumns: isMobile ? undefined : 'auto 1fr auto',
-                                                    justifyContent: isMobile ? 'space-between' : undefined,
+                                                    display: 'flex',
                                                     alignItems: 'center',
                                                     gap: '0.6rem',
                                                     flexWrap: 'wrap'
                                                 }}
                                             >
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', justifySelf: 'start' }}>
-                                                    <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#374151', marginRight: '0.15rem' }}>X</span>
-                                                    <button type="button" onClick={() => zoomAxisIn('x')} style={{ minWidth: '1.6rem', height: '1.6rem', border: '1px solid #9ca3af', borderRadius: '5px', background: '#fff', fontWeight: 700, cursor: 'pointer' }}>+</button>
-                                                    <button type="button" onClick={() => zoomAxisOut('x')} style={{ minWidth: '1.6rem', height: '1.6rem', border: '1px solid #9ca3af', borderRadius: '5px', background: '#fff', fontWeight: 700, cursor: 'pointer' }}>-</button>
-                                                    <button type="button" onClick={() => shiftAxisLeft('x')} style={{ minWidth: '1.6rem', height: '1.6rem', border: '1px solid #9ca3af', borderRadius: '5px', background: '#fff', fontWeight: 700, cursor: 'pointer' }}>{'←'}</button>
-                                                    <button type="button" onClick={() => shiftAxisRight('x')} style={{ minWidth: '1.6rem', height: '1.6rem', border: '1px solid #9ca3af', borderRadius: '5px', background: '#fff', fontWeight: 700, cursor: 'pointer' }}>{'→'}</button>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem', flexWrap: 'wrap' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', border: '1px solid #9ca3af', borderRadius: '6px', background: '#f9fafb', padding: '0.18rem 0.28rem' }}>
+                                                        <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#374151', marginRight: '0.15rem' }}>Date</span>
+                                                        <button type="button" onClick={() => zoomAxisIn('x')} style={{ minWidth: '1.6rem', height: '1.6rem', border: '1px solid #9ca3af', borderRadius: '5px', background: '#fff', fontWeight: 700, cursor: 'pointer' }}>+</button>
+                                                        <button type="button" onClick={() => zoomAxisOut('x')} style={{ minWidth: '1.6rem', height: '1.6rem', border: '1px solid #9ca3af', borderRadius: '5px', background: '#fff', fontWeight: 700, cursor: 'pointer' }}>-</button>
+                                                        <button type="button" onClick={() => shiftAxisLeft('x')} style={{ minWidth: '1.6rem', height: '1.6rem', border: '1px solid #9ca3af', borderRadius: '5px', background: '#fff', fontWeight: 700, cursor: 'pointer' }}>{'←'}</button>
+                                                        <button type="button" onClick={() => shiftAxisRight('x')} style={{ minWidth: '1.6rem', height: '1.6rem', border: '1px solid #9ca3af', borderRadius: '5px', background: '#fff', fontWeight: 700, cursor: 'pointer' }}>{'→'}</button>
+                                                    </div>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', border: '1px solid #9ca3af', borderRadius: '6px', background: '#f9fafb', padding: '0.18rem 0.28rem' }}>
+                                                        <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#374151', marginRight: '0.15rem' }}>Time</span>
+                                                        <button type="button" onClick={() => zoomAxisIn('y')} style={{ minWidth: '1.6rem', height: '1.6rem', border: '1px solid #9ca3af', borderRadius: '5px', background: '#fff', fontWeight: 700, cursor: 'pointer' }}>+</button>
+                                                        <button type="button" onClick={() => zoomAxisOut('y')} style={{ minWidth: '1.6rem', height: '1.6rem', border: '1px solid #9ca3af', borderRadius: '5px', background: '#fff', fontWeight: 700, cursor: 'pointer' }}>-</button>
+                                                        <button type="button" onClick={shiftYAxisUp} style={{ minWidth: '1.6rem', height: '1.6rem', border: '1px solid #9ca3af', borderRadius: '5px', background: '#fff', fontWeight: 700, cursor: 'pointer' }}>{'↑'}</button>
+                                                        <button type="button" onClick={shiftYAxisDown} style={{ minWidth: '1.6rem', height: '1.6rem', border: '1px solid #9ca3af', borderRadius: '5px', background: '#fff', fontWeight: 700, cursor: 'pointer' }}>{'↓'}</button>
+                                                    </div>
                                                 </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={resetPlotZoom}
+                                                    style={{
+                                                        height: '1.9rem',
+                                                        border: '1px solid #9ca3af',
+                                                        borderRadius: '6px',
+                                                        background: '#fff',
+                                                        color: '#111827',
+                                                        fontSize: '0.78rem',
+                                                        fontWeight: 700,
+                                                        cursor: 'pointer',
+                                                        padding: '0 0.55rem'
+                                                    }}
+                                                >
+                                                    zoom-out
+                                                </button>
                                                 <div
                                                     style={{
                                                         display: 'flex',
                                                         alignItems: 'center',
-                                                        justifyContent: 'center',
+                                                        justifyContent: isMobile ? 'flex-start' : 'flex-end',
                                                         gap: '0.45rem',
                                                         flexWrap: 'wrap',
                                                         fontSize: '0.72rem',
                                                         color: '#374151',
-                                                        minWidth: 0
+                                                        minWidth: 0,
+                                                        marginLeft: isMobile ? 0 : 'auto'
                                                     }}
                                                 >
                                                     {plotEventLegendEntries.map((entry) => (
@@ -1702,19 +2002,13 @@ const Athletes: React.FC = () => {
                                                         <span>Other</span>
                                                     </button>
                                                 </div>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', justifySelf: 'end' }}>
-                                                    <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#374151', marginRight: '0.15rem' }}>Y</span>
-                                                    <button type="button" onClick={() => zoomAxisIn('y')} style={{ minWidth: '1.6rem', height: '1.6rem', border: '1px solid #9ca3af', borderRadius: '5px', background: '#fff', fontWeight: 700, cursor: 'pointer' }}>+</button>
-                                                    <button type="button" onClick={() => zoomAxisOut('y')} style={{ minWidth: '1.6rem', height: '1.6rem', border: '1px solid #9ca3af', borderRadius: '5px', background: '#fff', fontWeight: 700, cursor: 'pointer' }}>-</button>
-                                                    <button type="button" onClick={shiftYAxisUp} style={{ minWidth: '1.6rem', height: '1.6rem', border: '1px solid #9ca3af', borderRadius: '5px', background: '#fff', fontWeight: 700, cursor: 'pointer' }}>{'↑'}</button>
-                                                    <button type="button" onClick={shiftYAxisDown} style={{ minWidth: '1.6rem', height: '1.6rem', border: '1px solid #9ca3af', borderRadius: '5px', background: '#fff', fontWeight: 700, cursor: 'pointer' }}>{'↓'}</button>
-                                                </div>
                                             </div>
                                             </>
                                         )}
                                     </div>
                                 </div>
                             </div>
+                            </>
                         ) : showProfile ? (
                             <div
                                 className="athlete-runs-table-wrapper"
