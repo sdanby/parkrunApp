@@ -2137,7 +2137,27 @@ eventCodes.forEach(code => {
                     <tbody>
                         {sortedEventCodes.map(code => (
                             <tr key={code}>
-                                <td className="sticky-col">
+                                <td
+                                    className="sticky-col"
+                                    style={{ cursor: 'pointer' }}
+                                    onClick={() => {
+                                        const eventName = String(results.find(r => r.event_code === code)?.event_name || code);
+                                        const params = new URLSearchParams();
+                                        params.set('event_code', String(code));
+                                        params.set('event_name', eventName);
+                                        navigate(`/courses?${params.toString()}`, {
+                                            state: {
+                                                eventCode: String(code),
+                                                eventName,
+                                                from: 'results',
+                                                returnTo: {
+                                                    pathname: location.pathname,
+                                                    search: location.search
+                                                }
+                                            }
+                                        });
+                                    }}
+                                >
                                     {results.find(r => r.event_code === code)?.event_name || code}
                                 </td>
                                 <td className="sticky-col-2">
