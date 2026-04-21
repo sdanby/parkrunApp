@@ -1,0 +1,163 @@
+.courses-page {
+    width: 100%;
+}
+
+.course-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.35rem;
+    margin-left: 0.3cm;
+    margin-right: 0.3cm;
+    margin-bottom: 0.3rem;
+}
+
+.course-header-main {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    width: 100%;
+    min-width: 0;
+}
+
+.course-header-text {
+    min-width: 0;
+}
+
+.course-header-code,
+.course-header-total-events {
+    color: #374151;
+    font-size: 0.84rem;
+    margin-top: 0.1rem;
+}
+
+.course-view-control {
+    margin-left: auto;
+    min-width: 0;
+    transform: none;
+}
+
+.course-runs-section {
+    width: 100%;
+}
+
+.course-runs-empty {
+    color: #6b7280;
+    font-size: 0.9rem;
+    margin: 0.5rem 0;
+}
+
+.course-table-wrapper {
+    margin-top: -0.7cm;
+    --course-summary-sticky-height: 2.05rem;
+}
+
+.course-summary-table {
+    margin-bottom: 0;
+    position: sticky;
+    top: 0;
+    z-index: 80;
+}
+
+.course-table-wrapper .course-summary-table th,
+.course-table-wrapper .course-summary-table td {
+    position: sticky;
+    top: 0;
+    z-index: 80;
+    background: #ffffff;
+}
+
+.course-summary-table .athlete-date-cell {
+    background: #e0e0e0;
+}
+
+.course-table-wrapper .course-summary-table tbody th.athlete-date-cell {
+    position: sticky;
+    left: 0;
+    z-index: 95;
+    background: #e0e0e0;
+    box-shadow: 3px 0 6px rgba(0, 0, 0, 0.08);
+}
+
+.course-table-wrapper .athlete-runs-table:not(.course-summary-table) thead th,
+.course-table-wrapper .athlete-runs-table:not(.course-summary-table) thead th.athlete-date-header {
+    top: calc(var(--course-summary-sticky-height) - 1px);
+}
+
+.course-summary-table td {
+    font-weight: 700;
+}
+
+.course-summary-mode-select {
+    width: 110%;
+    border: none;
+    background: transparent;
+    font: inherit;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #111;
+    cursor: pointer;
+    padding: 0.00rem 0.0rem 0 0;
+    outline: none;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    line-height: 1.15;
+    background-image:
+        linear-gradient(45deg, transparent 50%, #111 50%),
+        linear-gradient(135deg, #111 50%, transparent 50%);
+    background-position:
+        calc(100% - 0.20rem) calc(60% + 2px),
+        calc(100% + 0.00rem) calc(60% + 2px);
+    background-size: 0.3rem 0.3rem, 0.3rem 0.3rem;
+    background-repeat: no-repeat;
+}
+
+.course-summary-mode-select::-ms-expand {
+    display: none;
+}
+
+.course-clickable-row {
+    cursor: pointer;
+}
+
+.course-clickable-row:hover {
+    background: #f3f4f6;
+}
+
+.course-clickable-row.highlighted-source-row,
+.course-clickable-row.highlighted-source-row:hover {
+    background: #add8e6;
+}
+
+.course-clickable-row.highlighted-source-row > th,
+.course-clickable-row.highlighted-source-row > td,
+.course-clickable-row.highlighted-source-row:hover > th,
+.course-clickable-row.highlighted-source-row:hover > td {
+    background-color: #add8e6 !important;
+}
+
+@media (min-width: 901px) {
+    .courses-page .course-view-control.races-view-control {
+        margin-left: 0 !important;
+        left: 0 !important;
+        transform: translateX(-33.2cm) !important;
+    }
+}
+
+@media (max-width: 900px) {
+    .course-header-main {
+        flex-direction: column;
+        gap: 0.35rem;
+    }
+
+    .course-view-control {
+        margin-left: 0;
+    }
+
+    .courses-page .course-view-control.races-view-control {
+        top: -1.2cm !important;
+        left: -0.3cm !important;
+        margin-left: 0 !important;
+        transform: translateX(-1.2cm) !important;
+    }
+}
