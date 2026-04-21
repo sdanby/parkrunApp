@@ -689,9 +689,41 @@ const Races: React.FC = () => {
     const BackButton: React.FC = () => {
         const params = new URLSearchParams(location.search);
         const fromList = params.get('from_list') === '1';
+        const locationState: any = location.state ?? {};
+        const fromCourses = locationState?.from === 'courses' || params.get('from_courses') === '1';
         const handleBack = () => {
             if (fromList) {
                 navigate('/lists');
+                return;
+            }
+            if (fromCourses) {
+                const returnTo = locationState?.returnTo;
+                const targetPath = (returnTo && typeof returnTo.pathname === 'string') ? returnTo.pathname : '/courses';
+                const targetParams = new URLSearchParams((returnTo && typeof returnTo.search === 'string') ? returnTo.search : '');
+                if (eventName) {
+                    targetParams.set('event_name', String(eventName));
+                }
+                if (rawEventParam) {
+                    targetParams.set('event_code', String(rawEventParam));
+                }
+                const sourceDate = resolvedDateDisplay || date;
+                if (sourceDate) {
+                    targetParams.set('source_date', String(sourceDate));
+                }
+                navigate(`${targetPath}${targetParams.toString() ? `?${targetParams.toString()}` : ''}`, {
+                    state: {
+                        eventCode: rawEventParam || undefined,
+                        eventName: eventName || undefined,
+                        from: 'results',
+                        returnTo: {
+                            pathname: '/results'
+                        },
+                        sourceEvent: {
+                            eventName: eventName || undefined,
+                            eventDate: sourceDate || undefined
+                        }
+                    }
+                });
                 return;
             }
             // Always navigate back to the Results page and ignore browser history entries.
@@ -717,10 +749,10 @@ const Races: React.FC = () => {
         return (
             <button
                 type="button"
-                aria-label={fromList ? 'Back to Lists' : 'Back to Event Analysis'}
+                aria-label={fromList ? 'Back to Lists' : (fromCourses ? 'Back to Courses' : 'Back to Event Analysis')}
                 className="races-back-btn"
                 onClick={handleBack}
-                title={fromList ? 'Back to Lists' : 'Back to Event Analysis'}
+                title={fromList ? 'Back to Lists' : (fromCourses ? 'Back to Courses' : 'Back to Event Analysis')}
             >
                 ←
             </button>
