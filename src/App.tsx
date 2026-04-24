@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { createBrowserRouter, RouterProvider, Outlet, useLocation } from 'react-router-dom';
+import { createBrowserRouter, RouterProvider, Outlet, useLocation, Navigate } from 'react-router-dom';
 import HamburgerMenu from './components/HamburgerMenu';
 import Home from './pages/Home';
 import Login from './pages/Login';
@@ -10,6 +10,8 @@ import Athletes from './pages/Athletes';
 import Lists from './pages/Lists';
 import { API_BASE_URL } from './api/backendAPI';
 import './styles/main.css';
+
+const AUTH_TOKEN_KEY = 'auth_token_v1';
 
 const headings: { [key: string]: string } = {
     '/': 'Home',
@@ -108,6 +110,23 @@ const RootLayout: React.FC = () => (
     </>
 );
 
+const RequireAuthLayout: React.FC = () => {
+    const location = useLocation();
+    const token = localStorage.getItem(AUTH_TOKEN_KEY);
+    if (!token) {
+        return <Navigate to="/login" replace state={{ from: location }} />;
+    }
+    return <RootLayout />;
+};
+
+const LoginOnlyRoute: React.FC = () => {
+    const token = localStorage.getItem(AUTH_TOKEN_KEY);
+    if (token) {
+        return <Navigate to="/results" replace />;
+    }
+    return <Login />;
+};
+
 // Build router options with a lenient `any` type so we can pass
 // future flags that the installed router type definitions may not
 // yet include (this silences runtime deprecation warnings).
@@ -116,16 +135,19 @@ const _futureOptions: any = { future: { v7_relativeSplatPath: true, v7_startTran
 const router = createBrowserRouter([
     {
         path: '/',
-        element: <RootLayout />,
+        element: <RequireAuthLayout />,
         children: [
             { index: true, element: <Home /> },
-            { path: 'login', element: <Login /> },
             { path: 'results', element: <Results /> },
             { path: 'races', element: <Races /> },
             { path: 'courses', element: <Courses /> },
             { path: 'athletes', element: <Athletes /> },
             { path: 'lists', element: <Lists /> }
         ]
+    },
+    {
+        path: '/login',
+        element: <LoginOnlyRoute />
     }
 ], _futureOptions);
 
