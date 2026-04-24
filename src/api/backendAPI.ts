@@ -4,6 +4,17 @@ import axios from 'axios';
 export const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'https://hello-world-9yb9.onrender.com';
 const API_LOCAL_URL = 'http://localhost:5000/';
 
+export type AuthUser = {
+    id: number;
+    email: string;
+    displayName?: string;
+};
+
+export type AuthResponse = {
+    token: string;
+    user: AuthUser;
+};
+
 export const fetchResults = async (opts?: number | string) => {
     try {
         let url = `${API_BASE_URL}/results`;
@@ -245,4 +256,50 @@ export const fetchAthleteBestSummary = async (athleteCode: string) => {
         console.error('Error fetching athlete best summary:', error);
         throw error;
     }
+};
+
+export const registerWithEmail = async (email: string, password: string, displayName?: string): Promise<AuthResponse> => {
+    const response = await axios.post(`${API_BASE_URL}/api/auth/register`, {
+        email,
+        password,
+        displayName
+    });
+    return response.data;
+};
+
+export const loginWithEmail = async (email: string, password: string): Promise<AuthResponse> => {
+    const response = await axios.post(`${API_BASE_URL}/api/auth/login`, {
+        email,
+        password
+    });
+    return response.data;
+};
+
+export const loginWithGoogle = async (credential: string): Promise<AuthResponse> => {
+    const response = await axios.post(`${API_BASE_URL}/api/auth/google`, {
+        credential
+    });
+    return response.data;
+};
+
+export const logoutSession = async (token?: string): Promise<void> => {
+    await axios.post(`${API_BASE_URL}/api/auth/logout`, {
+        token
+    });
+};
+
+export const trackPageVisit = async (payload: {
+    token?: string;
+    path: string;
+    enteredAt?: string;
+    leftAt?: string;
+    durationMs?: number;
+    referrer?: string;
+}): Promise<void> => {
+    await axios.post(`${API_BASE_URL}/api/analytics/page-visit`, payload);
+};
+
+export const fetchAuthConfig = async (): Promise<{ googleClientId?: string }> => {
+    const response = await axios.get(`${API_BASE_URL}/api/auth/config`);
+    return response.data || {};
 };
