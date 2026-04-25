@@ -1,11 +1,29 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { fetchAllResults } from '../api/backendAPI';
+import { logoutSession } from '../api/backendAPI';
 import './HamburgerMenu.css';
+
+const AUTH_TOKEN_KEY = 'auth_token_v1';
+const AUTH_USER_KEY = 'auth_user_v1';
 
 const HamburgerMenu: React.FC = () => {
     const [open, setOpen] = useState(false);
     const navigate = useNavigate();
+    const isAuthenticated = Boolean(localStorage.getItem(AUTH_TOKEN_KEY));
+
+    const handleLogout = async () => {
+        const token = localStorage.getItem(AUTH_TOKEN_KEY) || undefined;
+        try {
+            await logoutSession(token);
+        } catch (_err) {
+            // ignore logout API errors and still clear local auth state
+        }
+
+        localStorage.removeItem(AUTH_TOKEN_KEY);
+        localStorage.removeItem(AUTH_USER_KEY);
+        setOpen(false);
+        navigate('/login');
+    };
 
     const handleMenuClick = async (path: string) => {
         if (path === '/races') {
@@ -54,7 +72,9 @@ const HamburgerMenu: React.FC = () => {
             {open && (
                 <ul className="hamburger-list">
                     <li onClick={() => handleMenuClick('/')}>Home</li>
-                    <li onClick={() => handleMenuClick('/login')}>Login</li>
+                    <li onClick={() => (isAuthenticated ? handleLogout() : handleMenuClick('/login'))}>
+                        {isAuthenticated ? 'Logout' : 'Login'}
+                    </li>
                     <li onClick={() => handleMenuClick('/results')}>Event Analysis</li>
                     <li onClick={() => handleMenuClick('/races')}>Single Event</li>
                     <li onClick={() => handleMenuClick('/courses')}>Courses</li>
