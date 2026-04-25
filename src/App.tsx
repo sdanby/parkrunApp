@@ -23,13 +23,45 @@ const headings: { [key: string]: string } = {
     '/lists': 'Lists'
 };
 
+const getTopBarUserLabel = (): string => {
+    try {
+        const raw = localStorage.getItem('auth_user_v1');
+        if (!raw) return '';
+        const parsed = JSON.parse(raw) || {};
+        const displayName = String(parsed.displayName || parsed.email || '').trim();
+        const athleteCode = String(parsed.athleteCode || '').trim();
+        if (!displayName && !athleteCode) return '';
+        if (displayName && athleteCode) return `Logged in as: ${displayName} [${athleteCode}]`;
+        return `Logged in as: ${displayName || athleteCode}`;
+    } catch (_err) {
+        return '';
+    }
+};
+
 const TopBar: React.FC = () => {
     const location = useLocation();
     const heading = headings[location.pathname] || '';
+    const userLabel = getTopBarUserLabel();
     return (
-        <div className="top-bar" style={{  padding: '0px 0' }}>
+        <div className="top-bar" style={{ padding: '0px 0', display: 'flex', alignItems: 'center', position: 'relative' }}>
             <HamburgerMenu />
             <h1 style={{ marginLeft: '2cm', marginTop: '0.8cm', fontSize: '1.5em' }}>{heading}</h1>
+            {userLabel && (
+                <div
+                    style={{
+                        position: 'absolute',
+                        left: '2cm',
+                        marginTop: '1.55cm',
+                        fontSize: '0.72rem',
+                        color: '#6b7280',
+                        fontStyle: 'italic',
+                        whiteSpace: 'nowrap',
+                    }}
+                    title="Logged in user"
+                >
+                    {userLabel}
+                </div>
+            )}
         </div>
     );
 };
@@ -120,10 +152,6 @@ const RequireAuthLayout: React.FC = () => {
 };
 
 const LoginOnlyRoute: React.FC = () => {
-    const token = localStorage.getItem(AUTH_TOKEN_KEY);
-    if (token) {
-        return <Navigate to="/results" replace />;
-    }
     return <Login />;
 };
 
