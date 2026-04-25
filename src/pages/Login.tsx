@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { fetchAuthConfig, loginWithEmail, loginWithGoogle, registerWithEmail } from '../api/backendAPI';
+import AthleteSearch from '../components/AthleteSearch';
+import { fetchAuthConfig, linkAthleteCode, loginWithEmail, loginWithGoogle, logoutSession, registerWithEmail, type AuthUser } from '../api/backendAPI';
 
 declare global {
     interface Window {
@@ -10,6 +11,11 @@ declare global {
 
 const AUTH_TOKEN_KEY = 'auth_token_v1';
 const AUTH_USER_KEY = 'auth_user_v1';
+
+type PendingLogin = {
+    token: string;
+    user: AuthUser;
+};
 
 const Login: React.FC = () => {
     const navigate = useNavigate();
@@ -21,12 +27,83 @@ const Login: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [googleClientId, setGoogleClientId] = useState<string>(process.env.REACT_APP_GOOGLE_CLIENT_ID || '');
+    const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => Boolean(localStorage.getItem(AUTH_TOKEN_KEY)));
+    const [pendingLogin, setPendingLogin] = useState<PendingLogin | null>(null);
+    const [selectedAthleteCode, setSelectedAthleteCode] = useState<string>('');
 
     const completeLogin = (token: string, user: any) => {
+        const normalizedUser = (user || {}) as AuthUser;
+        setPendingLogin({ token, user: normalizedUser });
+        setSelectedAthleteCode(String(normalizedUser.athleteCode || ''));
+    };
+
+    const finalizeLogin = (token: string, user: AuthUser) => {
         localStorage.setItem(AUTH_TOKEN_KEY, token);
         localStorage.setItem(AUTH_USER_KEY, JSON.stringify(user));
+        setIsAuthenticated(true);
+        setPendingLogin(null);
         navigate('/results');
     };
+
+    const handlePostLoginContinue = async () => {
+        if (!pendingLogin) {
+            return;
+        }
+        setError(null);
+        setLoading(true);
+        let userToStore: AuthUser = pendingLogin.user;
+        try {
+            const response = await linkAthleteCode(pendingLogin.token, selectedAthleteCode || undefined);
+            if (response?.user) {
+                userToStore = response.user;
+            } else {
+                userToStore = {
+                    ...userToStore,
+                    athleteCode: selectedAthleteCode || null,
+                };
+            }
+        } catch (_err) {
+            userToStore = {
+                ...userToStore,
+                athleteCode: selectedAthleteCode || null,
+            };
+        } finally {
+            setLoading(false);
+        }
+
+        finalizeLogin(pendingLogin.token, userToStore);
+    };
+
+    const formatLastLogin = (user?: AuthUser) => {
+        if (!user) return 'Not available';
+        const value = user.previousLoginAt || user.lastLoginAt;
+        if (!value) return 'Not available';
+        const dt = new Date(value);
+        if (Number.isNaN(dt.getTime())) return 'Not available';
+        return dt.toLocaleString();
+    };
+
+    const handleLogout = async () => {
+        setError(null);
+        setLoading(true);
+        const token = localStorage.getItem(AUTH_TOKEN_KEY) || undefined;
+        try {
+            await logoutSession(token);
+        } catch (_err) {
+            // ignore API errors and still clear local auth state
+        } finally {
+            localStorage.removeItem(AUTH_TOKEN_KEY);
+            localStorage.removeItem(AUTH_USER_KEY);
+            setIsAuthenticated(false);
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        const onStorage = () => setIsAuthenticated(Boolean(localStorage.getItem(AUTH_TOKEN_KEY)));
+        window.addEventListener('storage', onStorage);
+        return () => window.removeEventListener('storage', onStorage);
+    }, []);
 
     useEffect(() => {
         if (googleClientId) {
@@ -130,6 +207,88 @@ const Login: React.FC = () => {
     return (
         <div className="page-content" style={{ display: 'flex', justifyContent: 'center', paddingTop: '1.2rem' }}>
             <div style={{ width: 'min(420px, 96vw)', background: '#fff', border: '1px solid #d5dae3', borderRadius: 12, padding: '1rem 1rem 1.2rem' }}>
+                {isAuthenticated ? (
+                    <div style={{ display: 'grid', gap: 10 }}>
+                        <div style={{ fontWeight: 700, fontSize: '1rem' }}>You are currently logged in.</div>
+                        <div style={{ color: '#475569' }}>Use logout below to test signing in again or linking an athlete.</div>
+                        <button
+                            type="button"
+                            onClick={handleLogout}
+                            disabled={loading}
+                            style={{
+                                marginTop: 4,
+                                padding: '0.55rem 0.75rem',
+                                borderRadius: 8,
+                                border: '1px solid #1f2937',
+                                background: '#111827',
+                                color: '#fff',
+                                fontWeight: 700,
+                                cursor: loading ? 'default' : 'pointer',
+                                opacity: loading ? 0.7 : 1
+                            }}
+                        >
+                            {loading ? 'Please wait…' : 'Logout'}
+                        </button>
+                    </div>
+                ) : pendingLogin ? (
+                    <div style={{ display: 'grid', gap: 10 }}>
+                        <div style={{ fontWeight: 700, fontSize: '1rem' }}>Confirm your profile</div>
+                        <div><strong>Name:</strong> {pendingLogin.user.displayName || pendingLogin.user.email || 'Unknown user'}</div>
+                        <div><strong>Last login:</strong> {formatLastLogin(pendingLogin.user)}</div>
+                        <div><strong>Athlete code:</strong> {selectedAthleteCode || 'Not set'}</div>
+
+                        <div>
+                            <label htmlFor="login-athlete-search" style={{ display: 'block', fontWeight: 600, marginBottom: 6 }}>
+                                Select new/Change parkrun athlete code
+                            </label>
+                            <AthleteSearch
+                                inputId="login-athlete-search"
+                                placeholder="Search athlete name or code..."
+                                onSelect={(athleteCode) => setSelectedAthleteCode(String(athleteCode || ''))}
+                            />
+                        </div>
+
+                        <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
+                            <button
+                                type="button"
+                                onClick={handlePostLoginContinue}
+                                disabled={loading}
+                                style={{
+                                    flex: 1,
+                                    padding: '0.55rem 0.75rem',
+                                    borderRadius: 8,
+                                    border: '1px solid #1f2937',
+                                    background: '#111827',
+                                    color: '#fff',
+                                    fontWeight: 700,
+                                    cursor: loading ? 'default' : 'pointer',
+                                    opacity: loading ? 0.7 : 1
+                                }}
+                            >
+                                {loading ? 'Please wait…' : 'Continue'}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setSelectedAthleteCode('')}
+                                disabled={loading}
+                                style={{
+                                    flex: 1,
+                                    padding: '0.55rem 0.75rem',
+                                    borderRadius: 8,
+                                    border: '1px solid #cbd5e1',
+                                    background: '#fff',
+                                    color: '#111827',
+                                    fontWeight: 700,
+                                    cursor: loading ? 'default' : 'pointer',
+                                    opacity: loading ? 0.7 : 1
+                                }}
+                            >
+                                Clear athlete code
+                            </button>
+                        </div>
+                    </div>
+                ) : (
+                    <>
                 <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
                     <button
                         type="button"
@@ -233,6 +392,8 @@ const Login: React.FC = () => {
                     <div style={{ marginTop: 12, color: '#b91c1c', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '0.45rem' }}>
                         {error}
                     </div>
+                )}
+                    </>
                 )}
             </div>
         </div>
