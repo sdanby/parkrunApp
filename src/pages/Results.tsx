@@ -4,6 +4,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { fetchResults, fetchAllResults } from '../api/backendAPI';
 import './ResultsTable.css'; // Create this CSS file for sticky headers
 import { formatDate,formatDate1,formatDate2,formatAvgTime,formatDateToDDMMYYYY } from '../utilities'; // Utility function to format dates
+import ReactECharts from 'echarts-for-react';
 
 const queryOptions = [
     { value: 'recent', label: 'Recent Events' },
@@ -450,11 +451,221 @@ const ResultsPageComponent: React.FC = () => {
     const [aggType, setAggType] = useState<string>('avg');
     const [cellAgg, setCellAgg] = useState<string>('single');
     const [infoMessage, setInfoMessage] = useState<string | null>(null);
+    const [showPlot, setShowPlot] = useState<boolean>(false);
+    const [plotDisplayMode, setPlotDisplayMode] = useState<'per_event' | 'cumulative'>('per_event');
+    const [isPlotExpanded, setIsPlotExpanded] = useState<boolean>(false);
+    const [plotSeriesColorMap, setPlotSeriesColorMap] = useState<Record<string, string>>({});
+    const [plotSelectionOrder, setPlotSelectionOrder] = useState<string[]>([]);
+    const [isLaptopLayout, setIsLaptopLayout] = useState<boolean>(() => {
+        if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+            return true;
+        }
+        return window.matchMedia('(min-width: 901px) and (pointer: fine)').matches;
+    });
 
     const navigate = useNavigate();
     const location = useLocation();
     const containerRef = useRef<HTMLDivElement | null>(null);
+    const plotChartRef = useRef<any>(null);
     const pendingRestoreRef = useRef<{ top: number | null; left: number | null } | null>(null);
+    const plotColorCursorRef = useRef<number>(0);
+    const plotHighlightPalette = ['#3b82f6', '#ef4444', '#22c55e', '#f97316', '#ec4899'];
+    const [plotXZoom, setPlotXZoom] = useState<{ start: number; end: number }>({ start: 0, end: 100 });
+    const [plotYZoom, setPlotYZoom] = useState<{ start: number; end: number }>({ start: 0, end: 100 });
+
+    const handlePlotLegendToggle = (seriesName: string) => {
+        if (!seriesName) return;
+
+        const wasSelected = Boolean(plotSeriesColorMap[seriesName]);
+
+        setPlotSeriesColorMap((prev) => {
+            const next = { ...prev };
+
+            if (next[seriesName]) {
+                delete next[seriesName];
+                return next;
+            }
+
+            const usedColors = new Set(Object.values(next));
+            const freeColor = plotHighlightPalette.find((color) => !usedColors.has(color));
+
+            if (freeColor) {
+                next[seriesName] = freeColor;
+                return next;
+            }
+
+            const rotateColor = plotHighlightPalette[plotColorCursorRef.current % plotHighlightPalette.length];
+            Object.keys(next).forEach((name) => {
+                if (next[name] === rotateColor) {
+                    delete next[name];
+                }
+            });
+            next[seriesName] = rotateColor;
+            plotColorCursorRef.current = (plotColorCursorRef.current + 1) % plotHighlightPalette.length;
+            return next;
+        });
+
+        setPlotSelectionOrder((prev) => {
+            const withoutCurrent = prev.filter((name) => name !== seriesName);
+            return wasSelected ? withoutCurrent : [...withoutCurrent, seriesName];
+        });
+    };
+
+    useEffect(() => {
+        setPlotSelectionOrder((prev) => prev.filter((name) => Boolean(plotSeriesColorMap[name])));
+    }, [plotSeriesColorMap]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+            return;
+        }
+
+        const mediaQuery = window.matchMedia('(min-width: 901px) and (pointer: fine)');
+        const syncLayout = () => setIsLaptopLayout(mediaQuery.matches);
+        syncLayout();
+
+        if (typeof mediaQuery.addEventListener === 'function') {
+            mediaQuery.addEventListener('change', syncLayout);
+            return () => mediaQuery.removeEventListener('change', syncLayout);
+        }
+
+        mediaQuery.addListener(syncLayout);
+        return () => mediaQuery.removeListener(syncLayout);
+    }, []);
+
+    const canTogglePlotExpand = isLaptopLayout;
+    const plotChartHeight = '12.5cm';
+    const plotChartMinWidth = canTogglePlotExpand && isPlotExpanded ? '33cm' : '18cm';
+
+    const clampPercent = (value: number) => Math.max(0, Math.min(100, value));
+
+    const normalizeZoomWindow = (start: number, end: number, minWindow = 2) => {
+        let nextStart = clampPercent(start);
+        let nextEnd = clampPercent(end);
+        if (nextEnd < nextStart) {
+            [nextStart, nextEnd] = [nextEnd, nextStart];
+        }
+        let windowSize = nextEnd - nextStart;
+        if (windowSize < minWindow) {
+            const center = (nextStart + nextEnd) / 2;
+            nextStart = clampPercent(center - minWindow / 2);
+            nextEnd = clampPercent(center + minWindow / 2);
+            windowSize = nextEnd - nextStart;
+            if (windowSize < minWindow) {
+                if (nextStart === 0) {
+                    nextEnd = minWindow;
+                } else if (nextEnd === 100) {
+                    nextStart = 100 - minWindow;
+                }
+            }
+        }
+        return { start: clampPercent(nextStart), end: clampPercent(nextEnd) };
+    };
+
+    const updateAxisZoom = (axis: 'x' | 'y', nextRange: { start: number; end: number }) => {
+        const normalized = normalizeZoomWindow(nextRange.start, nextRange.end);
+        if (axis === 'x') {
+            setPlotXZoom(normalized);
+        } else {
+            setPlotYZoom(normalized);
+        }
+
+        const chart = plotChartRef.current?.getEchartsInstance?.();
+        if (chart) {
+            chart.dispatchAction({
+                type: 'dataZoom',
+                dataZoomId: axis === 'x' ? 'xZoom' : 'yZoom',
+                start: normalized.start,
+                end: normalized.end
+            });
+        }
+    };
+
+    const zoomAxisIn = (axis: 'x' | 'y') => {
+        const source = axis === 'x' ? plotXZoom : plotYZoom;
+        const windowSize = source.end - source.start;
+        const delta = windowSize * 0.12;
+        updateAxisZoom(axis, { start: source.start + delta, end: source.end - delta });
+    };
+
+    const zoomAxisOut = (axis: 'x' | 'y') => {
+        const source = axis === 'x' ? plotXZoom : plotYZoom;
+        const windowSize = source.end - source.start;
+        const delta = windowSize * 0.15;
+        updateAxisZoom(axis, { start: source.start - delta, end: source.end + delta });
+    };
+
+    const shiftAxisLeft = (axis: 'x' | 'y') => {
+        const source = axis === 'x' ? plotXZoom : plotYZoom;
+        const windowSize = source.end - source.start;
+        const delta = Math.max(windowSize * 0.2, 1);
+        updateAxisZoom(axis, { start: source.start - delta, end: source.end - delta });
+    };
+
+    const shiftAxisRight = (axis: 'x' | 'y') => {
+        const source = axis === 'x' ? plotXZoom : plotYZoom;
+        const windowSize = source.end - source.start;
+        const delta = Math.max(windowSize * 0.2, 1);
+        updateAxisZoom(axis, { start: source.start + delta, end: source.end + delta });
+    };
+
+    const shiftYAxisUp = () => {
+        shiftAxisLeft('y');
+    };
+
+    const shiftYAxisDown = () => {
+        shiftAxisRight('y');
+    };
+
+    const resetPlotZoom = () => {
+        const resetRange = { start: 0, end: 100 };
+        setPlotXZoom(resetRange);
+        setPlotYZoom(resetRange);
+
+        const chart = plotChartRef.current?.getEchartsInstance?.();
+        if (chart) {
+            chart.dispatchAction({
+                type: 'dataZoom',
+                dataZoomId: 'xZoom',
+                start: resetRange.start,
+                end: resetRange.end
+            });
+            chart.dispatchAction({
+                type: 'dataZoom',
+                dataZoomId: 'yZoom',
+                start: resetRange.start,
+                end: resetRange.end
+            });
+        }
+    };
+
+    const handlePlotDataZoom = (params: any) => {
+        const events = Array.isArray(params?.batch) ? params.batch : [params];
+        events.forEach((event: any) => {
+            const id = String(event?.dataZoomId ?? '');
+            const start = Number(event?.start);
+            const end = Number(event?.end);
+            if (!Number.isFinite(start) || !Number.isFinite(end)) {
+                return;
+            }
+            const normalized = normalizeZoomWindow(start, end);
+            if (id.startsWith('xZoom')) {
+                setPlotXZoom((prev) =>
+                    prev.start === normalized.start && prev.end === normalized.end ? prev : normalized
+                );
+            }
+            if (id.startsWith('yZoom')) {
+                setPlotYZoom((prev) =>
+                    prev.start === normalized.start && prev.end === normalized.end ? prev : normalized
+                );
+            }
+        });
+    };
+
+    useEffect(() => {
+        setPlotXZoom({ start: 0, end: 100 });
+        setPlotYZoom({ start: 0, end: 100 });
+    }, [showPlot, query, analysisType, filterType, avgType, aggType, cellAgg]);
 
     // Restore scroll positions once the results have been fetched and rendered.
     const restoreScrollPositions = (desiredTop: number | null, desiredLeft: number | null) => {
@@ -1791,6 +2002,478 @@ eventCodes.forEach(code => {
             pos1="0.4cm"
             pos2 ="0.5em"
         />
+        <div style={{ display: 'flex', justifyContent: 'flex-start', alignItems: 'center', gap: '0.4rem', margin: '0.2rem 0.6rem 0.35rem 0.6rem' }}>
+            <button
+                id="results-view-toggle-btn"
+                type="button"
+                onClick={() => setShowPlot(prev => !prev)}
+                title={`Show ${showPlot ? 'table' : 'plot'}`}
+                aria-label={`Show ${showPlot ? 'table' : 'plot'}`}
+                style={{
+                    width: '1cm',
+                    height: '1cm',
+                    border: '1px solid #777',
+                    borderRadius: '6px',
+                    background: '#fff',
+                    cursor: 'pointer',
+                    fontSize: '0.5rem',
+                    fontWeight: 700,
+                    lineHeight: 1,
+                    padding: 0,
+                }}
+            >
+                {showPlot ? 'Table' : 'Plot'}
+            </button>
+            {showPlot && canTogglePlotExpand && (
+                <button
+                    id="results-expand-toggle-btn"
+                    type="button"
+                    onClick={() => setIsPlotExpanded((prev) => !prev)}
+                    style={{
+                        height: '1cm',
+                        border: '1px solid #777',
+                        borderRadius: '6px',
+                        background: '#fff',
+                        cursor: 'pointer',
+                        fontSize: '0.5rem',
+                        fontWeight: 700,
+                        lineHeight: 1,
+                        padding: '0 0.45rem',
+                    }}
+                >
+                    {isPlotExpanded ? 'Reduce' : 'Expand'}
+                </button>
+            )}
+        </div>
+            {showPlot ? (
+                <div
+                    className="results-table-container analysis-container"
+                    style={{ padding: '0.5rem 0.6rem', background: 'transparent', borderRadius: '8px' }}
+                >
+                    {sortedEventCodes.length === 0 || eventDates.length === 0 ? (
+                        <div style={{ color: '#6b7280', fontSize: '0.9rem' }}>No data to plot.</div>
+                    ) : (
+                        (() => {
+                            const lineColor = '#c4c7cf';
+                            const parsePlotDate = (raw: string): Date | null => {
+                                const value = String(raw || '').trim();
+                                if (!value) return null;
+                                if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+                                    const dt = new Date(`${value}T00:00:00`);
+                                    return Number.isNaN(dt.getTime()) ? null : dt;
+                                }
+                                const slash = value.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+                                if (slash) {
+                                    const day = Number(slash[1]);
+                                    const month = Number(slash[2]) - 1;
+                                    const year = Number(slash[3]);
+                                    const dt = new Date(year, month, day);
+                                    return Number.isNaN(dt.getTime()) ? null : dt;
+                                }
+                                const dt = new Date(value);
+                                return Number.isNaN(dt.getTime()) ? null : dt;
+                            };
+
+                            const monthOrder = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                            const quarterOrder = ['Q1', 'Q2', 'Q3', 'Q4'];
+
+                            const plotDates = [...eventDates].sort((a, b) => {
+                                if (query === 'Mseason') {
+                                    return monthOrder.indexOf(String(a)) - monthOrder.indexOf(String(b));
+                                }
+                                if (query === 'Qseason') {
+                                    return quarterOrder.indexOf(String(a)) - quarterOrder.indexOf(String(b));
+                                }
+                                if (query === 'Annual') {
+                                    return Number(a) - Number(b);
+                                }
+                                const ta = parsePlotDate(String(a))?.getTime() ?? 0;
+                                const tb = parsePlotDate(String(b))?.getTime() ?? 0;
+                                return ta - tb;
+                            });
+
+                            const xLabels = plotDates.map((date) => formatHeaderDate(date, query));
+
+                            const monthTickIndices = (() => {
+                                if (['Annual', 'Mseason', 'Qseason'].includes(query)) {
+                                    return xLabels.map((_label, index) => index);
+                                }
+
+                                const firstIndexPerMonth = new Map<string, number>();
+                                for (let index = 0; index < plotDates.length; index += 1) {
+                                    const parsed = parsePlotDate(String(plotDates[index]));
+                                    if (!parsed) continue;
+                                    const monthKey = `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(2, '0')}`;
+                                    if (!firstIndexPerMonth.has(monthKey)) {
+                                        firstIndexPerMonth.set(monthKey, index);
+                                    }
+                                }
+
+                                const monthStartIndices = Array.from(firstIndexPerMonth.values()).sort((a, b) => a - b);
+
+                                if (monthStartIndices.length === 0) {
+                                    return [0];
+                                }
+
+                                const targetCount = Math.max(3, Math.min(10, monthStartIndices.length));
+
+                                if (monthStartIndices.length <= targetCount) {
+                                    return monthStartIndices;
+                                }
+
+                                const sampled: number[] = [];
+                                const step = (monthStartIndices.length - 1) / (targetCount - 1);
+                                for (let i = 0; i < targetCount; i += 1) {
+                                    sampled.push(monthStartIndices[Math.round(i * step)]);
+                                }
+                                return Array.from(new Set(sampled)).sort((a, b) => a - b);
+                            })();
+
+                            const monthTickIndexSet = new Set<number>(monthTickIndices);
+                            const monthLabelByIndex = new Map<number, string>();
+                            monthTickIndices.forEach((index) => {
+                                const parsed = parsePlotDate(String(plotDates[index]));
+                                if (parsed) {
+                                    monthLabelByIndex.set(index, parsed.toLocaleDateString(undefined, { month: 'short', year: '2-digit' }));
+                                } else {
+                                    monthLabelByIndex.set(index, String(xLabels[index] || ''));
+                                }
+                            });
+
+                            const computePlotValue = (date: string, code: string): number | null => {
+                                const numeric = getCellNumericValue({
+                                    analysisType,
+                                    avgType,
+                                    filterType,
+                                    date,
+                                    code,
+                                    avgTimeLim12Lookup,
+                                    avgTimeLim5Lookup,
+                                    avgTimeLookup,
+                                    volunteers,
+                                    tourists,
+                                    coeff,
+                                    positionLookup,
+                                    event_number,
+                                    avgAgeLookup,
+                                    cellAgg
+                                });
+
+                                if (numeric === null || !isFinite(Number(numeric))) return null;
+
+                                if (analysisType === '%Total') {
+                                    const denom = eventCodes.reduce((acc, cc) => {
+                                        const v = getCellNumericValue({
+                                            analysisType,
+                                            avgType,
+                                            filterType,
+                                            date,
+                                            code: cc,
+                                            avgTimeLim12Lookup,
+                                            avgTimeLim5Lookup,
+                                            avgTimeLookup,
+                                            volunteers,
+                                            tourists,
+                                            coeff,
+                                            positionLookup,
+                                            event_number,
+                                            avgAgeLookup,
+                                            cellAgg
+                                        });
+                                        return acc + (typeof v === 'number' && isFinite(v) ? Number(v) : 0);
+                                    }, 0);
+                                    if (!denom) return null;
+                                    return (Number(numeric) / Number(denom)) * 100;
+                                }
+
+                                if (analysisType === '#Actual Deviation') {
+                                    const rowAvg = rowAverages[code];
+                                    if (!isFinite(Number(rowAvg))) return null;
+                                    const diff = Number(numeric) - Number(rowAvg);
+                                    if (!isFinite(diff)) return null;
+                                    if (String(filterType).startsWith('coeff')) {
+                                        return Number((diff * 100).toFixed(1));
+                                    }
+                                    return Math.round(diff);
+                                }
+
+                                if (analysisType === '%Deviation') {
+                                    const rowAvg = rowAverages[code];
+                                    if (!isFinite(Number(rowAvg)) || Number(rowAvg) === 0) return null;
+                                    return Math.round(((Number(numeric) / Number(rowAvg)) - 1) * 100);
+                                }
+
+                                return Number(numeric);
+                            };
+
+                            const plotRows = sortedEventCodes
+                                .map((code) => {
+                                    const label = String(results.find(r => r.event_code === code)?.event_name || code);
+                                    const data = plotDates.map((date) => {
+                                        const value = computePlotValue(date, code);
+                                        if (value === null || !isFinite(value)) return null;
+                                        return Number(value.toFixed(3));
+                                    });
+                                    const hasData = data.some((value) => value !== null);
+                                    if (!hasData) return null;
+                                    return {
+                                        code: String(code),
+                                        label,
+                                        data
+                                    };
+                                })
+                                .filter((entry): entry is any => entry !== null);
+
+                            if (plotRows.length === 0) {
+                                return <div style={{ color: '#6b7280', fontSize: '0.9rem' }}>No data to plot.</div>;
+                            }
+
+                            const lineSeries = plotRows.map((row: any) => {
+                                const selectedColor = plotSeriesColorMap[row.label];
+                                const activeColor = selectedColor || lineColor;
+                                const priorityIndex = plotSelectionOrder.indexOf(row.label);
+                                const isSelectedSeries = priorityIndex >= 0;
+                                return {
+                                    name: row.label,
+                                    type: 'line',
+                                    connectNulls: false,
+                                    symbol: 'circle',
+                                    symbolSize: 4,
+                                    showSymbol: true,
+                                    lineStyle: { color: activeColor, width: isSelectedSeries ? 1.6 : 1 },
+                                    itemStyle: { color: activeColor, borderColor: activeColor, borderWidth: 1 },
+                                    emphasis: { disabled: true },
+                                    zlevel: isSelectedSeries ? 1 : 0,
+                                    z: isSelectedSeries ? (20 + priorityIndex) : 1,
+                                    data: row.data
+                                };
+                            });
+
+                            const getLastNonNull = (arr: Array<number | null>) => {
+                                for (let index = arr.length - 1; index >= 0; index -= 1) {
+                                    const value = arr[index];
+                                    if (typeof value === 'number' && isFinite(value)) {
+                                        return value;
+                                    }
+                                }
+                                return Number.NEGATIVE_INFINITY;
+                            };
+
+                            const cumulativeRows = [...plotRows].sort((a: any, b: any) => {
+                                const aLast = getLastNonNull(a.data);
+                                const bLast = getLastNonNull(b.data);
+                                return bLast - aLast;
+                            });
+
+                            const cumulativeSeries = cumulativeRows.map((row: any) => {
+                                const selectedColor = plotSeriesColorMap[row.label];
+                                const isSelectedSeries = Boolean(selectedColor);
+                                const priorityIndex = plotSelectionOrder.indexOf(row.label);
+                                return {
+                                    name: row.label,
+                                    type: 'bar',
+                                    stack: 'total',
+                                    barMaxWidth: 22,
+                                    itemStyle: {
+                                        color: selectedColor || '#d1d5db',
+                                        borderColor: selectedColor || '#9ca3af',
+                                        borderWidth: 1
+                                    },
+                                    emphasis: { disabled: true },
+                                    zlevel: isSelectedSeries ? 1 : 0,
+                                    z: isSelectedSeries ? (20 + Math.max(priorityIndex, 0)) : 1,
+                                    data: row.data
+                                };
+                            });
+
+                            const activeSeries = plotDisplayMode === 'cumulative' ? cumulativeSeries : lineSeries;
+
+                            const option = {
+                                animation: false,
+                                grid: { left: 56, right: 24, top: 22, bottom: 121 },
+                                tooltip: {
+                                    trigger: 'axis',
+                                    axisPointer: { type: plotDisplayMode === 'cumulative' ? 'shadow' : 'line' },
+                                    confine: true,
+                                    textStyle: {
+                                        fontSize: 10
+                                    },
+                                    padding: [4, 6],
+                                    position: (point: any, _params: any, _dom: any, _rect: any, size: any) => {
+                                        const [mouseX, mouseY] = point as [number, number];
+                                        const contentWidth = Number(size?.contentSize?.[0] ?? 0);
+                                        const contentHeight = Number(size?.contentSize?.[1] ?? 0);
+                                        const viewWidth = Number(size?.viewSize?.[0] ?? 0);
+                                        const viewHeight = Number(size?.viewSize?.[1] ?? 0);
+
+                                        let left = mouseX + 10;
+                                        if (left + contentWidth > viewWidth - 6) {
+                                            left = mouseX - contentWidth - 10;
+                                        }
+                                        left = Math.max(6, Math.min(left, Math.max(6, viewWidth - contentWidth - 6)));
+
+                                        let top = mouseY - contentHeight - 10;
+                                        if (top < 6) {
+                                            top = mouseY + 10;
+                                        }
+                                        top = Math.max(6, Math.min(top, Math.max(6, viewHeight - contentHeight - 6)));
+
+                                        return [left, top];
+                                    }
+                                },
+                                xAxis: {
+                                    type: 'category',
+                                    data: xLabels,
+                                    boundaryGap: plotDisplayMode === 'cumulative',
+                                    name: 'Date',
+                                    nameLocation: 'middle',
+                                    nameGap: 32,
+                                    axisLine: { lineStyle: { color: '#9ca3af', width: 1 } },
+                                    axisTick: {
+                                        alignWithLabel: true,
+                                        interval: (index: number) => monthTickIndexSet.has(index)
+                                    },
+                                    splitLine: { show: true, lineStyle: { color: '#d1d5db', width: 0.7 } },
+                                    axisLabel: {
+                                        color: '#4b5563',
+                                        fontSize: 11,
+                                        rotate: 0,
+                                        interval: (index: number) => monthTickIndexSet.has(index),
+                                        formatter: (_value: string, index: number) => monthLabelByIndex.get(index) || ''
+                                    }
+                                },
+                                yAxis: {
+                                    type: 'value',
+                                    name: String(getSecondColumnHeaderLabel(analysisType, aggType) || 'Value'),
+                                    nameLocation: 'middle',
+                                    nameGap: 42,
+                                    axisLabel: { color: '#4b5563', fontSize: 11 },
+                                    splitLine: { lineStyle: { color: '#e5e7eb' } }
+                                },
+                                legend: {
+                                    show: true,
+                                    type: 'plain',
+                                    bottom: 0,
+                                    left: 56,
+                                    right: 16,
+                                    itemWidth: 10,
+                                    itemHeight: 6,
+                                    itemGap: 6,
+                                    selected: Object.fromEntries(activeSeries.map((s: any) => [s.name, true])),
+                                    textStyle: { fontSize: 10, color: '#6b7280' }
+                                },
+                                dataZoom: [
+                                    { id: 'xZoom', type: 'inside', xAxisIndex: 0, filterMode: 'none', start: plotXZoom.start, end: plotXZoom.end },
+                                    { id: 'yZoom', type: 'inside', yAxisIndex: 0, filterMode: 'none', start: plotYZoom.start, end: plotYZoom.end }
+                                ],
+                                series: activeSeries
+                            };
+
+                            return (
+                                <div
+                                    style={{
+                                        border: '2px solid #9ca3af',
+                                        borderRadius: '12px',
+                                        background: '#fff',
+                                        overflow: 'hidden',
+                                        boxShadow: '0 10px 18px rgba(15, 23, 42, 0.08)'
+                                    }}
+                                >
+                                    <div
+                                        style={{
+                                            background: '#e5e7eb',
+                                            borderBottom: '1px solid #d1d5db',
+                                            padding: '0.55rem 0.8rem',
+                                            textAlign: 'center',
+                                            fontSize: '1.05rem',
+                                            fontWeight: 700
+                                        }}
+                                    >
+                                        Event statistics comparison
+                                    </div>
+                                    <div style={{ padding: '0.6rem 0.8rem 0.8rem 0.8rem' }}>
+                                        <ReactECharts
+                                            ref={plotChartRef}
+                                            option={option}
+                                            notMerge
+                                            lazyUpdate
+                                            onEvents={{
+                                                datazoom: handlePlotDataZoom,
+                                                legendselectchanged: (params: any) => {
+                                                    const name = String(params?.name || '');
+                                                    if (name) {
+                                                        handlePlotLegendToggle(name);
+                                                    }
+                                                }
+                                            }}
+                                            style={{ width: '100%', minWidth: plotChartMinWidth, height: plotChartHeight }}
+                                        />
+                                        <div
+                                            style={{
+                                                marginTop: '0.45rem',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '0.45rem',
+                                                flexWrap: isLaptopLayout ? 'nowrap' : 'wrap',
+                                                overflow: 'hidden'
+                                            }}
+                                        >
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.22rem', border: '1px solid #9ca3af', borderRadius: '6px', background: '#f9fafb', padding: '0.12rem 0.2rem' }}>
+                                                <span style={{ fontSize: '0.74rem', fontWeight: 700, color: '#374151', marginRight: '0.08rem' }}>Date</span>
+                                                <button type="button" onClick={() => zoomAxisIn('x')} style={{ minWidth: 'calc(1.35rem + 1mm)', height: 'calc(1.35rem + 2mm)', border: '1px solid #9ca3af', borderRadius: '4px', background: '#fff', fontWeight: 700, cursor: 'pointer' }}>+</button>
+                                                <button type="button" onClick={() => zoomAxisOut('x')} style={{ minWidth: 'calc(1.35rem + 1mm)', height: 'calc(1.35rem + 2mm)', border: '1px solid #9ca3af', borderRadius: '4px', background: '#fff', fontWeight: 700, cursor: 'pointer' }}>-</button>
+                                                <button type="button" onClick={() => shiftAxisLeft('x')} style={{ minWidth: 'calc(1.35rem + 1mm)', height: 'calc(1.35rem + 2mm)', border: '1px solid #9ca3af', borderRadius: '4px', background: '#fff', fontWeight: 700, cursor: 'pointer' }}>{'←'}</button>
+                                                <button type="button" onClick={() => shiftAxisRight('x')} style={{ minWidth: 'calc(1.35rem + 1mm)', height: 'calc(1.35rem + 2mm)', border: '1px solid #9ca3af', borderRadius: '4px', background: '#fff', fontWeight: 700, cursor: 'pointer' }}>{'→'}</button>
+                                            </div>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.22rem', border: '1px solid #9ca3af', borderRadius: '6px', background: '#f9fafb', padding: '0.12rem 0.2rem' }}>
+                                                <span style={{ fontSize: '0.74rem', fontWeight: 700, color: '#374151', marginRight: '0.08rem' }}>Time</span>
+                                                <button type="button" onClick={() => zoomAxisIn('y')} style={{ minWidth: 'calc(1.35rem + 1mm)', height: 'calc(1.35rem + 2mm)', border: '1px solid #9ca3af', borderRadius: '4px', background: '#fff', fontWeight: 700, cursor: 'pointer' }}>+</button>
+                                                <button type="button" onClick={() => zoomAxisOut('y')} style={{ minWidth: 'calc(1.35rem + 1mm)', height: 'calc(1.35rem + 2mm)', border: '1px solid #9ca3af', borderRadius: '4px', background: '#fff', fontWeight: 700, cursor: 'pointer' }}>-</button>
+                                                <button type="button" onClick={shiftYAxisUp} style={{ minWidth: 'calc(1.35rem + 1mm)', height: 'calc(1.35rem + 2mm)', border: '1px solid #9ca3af', borderRadius: '4px', background: '#fff', fontWeight: 700, cursor: 'pointer' }}>{'↑'}</button>
+                                                <button type="button" onClick={shiftYAxisDown} style={{ minWidth: 'calc(1.35rem + 1mm)', height: 'calc(1.35rem + 2mm)', border: '1px solid #9ca3af', borderRadius: '4px', background: '#fff', fontWeight: 700, cursor: 'pointer' }}>{'↓'}</button>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={resetPlotZoom}
+                                                style={{
+                                                    height: '1.35rem',
+                                                    border: '1px solid #9ca3af',
+                                                    borderRadius: '6px',
+                                                    background: '#fff',
+                                                    color: '#111827',
+                                                    fontSize: '0.72rem',
+                                                    fontWeight: 700,
+                                                    cursor: 'pointer',
+                                                    padding: '0 0.4rem'
+                                                }}
+                                            >
+                                                pan-out
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setPlotDisplayMode((prev) => (prev === 'cumulative' ? 'per_event' : 'cumulative'))}
+                                                style={{
+                                                    height: '1.35rem',
+                                                    border: '1px solid #9ca3af',
+                                                    borderRadius: '6px',
+                                                    background: '#fff',
+                                                    color: '#111827',
+                                                    fontSize: '0.72rem',
+                                                    fontWeight: 700,
+                                                    cursor: 'pointer',
+                                                    padding: '0 0.45rem'
+                                                }}
+                                            >
+                                                {plotDisplayMode === 'cumulative' ? 'per event' : 'cumulative'}
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })()
+                    )}
+                </div>
+            ) : (
             <div ref={containerRef} className="results-table-container analysis-container">
                 <table className={query === 'Qseason' ? 'results-table compact analysis-table' : 'results-table analysis-table'}>
                     <thead>
@@ -2525,6 +3208,7 @@ eventCodes.forEach(code => {
                     </tbody>
                 </table>
             </div>
+            )}
         </div>
     );
 };
