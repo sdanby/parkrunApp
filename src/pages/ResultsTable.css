@@ -934,7 +934,7 @@ select:focus {
 
 /* Positioning: move Event Analysis tables down slightly so header controls
   and other page chrome do not overlap the table on both desktop and mobile. */
-.results-table.analysis-table { margin-top: 1.0cm; }
+.results-table.analysis-table { margin-top: 0.0cm; }
 .results-table-container.analysis-container { margin-top: 0.3cm !important; }
 
 /* Limit the container for analysis tables so only ~16 columns are visible at once */
