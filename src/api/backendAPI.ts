@@ -8,6 +8,9 @@ export type AuthUser = {
     id: number;
     email: string;
     displayName?: string;
+    athleteCode?: string | null;
+    lastLoginAt?: string | null;
+    previousLoginAt?: string | null;
 };
 
 export type AuthResponse = {
@@ -302,4 +305,12 @@ export const trackPageVisit = async (payload: {
 export const fetchAuthConfig = async (): Promise<{ googleClientId?: string }> => {
     const response = await axios.get(`${API_BASE_URL}/api/auth/config`);
     return response.data || {};
+};
+
+export const linkAthleteCode = async (token: string, athleteCode?: string): Promise<{ ok: boolean; user?: AuthUser; message?: string }> => {
+    const response = await axios.post(`${API_BASE_URL}/api/auth/link-athlete`, {
+        token,
+        athleteCode
+    });
+    return response.data || { ok: true };
 };
