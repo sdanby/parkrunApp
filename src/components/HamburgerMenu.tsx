@@ -72,14 +72,14 @@ const HamburgerMenu: React.FC = () => {
             {open && (
                 <ul className="hamburger-list">
                     <li onClick={() => handleMenuClick('/')}>Home</li>
-                    <li onClick={() => (isAuthenticated ? handleLogout() : handleMenuClick('/login'))}>
-                        {isAuthenticated ? 'Logout' : 'Login'}
-                    </li>
                     <li onClick={() => handleMenuClick('/results')}>Event Analysis</li>
                     <li onClick={() => handleMenuClick('/races')}>Single Event</li>
                     <li onClick={() => handleMenuClick('/courses')}>Courses</li>
                     <li onClick={() => handleMenuClick('/athletes')}>Athletes - Run History</li>
                     <li onClick={() => handleMenuClick('/lists')}>Lists</li>
+                    <li onClick={() => (isAuthenticated ? handleLogout() : handleMenuClick('/login'))}>
+                        {isAuthenticated ? 'Logout' : 'Login'}
+                    </li>
                 </ul>
             )}
         </div>
