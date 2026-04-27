@@ -127,6 +127,20 @@ export const fetchEventByNumber = async (eventCode: number, eventNumber: number)
     }
 };
 
+export const fetchEventSummary = async (eventCode: number, limit = 250) => {
+    try {
+        const params = new URLSearchParams();
+        params.set('event_code', String(eventCode));
+        params.set('limit', String(limit));
+        const url = `${API_BASE_URL}/api/lists/event_summary?${params.toString()}`;
+        const response = await axios.get(url);
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching event summary:', error);
+        throw error;
+    }
+};
+
 export const fetchEventInfo = async (eventIdentifier: string, eventDate: string) => {
     try {
         const params = new URLSearchParams();
