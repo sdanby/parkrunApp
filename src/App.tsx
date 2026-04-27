@@ -6,6 +6,7 @@ import Login from './pages/Login';
 import Results from './pages/Results';
 import Races from './pages/Races';
 import Courses from './pages/Courses';
+import Clubs from './pages/Clubs';
 import Athletes from './pages/Athletes';
 import Lists from './pages/Lists';
 import { API_BASE_URL } from './api/backendAPI';
@@ -19,6 +20,7 @@ const headings: { [key: string]: string } = {
     '/results': 'Event Analysis',
     '/races': 'Single Event',
     '/courses': 'Courses',
+    '/clubs': 'Clubs',
     '/athletes': 'Athletes - Run History',
     '/lists': 'Lists'
 };
@@ -169,6 +171,7 @@ const router = createBrowserRouter([
             { path: 'results', element: <Results /> },
             { path: 'races', element: <Races /> },
             { path: 'courses', element: <Courses /> },
+            { path: 'clubs', element: <Clubs /> },
             { path: 'athletes', element: <Athletes /> },
             { path: 'lists', element: <Lists /> }
         ]
