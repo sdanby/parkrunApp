@@ -42,7 +42,7 @@ const Login: React.FC = () => {
         localStorage.setItem(AUTH_USER_KEY, JSON.stringify(user));
         setIsAuthenticated(true);
         setPendingLogin(null);
-        navigate('/results');
+        navigate('/');
     };
 
     const handlePostLoginContinue = async () => {
