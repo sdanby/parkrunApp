@@ -175,6 +175,34 @@ export const fetchAthletes = async () => {
         throw error;
     }
 };
+
+export const fetchClubsSearch = async (q: string, limit = 25) => {
+    try {
+        const params = new URLSearchParams();
+        params.set('q', q);
+        params.set('limit', String(limit));
+        const url = `${API_BASE_URL}/api/clubs/search?${params.toString()}`;
+        const response = await axios.get(url);
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching clubs search:', error);
+        throw error;
+    }
+};
+
+export const fetchClubMembers = async (club: string, limit = 1000) => {
+    try {
+        const params = new URLSearchParams();
+        params.set('club', club);
+        params.set('limit', String(limit));
+        const url = `${API_BASE_URL}/api/clubs/members?${params.toString()}`;
+        const response = await axios.get(url);
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching club members:', error);
+        throw error;
+    }
+};
 /*
 export const loginUser = async (athleteCode, password) => {
     try {
