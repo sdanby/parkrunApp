@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { fetchAllResults, fetchResults } from '../api/backendAPI';
+import { fetchAllResults, fetchEventSummary, fetchResults } from '../api/backendAPI';
 import './ResultsTable.css';
 import './Courses.css';
 
@@ -32,6 +32,7 @@ type ColumnDef = {
 
 type SummaryMode = 'average' | 'total' | 'maximum' | 'minimum' | 'range' | 'growth';
 type PeriodQuery = 'recent' | 'last50' | 'since-lockdown' | 'all';
+type CoursePanelMode = 'table' | 'profile' | 'top250';
 
 const COURSES_VIEW_MODE_KEY = 'courses_view_mode_v1';
 const COURSES_PERIOD_QUERY_KEY = 'courses_period_query_v1';
@@ -118,6 +119,33 @@ const formatDateValue = (value: unknown): string => {
     return raw;
 };
 
+const formatDateDdmmyyDash = (value: unknown): string => {
+    if (value === undefined || value === null || value === '') return '';
+    const raw = String(value).trim();
+
+    const iso = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (iso) {
+        const month = monthNames[Number(iso[2]) - 1] || iso[2];
+        return `${iso[3]}-${month}-${iso[1].slice(-2)}`;
+    }
+
+    const slash = raw.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if (slash) {
+        const month = monthNames[Number(slash[2]) - 1] || slash[2];
+        return `${slash[1]}-${month}-${slash[3].slice(-2)}`;
+    }
+
+    const parsed = new Date(raw);
+    if (!Number.isNaN(parsed.getTime())) {
+        const day = String(parsed.getUTCDate()).padStart(2, '0');
+        const month = monthNames[parsed.getUTCMonth()] || '';
+        const year = String(parsed.getUTCFullYear()).slice(-2);
+        return `${day}-${month}-${year}`;
+    }
+
+    return raw;
+};
+
 const parseDateSortValue = (value: unknown): number | null => {
     if (value === undefined || value === null || value === '') return null;
     if (typeof value === 'number' && Number.isFinite(value)) return value;
@@ -143,6 +171,17 @@ const parseNumberValue = (value: unknown): number | null => {
     if (cleaned === '') return null;
     const parsed = Number(cleaned);
     return Number.isFinite(parsed) ? parsed : null;
+};
+
+const parseMmssToSeconds = (value: unknown): number | null => {
+    if (value === undefined || value === null || value === '') return null;
+    const raw = String(value).trim();
+    const match = raw.match(/^(\d+):(\d{1,2})$/);
+    if (!match) return null;
+    const minutes = Number(match[1]);
+    const seconds = Number(match[2]);
+    if (!Number.isFinite(minutes) || !Number.isFinite(seconds)) return null;
+    return (minutes * 60) + seconds;
 };
 
 const formatMetricValue = (key: string, value: unknown): string => {
@@ -397,6 +436,25 @@ const detailedOnlyColumns: ColumnDef[] = [
     { key: 'eligible_time_count', label: 'Eligible', align: 'center', desktopWidth: 54, mobileWidth: 54 }
 ];
 
+const top250Columns: ColumnDef[] = [
+    { key: 'name', label: 'Participants', align: 'left', desktopWidth: 150, mobileWidth: 140 },
+    { key: 'total_count', label: 'Total', align: 'center', desktopWidth: 58, mobileWidth: 52 },
+    { key: 'appearances', label: 'Events', align: 'center', desktopWidth: 62, mobileWidth: 58 },
+    { key: 'volunteer_count', label: 'Volunts', align: 'center', desktopWidth: 58, mobileWidth: 52 },
+    { key: 'club', label: 'Club', align: 'left', desktopWidth: 120, mobileWidth: 110 },
+    { key: 'best_curve_ranking_current', label: 'Cur. Rank', align: 'center', desktopWidth: 68, mobileWidth: 62 },
+    { key: 'best_curve_ranking_historic', label: 'Hist Rank', align: 'center', desktopWidth: 68, mobileWidth: 62 },
+    { key: 'best_curve_ranking_current_type', label: 'Rank Type', align: 'center', desktopWidth: 76, mobileWidth: 72 },
+    { key: 'min_time_mmss', label: 'Best time', align: 'center', desktopWidth: 68, mobileWidth: 62 },
+    { key: 'min_event_adj_mmss', label: 'Ev adj time', align: 'center', desktopWidth: 78, mobileWidth: 72 },
+    { key: 'min_age_event_adj_mmss', label: 'AE adj time', align: 'center', desktopWidth: 78, mobileWidth: 72 },
+    { key: 'min_age_sex_event_adj_mmss', label: 'AES adj time', align: 'center', desktopWidth: 85, mobileWidth: 78 },
+    { key: 'last_run_date', label: 'Last Event', align: 'center', desktopWidth: 78, mobileWidth: 72 },
+    { key: 'last_volunteer_date', label: 'Last Volunt', align: 'center', desktopWidth: 82, mobileWidth: 76 }
+];
+
+const top250SortableKeys = new Set<string>(top250Columns.map((col) => col.key));
+
 const Courses: React.FC = () => {
     const location = useLocation();
     const navigate = useNavigate();
@@ -406,6 +464,17 @@ const Courses: React.FC = () => {
 
     const initialEventCode = locationState.eventCode || searchParams.get('event_code') || '';
     const initialEventName = locationState.eventName || searchParams.get('event_name') || '';
+    const initialPanelModeParam = searchParams.get('panel');
+    const initialPanelMode: CoursePanelMode = initialPanelModeParam === 'top250'
+        ? 'top250'
+        : initialPanelModeParam === 'profile'
+            ? 'profile'
+            : 'table';
+    const initialTop250SortKeyParam = searchParams.get('top250_sort') || 'total_count';
+    const initialTop250SortKey = top250SortableKeys.has(initialTop250SortKeyParam) ? initialTop250SortKeyParam : 'total_count';
+    const initialTop250SortDirParam = searchParams.get('top250_dir');
+    const initialTop250SortDir: 'asc' | 'desc' = initialTop250SortDirParam === 'asc' ? 'asc' : 'desc';
+    const highlightedTop250AthleteCode = searchParams.get('highlight_athlete') || '';
 
     const [allRows, setAllRows] = useState<CourseRecord[]>([]);
     const [periodRows, setPeriodRows] = useState<CourseRecord[]>([]);
@@ -431,12 +500,17 @@ const Courses: React.FC = () => {
             return 'recent';
         }
     });
-    const [showProfile, setShowProfile] = useState<boolean>(false);
+    const [panelMode, setPanelMode] = useState<CoursePanelMode>(initialPanelMode);
     const [sortKey, setSortKey] = useState<string>('date');
     const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+    const [top250SortKey, setTop250SortKey] = useState<string>(initialTop250SortKey);
+    const [top250SortDir, setTop250SortDir] = useState<'asc' | 'desc'>(initialTop250SortDir);
     const [summaryMode, setSummaryMode] = useState<SummaryMode>('average');
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
+    const [top250Rows, setTop250Rows] = useState<CourseRecord[]>([]);
+    const [top250Loading, setTop250Loading] = useState<boolean>(false);
+    const [top250Error, setTop250Error] = useState<string | null>(null);
 
     useEffect(() => {
         let cancelled = false;
@@ -552,6 +626,46 @@ const Courses: React.FC = () => {
     }, [periodQuery]);
 
     useEffect(() => {
+        if (panelMode !== 'top250') {
+            return;
+        }
+
+        const parsedEventCode = Number(activeEventCode);
+        if (!Number.isInteger(parsedEventCode) || parsedEventCode < 1) {
+            setTop250Rows([]);
+            setTop250Error('Please select a valid event to load Top250.');
+            setTop250Loading(false);
+            return;
+        }
+
+        let cancelled = false;
+        const loadTop250 = async () => {
+            try {
+                setTop250Loading(true);
+                setTop250Error(null);
+                const data = await fetchEventSummary(parsedEventCode, 250);
+                if (!cancelled) {
+                    setTop250Rows(Array.isArray(data) ? data : []);
+                }
+            } catch (err: any) {
+                if (!cancelled) {
+                    setTop250Error(err?.message || 'Unable to load Top250 data.');
+                    setTop250Rows([]);
+                }
+            } finally {
+                if (!cancelled) {
+                    setTop250Loading(false);
+                }
+            }
+        };
+
+        loadTop250();
+        return () => {
+            cancelled = true;
+        };
+    }, [panelMode, activeEventCode]);
+
+    useEffect(() => {
         if (!activeEventCode) {
             setRows([]);
             return;
@@ -651,7 +765,7 @@ const Courses: React.FC = () => {
     const handleSelectEvent = (eventCode: string, eventName: string) => {
         setActiveEventCode(eventCode);
         setActiveEventName(eventName);
-        setShowProfile(false);
+        setPanelMode('table');
         const params = new URLSearchParams();
         params.set('event_code', eventCode);
         params.set('event_name', eventName);
@@ -702,6 +816,35 @@ const Courses: React.FC = () => {
         });
     };
 
+    const handleTop250AthleteOpen = (row: CourseRecord) => {
+        const athleteCode = pickField(row, ['athlete_code']);
+        if (!athleteCode) {
+            return;
+        }
+
+        const athleteName = pickField(row, ['name']);
+        const params = new URLSearchParams();
+        params.set('athlete_code', String(athleteCode));
+        const returnParams = new URLSearchParams(location.search || '');
+        returnParams.set('panel', 'top250');
+        returnParams.set('top250_sort', top250SortKey);
+        returnParams.set('top250_dir', top250SortDir);
+        returnParams.set('highlight_athlete', String(athleteCode));
+        const returnSearch = `?${returnParams.toString()}`;
+
+        navigate(`/athletes?${params.toString()}`, {
+            state: {
+                athleteCode: String(athleteCode),
+                athleteName: athleteName ? String(athleteName) : undefined,
+                from: 'courses',
+                returnTo: {
+                    pathname: '/courses',
+                    search: returnSearch
+                }
+            }
+        });
+    };
+
     useEffect(() => {
         if (!rows.length || (!sourceEvent?.eventDate && !sourceEvent?.eventName)) {
             return;
@@ -718,7 +861,17 @@ const Courses: React.FC = () => {
         return () => clearTimeout(scrollTimeout);
     }, [rows, sourceEvent]);
 
-    const panelToggleLabel = showProfile ? 'Table' : 'Profile';
+    const nextPanelMode: CoursePanelMode = panelMode === 'table'
+        ? 'top250'
+        : panelMode === 'top250'
+            ? 'profile'
+            : 'table';
+
+    const panelToggleLabel = nextPanelMode === 'top250'
+        ? 'Top250'
+        : nextPanelMode === 'profile'
+            ? 'Profile'
+            : 'Table';
 
     const chronologicallySortedRows = useMemo(() => {
         return [...rows].sort((left, right) => {
@@ -816,6 +969,77 @@ const Courses: React.FC = () => {
         };
     }, [rows]);
 
+    const sortedTop250Rows = useMemo(() => {
+        const withIndex = top250Rows.map((row, index) => ({ row, index }));
+
+        withIndex.sort((left, right) => {
+            const leftRaw = pickField(left.row, [top250SortKey]);
+            const rightRaw = pickField(right.row, [top250SortKey]);
+
+            if (top250SortKey.endsWith('_date')) {
+                const lDate = parseDateSortValue(leftRaw) ?? Number.NEGATIVE_INFINITY;
+                const rDate = parseDateSortValue(rightRaw) ?? Number.NEGATIVE_INFINITY;
+                if (lDate !== rDate) {
+                    return top250SortDir === 'asc' ? lDate - rDate : rDate - lDate;
+                }
+            }
+
+            if (top250SortKey.endsWith('_mmss')) {
+                const lTime = parseMmssToSeconds(leftRaw);
+                const rTime = parseMmssToSeconds(rightRaw);
+                if (lTime !== null && rTime !== null && lTime !== rTime) {
+                    return top250SortDir === 'asc' ? lTime - rTime : rTime - lTime;
+                }
+            }
+
+            const lNum = parseNumberValue(leftRaw);
+            const rNum = parseNumberValue(rightRaw);
+            if (lNum !== null && rNum !== null && lNum !== rNum) {
+                return top250SortDir === 'asc' ? lNum - rNum : rNum - lNum;
+            }
+
+            const lText = String(leftRaw ?? '').toLowerCase();
+            const rText = String(rightRaw ?? '').toLowerCase();
+            if (lText !== rText) {
+                return top250SortDir === 'asc' ? lText.localeCompare(rText) : rText.localeCompare(lText);
+            }
+
+            return left.index - right.index;
+        });
+
+        return withIndex.map((entry) => entry.row);
+    }, [top250Rows, top250SortKey, top250SortDir]);
+
+    const handleTop250Sort = (columnKey: string) => {
+        if (top250SortKey === columnKey) {
+            setTop250SortDir((prevDir) => (prevDir === 'asc' ? 'desc' : 'asc'));
+            return;
+        }
+        setTop250SortKey(columnKey);
+        setTop250SortDir('desc');
+    };
+
+    useEffect(() => {
+        if (panelMode !== 'top250' || !highlightedTop250AthleteCode || top250Loading || sortedTop250Rows.length === 0) {
+            return;
+        }
+
+        const scrollTimeout = window.setTimeout(() => {
+            const candidates = Array.from(document.querySelectorAll<HTMLTableRowElement>('tr[data-top250-athlete-code]'));
+            const highlightedRow = candidates.find(
+                (row) => row.getAttribute('data-top250-athlete-code') === highlightedTop250AthleteCode
+            );
+            if (highlightedRow) {
+                highlightedRow.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'center'
+                });
+            }
+        }, 100);
+
+        return () => window.clearTimeout(scrollTimeout);
+    }, [panelMode, highlightedTop250AthleteCode, top250Loading, sortedTop250Rows]);
+
     return (
         <div className="page-content courses-page">
             <div className="course-header">
@@ -860,7 +1084,7 @@ const Courses: React.FC = () => {
                         <button
                             id="courses-view-toggle-btn"
                             type="button"
-                            onClick={() => setShowProfile((prev) => !prev)}
+                            onClick={() => setPanelMode(nextPanelMode)}
                             title={`Show ${panelToggleLabel.toLowerCase()}`}
                             aria-label={`Show ${panelToggleLabel.toLowerCase()}`}
                             style={{
@@ -940,7 +1164,7 @@ const Courses: React.FC = () => {
                             </div>
                         </div>
                     </div>
-                    {showProfile ? (
+                    {panelMode === 'profile' ? (
                         <div
                             className="athlete-runs-table-wrapper"
                             style={{
@@ -1005,6 +1229,112 @@ const Courses: React.FC = () => {
                                     )}
                                 </div>
                             </div>
+                        </div>
+                    ) : panelMode === 'top250' ? (
+                        <div className="athlete-runs-table-wrapper top250-table-wrapper">
+                            {top250Loading ? (
+                                <p className="course-runs-empty">Loading Top250 data…</p>
+                            ) : top250Error ? (
+                                <p className="athlete-error">{top250Error}</p>
+                            ) : sortedTop250Rows.length > 0 ? (
+                                <table className="athlete-runs-table" aria-label="Top250 event summary">
+                                    <thead>
+                                        <tr>
+                                            {top250Columns.map((col) => {
+                                                const isSorted = top250SortKey === col.key;
+                                                const headerClasses = ['athlete-table-header'];
+                                                if (col.key === 'name') headerClasses.push('athlete-date-header');
+                                                const style: React.CSSProperties = {
+                                                    ...getColumnWidthStyle(col),
+                                                    textAlign: col.align ?? 'left'
+                                                };
+                                                return (
+                                                    <th
+                                                        key={col.key}
+                                                        className={headerClasses.join(' ')}
+                                                        onClick={() => handleTop250Sort(col.key)}
+                                                        onKeyDown={(event) => {
+                                                            if (event.key === 'Enter' || event.key === ' ') {
+                                                                event.preventDefault();
+                                                                handleTop250Sort(col.key);
+                                                            }
+                                                        }}
+                                                        tabIndex={0}
+                                                        scope="col"
+                                                        aria-sort={isSorted ? (top250SortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
+                                                        style={style}
+                                                    >
+                                                        <span>{col.label}</span>
+                                                        <span className="athlete-sort-indicator">{isSorted ? (top250SortDir === 'asc' ? '▲' : '▼') : ''}</span>
+                                                    </th>
+                                                );
+                                            })}
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {sortedTop250Rows.map((row, index) => {
+                                            const rowKey = `${pickField(row, ['athlete_code'])}-${pickField(row, ['name'])}-${index}`;
+                                            const top250AthleteCode = String(pickField(row, ['athlete_code']) ?? '');
+                                            const top250IsHighlighted = Boolean(top250AthleteCode) && top250AthleteCode === highlightedTop250AthleteCode;
+                                            return (
+                                                <tr
+                                                    key={rowKey}
+                                                    data-top250-athlete-code={top250AthleteCode || undefined}
+                                                    className={top250IsHighlighted ? 'top250-highlighted-row' : ''}
+                                                >
+                                                    {top250Columns.map((col) => {
+                                                        const alignmentStyle: React.CSSProperties = {
+                                                            ...getColumnWidthStyle(col),
+                                                            ...(col.align ? { textAlign: col.align } : {})
+                                                        };
+                                                        const rawValue = pickField(row, [col.key]);
+                                                        const value = (col.key === 'last_run_date' || col.key === 'last_volunteer_date')
+                                                            ? formatDateDdmmyyDash(rawValue)
+                                                            : String(rawValue ?? '');
+
+                                                        if (col.key === 'name') {
+                                                            return (
+                                                                <th key={col.key} scope="row" className="athlete-date-cell" style={alignmentStyle}>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={(event) => {
+                                                                            event.preventDefault();
+                                                                            event.stopPropagation();
+                                                                            handleTop250AthleteOpen(row);
+                                                                        }}
+                                                                        style={{
+                                                                            border: 'none',
+                                                                            background: 'none',
+                                                                            padding: 0,
+                                                                            margin: 0,
+                                                                            color: '#0a5ad1',
+                                                                            cursor: 'pointer',
+                                                                            textAlign: 'left',
+                                                                            font: 'inherit',
+                                                                            textDecoration: 'underline'
+                                                                        }}
+                                                                        aria-label={`Open athlete run history for ${value}`}
+                                                                    >
+                                                                        {value}
+                                                                    </button>
+                                                                </th>
+                                                            );
+                                                        }
+
+                                                        return (
+                                                            <td key={col.key} style={alignmentStyle}>
+                                                                {value}
+                                                            </td>
+                                                        );
+                                                    })}
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            ) : (
+                                <p className="course-runs-empty">No Top250 data returned.</p>
+                            )}
                         </div>
                     ) : (
                         <div className="athlete-runs-table-wrapper course-table-wrapper">
