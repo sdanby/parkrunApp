@@ -1,0 +1,199 @@
+.clubs-page {
+    width: 100%;
+}
+
+.clubs-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.35rem;
+    margin-left: 0.3cm;
+    margin-right: 0.3cm;
+    margin-bottom: 0.3rem;
+}
+
+.clubs-left-controls {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.3rem;
+    margin-right: 0.5em;
+}
+
+.clubs-back-button {
+    font-size: 1.2rem;
+    border: 1px solid #222;
+    border-radius: 8px;
+    background: #fff;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    width: 30px;
+    height: 30px;
+    min-width: 30px;
+    min-height: 30px;
+    position: relative;
+    flex-shrink: 0;
+    z-index: 1200;
+    pointer-events: auto;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+}
+
+.clubs-header-main {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    min-width: 0;
+}
+
+.clubs-search-wrap {
+    position: relative;
+    width: min(460px, calc(100% - 0.4rem));
+}
+
+.clubs-search-input {
+    width: 100%;
+    height: 22px;
+    padding: 8px 6px;
+    box-sizing: border-box;
+    font-size: 0.95rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: #4b5563;
+    font-family: inherit;
+}
+
+.clubs-search-dropdown {
+    position: absolute;
+    z-index: 1500;
+    top: calc(100% + 4px);
+    left: 0;
+    width: calc(100% + 38px);
+    background: #fff;
+    border: 1px solid rgba(0, 0, 0, 0.15);
+    border-radius: 4px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+    max-height: 240px;
+    overflow-y: auto;
+}
+
+.clubs-search-loading {
+    padding: 0.5rem 0.65rem;
+    color: #6b7280;
+    font-size: 0.88rem;
+}
+
+.clubs-search-option {
+    padding: 8px 10px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.clubs-search-option--highlight {
+    background: #eef2ff;
+}
+
+.clubs-search-option-name {
+    font-size: 14px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.clubs-search-option-count {
+    color: #666;
+    font-size: 13px;
+    flex-shrink: 0;
+}
+
+.clubs-active-members {
+    color: #374151;
+    font-size: 0.96rem;
+    margin-top: 0.65rem;
+}
+
+.clubs-mode-button {
+    width: 1.2cm;
+    height: 1cm;
+    border: 1px solid #777;
+    border-radius: 6px;
+    background: #fff;
+    cursor: pointer;
+    font-size: 0.56rem;
+    font-weight: 700;
+    line-height: 1.1;
+    padding: 0.06rem;
+    white-space: pre-line;
+    word-break: normal;
+    overflow-wrap: normal;
+    text-align: center;
+}
+
+.clubs-mode-label {
+    color: #374151;
+    font-size: 0.84rem;
+    margin-top: 0.15rem;
+}
+
+.clubs-page .clubs-members-table-wrap {
+    margin-left: 0.3cm;
+    margin-right: 0.3cm;
+    margin-top: 0.2rem;
+    max-height: 68vh;
+}
+
+.clubs-members-table-wrap .athlete-runs-table thead th,
+.clubs-members-table-wrap .athlete-runs-table thead th.athlete-date-header {
+    top: 0;
+}
+
+.clubs-members-table-wrap .athlete-runs-table tbody th.athlete-date-cell {
+    background: #e0e0e0;
+    color: #111;
+}
+
+.clubs-members-loading {
+    font-size: 0.9rem;
+    color: #4b5563;
+    padding: 0.75rem 0.85rem;
+}
+
+.clubs-members-empty {
+    padding: 0.9rem;
+    text-align: center;
+    color: #6b7280;
+}
+
+.clubs-athlete-button {
+    border: none;
+    background: transparent;
+    color: inherit;
+    padding: 0;
+    margin: 0;
+    font: inherit;
+    cursor: pointer;
+    text-align: left;
+    text-decoration: underline;
+}
+
+.clubs-current-club-button {
+    border: none;
+    background: transparent;
+    color: inherit;
+    padding: 0;
+    margin: 0;
+    font: inherit;
+    cursor: pointer;
+    text-align: left;
+    text-decoration: underline;
+}
+
+.clubs-highlighted-row > th,
+.clubs-highlighted-row > td {
+    background-color: #add8e6 !important;
+}
