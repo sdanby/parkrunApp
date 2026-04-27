@@ -51,6 +51,15 @@
     --course-summary-sticky-height: 2.05rem;
 }
 
+.top250-table-wrapper {
+    margin-top: -0.7cm;
+}
+
+.top250-table-wrapper .athlete-runs-table thead th,
+.top250-table-wrapper .athlete-runs-table thead th.athlete-date-header {
+    top: 0;
+}
+
 .course-summary-table {
     margin-bottom: 0;
     position: sticky;
@@ -133,6 +142,11 @@
 .course-clickable-row.highlighted-source-row > td,
 .course-clickable-row.highlighted-source-row:hover > th,
 .course-clickable-row.highlighted-source-row:hover > td {
+    background-color: #add8e6 !important;
+}
+
+.top250-highlighted-row > th,
+.top250-highlighted-row > td {
     background-color: #add8e6 !important;
 }
 
