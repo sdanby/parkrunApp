@@ -875,6 +875,10 @@ const Athletes: React.FC = () => {
             handleBackToRaces();
             return;
         }
+        if (returnTarget?.pathname) {
+            navigate(`${returnTarget.pathname}${returnTarget.search ?? ''}`);
+            return;
+        }
         navigate('/lists');
     };
 
