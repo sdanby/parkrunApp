@@ -62,6 +62,39 @@ const viewModeDisplay: Record<'basic' | 'detailed' | 'allTimeAdjustments', strin
     allTimeAdjustments: 'All Time Adjustments'
 };
 
+const parseNumeric = (value: any): number | null => {
+    const num = Number(value);
+    return Number.isFinite(num) ? num : null;
+};
+
+const formatHardnessPercent = (value: number | null): string => {
+    if (value === null || !Number.isFinite(value)) return 'N/A';
+    const percentValue = Math.abs(value) <= 1 ? value * 100 : value;
+    return `${percentValue.toFixed(2)}%`;
+};
+
+const parseTimeToSeconds = (value: any): number | null => {
+    if (value === null || value === undefined || value === '') return null;
+    if (typeof value === 'number' && Number.isFinite(value)) return value;
+
+    const raw = String(value).trim();
+    if (!raw) return null;
+    if (/^-?\d+(?:\.\d+)?$/.test(raw)) {
+        const numeric = Number(raw);
+        return Number.isFinite(numeric) ? numeric : null;
+    }
+
+    const parts = raw.split(':').map((part) => Number(part));
+    if (parts.some((part) => Number.isNaN(part))) return null;
+    if (parts.length === 2) {
+        return (parts[0] * 60) + parts[1];
+    }
+    if (parts.length === 3) {
+        return (parts[0] * 3600) + (parts[1] * 60) + parts[2];
+    }
+    return null;
+};
+
 // Minimal Races page — shows the selected event/date (from query) and attempts to fetch event positions
 const Races: React.FC = () => {
     const navigate = useNavigate();
@@ -430,7 +463,16 @@ const Races: React.FC = () => {
     const paramEventNumber = paramEventNumberRaw ? Number(paramEventNumberRaw) : null;
     // Get athlete code for highlighting if coming from Athletes table
     const highlightAthleteCode = params.get('highlight_athlete') || '';
-    const [eventInfo, setEventInfo] = useState<{ event_name?: string; event_number?: number; event_code?: number } | null>(null);
+    const [eventInfo, setEventInfo] = useState<{
+        event_name?: string;
+        event_number?: number;
+        event_code?: number;
+        coeff?: number;
+        coeff_event?: number;
+        coeffCombined?: number;
+        coeff_combined?: number;
+        coeffEvent?: number;
+    } | null>(null);
     const [navLoading, setNavLoading] = useState<boolean>(false);
     // If the URL doesn't include a `date`, we may resolve it from
     // `event_code` + `event_number` via the backend. Store the resolved
@@ -490,9 +532,11 @@ const Races: React.FC = () => {
         if (!apiDate) throw new Error('Event date is unknown — cannot load event positions');
 
         const positionsPromise = fetchEventPositions(rawEventParam, apiDate);
-        const needsAdjustmentData = viewMode === 'allTimeAdjustments' || adjustmentKeys.length > 0;
-        const adjustmentsPromise =
-            needsAdjustmentData ? fetchEventTimeAdjustment(rawEventParam, apiDate) : Promise.resolve(null);
+        const needsAdjustmentData = true;
+        const adjustmentsPromise = fetchEventTimeAdjustment(rawEventParam, apiDate).catch((adjustErr) => {
+            console.warn('fetchEventTimeAdjustment failed (optional):', adjustErr);
+            return null;
+        });
 
         const [positionsRaw, adjustmentsRaw] = await Promise.all([positionsPromise, adjustmentsPromise]);
 
@@ -622,6 +666,47 @@ const Races: React.FC = () => {
         }
         return date;
     })();
+
+    const combinedHardnessRaw = (() => {
+        if (rows && rows.length > 0) {
+            const adjustments = rows
+                .map((row: any) => {
+                    const rawTime = row?.time ?? row?.time_seconds ?? row?.timeSeconds;
+                    const rawEventAdj = row?.event_adj_time ?? row?.eventAdjTime;
+                    const timeSeconds = parseTimeToSeconds(rawTime);
+                    const eventAdjSeconds = parseTimeToSeconds(rawEventAdj);
+                    if (timeSeconds === null || eventAdjSeconds === null || eventAdjSeconds === 0) {
+                        return null;
+                    }
+                    return (timeSeconds / eventAdjSeconds) - 1;
+                })
+                .filter((value): value is number => value !== null && Number.isFinite(value));
+
+            if (adjustments.length > 0) {
+                return adjustments.reduce((sum, value) => sum + value, 0) / adjustments.length;
+            }
+        }
+
+        const fromInfoCombined = parseNumeric(eventInfo?.coeff_combined ?? eventInfo?.coeffCombined);
+        if (fromInfoCombined !== null) return fromInfoCombined;
+
+        const infoCoeff = parseNumeric(eventInfo?.coeff);
+        const infoCoeffEvent = parseNumeric(eventInfo?.coeff_event ?? eventInfo?.coeffEvent);
+        if (infoCoeff !== null && infoCoeffEvent !== null) return infoCoeff + infoCoeffEvent;
+
+        if (rows && rows.length > 0) {
+            const first = rows[0] || {};
+            const rowCombined = parseNumeric(first.coeff_combined ?? first.coeffCombined);
+            if (rowCombined !== null) return rowCombined;
+
+            const rowCoeff = parseNumeric(first.coeff);
+            const rowCoeffEvent = parseNumeric(first.coeff_event ?? first.coeffEvent);
+            if (rowCoeff !== null && rowCoeffEvent !== null) return rowCoeff + rowCoeffEvent;
+        }
+
+        return null;
+    })();
+    const combinedHardnessDisplay = formatHardnessPercent(combinedHardnessRaw);
     
 
     // Change event number by delta (-1 or +1). Will look up the date for the
@@ -981,6 +1066,20 @@ const Races: React.FC = () => {
                                                 <option value="sex">sex adjustments</option>
                                                 <option value="age_sex">age & sex adjustment</option>
                                             </select>
+                                            <div
+                                                style={{
+                                                    gridColumn: '2 / 3',
+                                                    marginTop: '0.60em',
+                                                    marginLeft: '-2.9cm',
+                                                    fontSize: '0.78rem',
+                                                    color: '#374151',
+                                                    whiteSpace: 'nowrap',
+                                                    width: 'max-content'
+                                                }}
+                                            >
+                                                <span>Hardness adj:</span>
+                                                <span style={{ marginLeft: '0.2cm' }}>{combinedHardnessDisplay}</span>
+                                            </div>
                                         </div>
                                     </span>
                                 </span>
