@@ -76,6 +76,7 @@ const HamburgerMenu: React.FC = () => {
                     <li onClick={() => handleMenuClick('/races')}>Single Event</li>
                     <li onClick={() => handleMenuClick('/courses')}>Courses</li>
                     <li onClick={() => handleMenuClick('/athletes')}>Athletes - Run History</li>
+                    <li onClick={() => handleMenuClick('/clubs')}>Clubs</li>
                     <li onClick={() => handleMenuClick('/lists')}>Lists</li>
                     <li onClick={() => (isAuthenticated ? handleLogout() : handleMenuClick('/login'))}>
                         {isAuthenticated ? 'Logout' : 'Login'}
