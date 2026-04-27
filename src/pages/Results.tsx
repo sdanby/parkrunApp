@@ -534,8 +534,8 @@ const ResultsPageComponent: React.FC = () => {
     }, []);
 
     const canTogglePlotExpand = isLaptopLayout;
-    const plotChartHeight = '12.5cm';
-    const plotChartMinWidth = canTogglePlotExpand && isPlotExpanded ? '33cm' : '18cm';
+    const plotChartHeight = (isLaptopLayout ? '13.3cm' : '10.3cm');
+    const plotChartMinWidth = canTogglePlotExpand && isPlotExpanded ? '33cm' : (isLaptopLayout ? '18cm' : '10cm');
 
     const clampPercent = (value: number) => Math.max(0, Math.min(100, value));
 
@@ -2048,7 +2048,7 @@ eventCodes.forEach(code => {
             {showPlot ? (
                 <div
                     className="results-table-container analysis-container"
-                    style={{ padding: '0.5rem 0.6rem', background: 'transparent', borderRadius: '8px' }}
+                    style={{ padding: '0.5rem 0.6rem', background: 'transparent', borderRadius: '8px', overflowX: 'hidden' }}
                 >
                     {sortedEventCodes.length === 0 || eventDates.length === 0 ? (
                         <div style={{ color: '#6b7280', fontSize: '0.9rem' }}>No data to plot.</div>
@@ -2290,11 +2290,38 @@ eventCodes.forEach(code => {
 
                             const option = {
                                 animation: false,
-                                grid: { left: 56, right: 24, top: 22, bottom: 121 },
+                                grid: { left: 0, right: 20, top: 10, bottom: isLaptopLayout ? 140 : 150 },
                                 tooltip: {
                                     trigger: 'axis',
                                     axisPointer: { type: plotDisplayMode === 'cumulative' ? 'shadow' : 'line' },
                                     confine: true,
+                                    formatter: (params: any) => {
+                                        const rows = Array.isArray(params) ? params : [params];
+                                        if (!rows.length) return '';
+
+                                        const toNumeric = (value: any): number => {
+                                            if (Array.isArray(value)) {
+                                                const last = value[value.length - 1];
+                                                const parsed = Number(last);
+                                                return Number.isFinite(parsed) ? parsed : Number.NEGATIVE_INFINITY;
+                                            }
+                                            const parsed = Number(value);
+                                            return Number.isFinite(parsed) ? parsed : Number.NEGATIVE_INFINITY;
+                                        };
+
+                                        const sorted = [...rows].sort((a, b) => toNumeric(b?.value) - toNumeric(a?.value));
+                                        const header = String(sorted[0]?.axisValueLabel ?? sorted[0]?.name ?? '');
+
+                                        const lines = sorted.map((item: any) => {
+                                            const raw = toNumeric(item?.value);
+                                            const displayValue = Number.isFinite(raw)
+                                                ? Number(raw.toFixed(3)).toLocaleString()
+                                                : '-';
+                                            return `${item?.marker || ''}${String(item?.seriesName || '')}: ${displayValue}`;
+                                        });
+
+                                        return [header, ...lines].join('<br/>');
+                                    },
                                     textStyle: {
                                         fontSize: 10
                                     },
@@ -2326,8 +2353,9 @@ eventCodes.forEach(code => {
                                     data: xLabels,
                                     boundaryGap: plotDisplayMode === 'cumulative',
                                     name: 'Date',
+                                    nameTextStyle: { fontWeight: 'bold' },
                                     nameLocation: 'middle',
-                                    nameGap: 32,
+                                    nameGap: isLaptopLayout ? 26 : 26,
                                     axisLine: { lineStyle: { color: '#9ca3af', width: 1 } },
                                     axisTick: {
                                         alignWithLabel: true,
@@ -2353,14 +2381,14 @@ eventCodes.forEach(code => {
                                 legend: {
                                     show: true,
                                     type: 'plain',
-                                    bottom: 0,
-                                    left: 56,
-                                    right: 16,
-                                    itemWidth: 10,
-                                    itemHeight: 6,
-                                    itemGap: 6,
+                                    bottom: isLaptopLayout ? 0 : -23,
+                                    left: isLaptopLayout ? 56 : 0,
+                                    right: isLaptopLayout ? 16 : 16,
+                                    itemWidth: isLaptopLayout ? 10 : 10,
+                                    itemHeight: isLaptopLayout ? 6 : 5,
+                                    itemGap: isLaptopLayout ? 6 : 4,
                                     selected: Object.fromEntries(activeSeries.map((s: any) => [s.name, true])),
-                                    textStyle: { fontSize: 10, color: '#6b7280' }
+                                    textStyle: { fontSize: isLaptopLayout ? 12 : 12, color: '#6b7280' }
                                 },
                                 dataZoom: [
                                     { id: 'xZoom', type: 'inside', xAxisIndex: 0, filterMode: 'none', start: plotXZoom.start, end: plotXZoom.end },
@@ -2372,6 +2400,9 @@ eventCodes.forEach(code => {
                             return (
                                 <div
                                     style={{
+                                        width: isLaptopLayout ? '100%' : 'calc(100% - 1.0cm)',
+                                        margin: isLaptopLayout ? '0' : '0 0.75cm 0 0.15cm',
+                                        marginTop: '-0.2cm',
                                         border: '2px solid #9ca3af',
                                         borderRadius: '12px',
                                         background: '#fff',
@@ -2383,7 +2414,7 @@ eventCodes.forEach(code => {
                                         style={{
                                             background: '#e5e7eb',
                                             borderBottom: '1px solid #d1d5db',
-                                            padding: '0.55rem 0.8rem',
+                                            padding: '0.35rem 0.0rem',
                                             textAlign: 'center',
                                             fontSize: '1.05rem',
                                             fontWeight: 700
@@ -2410,28 +2441,31 @@ eventCodes.forEach(code => {
                                         />
                                         <div
                                             style={{
-                                                marginTop: '0.45rem',
+                                                marginTop: isLaptopLayout ? '0.45rem' : 'calc(0.45rem + 0.0cm)',
                                                 display: 'flex',
-                                                alignItems: 'center',
-                                                gap: '0.45rem',
-                                                flexWrap: isLaptopLayout ? 'nowrap' : 'wrap',
+                                                flexDirection: isLaptopLayout ? 'row' : 'column',
+                                                alignItems: 'flex-start',
+                                                gap: isLaptopLayout ? '0.45rem' : '0.3rem',
                                                 overflow: 'hidden'
                                             }}
                                         >
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.22rem', border: '1px solid #9ca3af', borderRadius: '6px', background: '#f9fafb', padding: '0.12rem 0.2rem' }}>
-                                                <span style={{ fontSize: '0.74rem', fontWeight: 700, color: '#374151', marginRight: '0.08rem' }}>Date</span>
-                                                <button type="button" onClick={() => zoomAxisIn('x')} style={{ minWidth: 'calc(1.35rem + 1mm)', height: 'calc(1.35rem + 2mm)', border: '1px solid #9ca3af', borderRadius: '4px', background: '#fff', fontWeight: 700, cursor: 'pointer' }}>+</button>
-                                                <button type="button" onClick={() => zoomAxisOut('x')} style={{ minWidth: 'calc(1.35rem + 1mm)', height: 'calc(1.35rem + 2mm)', border: '1px solid #9ca3af', borderRadius: '4px', background: '#fff', fontWeight: 700, cursor: 'pointer' }}>-</button>
-                                                <button type="button" onClick={() => shiftAxisLeft('x')} style={{ minWidth: 'calc(1.35rem + 1mm)', height: 'calc(1.35rem + 2mm)', border: '1px solid #9ca3af', borderRadius: '4px', background: '#fff', fontWeight: 700, cursor: 'pointer' }}>{'←'}</button>
-                                                <button type="button" onClick={() => shiftAxisRight('x')} style={{ minWidth: 'calc(1.35rem + 1mm)', height: 'calc(1.35rem + 2mm)', border: '1px solid #9ca3af', borderRadius: '4px', background: '#fff', fontWeight: 700, cursor: 'pointer' }}>{'→'}</button>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: isLaptopLayout ? '0.45rem' : '0.25rem', flexWrap: 'nowrap', overflow: 'hidden' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: isLaptopLayout ? '0.22rem' : '0.15rem', border: '1px solid #9ca3af', borderRadius: '6px', background: '#f9fafb', padding: isLaptopLayout ? '0.12rem 0.2rem' : '0.1rem 0.15rem' }}>
+                                                    <span style={{ fontSize: '0.74rem', fontWeight: 700, color: '#374151', marginRight: '0.08rem' }}>Date</span>
+                                                    <button type="button" onClick={() => zoomAxisIn('x')} style={{ minWidth: 'calc(1.35rem + 1mm)', height: 'calc(1.35rem + 2mm)', border: '1px solid #9ca3af', borderRadius: '4px', background: '#fff', fontWeight: 700, cursor: 'pointer' }}>+</button>
+                                                    <button type="button" onClick={() => zoomAxisOut('x')} style={{ minWidth: 'calc(1.35rem + 1mm)', height: 'calc(1.35rem + 2mm)', border: '1px solid #9ca3af', borderRadius: '4px', background: '#fff', fontWeight: 700, cursor: 'pointer' }}>-</button>
+                                                    <button type="button" onClick={() => shiftAxisLeft('x')} style={{ minWidth: 'calc(1.35rem + 1mm)', height: 'calc(1.35rem + 2mm)', border: '1px solid #9ca3af', borderRadius: '4px', background: '#fff', fontWeight: 700, cursor: 'pointer' }}>{'←'}</button>
+                                                    <button type="button" onClick={() => shiftAxisRight('x')} style={{ minWidth: 'calc(1.35rem + 1mm)', height: 'calc(1.35rem + 2mm)', border: '1px solid #9ca3af', borderRadius: '4px', background: '#fff', fontWeight: 700, cursor: 'pointer' }}>{'→'}</button>
+                                                </div>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: isLaptopLayout ? '0.22rem' : '0.15rem', border: '1px solid #9ca3af', borderRadius: '6px', background: '#f9fafb', padding: isLaptopLayout ? '0.12rem 0.2rem' : '0.1rem 0.15rem' }}>
+                                                    <span style={{ fontSize: '0.74rem', fontWeight: 700, color: '#374151', marginRight: '0.08rem' }}>Time</span>
+                                                    <button type="button" onClick={() => zoomAxisIn('y')} style={{ minWidth: 'calc(1.35rem + 1mm)', height: 'calc(1.35rem + 2mm)', border: '1px solid #9ca3af', borderRadius: '4px', background: '#fff', fontWeight: 700, cursor: 'pointer' }}>+</button>
+                                                    <button type="button" onClick={() => zoomAxisOut('y')} style={{ minWidth: 'calc(1.35rem + 1mm)', height: 'calc(1.35rem + 2mm)', border: '1px solid #9ca3af', borderRadius: '4px', background: '#fff', fontWeight: 700, cursor: 'pointer' }}>-</button>
+                                                    <button type="button" onClick={shiftYAxisUp} style={{ minWidth: 'calc(1.35rem + 1mm)', height: 'calc(1.35rem + 2mm)', border: '1px solid #9ca3af', borderRadius: '4px', background: '#fff', fontWeight: 700, cursor: 'pointer' }}>{'↑'}</button>
+                                                    <button type="button" onClick={shiftYAxisDown} style={{ minWidth: 'calc(1.35rem + 1mm)', height: 'calc(1.35rem + 2mm)', border: '1px solid #9ca3af', borderRadius: '4px', background: '#fff', fontWeight: 700, cursor: 'pointer' }}>{'↓'}</button>
+                                                </div>
                                             </div>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.22rem', border: '1px solid #9ca3af', borderRadius: '6px', background: '#f9fafb', padding: '0.12rem 0.2rem' }}>
-                                                <span style={{ fontSize: '0.74rem', fontWeight: 700, color: '#374151', marginRight: '0.08rem' }}>Time</span>
-                                                <button type="button" onClick={() => zoomAxisIn('y')} style={{ minWidth: 'calc(1.35rem + 1mm)', height: 'calc(1.35rem + 2mm)', border: '1px solid #9ca3af', borderRadius: '4px', background: '#fff', fontWeight: 700, cursor: 'pointer' }}>+</button>
-                                                <button type="button" onClick={() => zoomAxisOut('y')} style={{ minWidth: 'calc(1.35rem + 1mm)', height: 'calc(1.35rem + 2mm)', border: '1px solid #9ca3af', borderRadius: '4px', background: '#fff', fontWeight: 700, cursor: 'pointer' }}>-</button>
-                                                <button type="button" onClick={shiftYAxisUp} style={{ minWidth: 'calc(1.35rem + 1mm)', height: 'calc(1.35rem + 2mm)', border: '1px solid #9ca3af', borderRadius: '4px', background: '#fff', fontWeight: 700, cursor: 'pointer' }}>{'↑'}</button>
-                                                <button type="button" onClick={shiftYAxisDown} style={{ minWidth: 'calc(1.35rem + 1mm)', height: 'calc(1.35rem + 2mm)', border: '1px solid #9ca3af', borderRadius: '4px', background: '#fff', fontWeight: 700, cursor: 'pointer' }}>{'↓'}</button>
-                                            </div>
+                                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: isLaptopLayout ? '0.45rem' : '0.25rem', flexWrap: 'nowrap', flexShrink: 0 }}>
                                             <button
                                                 type="button"
                                                 onClick={resetPlotZoom}
@@ -2444,7 +2478,7 @@ eventCodes.forEach(code => {
                                                     fontSize: '0.72rem',
                                                     fontWeight: 700,
                                                     cursor: 'pointer',
-                                                    padding: '0 0.4rem'
+                                                    padding: isLaptopLayout ? '0 0.4rem' : '0 0.3rem'
                                                 }}
                                             >
                                                 pan-out
@@ -2461,11 +2495,12 @@ eventCodes.forEach(code => {
                                                     fontSize: '0.72rem',
                                                     fontWeight: 700,
                                                     cursor: 'pointer',
-                                                    padding: '0 0.45rem'
+                                                    padding: isLaptopLayout ? '0 0.45rem' : '0 0.32rem'
                                                 }}
                                             >
                                                 {plotDisplayMode === 'cumulative' ? 'per event' : 'cumulative'}
                                             </button>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
