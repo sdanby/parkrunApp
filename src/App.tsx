@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { createBrowserRouter, RouterProvider, Outlet, useLocation, Navigate } from 'react-router-dom';
 import HamburgerMenu from './components/HamburgerMenu';
 import Home from './pages/Home';
@@ -9,6 +9,8 @@ import Courses from './pages/Courses';
 import Clubs from './pages/Clubs';
 import Athletes from './pages/Athletes';
 import Lists from './pages/Lists';
+import Admin from './pages/Admin';
+import EventHelpManual, { UnifiedHelpOverlay, UNIFIED_HELP_EVENT, getPageMarkerForPath, type UnifiedHelpAnchor } from './pages/UnifiedHelp';
 import { API_BASE_URL } from './api/backendAPI';
 import './styles/main.css';
 
@@ -22,7 +24,9 @@ const headings: { [key: string]: string } = {
     '/courses': 'Courses',
     '/clubs': 'Clubs',
     '/athletes': 'Athletes - Run History',
-    '/lists': 'Lists'
+    '/lists': 'Lists',
+    '/admin': 'Admin',
+    '/help-manual': 'Help Manual'
 };
 
 const getTopBarUserLabel = (): string => {
@@ -44,10 +48,52 @@ const TopBar: React.FC = () => {
     const location = useLocation();
     const heading = headings[location.pathname] || '';
     const userLabel = getTopBarUserLabel();
+    const [isHelpOpen, setIsHelpOpen] = useState(false);
+    const [helpMarkerId, setHelpMarkerId] = useState<string>('top');
+    const [helpAnchor, setHelpAnchor] = useState<UnifiedHelpAnchor | null>(null);
+    const pageMarker = getPageMarkerForPath(location.pathname);
+
+    useEffect(() => {
+        const onHelpRequest = (event: Event) => {
+            const customEvent = event as CustomEvent<{ markerId?: string; anchor?: UnifiedHelpAnchor | null }>;
+            const markerId = String(customEvent?.detail?.markerId || 'top');
+            const anchor = customEvent?.detail?.anchor || null;
+            setHelpMarkerId(markerId);
+            setHelpAnchor(anchor);
+            setIsHelpOpen(true);
+        };
+
+        window.addEventListener(UNIFIED_HELP_EVENT, onHelpRequest as EventListener);
+        return () => window.removeEventListener(UNIFIED_HELP_EVENT, onHelpRequest as EventListener);
+    }, []);
+
     return (
-        <div className="top-bar" style={{ padding: '0px 0', display: 'flex', alignItems: 'center', position: 'relative' }}>
+        <div className="top-bar" style={{ padding: '0px 0', display: 'flex', alignItems: 'center', position: 'sticky', top: 0, zIndex: 2147483647, background: '#f4f4f4', borderBottom: '1px solid #dbe2ea' }}>
             <HamburgerMenu />
-            <h1 style={{ marginLeft: '2cm', marginTop: '0.8cm', fontSize: '1.5em' }}>{heading}</h1>
+            <div className="top-bar-title-wrap">
+                <h1 style={{ marginLeft: '2cm', marginTop: '0.8cm', fontSize: '1.5em' }}>{heading}</h1>
+                {pageMarker ? (
+                    <div className="top-bar-page-help">
+                        <button
+                            type="button"
+                            className="top-bar-help-btn"
+                            aria-label={`${heading} help`}
+                            title={`${heading} help`}
+                            onClick={(event) => {
+                                const rect = (event.currentTarget as HTMLButtonElement).getBoundingClientRect();
+                                setHelpMarkerId(pageMarker);
+                                setHelpAnchor({
+                                    x: rect.left,
+                                    y: rect.bottom
+                                });
+                                setIsHelpOpen(true);
+                            }}
+                        >
+                            📖
+                        </button>
+                    </div>
+                ) : null}
+            </div>
             {userLabel && (
                 <div
                     style={{
@@ -58,12 +104,20 @@ const TopBar: React.FC = () => {
                         color: '#6b7280',
                         fontStyle: 'italic',
                         whiteSpace: 'nowrap',
+                        pointerEvents: 'none',
                     }}
                     title="Logged in user"
                 >
                     {userLabel}
                 </div>
             )}
+
+            <UnifiedHelpOverlay
+                open={isHelpOpen}
+                startMarkerId={helpMarkerId}
+                anchor={helpAnchor}
+                onClose={() => setIsHelpOpen(false)}
+            />
         </div>
     );
 };
@@ -173,7 +227,9 @@ const router = createBrowserRouter([
             { path: 'courses', element: <Courses /> },
             { path: 'clubs', element: <Clubs /> },
             { path: 'athletes', element: <Athletes /> },
-            { path: 'lists', element: <Lists /> }
+            { path: 'lists', element: <Lists /> },
+            { path: 'admin', element: <Admin /> },
+            { path: 'help-manual', element: <EventHelpManual /> }
         ]
     },
     {

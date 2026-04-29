@@ -149,6 +149,45 @@ overflow: hidden;
   cursor: pointer;
   font-size: 0.9em;
 }
+
+.help-tooltip .help-trigger.help-trigger-label {
+  width: auto;
+  height: auto;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #eaf5ff 0%, #cfe8ff 100%);
+  color: #114a9a;
+  border: 1px solid #9ec5ee;
+  padding: 3px 8px;
+  gap: 0;
+  font-weight: 400;
+  white-space: nowrap;
+  box-shadow: inset 0 1px 0 #ffffff, 0 1px 0 rgba(0, 0, 0, 0.08);
+}
+
+.help-tooltip .help-trigger.help-trigger-label .help-trigger-text {
+  font-size: 0.86em;
+  line-height: 1;
+  white-space: nowrap;
+  font-weight: 400;
+}
+
+.help-tooltip .help-trigger.help-trigger-label .help-trigger-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: #0f3b66;
+  color: #fff;
+  font-size: 0.72em;
+  font-weight: 700;
+}
+
+.help-tooltip .help-trigger.help-trigger-label:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
 .help-tooltip .help-content {
   visibility: hidden;
   width: 320px;
@@ -1084,5 +1123,172 @@ select:focus {
   white-space: nowrap !important;
   overflow: hidden !important;
   text-overflow: ellipsis !important;
+}
+
+.help-tooltip .help-content {
+  width: 420px;
+  max-width: calc(100vw - 32px);
+  max-height: min(72vh, 620px);
+  overflow-y: auto;
+  background: #fff9d9;
+  color: #1f2937;
+  border: 1px solid #e4d48a;
+  border-radius: 12px;
+  box-shadow: 0 14px 40px rgba(15, 23, 42, 0.22);
+  padding: 12px 14px;
+}
+
+.help-tooltip.open .help-content,
+.help-tooltip:hover .help-content {
+  visibility: visible;
+  opacity: 0.98;
+  position: fixed !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+}
+
+@media (min-width: 641px) {
+  .help-tooltip .help-content {
+    max-width: min(460px, 62vw);
+  }
+
+  .help-tooltip.open .help-content,
+  .help-tooltip:hover .help-content {
+    position: absolute !important;
+    top: calc(100% + 8px) !important;
+    left: 0 !important;
+    transform: none !important;
+  }
+}
+
+.help-doc-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.help-doc-head .close-x {
+  position: static;
+  border: 1px solid #d8c676;
+  border-radius: 6px;
+  background: #fff3b0;
+  color: #6b5a17;
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.help-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.help-doc-summary {
+  font-size: 0.82rem;
+  color: #334155;
+  margin-bottom: 8px;
+}
+
+.help-doc-details {
+  margin: 0 0 10px 17px;
+  padding: 0;
+  color: #1e293b;
+  font-size: 0.8rem;
+}
+
+.help-doc-details li {
+  margin-bottom: 4px;
+}
+
+.help-doc-section {
+  border-top: 1px solid #ebdda2;
+  margin-top: 10px;
+  padding-top: 9px;
+}
+
+.help-doc-subtitle {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 6px;
+}
+
+.help-doc-links {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.help-ref-link {
+  border: 1px solid #e0cf84;
+  border-radius: 8px;
+  background: #fff7cc;
+  padding: 6px 8px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.help-ref-link:disabled {
+  opacity: 0.62;
+  cursor: default;
+}
+
+.help-ref-link.active {
+  border-color: #c9ab3a;
+  background: #ffef9e;
+}
+
+.help-key {
+  display: block;
+  font-size: 0.79rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 2px;
+}
+
+.help-desc {
+  display: block;
+  font-size: 0.75rem;
+  color: #475569;
+}
+
+.help-related-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.help-inline-link {
+  border: none;
+  background: transparent;
+  color: #2563eb;
+  font-size: 0.76rem;
+  font-weight: 600;
+  padding: 0;
+  cursor: pointer;
+}
+
+@media (max-width: 640px) {
+  .help-tooltip .help-content {
+    width: min(360px, calc(100vw - 42px));
+    max-width: min(360px, calc(100vw - 42px));
+    max-height: 70vh;
+  }
+
+  .help-tooltip.open .help-content,
+  .help-tooltip:hover .help-content {
+    top: 52% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+  }
 }
 

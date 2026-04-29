@@ -1,3 +1,30 @@
+.home-help-entry {
+  margin: 0.4rem 0 0.8rem;
+}
+
+.home-help-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  text-decoration: none;
+  color: #0f3b66;
+  background: #eaf3ff;
+  border: 1px solid #bcd4f0;
+  border-radius: 999px;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
+.home-help-icon {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.home-help-link:hover {
+  background: #dcecff;
+}
+
 .features-section {
   margin-top: 1.5rem;
 }

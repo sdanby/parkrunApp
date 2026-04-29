@@ -1,15 +1,52 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { logoutSession } from '../api/backendAPI';
+import { fetchAdminStatus, logoutSession } from '../api/backendAPI';
 import './HamburgerMenu.css';
 
 const AUTH_TOKEN_KEY = 'auth_token_v1';
 const AUTH_USER_KEY = 'auth_user_v1';
+const SESSION_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
 const HamburgerMenu: React.FC = () => {
     const [open, setOpen] = useState(false);
+    const [canSeeAdmin, setCanSeeAdmin] = useState(false);
     const navigate = useNavigate();
     const isAuthenticated = Boolean(localStorage.getItem(AUTH_TOKEN_KEY));
+
+    useEffect(() => {
+        let cancelled = false;
+
+        const loadAdminAccess = async () => {
+            if (!isAuthenticated) {
+                if (!cancelled) setCanSeeAdmin(false);
+                return;
+            }
+            const token = localStorage.getItem(AUTH_TOKEN_KEY) || '';
+            if (!token) {
+                if (!cancelled) setCanSeeAdmin(false);
+                return;
+            }
+
+            try {
+                const status = await fetchAdminStatus(token);
+                if (!cancelled) {
+                    setCanSeeAdmin(Boolean(status.canAccessAdmin));
+                    if (status.user) {
+                        localStorage.setItem(AUTH_USER_KEY, JSON.stringify(status.user));
+                    }
+                }
+            } catch (_err) {
+                if (!cancelled) {
+                    setCanSeeAdmin(false);
+                }
+            }
+        };
+
+        loadAdminAccess();
+        return () => {
+            cancelled = true;
+        };
+    }, [isAuthenticated, open]);
 
     const handleLogout = async () => {
         const token = localStorage.getItem(AUTH_TOKEN_KEY) || undefined;
@@ -21,8 +58,53 @@ const HamburgerMenu: React.FC = () => {
 
         localStorage.removeItem(AUTH_TOKEN_KEY);
         localStorage.removeItem(AUTH_USER_KEY);
+        setCanSeeAdmin(false);
         setOpen(false);
         navigate('/login');
+    };
+
+    const getLastLoginTime = (): number | null => {
+        try {
+            const raw = localStorage.getItem(AUTH_USER_KEY);
+            if (!raw) return null;
+            const parsed = JSON.parse(raw) || {};
+            const value = parsed.lastLoginAt;
+            if (!value) return null;
+            const dt = new Date(String(value));
+            if (Number.isNaN(dt.getTime())) return null;
+            return dt.getTime();
+        } catch (_err) {
+            return null;
+        }
+    };
+
+    const handleHamburgerToggle = async () => {
+        if (!isAuthenticated) {
+            setOpen((prev) => !prev);
+            return;
+        }
+
+        const lastLoginTs = getLastLoginTime();
+        if (lastLoginTs && (Date.now() - lastLoginTs) > SESSION_MAX_AGE_MS) {
+            const token = localStorage.getItem(AUTH_TOKEN_KEY) || undefined;
+            try {
+                await logoutSession(token);
+            } catch (_err) {
+                // ignore API errors and still clear local auth state
+            }
+            localStorage.removeItem(AUTH_TOKEN_KEY);
+            localStorage.removeItem(AUTH_USER_KEY);
+            setCanSeeAdmin(false);
+            setOpen(false);
+            navigate('/login', {
+                state: {
+                    sessionMessage: 'Your session is older than 24 hours. Please log in again.'
+                }
+            });
+            return;
+        }
+
+        setOpen((prev) => !prev);
     };
 
     const handleMenuClick = async (path: string) => {
@@ -66,7 +148,7 @@ const HamburgerMenu: React.FC = () => {
 
     return (
         <div className="hamburger-menu">
-            <button className="hamburger-button" onClick={() => setOpen(!open)}>
+            <button className="hamburger-button" onClick={handleHamburgerToggle}>
                 ☰
             </button>
             {open && (
@@ -78,6 +160,7 @@ const HamburgerMenu: React.FC = () => {
                     <li onClick={() => handleMenuClick('/athletes')}>Athletes - Run History</li>
                     <li onClick={() => handleMenuClick('/clubs')}>Clubs</li>
                     <li onClick={() => handleMenuClick('/lists')}>Lists</li>
+                    {canSeeAdmin && <li onClick={() => handleMenuClick('/admin')}>Admin</li>}
                     <li onClick={() => (isAuthenticated ? handleLogout() : handleMenuClick('/login'))}>
                         {isAuthenticated ? 'Logout' : 'Login'}
                     </li>

@@ -4,7 +4,7 @@
   position: fixed;
   top: 10px;
   left: 10px;
-  z-index: 12000;
+  z-index: 2147483647;
 }
 
 .hamburger-button {
@@ -22,7 +22,7 @@
   border: 1px solid #ccc;
   padding: 0.5rem 1rem;
   list-style: none;
-  z-index: 12001;
+  z-index: 2147483647;
   min-width: 120px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.15);
 }

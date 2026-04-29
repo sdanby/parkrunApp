@@ -5,6 +5,7 @@ import { fetchResults, fetchAllResults } from '../api/backendAPI';
 import './ResultsTable.css'; // Create this CSS file for sticky headers
 import { formatDate,formatDate1,formatDate2,formatAvgTime,formatDateToDDMMYYYY } from '../utilities'; // Utility function to format dates
 import ReactECharts from 'echarts-for-react';
+import { getMarkerForControlLabel, requestUnifiedHelp } from './UnifiedHelp';
 
 const queryOptions = [
     { value: 'recent', label: 'Recent Events' },
@@ -17,8 +18,8 @@ const queryOptions = [
     // Add more options here as needed
 ];
 const analysisOptions = [
-    { value: 'participants', label: 'Participants' },
-    { value: '%Participants', label: '%Participants' },
+    { value: 'participants', label: 'Actual' },
+    { value: '%Participants', label: 'Actual%' },
     { value: '%Total', label: '%Total' },
     { value: '%Deviation', label: '%Deviation' },
     { value: '#Actual Deviation', label: '#Actual Deviation' },
@@ -28,116 +29,34 @@ const analysisOptions = [
 
     // Add more options here as needed
 ];
-// Short help text for various option values. Use these in the hover tooltip.
-const helpTextMap: { [key: string]: string } = {
-    participants: 'Number of parkrunners/walkers recorded at each event. Aggregations operate on counts.',
-    '%Participants': 'Dive.',
-    Times: 'The participants event times - aggregated across the event using - Average, Maximum, Minimum etc.',
-    Age: 'The participants calculated age* - aggregated across the event using - Average, Maximum, Minimum etc. * note that age is approximate and accuracy depends on the number of observations',
-    all: 'All participants at the event.',
-    Tourist: 'Participants flagged as tourists (visitors). A tourist run is assigned to a parkrunner if over a period of 15 previous events, it is not the most frequetly attended event',
-    volunteers: 'Number of volunteers recorded for the event.',
-    eventNumber: 'Event-specific number identifier (only numeric). Not suitable for percent mode.',
-    coeff: 'Seasonal hardness coefficient. This is calculated by comparing the ratio of the fastest run in',
-    coeff_event: 'Event hardness coefficient. Similar to Seasonal Hardness but specific to each event (driven by coeff_event).',
-    coeff_combined: 'Combined Hardness = Seasonal Hardness + Event Hardness (sum of coeff and coeff_event).',
-    avg: 'Average aggregation (mean).',
-    total: 'Sum across selected dates or events.',
-    max: 'Maximum value observed across the selected period.',
-    min: 'Minimum value observed across the selected period.',
-    range: 'Difference between maximum and minimum values (presented as percent points for %Participants).',
-    growth: 'Linear slope (least-squares) showing trend across the selected dates.'
-};
-
 // Global page load time to prevent help popups on mobile
 let pageLoadTime = Date.now();
 
-// Small tooltip component that shows short help text for control options and supports a 'More' drilldown
-const HelpTooltip: React.FC<{ label: string; options: { value: string; label: string }[] }> = ({ label, options }) => {
-    const [expanded, setExpanded] = useState<string | null>(null);
-    const [open, setOpen] = useState(false);
-    const wrapperRef = useRef<HTMLSpanElement | null>(null);
-
-    // Check if enough time has passed since page load to prevent mobile accidents
-    const isRecentPageLoad = () => {
-        return Date.now() - pageLoadTime < 1500; // 1.5 seconds
-    };
-
-    useEffect(() => {
-        const onDocClick = (e: any) => {
-            if (!open) return;
-            if (wrapperRef.current && !wrapperRef.current.contains(e.target)) {
-                setOpen(false);
-            }
-        };
-        document.addEventListener('click', onDocClick);
-        return () => document.removeEventListener('click', onDocClick);
-    }, [open]);
-
-    const handleClick = (e: React.MouseEvent) => {
-        // Prevent accidental mobile touch triggers but allow normal clicks
-        if (isRecentPageLoad()) {
-            e.preventDefault();
-            return;
-        }
-        setOpen(s => !s);
-    };
-
-    const handleTouch = (e: React.TouchEvent) => {
-        // More aggressive prevention for touch events (mobile)
-        if (isRecentPageLoad()) {
-            e.preventDefault();
-            e.stopPropagation();
-            return;
-        }
-    };
+const HelpTooltip: React.FC<{ label: string; options: { value: string; label: string }[]; triggerText?: string }> = ({ label, triggerText }) => {
+    const markerId = getMarkerForControlLabel(label);
 
     return (
-        <span className={`help-tooltip${open ? ' open' : ''}`} ref={wrapperRef}>
+        <span className="help-tooltip">
             <button
                 type="button"
+                className={`help-trigger${triggerText ? ' help-trigger-label' : ''}`}
+                onClick={(event) => {
+                    const rect = (event.currentTarget as HTMLButtonElement).getBoundingClientRect();
+                    requestUnifiedHelp(markerId, {
+                        x: rect.left,
+                        y: rect.bottom
+                    });
+                }}
                 aria-label={`${label} help`}
-                aria-expanded={open}
-                className="help-trigger"
-                onClick={handleClick}
-                onTouchStart={handleTouch}
-                onKeyDown={(e) => { 
-                    if (e.key === 'Escape') setOpen(false);
-                    if (e.key === 'Enter' && !isRecentPageLoad()) setOpen(s => !s);
-                }}
-                style={{ 
-                    userSelect: 'none',
-                    WebkitUserSelect: 'none',
-                    WebkitTouchCallout: 'none'
-                }}
                 title={`${label} help`}
             >
-                ?
+                {triggerText ? <span className="help-trigger-text">{triggerText}</span> : '?'}
             </button>
-            {open && (
-                <div className="help-content" role="dialog" aria-hidden={!open}>
-                    <div className="help-title">{label} - quick help</div>
-                    <div className="close-x" onClick={() => setOpen(false)} aria-label="Close">✕</div>
-                    <div style={{ marginTop: 6 }}>
-                        {options.slice(0, 8).map(opt => (
-                            <div key={opt.value} className="help-item"><span className="help-key">{opt.label}</span><span className="help-desc">{helpTextMap[opt.value] || ''}</span></div>
-                        ))}
-                    </div>
-                    {expanded ? (
-                        <div style={{ marginTop: 6 }}>
-                            <div style={{ fontSize: '0.85em' }}>{helpTextMap[expanded]}</div>
-                            <div className="more-link" onClick={() => setExpanded(null)}>Less</div>
-                        </div>
-                    ) : (
-                        <div className="more-link" onClick={() => setExpanded(options[0]?.value || null)}>More...</div>
-                    )}
-                </div>
-            )}
         </span>
     );
 };
 const filterOptions = [
-    { value: 'all', label: 'All' },
+    { value: 'all', label: 'Participants' },
     { value: 'sex', label: 'Sex' },
     { value: 'tourist', label: 'Tourist'},
     { value: 'volunteers', label: 'Volunteers' },
@@ -163,7 +82,7 @@ const filterOptions = [
 ];
 // Specific filter lists per analysis Type
 const participantFilterOptions = [
-    { value: 'all', label: 'All' },
+    { value: 'all', label: 'All Participants' },
     { value: 'eventNumber', label: 'Event Number' },
     { value: 'coeff', label: 'Seasonal Hardness' },
     { value: 'coeff_event', label: 'Event Hardness' },
@@ -184,7 +103,7 @@ const participantFilterOptions = [
 const percentParticipantFilterOptions = participantFilterOptions.slice();
 const percentTotalFilterOptions = participantFilterOptions.slice();
 const timesFilterOptions = [
-    { value: 'all', label: 'All' },
+    { value: 'all', label: 'All Participants' },
     { value: 'tourist', label: 'Tourist' },
     { value: 'regs', label: 'Regulars' },
     { value: 'sTourist', label: 'Super Tourists' },
@@ -1416,8 +1335,7 @@ const AnalysisControls: React.FC<AnalysisControlsProps> = ({
     <div style={{ marginBottom: '0.5em', marginLeft: '0.4cm', display: 'flex', alignItems: 'center' }}>
 
             <div style={{ display: 'flex', alignItems: 'center', marginRight: pos1 }}>
-                <HelpTooltip label={label1} options={options} />
-                <label htmlFor={`${label1}-select`} style={{ fontSize: '0.85em', marginLeft: '0.4em' }}>{label1}</label>
+                <HelpTooltip label={label1} options={options} triggerText={label1} />
             </div>
             <select
                 id={`${label1}-select`}
@@ -1431,8 +1349,13 @@ const AnalysisControls: React.FC<AnalysisControlsProps> = ({
                 ))}
             </select>
  
-     
-            <label htmlFor={`${label2}-select`} style={{ margin: '0 0.5em 0 '+pos2, fontSize: '0.85em'}}>{label2}</label>
+            <div style={{ margin: `0 0.5em 0 ${pos2}` }}>
+                {(options2 ?? []).length > 0 ? (
+                    <HelpTooltip label={label2} options={options2 ?? []} triggerText={label2} />
+                ) : (
+                    <span style={{ fontSize: '0.85em' }}>{label2}</span>
+                )}
+            </div>
             <select
                 id={`${label2}-select`}
                 value={value2}
@@ -1444,10 +1367,6 @@ const AnalysisControls: React.FC<AnalysisControlsProps> = ({
                     <option key={opt.value} value={opt.value}>{opt.label}</option>
                 ))}
             </select>
-            {/* Place help icons after right-side controls when provided */}
-            {label2 === 'Period' || label2 === 'Cell Agg' || label2 === 'Time Adj' ? (
-                <div style={{ marginLeft: '0.4em' }}><HelpTooltip label={label2} options={options2 ?? []} /></div>
-            ) : null}
         
     </div>
     );

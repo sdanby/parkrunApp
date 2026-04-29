@@ -1,6 +1,7 @@
 import React from 'react';
 import '../styles/main.css';
 import './HomePage.css';
+import { requestUnifiedHelp } from '../pages/UnifiedHelp';
 
 const HomePage: React.FC = () => {
     return (
@@ -9,6 +10,28 @@ const HomePage: React.FC = () => {
             <p>
                 This application allows you to track your parkrun events, view results, and analyze your performance over time.
             </p>
+            <div className="home-help-entry">
+                <button
+                    type="button"
+                    className="home-help-link"
+                    aria-label="Open Help Manual"
+                    onClick={() => requestUnifiedHelp('top')}
+                >
+                    <span className="home-help-icon" aria-hidden="true">📘</span>
+                    <span>Open Help Manual</span>
+                </button>
+            </div>
+            <div className="home-help-entry">
+                <button
+                    type="button"
+                    className="home-help-link"
+                    aria-label="Open Glossary"
+                    onClick={() => requestUnifiedHelp('glossary')}
+                >
+                    <span className="home-help-icon" aria-hidden="true">📗</span>
+                    <span>Glossary</span>
+                </button>
+            </div>
             <p>
                 Features include:
             </p>

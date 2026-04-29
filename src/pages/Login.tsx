@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import AthleteSearch from '../components/AthleteSearch';
 import { fetchAuthConfig, linkAthleteCode, loginWithEmail, loginWithGoogle, logoutSession, registerWithEmail, type AuthUser } from '../api/backendAPI';
 
@@ -19,6 +19,7 @@ type PendingLogin = {
 
 const Login: React.FC = () => {
     const navigate = useNavigate();
+    const location = useLocation();
     const googleBtnRef = useRef<HTMLDivElement | null>(null);
     const [mode, setMode] = useState<'signin' | 'register'>('signin');
     const [email, setEmail] = useState('');
@@ -104,6 +105,15 @@ const Login: React.FC = () => {
         window.addEventListener('storage', onStorage);
         return () => window.removeEventListener('storage', onStorage);
     }, []);
+
+    useEffect(() => {
+        const state: any = location.state;
+        const sessionMessage = state?.sessionMessage;
+        if (sessionMessage) {
+            setError(String(sessionMessage));
+            navigate(location.pathname, { replace: true, state: null });
+        }
+    }, [location.pathname, location.state, navigate]);
 
     useEffect(() => {
         if (googleClientId) {

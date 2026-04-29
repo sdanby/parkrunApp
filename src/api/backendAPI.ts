@@ -9,8 +9,41 @@ export type AuthUser = {
     email: string;
     displayName?: string;
     athleteCode?: string | null;
+    isAdmin?: boolean;
     lastLoginAt?: string | null;
     previousLoginAt?: string | null;
+};
+
+export type AdminStatusResponse = {
+    adminCount: number;
+    bootstrapOpen: boolean;
+    canAccessAdmin: boolean;
+    user?: AuthUser;
+};
+
+export type AdminUser = {
+    id: number;
+    email: string;
+    displayName?: string | null;
+    athleteCode?: string | null;
+    isAdmin: boolean;
+    createdAt?: string | null;
+    lastLoginAt?: string | null;
+};
+
+export type AdminActivityRecord = {
+    activityType: 'page_visit' | 'login' | string;
+    activityAt?: string | null;
+    userId?: number | null;
+    email?: string | null;
+    displayName?: string | null;
+    provider?: string | null;
+    success?: boolean | null;
+    pagePath?: string | null;
+    durationMs?: number | null;
+    referrerPath?: string | null;
+    userAgent?: string | null;
+    ipAddress?: string | null;
 };
 
 export type AuthResponse = {
@@ -355,4 +388,42 @@ export const linkAthleteCode = async (token: string, athleteCode?: string): Prom
         athleteCode
     });
     return response.data || { ok: true };
+};
+
+export const fetchAdminStatus = async (token: string): Promise<AdminStatusResponse> => {
+    const response = await axios.get(`${API_BASE_URL}/api/admin/status`, {
+        headers: {
+            Authorization: `Bearer ${token}`
+        }
+    });
+    return response.data;
+};
+
+export const fetchAdminUsers = async (token: string): Promise<{ users: AdminUser[]; adminCount: number; bootstrapOpen: boolean }> => {
+    const response = await axios.get(`${API_BASE_URL}/api/admin/users`, {
+        headers: {
+            Authorization: `Bearer ${token}`
+        }
+    });
+    return response.data || { users: [], adminCount: 0, bootstrapOpen: true };
+};
+
+export const setAdminUserFlag = async (token: string, userId: number, isAdmin: boolean): Promise<{ ok: boolean; user?: AdminUser; adminCount: number; bootstrapOpen: boolean }> => {
+    const response = await axios.post(`${API_BASE_URL}/api/admin/users/${userId}/admin`, {
+        isAdmin
+    }, {
+        headers: {
+            Authorization: `Bearer ${token}`
+        }
+    });
+    return response.data;
+};
+
+export const fetchAdminActivity = async (token: string, limit = 300): Promise<{ activity: AdminActivityRecord[]; limit: number }> => {
+    const response = await axios.get(`${API_BASE_URL}/api/admin/activity?limit=${encodeURIComponent(String(limit))}`, {
+        headers: {
+            Authorization: `Bearer ${token}`
+        }
+    });
+    return response.data || { activity: [], limit };
 };
