@@ -2334,12 +2334,30 @@ eventCodes.forEach(code => {
                                             background: '#e5e7eb',
                                             borderBottom: '1px solid #d1d5db',
                                             padding: '0.35rem 0.0rem',
-                                            textAlign: 'center',
                                             fontSize: '1.05rem',
-                                            fontWeight: 700
+                                            fontWeight: 700,
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            gap: '0.35rem'
                                         }}
                                     >
-                                        Event statistics comparison
+                                        <span>Event statistics comparison</span>
+                                        <button
+                                            type="button"
+                                            className="top-bar-help-btn"
+                                            aria-label="Event statistics comparison help"
+                                            title="Event statistics comparison help"
+                                            onClick={(event) => {
+                                                const rect = (event.currentTarget as HTMLButtonElement).getBoundingClientRect();
+                                                requestUnifiedHelp('section-event-stats-comparison', {
+                                                    x: rect.left,
+                                                    y: rect.bottom
+                                                });
+                                            }}
+                                        >
+                                            📖
+                                        </button>
                                     </div>
                                     <div style={{ padding: '0.6rem 0.8rem 0.8rem 0.8rem' }}>
                                         <ReactECharts

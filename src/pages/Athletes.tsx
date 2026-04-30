@@ -4,6 +4,7 @@ import { fetchAthleteBestSummary, fetchAthleteRuns } from '../api/backendAPI';
 import './ResultsTable.css';
 import AthleteSearch from '../components/AthleteSearch';
 import ReactECharts from 'echarts-for-react';
+import { requestUnifiedHelp } from './UnifiedHelp';
 
 type AthleteRecord = { [key: string]: any };
 
@@ -392,6 +393,7 @@ type ColumnKey =
     | 'best_curve_ranking_current'
     | 'time'
     | 'comment'
+    | 'club'
     | 'season_adj_time'
     | 'event_adj_time'
     | 'age_adj_time'
@@ -442,6 +444,7 @@ const adjustmentColumns: ColumnDef[] = [
 ];
 
 const detailedColumns: ColumnDef[] = [
+    { key: 'club', label: 'Club', align: 'left', desktopWidth: 120, mobileWidth: 100 },
     { key: 'last_position', label: 'Event total', align: 'center', desktopWidth: 80, mobileWidth: 70 },
     { key: 'event_number', label: 'Event No', align: 'center', desktopWidth: 70, mobileWidth: 60 },
     { key: 'total_runs_long', label: 'Runs in 1Y', align: 'center', desktopWidth: 80, mobileWidth: 70 },
@@ -643,6 +646,8 @@ const resolveColumnSortValue = (row: AthleteRecord, column: ColumnKey): number |
             );
         case 'comment':
             return parseStringSortValue(pickField(row, ['comment', 'notes', 'note', 'remark']));
+        case 'club':
+            return parseStringSortValue(pickField(row, ['club', 'athlete_club', 'current_club']));
         case 'season_adj_time':
         case 'event_adj_time':
         case 'age_adj_time':
@@ -712,9 +717,25 @@ const Athletes: React.FC = () => {
     const isMobileButtonLayout = useMediaQuery('(max-width: 900px), (pointer: coarse)');
     const navigate = useNavigate();
     const locationState = toAthletesLocationState(location.state ?? {});
-    const selectedCode = locationState.athleteCode || searchParams.get('athlete_code') || undefined;
+    // --- Athlete code selection logic ---
+    // If location state or query param has athlete_code, use it. Otherwise, use logged-in user's athlete_code from localStorage.
+    const getLoggedInUser = () => {
+        try {
+            const raw = localStorage.getItem('auth_user_v1');
+            if (!raw) return {};
+            const parsed = JSON.parse(raw);
+            return parsed || {};
+        } catch {
+            return {};
+        }
+    };
+    const loggedInUser = getLoggedInUser();
+    const loggedInAthleteCode = loggedInUser.athleteCode && typeof loggedInUser.athleteCode === 'string' && loggedInUser.athleteCode.trim() ? loggedInUser.athleteCode.trim() : undefined;
+    const loggedInDisplayName = loggedInUser.displayName && typeof loggedInUser.displayName === 'string' && loggedInUser.displayName.trim() ? loggedInUser.displayName.trim() : undefined;
+    const selectedCode = locationState.athleteCode || searchParams.get('athlete_code') || loggedInAthleteCode;
     const activeSelectedCode = selectedCode;
-    const initialSearchQuery = locationState.athleteName;
+    // If we are defaulting to the logged-in user, prefill the search box with their name
+    const initialSearchQuery = locationState.athleteName || (selectedCode === loggedInAthleteCode ? loggedInDisplayName : undefined);
     const shouldSuppressInitialSearch = Boolean((initialSearchQuery && initialSearchQuery.trim()) || activeSelectedCode);
     const fromRaces = locationState.from === 'races';
     const returnTarget = locationState.returnTo;
@@ -837,6 +858,29 @@ const Athletes: React.FC = () => {
         return () => clearTimeout(scrollTimeout);
     }, [runs, sourceEvent]);
 
+    const getReturnNavigationPath = (): string | null => {
+        if (!returnTarget?.pathname) {
+            return null;
+        }
+
+        const params = new URLSearchParams(returnTarget.search || '');
+        if (activeSelectedCode) {
+            params.set('highlight_athlete', String(activeSelectedCode));
+        }
+
+        if (returnTarget.pathname === '/clubs') {
+            const latestRunForClub = runs.length > 0 ? runs[runs.length - 1] : null;
+            const clubRaw = pickField(latestRunForClub, ['club']) || summary?.club;
+            const clubName = clubRaw ? String(clubRaw).trim() : '';
+            if (clubName && clubName.toLowerCase() !== '<no club>') {
+                params.set('club', clubName);
+            }
+        }
+
+        const qs = params.toString();
+        return `${returnTarget.pathname}${qs ? `?${qs}` : ''}`;
+    };
+
     const handleBackToRaces = () => {
         if (fromRaces && (locationState.fromSearchSelection || !hasSourceEvent) && runs.length > 0) {
             const mostRecentRow = sortedRuns.length > 0 ? sortedRuns[0] : runs[0];
@@ -859,12 +903,11 @@ const Athletes: React.FC = () => {
             }
         }
         if (returnTarget?.pathname) {
-            const params = new URLSearchParams(returnTarget.search || '');
-            if (activeSelectedCode) {
-                params.set('highlight_athlete', String(activeSelectedCode));
+            const targetPath = getReturnNavigationPath();
+            if (targetPath) {
+                navigate(targetPath);
+                return;
             }
-            const qs = params.toString();
-            navigate(`${returnTarget.pathname}${qs ? `?${qs}` : ''}`);
         } else {
             navigate('/races');
         }
@@ -876,10 +919,15 @@ const Athletes: React.FC = () => {
             return;
         }
         if (returnTarget?.pathname) {
-            navigate(`${returnTarget.pathname}${returnTarget.search ?? ''}`);
+            const targetPath = getReturnNavigationPath();
+            if (targetPath) {
+                navigate(targetPath);
+                return;
+            }
             return;
         }
-        navigate('/lists');
+        // Default: go to Event Analysis screen
+        navigate('/results');
     };
 
     const handleViewModeSelect = (event: React.ChangeEvent<HTMLSelectElement>) => {
@@ -1001,6 +1049,8 @@ const Athletes: React.FC = () => {
                 );
             case 'comment':
                 return renderCell(pickField(row, ['comment', 'notes', 'note', 'remark']));
+            case 'club':
+                return renderCell(pickField(row, ['club', 'athlete_club', 'current_club']));
             case 'season_adj_time':
             case 'event_adj_time':
             case 'age_adj_time':
@@ -2049,12 +2099,30 @@ const Athletes: React.FC = () => {
                                             background: '#e5e7eb',
                                             borderBottom: '1px solid #d1d5db',
                                             padding: '0.55rem 0.8rem',
-                                            textAlign: 'center',
                                             fontSize: '1.05rem',
-                                            fontWeight: 700
+                                            fontWeight: 700,
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            gap: '0.35rem'
                                         }}
                                     >
-                                        Time by Date
+                                        <span>Time by Date</span>
+                                        <button
+                                            type="button"
+                                            className="top-bar-help-btn"
+                                            aria-label="Time by Date help"
+                                            title="Time by Date help"
+                                            onClick={(event) => {
+                                                const rect = (event.currentTarget as HTMLButtonElement).getBoundingClientRect();
+                                                requestUnifiedHelp('section-participant-time-by-date', {
+                                                    x: rect.left,
+                                                    y: rect.bottom
+                                                });
+                                            }}
+                                        >
+                                            📖
+                                        </button>
                                     </div>
                                     <div style={{ padding: '0.6rem 0.8rem 0.9rem 0.8rem' }}>
                                         {plotPointsFilteredByEligibility.length === 0 ? (
@@ -2278,12 +2346,30 @@ const Athletes: React.FC = () => {
                                             background: '#e5e7eb',
                                             borderBottom: '1px solid #d1d5db',
                                             padding: '0.55rem 0.8rem',
-                                            textAlign: 'center',
                                             fontSize: '1.05rem',
-                                            fontWeight: 700
+                                            fontWeight: 700,
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            gap: '0.35rem'
                                         }}
                                     >
-                                        {displayName}
+                                        <span>{displayName}</span>
+                                        <button
+                                            type="button"
+                                            className="top-bar-help-btn"
+                                            aria-label="Participant Profile help"
+                                            title="Participant Profile help"
+                                            onClick={(event) => {
+                                                const rect = (event.currentTarget as HTMLButtonElement).getBoundingClientRect();
+                                                requestUnifiedHelp('section-participant-profile', {
+                                                    x: rect.left,
+                                                    y: rect.bottom
+                                                });
+                                            }}
+                                        >
+                                            📖
+                                        </button>
                                     </div>
                                     <div style={{ padding: '0.2rem 1rem 1rem 1rem' }}>
                                         {profileLoading ? (

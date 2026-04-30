@@ -9,9 +9,16 @@ export type AuthUser = {
     email: string;
     displayName?: string;
     athleteCode?: string | null;
+    defaultCourseCode?: string | null;
+    defaultCourseName?: string | null;
     isAdmin?: boolean;
     lastLoginAt?: string | null;
     previousLoginAt?: string | null;
+};
+
+export type EventOption = {
+    eventCode: string;
+    eventName: string;
 };
 
 export type AdminStatusResponse = {
@@ -26,6 +33,8 @@ export type AdminUser = {
     email: string;
     displayName?: string | null;
     athleteCode?: string | null;
+    defaultCourseCode?: string | null;
+    defaultCourseName?: string | null;
     isAdmin: boolean;
     createdAt?: string | null;
     lastLoginAt?: string | null;
@@ -44,6 +53,15 @@ export type AdminActivityRecord = {
     referrerPath?: string | null;
     userAgent?: string | null;
     ipAddress?: string | null;
+};
+
+export type FeedbackRequest = {
+    id: number;
+    type: 'error' | 'suggestion';
+    title: string;
+    details: string;
+    dateLogged: string;
+    status: string;
 };
 
 export type AuthResponse = {
@@ -382,10 +400,26 @@ export const fetchAuthConfig = async (): Promise<{ googleClientId?: string }> =>
     return response.data || {};
 };
 
-export const linkAthleteCode = async (token: string, athleteCode?: string): Promise<{ ok: boolean; user?: AuthUser; message?: string }> => {
+export const fetchEventOptions = async (): Promise<EventOption[]> => {
+    const response = await axios.get(`${API_BASE_URL}/api/events/options`);
+    const rows = Array.isArray(response.data) ? response.data : [];
+    return rows.map((row: any) => ({
+        eventCode: String(row.eventCode ?? row.event_code ?? ''),
+        eventName: String(row.eventName ?? row.event_name ?? '')
+    })).filter((row: EventOption) => row.eventCode && row.eventName);
+};
+
+export const linkAthleteCode = async (
+    token: string,
+    athleteCode?: string,
+    defaultCourseCode?: string,
+    defaultCourseName?: string
+): Promise<{ ok: boolean; user?: AuthUser; message?: string }> => {
     const response = await axios.post(`${API_BASE_URL}/api/auth/link-athlete`, {
         token,
-        athleteCode
+        athleteCode,
+        defaultCourseCode,
+        defaultCourseName
     });
     return response.data || { ok: true };
 };
@@ -419,6 +453,23 @@ export const setAdminUserFlag = async (token: string, userId: number, isAdmin: b
     return response.data;
 };
 
+export const setAdminUserDefaultCourse = async (
+    token: string,
+    userId: number,
+    defaultCourseCode?: string,
+    defaultCourseName?: string
+): Promise<{ ok: boolean; user?: AdminUser }> => {
+    const response = await axios.post(`${API_BASE_URL}/api/admin/users/${userId}/default-course`, {
+        defaultCourseCode,
+        defaultCourseName
+    }, {
+        headers: {
+            Authorization: `Bearer ${token}`
+        }
+    });
+    return response.data || { ok: true };
+};
+
 export const fetchAdminActivity = async (token: string, limit = 300): Promise<{ activity: AdminActivityRecord[]; limit: number }> => {
     const response = await axios.get(`${API_BASE_URL}/api/admin/activity?limit=${encodeURIComponent(String(limit))}`, {
         headers: {
@@ -426,4 +477,28 @@ export const fetchAdminActivity = async (token: string, limit = 300): Promise<{ 
         }
     });
     return response.data || { activity: [], limit };
+};
+
+export const fetchFeedbackRequests = async (): Promise<FeedbackRequest[]> => {
+    try {
+        const response = await axios.get(`${API_BASE_URL}/api/feedback-requests`);
+        return Array.isArray(response.data) ? response.data : [];
+    } catch (error) {
+        console.error('Error fetching feedback requests:', error);
+        throw error;
+    }
+};
+
+export const createFeedbackRequest = async (payload: {
+    type: 'error' | 'suggestion';
+    title: string;
+    details: string;
+}): Promise<FeedbackRequest> => {
+    try {
+        const response = await axios.post(`${API_BASE_URL}/api/feedback-requests`, payload);
+        return response.data;
+    } catch (error) {
+        console.error('Error creating feedback request:', error);
+        throw error;
+    }
 };

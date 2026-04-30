@@ -343,9 +343,8 @@ overflow: hidden;
 .races-table th:nth-child(n+3),
 .races-table td:nth-child(n+3) {
   /* allow the colgroup to control later columns */
-  min-width: initial !important;
-  max-width: initial !important;
-  width: auto !important;
+  min-width: 0 !important;
+  max-width: none !important;
 }
 
 /* Ensure sticky column classes inside .races-table respect the CSS variables */
@@ -829,7 +828,7 @@ select:focus {
 
 /* Make the races table size to its content, so the container width matches the table */
 .results-table.races-table {
-  width: auto !important;
+  width: var(--races-table-width, auto) !important;
   display: inline-block; /* shrink-wrapping behavior so scrollbar will sit near the table */
 }
 .results-table-container {
@@ -850,17 +849,8 @@ select:focus {
   z-index: 5;
 }
 
-/* Set a sensible starting size for columns 3+ in the Races view. This
-   places an initial width of 1.5cm for columns after the first two so the
-   table appears with that starting layout; users can still resize columns
-   and the colgroup inline widths will then take precedence. */
-.results-table.races-table th:nth-child(n+3),
-.results-table.races-table td:nth-child(n+3) {
-  min-width: 1.5cm !important;
-  width: 1.5cm !important;
-  /* allow user resizing to override later — colgroup inline widths have
-     higher specificity and will be applied when set by JS */
-}
+/* Widths for columns 3+ are controlled by the table colgroup and inline
+  widths from the Races page component. */
 
 /* Strong override to keep the Races table header visible above the page header
    and sticky columns. Some layouts place the page header near the table and
@@ -1111,19 +1101,6 @@ select:focus {
 }
 
 
-
-/* Force the Club column (6th) in the Races table to start at 1.5cm and
-   always clip overflow with ellipsis. This high-specificity rule should
-   override any global caps that keep the column wide due to content. */
-.races-table th:nth-child(6),
-.races-table td:nth-child(6) {
-  min-width: 1.5cm !important;
-  max-width: 3.5cm !important;
-  width: 3.5cm !important;
-  white-space: nowrap !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
-}
 
 .help-tooltip .help-content {
   width: 420px;

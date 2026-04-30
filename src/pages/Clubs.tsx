@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { fetchAthleteRuns } from '../api/backendAPI';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { fetchClubMembers, fetchClubsSearch } from '../api/backendAPI';
 import './ResultsTable.css';
@@ -177,12 +178,96 @@ const compareClubValues = (a: ClubMember, b: ClubMember, key: keyof ClubMember, 
     return direction === 'asc' ? result : -result;
 };
 
+const pickStringField = (value: unknown, keys: string[]): string | null => {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+        return null;
+    }
+    const obj: any = value;
+    for (const key of keys) {
+        const candidate = obj[key];
+        if (typeof candidate === 'string' && candidate.trim()) {
+            return candidate.trim();
+        }
+    }
+    return null;
+};
+
+const extractRunsArray = (payload: unknown): any[] => {
+    if (Array.isArray(payload)) {
+        return payload;
+    }
+    if (!payload || typeof payload !== 'object') {
+        return [];
+    }
+
+    const obj: any = payload;
+    const nestedArrayKeys = ['runs', 'results', 'records', 'rows', 'items', 'data', 'events'];
+    for (const key of nestedArrayKeys) {
+        const candidate = obj[key];
+        if (Array.isArray(candidate)) {
+            return candidate;
+        }
+    }
+
+    return [];
+};
+
+const getMostRecentClubFromAthletePayload = (payload: unknown): string | null => {
+    const runs = extractRunsArray(payload);
+    const latestRun = runs.length > 0 ? runs[runs.length - 1] : null;
+    const latestRunClub = pickStringField(latestRun, ['club']);
+    if (latestRunClub) {
+        return latestRunClub;
+    }
+
+    const summaryClub = pickStringField((payload as any)?.summary, ['club', 'athlete_club'])
+        || pickStringField(payload, ['club', 'athlete_club']);
+    return summaryClub || null;
+};
+
 const Clubs: React.FC = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const locationState = toClubsLocationState(location.state ?? {});
     const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
-    const initialClub = (searchParams.get('club') || '').trim();
+    const initialClubFromUrl = (searchParams.get('club') || '').trim();
+    const [userClub, setUserClub] = useState<string | null>(null);
+    const initialClub = initialClubFromUrl || userClub || '';
+
+    // If there is no club in URL, default to logged-in athlete's most recent club.
+    useEffect(() => {
+        if (initialClubFromUrl) {
+            return;
+        }
+
+        let cancelled = false;
+        const loadLoggedInAthleteClub = async () => {
+            try {
+                const raw = localStorage.getItem('auth_user_v1');
+                if (!raw) {
+                    return;
+                }
+                const parsed = JSON.parse(raw);
+                const athleteCode = typeof parsed?.athleteCode === 'string' ? parsed.athleteCode.trim() : '';
+                if (!athleteCode) {
+                    return;
+                }
+
+                const payload = await fetchAthleteRuns(athleteCode);
+                const club = getMostRecentClubFromAthletePayload(payload);
+                if (!cancelled && club) {
+                    setUserClub(club);
+                }
+            } catch {
+                // Ignore default-club lookup failures and allow manual entry.
+            }
+        };
+
+        loadLoggedInAthleteClub();
+        return () => {
+            cancelled = true;
+        };
+    }, [initialClubFromUrl]);
     const initialSortKeyParam = searchParams.get('club_sort') || 'club_runs_total';
     const initialSortDirectionParam = searchParams.get('club_dir');
     const initialClubModeParam = searchParams.get('club_mode');
@@ -596,56 +681,64 @@ const Clubs: React.FC = () => {
                                     <tr>
                                         <td colSpan={clubColumns.length} className="clubs-members-empty">No members found.</td>
                                     </tr>
-                                ) : rowsToRender.map((member) => (
-                                    <tr
-                                        key={member.athlete_code}
-                                        className={activeHighlightAthleteCode && String(member.athlete_code) === String(activeHighlightAthleteCode) ? 'clubs-highlighted-row' : ''}
-                                    >
-                                        {clubColumns.map((column) => {
-                                            const alignmentStyle = { textAlign: column.align ?? 'left' } as React.CSSProperties;
-                                            const value = member[column.key];
-                                            if (column.key === 'name') {
-                                                return (
-                                                    <th key={String(column.key)} scope="row" className="athlete-date-cell" style={alignmentStyle}>
-                                                        <button
-                                                            type="button"
-                                                            className="clubs-athlete-button"
-                                                            onClick={() => handleParticipantOpen(member)}
-                                                            title="Open athlete run history"
-                                                            aria-label={`Open run history for ${member.name || member.athlete_code}`}
-                                                        >
-                                                            {member.name || member.athlete_code}
-                                                        </button>
-                                                    </th>
-                                                );
-                                            }
-                                            if (column.key === 'current_club') {
-                                                const currentClubValue = String(value || '').trim();
-                                                const isClickable = currentClubValue.length > 0 && normalizeClubName(currentClubValue) !== normalizeClubName(selectedClub?.club);
-                                                return (
-                                                    <td key={String(column.key)} style={alignmentStyle}>
-                                                        {isClickable ? (
+                                ) : rowsToRender.map((member) => {
+                                    // Assume a linked participant is one where member.current_club matches selectedClub.club (customize as needed)
+                                    const isLinked = normalizeClubName(member.current_club) === normalizeClubName(selectedClub?.club);
+                                    const rowClass = [
+                                        isLinked ? 'clubs-linked-athlete-row' : '',
+                                        activeHighlightAthleteCode && String(member.athlete_code) === String(activeHighlightAthleteCode) ? 'clubs-highlighted-row' : ''
+                                    ].filter(Boolean).join(' ');
+                                    return (
+                                        <tr
+                                            key={member.athlete_code}
+                                            className={rowClass}
+                                        >
+                                            {clubColumns.map((column) => {
+                                                const alignmentStyle = { textAlign: column.align ?? 'left' } as React.CSSProperties;
+                                                const value = member[column.key];
+                                                if (column.key === 'name') {
+                                                    return (
+                                                        <th key={String(column.key)} scope="row" className="athlete-date-cell" style={alignmentStyle}>
                                                             <button
                                                                 type="button"
-                                                                className="clubs-current-club-button"
-                                                                onClick={() => handleCurrentClubOpen(member)}
-                                                                title={`Open ${currentClubValue}`}
-                                                                aria-label={`Open club ${currentClubValue}`}
+                                                                className={isLinked ? 'clubs-athlete-button clubs-linked-athlete-button' : 'clubs-athlete-button'}
+                                                                onClick={() => handleParticipantOpen(member)}
+                                                                title="Open athlete run history"
+                                                                aria-label={`Open run history for ${member.name || member.athlete_code}`}
                                                             >
-                                                                {currentClubValue}
+                                                                {member.name || member.athlete_code}
                                                             </button>
-                                                        ) : formatDisplayValue(column.key, value)}
+                                                        </th>
+                                                    );
+                                                }
+                                                if (column.key === 'current_club') {
+                                                    const currentClubValue = String(value || '').trim();
+                                                    const isClickable = currentClubValue.length > 0 && normalizeClubName(currentClubValue) !== normalizeClubName(selectedClub?.club);
+                                                    return (
+                                                        <td key={String(column.key)} style={alignmentStyle}>
+                                                            {isClickable ? (
+                                                                <button
+                                                                    type="button"
+                                                                    className="clubs-current-club-button"
+                                                                    onClick={() => handleCurrentClubOpen(member)}
+                                                                    title={`Open ${currentClubValue}`}
+                                                                    aria-label={`Open club ${currentClubValue}`}
+                                                                >
+                                                                    {currentClubValue}
+                                                                </button>
+                                                            ) : formatDisplayValue(column.key, value)}
+                                                        </td>
+                                                    );
+                                                }
+                                                return (
+                                                    <td key={String(column.key)} style={alignmentStyle}>
+                                                        {formatDisplayValue(column.key, value)}
                                                     </td>
                                                 );
-                                            }
-                                            return (
-                                                <td key={String(column.key)} style={alignmentStyle}>
-                                                    {formatDisplayValue(column.key, value)}
-                                                </td>
-                                            );
-                                        })}
-                                    </tr>
-                                ))}
+                                            })}
+                                        </tr>
+                                    );
+                                })}
                             </tbody>
                         </table>
                     )}

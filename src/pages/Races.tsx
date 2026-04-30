@@ -182,6 +182,24 @@ const Races: React.FC = () => {
             }
         });
     };
+    const handleClubNavigate = (clubRaw: unknown) => {
+        const club = String(clubRaw ?? '').trim();
+        if (!club || club.toLowerCase() === '<no club>') {
+            return;
+        }
+
+        const params = new URLSearchParams();
+        params.set('club', club);
+
+        navigate(`/clubs?${params.toString()}`, {
+            state: {
+                returnTo: {
+                    pathname: '/races',
+                    search: location.search || ''
+                }
+            }
+        });
+    };
     const onCourseAdjSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
         handleCourseAdjChange(normalizeCourseAdj(e.target.value));
     };
@@ -203,6 +221,25 @@ const Races: React.FC = () => {
     // Sorting state
     const [sortKey, setSortKey] = useState<string | null>(null);
     const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+    const [isCompactViewport, setIsCompactViewport] = useState<boolean>(() => {
+        if (typeof window === 'undefined') return false;
+        return window.innerWidth <= 900;
+    });
+
+    useEffect(() => {
+        const updateViewportMode = () => {
+            setIsCompactViewport(window.innerWidth <= 900);
+        };
+
+        updateViewportMode();
+        window.addEventListener('resize', updateViewportMode);
+        window.addEventListener('orientationchange', updateViewportMode);
+
+        return () => {
+            window.removeEventListener('resize', updateViewportMode);
+            window.removeEventListener('orientationchange', updateViewportMode);
+        };
+    }, []);
 
     const snakeToCamel = (s: string) => s.replace(/_(.)/g, (_m, g1) => g1.toUpperCase());
     const getSortValue = (row: any, key: string) => {
@@ -953,6 +990,58 @@ const Races: React.FC = () => {
     { k: 'age_sex_adj_time', label: 'Age+Sex' },
     { k: 'age_sex_event_adj_time', label: 'Event+Age+Sex' }
     ];
+    const compactLeadingWidths = {
+        position: 50,
+        athlete: 150
+    };
+    const desktopLeadingWidths = {
+        position: 60,
+        athlete: 220
+    };
+    const fixedLeadingWidths = isCompactViewport ? compactLeadingWidths : desktopLeadingWidths;
+
+    const compactDataColumnWidths: Record<string, number> = {
+        time: 60,
+        age_group: 70,
+        age_grade: 70,
+        best_curve_ranking_current: 60,
+        club: 130,
+        comment: 90,
+        total_runs: 90,
+        last_event_code_count_long: 90,
+        event_eligible_appearances: 90,
+        distinct_courses_long: 90,
+        season_adj_time: 90,
+        event_adj_time: 90,
+        age_adj_time: 90,
+        sex_adj_time: 90,
+        age_event_adj_time: 90,
+        sex_event_adj_time: 90,
+        age_sex_adj_time: 90,
+        age_sex_event_adj_time: 90
+    };
+    const desktopDataColumnWidths: Record<string, number> = {
+        time: 80,
+        age_group: 100,
+        age_grade: 100,
+        best_curve_ranking_current: 80,
+        club: 180,
+        comment: 180,
+        total_runs: 120,
+        last_event_code_count_long: 120,
+        event_eligible_appearances: 130,
+        distinct_courses_long: 120,
+        season_adj_time: 120,
+        event_adj_time: 120,
+        age_adj_time: 120,
+        sex_adj_time: 120,
+        age_event_adj_time: 140,
+        sex_event_adj_time: 140,
+        age_sex_adj_time: 130,
+        age_sex_event_adj_time: 150
+    };
+    const fixedDataColumnWidths = isCompactViewport ? compactDataColumnWidths : desktopDataColumnWidths;
+    const getFixedDataColumnWidth = (columnKey: string): number => fixedDataColumnWidths[columnKey] ?? (isCompactViewport ? 90 : 120);
     // ...after adjustmentColumns definition
     const columns = useMemo(() => {
         if (viewMode === 'detailed') return [...baseColumns, ...extraColumns];
@@ -976,6 +1065,10 @@ const Races: React.FC = () => {
             ...selected.slice(insertAt)
         ];
     }, [viewMode, adjustmentKeys]);
+    const racesTableWidthPx = useMemo(() => {
+        const dynamicWidth = columns.reduce((sum, col) => sum + getFixedDataColumnWidth(col.k), 0);
+        return fixedLeadingWidths.position + fixedLeadingWidths.athlete + dynamicWidth;
+    }, [columns]);
     const adjustmentLabelMap: Record<string, string> = {};
     adjustmentColumns.forEach(col => {
         adjustmentLabelMap[col.k] = col.label;
@@ -1113,11 +1206,17 @@ const Races: React.FC = () => {
                                 key={viewMode}                 // force remount when view changes
                                 className="results-table races-table"
                                 ref={tableRef}
+                                style={{ ['--races-table-width' as any]: `${racesTableWidthPx}px` }}
                             >
                                 {/* colgroup ... */}
                                 <colgroup>
                                 {Array.from({ length: 2 + columns.length }).map((_, i) => {
-                                    const w = colWidths[i] ?? (defaultWidthsBase[i] ?? 90);
+                                    const columnKey = i >= 2 ? columns[i - 2]?.k : null;
+                                    const w = i === 0
+                                        ? fixedLeadingWidths.position
+                                        : i === 1
+                                            ? fixedLeadingWidths.athlete
+                                            : getFixedDataColumnWidth(String(columnKey || ''));
                                     return <col key={i} style={{ width: `${w}px` }} />;
                                 })}
                                 </colgroup>
@@ -1129,7 +1228,14 @@ const Races: React.FC = () => {
                             <tr>
                                 <th
                                     className="sticky-col sticky-header"
-                                    style={{ fontWeight: 700, position: 'relative', cursor: 'pointer' }}
+                                    style={{
+                                        fontWeight: 700,
+                                        position: 'relative',
+                                        cursor: 'pointer',
+                                        width: `${fixedLeadingWidths.position}px`,
+                                        minWidth: `${fixedLeadingWidths.position}px`,
+                                        maxWidth: `${fixedLeadingWidths.position}px`
+                                    }}
                                     onClick={() => handleSort('position')}
                                     onTouchEnd={(e) => { e.preventDefault(); handleSort('position'); }}
                                 >
@@ -1143,7 +1249,14 @@ const Races: React.FC = () => {
                                 </th>
                                     <th
                                         className="sticky-col-2 sticky-header"
-                                        style={{ fontWeight: 700, textAlign: 'left', cursor: 'pointer' }}
+                                        style={{
+                                            fontWeight: 700,
+                                            textAlign: 'left',
+                                            cursor: 'pointer',
+                                            width: `${fixedLeadingWidths.athlete}px`,
+                                            minWidth: `${fixedLeadingWidths.athlete}px`,
+                                            maxWidth: `${fixedLeadingWidths.athlete}px`
+                                        }}
                                         onClick={() => handleSort('name')}
                                         onTouchEnd={(e) => { e.preventDefault(); handleSort('name'); }}
                                     >
@@ -1160,7 +1273,14 @@ const Races: React.FC = () => {
                                     <th
                                         key={col.k}
                                         className={`sticky-header ${adjustmentColumns.find(ac => ac.k === col.k) ? 'adjustment-header' : ''}`}
-                                        style={{ fontWeight: 700, position: 'relative', cursor: 'pointer' }}
+                                        style={{
+                                            fontWeight: 700,
+                                            position: 'relative',
+                                            cursor: 'pointer',
+                                            width: `${getFixedDataColumnWidth(col.k)}px`,
+                                            minWidth: `${getFixedDataColumnWidth(col.k)}px`,
+                                            maxWidth: `${getFixedDataColumnWidth(col.k)}px`
+                                        }}
                                         onClick={() => handleSort(col.k)}
                                         onTouchEnd={(e) => { e.preventDefault(); handleSort(col.k); }}  // add this
                                     >
@@ -1256,7 +1376,34 @@ const Races: React.FC = () => {
                                     {columns.map((col) => {
                                         const rawVal = r[col.k] ?? r[col.k.replace(/_(.)/g, (_m, g1) => g1.toUpperCase())] ?? '';
                                         const textAlign = (typeof rawVal === 'string') ? ((col.k === 'club' || col.k === 'comment') ? 'left' : undefined) : undefined;
-                                        const cellStyle: React.CSSProperties = { textAlign };
+                                        const cellStyle: React.CSSProperties = {
+                                            textAlign,
+                                            width: `${getFixedDataColumnWidth(col.k)}px`,
+                                            minWidth: `${getFixedDataColumnWidth(col.k)}px`,
+                                            maxWidth: `${getFixedDataColumnWidth(col.k)}px`
+                                        };
+
+                                        if (col.k === 'club') {
+                                            const clubValue = String(rawVal ?? '').trim();
+                                            const canOpenClub = clubValue.length > 0 && clubValue.toLowerCase() !== '<no club>';
+                                            return (
+                                                <td key={col.k} style={cellStyle}>
+                                                    {canOpenClub ? (
+                                                        <button
+                                                            type="button"
+                                                            className="races-athlete-button"
+                                                            onClick={() => handleClubNavigate(clubValue)}
+                                                            title={`Open club: ${clubValue}`}
+                                                            aria-label={`Open club ${clubValue}`}
+                                                        >
+                                                            {clubValue}
+                                                        </button>
+                                                    ) : (
+                                                        String(rawVal)
+                                                    )}
+                                                </td>
+                                            );
+                                        }
 
                                         if (col.k === 'best_curve_ranking_current') {
                                             const currentRankRaw = r['best_curve_ranking_current'] ?? r['bestCurveRankingCurrent'] ?? r['rank'];

@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import AthleteSearch from '../components/AthleteSearch';
-import { fetchAuthConfig, linkAthleteCode, loginWithEmail, loginWithGoogle, logoutSession, registerWithEmail, type AuthUser } from '../api/backendAPI';
+import EventSearch from '../components/EventSearch';
+import { fetchAuthConfig, fetchEventOptions, linkAthleteCode, loginWithEmail, loginWithGoogle, logoutSession, registerWithEmail, type AuthUser, type EventOption } from '../api/backendAPI';
 
 declare global {
     interface Window {
@@ -31,11 +32,16 @@ const Login: React.FC = () => {
     const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => Boolean(localStorage.getItem(AUTH_TOKEN_KEY)));
     const [pendingLogin, setPendingLogin] = useState<PendingLogin | null>(null);
     const [selectedAthleteCode, setSelectedAthleteCode] = useState<string>('');
+    const [selectedDefaultCourseCode, setSelectedDefaultCourseCode] = useState<string>('');
+    const [selectedDefaultCourseName, setSelectedDefaultCourseName] = useState<string>('');
+    const [courseOptions, setCourseOptions] = useState<EventOption[]>([]);
 
     const completeLogin = (token: string, user: any) => {
         const normalizedUser = (user || {}) as AuthUser;
         setPendingLogin({ token, user: normalizedUser });
         setSelectedAthleteCode(String(normalizedUser.athleteCode || ''));
+        setSelectedDefaultCourseCode(String(normalizedUser.defaultCourseCode || ''));
+        setSelectedDefaultCourseName(String(normalizedUser.defaultCourseName || ''));
     };
 
     const finalizeLogin = (token: string, user: AuthUser) => {
@@ -54,19 +60,28 @@ const Login: React.FC = () => {
         setLoading(true);
         let userToStore: AuthUser = pendingLogin.user;
         try {
-            const response = await linkAthleteCode(pendingLogin.token, selectedAthleteCode || undefined);
+            const response = await linkAthleteCode(
+                pendingLogin.token,
+                selectedAthleteCode || undefined,
+                selectedDefaultCourseCode || undefined,
+                selectedDefaultCourseName || undefined
+            );
             if (response?.user) {
                 userToStore = response.user;
             } else {
                 userToStore = {
                     ...userToStore,
                     athleteCode: selectedAthleteCode || null,
+                    defaultCourseCode: selectedDefaultCourseCode || null,
+                    defaultCourseName: selectedDefaultCourseName || null,
                 };
             }
         } catch (_err) {
             userToStore = {
                 ...userToStore,
                 athleteCode: selectedAthleteCode || null,
+                defaultCourseCode: selectedDefaultCourseCode || null,
+                defaultCourseName: selectedDefaultCourseName || null,
             };
         } finally {
             setLoading(false);
@@ -104,6 +119,26 @@ const Login: React.FC = () => {
         const onStorage = () => setIsAuthenticated(Boolean(localStorage.getItem(AUTH_TOKEN_KEY)));
         window.addEventListener('storage', onStorage);
         return () => window.removeEventListener('storage', onStorage);
+    }, []);
+
+    useEffect(() => {
+        let cancelled = false;
+        const loadCourseOptions = async () => {
+            try {
+                const options = await fetchEventOptions();
+                if (!cancelled) {
+                    setCourseOptions(options);
+                }
+            } catch (_err) {
+                if (!cancelled) {
+                    setCourseOptions([]);
+                }
+            }
+        };
+        loadCourseOptions();
+        return () => {
+            cancelled = true;
+        };
     }, []);
 
     useEffect(() => {
@@ -246,6 +281,7 @@ const Login: React.FC = () => {
                         <div><strong>Name:</strong> {pendingLogin.user.displayName || pendingLogin.user.email || 'Unknown user'}</div>
                         <div><strong>Last login:</strong> {formatLastLogin(pendingLogin.user)}</div>
                         <div><strong>Athlete code:</strong> {selectedAthleteCode || 'Not set'}</div>
+                        <div><strong>Default course:</strong> {selectedDefaultCourseName || selectedDefaultCourseCode || 'Not set'}</div>
 
                         <div>
                             <label htmlFor="login-athlete-search" style={{ display: 'block', fontWeight: 600, marginBottom: 6 }}>
@@ -255,6 +291,24 @@ const Login: React.FC = () => {
                                 inputId="login-athlete-search"
                                 placeholder="Search athlete name or code..."
                                 onSelect={(athleteCode) => setSelectedAthleteCode(String(athleteCode || ''))}
+                            />
+                        </div>
+
+                        <div>
+                            <label htmlFor="login-default-course-search" style={{ display: 'block', fontWeight: 600, marginBottom: 6 }}>
+                                Select new/Change default course
+                            </label>
+                            <EventSearch
+                                inputId="login-default-course-search"
+                                options={courseOptions}
+                                initialQuery={selectedDefaultCourseName}
+                                placeholder="Search course name or code..."
+                                inputWidth="100%"
+                                dropdownWidth="100%"
+                                onSelect={(eventCode, eventName) => {
+                                    setSelectedDefaultCourseCode(String(eventCode || ''));
+                                    setSelectedDefaultCourseName(String(eventName || ''));
+                                }}
                             />
                         </div>
 
@@ -279,7 +333,11 @@ const Login: React.FC = () => {
                             </button>
                             <button
                                 type="button"
-                                onClick={() => setSelectedAthleteCode('')}
+                                onClick={() => {
+                                    setSelectedAthleteCode('');
+                                    setSelectedDefaultCourseCode('');
+                                    setSelectedDefaultCourseName('');
+                                }}
                                 disabled={loading}
                                 style={{
                                     flex: 1,
@@ -293,7 +351,7 @@ const Login: React.FC = () => {
                                     opacity: loading ? 0.7 : 1
                                 }}
                             >
-                                Clear athlete code
+                                Clear selections
                             </button>
                         </div>
                     </div>

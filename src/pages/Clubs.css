@@ -1,3 +1,12 @@
+.clubs-linked-athlete-row > th,
+.clubs-linked-athlete-row > td {
+    color: #1976d2 !important; /* Material blue */
+}
+
+.clubs-linked-athlete-button {
+    color: #1976d2 !important;
+    font-weight: 600;
+}
 .clubs-page {
     width: 100%;
 }

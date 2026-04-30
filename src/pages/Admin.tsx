@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { fetchAdminActivity, fetchAdminStatus, fetchAdminUsers, setAdminUserFlag, type AdminActivityRecord, type AdminUser } from '../api/backendAPI';
+import { fetchAdminActivity, fetchAdminStatus, fetchAdminUsers, fetchEventOptions, setAdminUserDefaultCourse, setAdminUserFlag, type AdminActivityRecord, type AdminUser, type EventOption } from '../api/backendAPI';
 import './Admin.css';
 
 const AUTH_TOKEN_KEY = 'auth_token_v1';
@@ -63,7 +63,9 @@ const Admin: React.FC = () => {
     const [bootstrapOpen, setBootstrapOpen] = useState(false);
     const [adminCount, setAdminCount] = useState(0);
     const [users, setUsers] = useState<AdminUser[]>([]);
+    const [courseOptions, setCourseOptions] = useState<EventOption[]>([]);
     const [savingUserId, setSavingUserId] = useState<number | null>(null);
+    const [savingCourseUserId, setSavingCourseUserId] = useState<number | null>(null);
     const [section, setSection] = useState<AdminPanelSection>('admin-setup');
     const [activity, setActivity] = useState<AdminActivityRecord[]>([]);
     const [activityLoading, setActivityLoading] = useState(false);
@@ -85,6 +87,46 @@ const Admin: React.FC = () => {
         device: ''
     });
     const token = useMemo(() => localStorage.getItem(AUTH_TOKEN_KEY) || '', []);
+
+    const normalizeAdminUsers = (rawUsers: any[]): AdminUser[] => {
+        const usersList = Array.isArray(rawUsers) ? rawUsers : [];
+        const normalized = usersList.map((row: any) => ({
+            id: Number(row?.id),
+            email: String(row?.email || ''),
+            displayName: row?.displayName ?? row?.display_name ?? null,
+            athleteCode: row?.athleteCode ?? row?.athlete_code ?? null,
+            defaultCourseCode: row?.defaultCourseCode ?? row?.default_course_code ?? null,
+            defaultCourseName: row?.defaultCourseName ?? row?.default_course_name ?? null,
+            isAdmin: Boolean(row?.isAdmin ?? row?.is_admin),
+            createdAt: row?.createdAt ?? row?.created_at ?? null,
+            lastLoginAt: row?.lastLoginAt ?? row?.last_login_at ?? null
+        }));
+
+        try {
+            const rawAuth = localStorage.getItem(AUTH_USER_KEY);
+            if (!rawAuth) return normalized;
+            const authUser = JSON.parse(rawAuth) || {};
+            const authId = Number(authUser.id);
+            const authEmail = String(authUser.email || '').toLowerCase();
+            const authDefaultCode = String(authUser.defaultCourseCode || authUser.default_course_code || '').trim();
+            const authDefaultName = String(authUser.defaultCourseName || authUser.default_course_name || '').trim();
+            if (!authDefaultCode && !authDefaultName) return normalized;
+
+            return normalized.map((entry) => {
+                const idMatch = Number.isFinite(authId) && Number(entry.id) === authId;
+                const emailMatch = authEmail && String(entry.email || '').toLowerCase() === authEmail;
+                if (!idMatch && !emailMatch) return entry;
+
+                return {
+                    ...entry,
+                    defaultCourseCode: entry.defaultCourseCode || authDefaultCode || null,
+                    defaultCourseName: entry.defaultCourseName || authDefaultName || null
+                };
+            });
+        } catch (_err) {
+            return normalized;
+        }
+    };
 
     const loadData = async () => {
         if (!token) {
@@ -108,7 +150,9 @@ const Admin: React.FC = () => {
             }
 
             const response = await fetchAdminUsers(token);
-            setUsers(Array.isArray(response.users) ? response.users : []);
+            setUsers(normalizeAdminUsers(response.users));
+            const options = await fetchEventOptions();
+            setCourseOptions(Array.isArray(options) ? options : []);
             setAdminCount(Number(response.adminCount || 0));
             setBootstrapOpen(Boolean(response.bootstrapOpen));
         } catch (err: any) {
@@ -231,6 +275,40 @@ const Admin: React.FC = () => {
         }
     };
 
+    const handleDefaultCourseChange = async (row: AdminUser, nextCode: string) => {
+        if (!token || savingCourseUserId !== null) {
+            return;
+        }
+        const syntheticNamePrefix = '__name__:';
+        const isSyntheticName = nextCode.startsWith(syntheticNamePrefix);
+        const selectedName = isSyntheticName ? nextCode.slice(syntheticNamePrefix.length) : undefined;
+        const selected = courseOptions.find((opt) => opt.eventCode === nextCode);
+        try {
+            setSavingCourseUserId(row.id);
+            setError(null);
+            const response = await setAdminUserDefaultCourse(
+                token,
+                row.id,
+                isSyntheticName ? undefined : (nextCode || undefined),
+                selected?.eventName || selectedName || undefined
+            );
+            const updated = response?.user;
+            setUsers((prev) => prev.map((entry) => (
+                entry.id === row.id
+                    ? {
+                        ...entry,
+                        defaultCourseCode: String(updated?.defaultCourseCode || ''),
+                        defaultCourseName: String(updated?.defaultCourseName || '')
+                    }
+                    : entry
+            )));
+        } catch (err: any) {
+            setError(err?.response?.data?.error || 'Unable to update default course.');
+        } finally {
+            setSavingCourseUserId(null);
+        }
+    };
+
     if (loading) {
         return <div className="page-content admin-page"><div className="admin-status">Loading admin panel...</div></div>;
     }
@@ -277,6 +355,7 @@ const Admin: React.FC = () => {
                                             <th>Email</th>
                                             <th>Name</th>
                                             <th>Athlete</th>
+                                            <th>Default Course</th>
                                             <th>Created</th>
                                             <th>Last Login</th>
                                             <th>Admin</th>
@@ -298,6 +377,11 @@ const Admin: React.FC = () => {
                                                 <div className="admin-filter-cell">
                                                     <input className="admin-filter-input" value={userFilters.athlete} onChange={(e) => onUserFilterChange('athlete', e.target.value)} />
                                                     {userFilters.athlete && <button type="button" className="admin-filter-clear" onClick={() => clearUserFilter('athlete')}>x</button>}
+                                                </div>
+                                            </th>
+                                            <th>
+                                                <div className="admin-filter-cell" style={{ justifyContent: 'center' }}>
+                                                    <span style={{ color: '#64748b', fontSize: '0.75rem' }}>select</span>
                                                 </div>
                                             </th>
                                             <th>
@@ -323,13 +407,52 @@ const Admin: React.FC = () => {
                                     <tbody>
                                         {filteredUsers.length === 0 ? (
                                             <tr>
-                                                <td colSpan={6} className="admin-empty">No matching users found.</td>
+                                                <td colSpan={7} className="admin-empty">No matching users found.</td>
                                             </tr>
                                         ) : filteredUsers.map((row) => (
                                             <tr key={row.id}>
                                                 <td>{row.email}</td>
                                                 <td>{row.displayName || '—'}</td>
                                                 <td>{row.athleteCode || '—'}</td>
+                                                <td>
+                                                    {(() => {
+                                                        const currentCode = String(row.defaultCourseCode || '').trim();
+                                                        const currentName = String(row.defaultCourseName || '').trim();
+                                                        const syntheticNameValue = currentName ? `__name__:${currentName}` : '';
+                                                        const hasCodeOption = currentCode
+                                                            ? courseOptions.some((opt) => opt.eventCode === currentCode)
+                                                            : false;
+                                                        const hasNameOption = currentName
+                                                            ? courseOptions.some((opt) => opt.eventName.toLowerCase() === currentName.toLowerCase())
+                                                            : false;
+                                                        const currentValue = currentCode
+                                                            ? currentCode
+                                                            : (currentName ? syntheticNameValue : '');
+
+                                                        return (
+                                                    <select
+                                                        value={currentValue}
+                                                        onChange={(event) => handleDefaultCourseChange(row, event.target.value)}
+                                                        disabled={savingCourseUserId === row.id}
+                                                        style={{ width: '100%', minWidth: 180 }}
+                                                        aria-label={`Default course for ${row.email}`}
+                                                    >
+                                                        <option value="">Not set</option>
+                                                        {currentCode && !hasCodeOption && (
+                                                            <option value={currentCode}>{currentName || `Course ${currentCode}`} ({currentCode})</option>
+                                                        )}
+                                                        {!currentCode && currentName && !hasNameOption && (
+                                                            <option value={syntheticNameValue}>{currentName}</option>
+                                                        )}
+                                                        {courseOptions.map((opt) => (
+                                                            <option key={opt.eventCode} value={opt.eventCode}>
+                                                                {opt.eventName} ({opt.eventCode})
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                        );
+                                                    })()}
+                                                </td>
                                                 <td>{formatDateTime(row.createdAt)}</td>
                                                 <td>{formatDateTime(row.lastLoginAt)}</td>
                                                 <td>

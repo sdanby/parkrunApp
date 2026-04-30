@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { fetchAdminStatus, logoutSession } from '../api/backendAPI';
+import { API_BASE_URL, fetchAdminStatus, logoutSession } from '../api/backendAPI';
 import './HamburgerMenu.css';
 
 const AUTH_TOKEN_KEY = 'auth_token_v1';
@@ -10,8 +10,29 @@ const SESSION_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 const HamburgerMenu: React.FC = () => {
     const [open, setOpen] = useState(false);
     const [canSeeAdmin, setCanSeeAdmin] = useState(false);
+    const menuRef = useRef<HTMLDivElement | null>(null);
     const navigate = useNavigate();
     const isAuthenticated = Boolean(localStorage.getItem(AUTH_TOKEN_KEY));
+
+    useEffect(() => {
+        if (!open) return;
+
+        const handleOutsidePointer = (event: MouseEvent | TouchEvent) => {
+            const targetNode = event.target as Node | null;
+            if (!menuRef.current || !targetNode) return;
+            if (!menuRef.current.contains(targetNode)) {
+                setOpen(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleOutsidePointer);
+        document.addEventListener('touchstart', handleOutsidePointer, { passive: true });
+
+        return () => {
+            document.removeEventListener('mousedown', handleOutsidePointer);
+            document.removeEventListener('touchstart', handleOutsidePointer);
+        };
+    }, [open]);
 
     useEffect(() => {
         let cancelled = false;
@@ -109,10 +130,27 @@ const HamburgerMenu: React.FC = () => {
 
     const handleMenuClick = async (path: string) => {
         if (path === '/races') {
-            // Seed Single Event with event_code=1 and latest date using the last_positions API
+            const getPreferredEventCode = (): string => {
+                try {
+                    const raw = localStorage.getItem(AUTH_USER_KEY);
+                    if (!raw) return '1';
+                    const parsed = JSON.parse(raw) || {};
+                    const candidate = String(parsed.defaultCourseCode ?? parsed.default_course_code ?? '').trim();
+                    if (/^\d+$/.test(candidate)) {
+                        return candidate;
+                    }
+                    return '1';
+                } catch (_err) {
+                    return '1';
+                }
+            };
+
+            const preferredEventCode = getPreferredEventCode();
+
+            // Seed Single Event with preferred event_code and latest date using the last_positions API
             try {
-                // Use the specific API endpoint to get the latest event for event_code=1
-                const response = await fetch('https://hello-world-9yb9.onrender.com/api/last_positions?event_code=1');
+                // Use the specific API endpoint to get the latest event for the chosen event code
+                const response = await fetch(`${API_BASE_URL}/api/last_positions?event_code=${encodeURIComponent(preferredEventCode)}`);
                 if (response.ok) {
                     const lastEventData = await response.json();
                     
@@ -129,7 +167,7 @@ const HamburgerMenu: React.FC = () => {
                         const latestDate = latestEvent.event_date || latestEvent.eventDate;
                         if (latestDate) {
                             // Navigate with the latest date
-                            navigate(`/races?event_code=1&date=${encodeURIComponent(latestDate)}`);
+                            navigate(`/races?event_code=${encodeURIComponent(preferredEventCode)}&date=${encodeURIComponent(latestDate)}`);
                             setOpen(false);
                             return;
                         }
@@ -138,8 +176,8 @@ const HamburgerMenu: React.FC = () => {
             } catch (error) {
                 console.warn('Could not fetch latest event data, using defaults:', error);
             }
-            // Fallback to just event_code=1 if we can't get the latest date
-            navigate('/races?event_code=1');
+            // Fallback to event_code=1 when no preferred course is set, else preferred code
+            navigate(`/races?event_code=${encodeURIComponent(preferredEventCode)}`);
         } else {
             navigate(path);
         }
@@ -147,7 +185,7 @@ const HamburgerMenu: React.FC = () => {
     };
 
     return (
-        <div className="hamburger-menu">
+        <div className="hamburger-menu" ref={menuRef}>
             <button className="hamburger-button" onClick={handleHamburgerToggle}>
                 ☰
             </button>
@@ -155,10 +193,10 @@ const HamburgerMenu: React.FC = () => {
                 <ul className="hamburger-list">
                     <li onClick={() => handleMenuClick('/')}>Home</li>
                     <li onClick={() => handleMenuClick('/results')}>Event Analysis</li>
-                    <li onClick={() => handleMenuClick('/races')}>Single Event</li>
-                    <li onClick={() => handleMenuClick('/courses')}>Courses</li>
-                    <li onClick={() => handleMenuClick('/athletes')}>Athletes - Run History</li>
-                    <li onClick={() => handleMenuClick('/clubs')}>Clubs</li>
+                    <li onClick={() => handleMenuClick('/races')}>Event</li>
+                    <li onClick={() => handleMenuClick('/courses')}>Course</li>
+                    <li onClick={() => handleMenuClick('/athletes')}>Participant</li>
+                    <li onClick={() => handleMenuClick('/clubs')}>Club</li>
                     <li onClick={() => handleMenuClick('/lists')}>Lists</li>
                     {canSeeAdmin && <li onClick={() => handleMenuClick('/admin')}>Admin</li>}
                     <li onClick={() => (isAuthenticated ? handleLogout() : handleMenuClick('/login'))}>

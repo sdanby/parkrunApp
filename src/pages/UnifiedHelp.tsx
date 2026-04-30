@@ -14,6 +14,10 @@ export const requestUnifiedHelp = (markerId: string = 'top', anchor?: UnifiedHel
 export const getPageMarkerForPath = (path: string): string | null => {
     if (path === '/results') return 'page-event-analysis';
     if (path === '/races') return 'page-single-event';
+    if (path === '/courses') return 'page-course';
+    if (path === '/athletes') return 'page-participant';
+    if (path === '/clubs') return 'page-club';
+    if (path === '/lists') return 'page-lists';
     return null;
 };
 
@@ -48,9 +52,37 @@ Understanding these terms will help you make the most of the features available.
 Event Analysis compares events over time and supports table and plot views.
 Start with [[Type|control-type]], then set [[Filter|control-filter]], [[Period|control-period]] and [[Agg|control-agg]].
 
+## [section-event-stats-comparison] Event statistics comparison
+This plot compares selected event statistics across dates.
+Use legend selection and zoom controls to focus on trends, outliers and cross-event differences.
+
 ## [page-single-event] Single Event
 Single Event is the drill-down view for one event/date and is best used together with Event Analysis.
 Use Event Analysis first, then inspect details in Single Event with the same intent for [[Type|control-type]] and [[Filter|control-filter]].
+
+## [page-course] Course
+Course provides course-level information and views for each parkrun location.
+Use this page to understand route context before comparing performance trends.
+
+## [page-participant] Participant
+Participant shows run history and progression for individual athletes.
+Use this page to review consistency, milestones and performance changes over time.
+
+## [section-participant-profile] Participant Profile
+Participant Profile summarises best performances and rank/date/time combinations.
+Use this panel to quickly compare adjusted and unadjusted best results.
+
+## [section-participant-time-by-date] Time by Date
+Time by Date shows progression of times over event dates.
+Use this plot to inspect trajectory, compare event contexts and identify best windows.
+
+## [page-club] Club
+Club groups participants by club affiliation for side-by-side comparison.
+Use this page to explore participation patterns across clubs.
+
+## [page-lists] Lists
+Lists provides predefined collections and focused subsets of data.
+Use this page when you want quick access to common filtered views.
 
 ## [control-type] Type
 Type controls the metric family shown in the analysis.
