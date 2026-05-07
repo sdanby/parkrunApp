@@ -30,6 +30,30 @@
   text-decoration: underline;
 }
 
+.athletes-club-link {
+  border: none;
+  background: none;
+  color: #0a5ad1;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+  text-decoration: underline;
+}
+
+.athletes-event-link {
+  border: none;
+  background: none;
+  color: #0a5ad1;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+  text-decoration: underline;
+}
+
 
 
 /* Small back button shown on the Races page header */
@@ -534,6 +558,26 @@ select:focus {
   visibility: visible;
   opacity: 0.95;
 }
+
+.races-table.eventtest-table th.eventtest-col,
+.races-table.eventtest-table td.eventtest-col {
+  width: var(--event-col-width) !important;
+  min-width: var(--event-col-width) !important;
+  max-width: var(--event-col-width) !important;
+  left: var(--event-col-left, auto) !important;
+}
+
+.races-table.eventtest-table th.eventtest-sticky-col {
+  position: sticky !important;
+  left: var(--event-col-left, 0px) !important;
+  z-index: 260 !important;
+}
+
+.races-table.eventtest-table td.eventtest-sticky-col {
+  position: sticky !important;
+  left: var(--event-col-left, 0px) !important;
+  z-index: 120 !important;
+}
 .help-content .more-link {
   margin-top: 6px;
   display: inline-block;
@@ -895,6 +939,34 @@ select:focus {
 .results-table.races-table td.sticky-col,
 .results-table.races-table td.sticky-col-2 {
   z-index: 130 !important;
+}
+
+/* EventAnalysis_test: drive sticky lead column alignment from config via CSS vars */
+.results-table.races-table.eventtest-table th.eventanalysis-col1,
+.results-table.races-table.eventtest-table td.eventanalysis-col1 {
+  text-align: var(--ea-col1-align, left) !important;
+}
+
+.results-table.races-table.eventtest-table th.eventanalysis-col2,
+.results-table.races-table.eventtest-table td.eventanalysis-col2 {
+  text-align: var(--ea-col2-align, center) !important;
+}
+
+.results-table.races-table.eventtest-table thead th {
+  padding-top: 0.34rem !important;
+  padding-bottom: 0.34rem !important;
+  line-height: 1.15 !important;
+  min-height: 30px;
+  background-clip: padding-box;
+}
+
+/* EventAnalysis_test: honor configured second sticky header row offset */
+.results-table.races-table.eventtest-table thead th.sticky-header.second-row {
+  top: calc(var(--ea-row2-top, 25px) - 1px) !important;
+}
+
+.results-table.races-table.eventtest-table thead th.eventanalysis-row2-corner {
+  top: calc(var(--ea-row2-top, 25px) - 1px) !important;
 }
 
 .results-table.races-table .sticky-corner,
@@ -1267,5 +1339,104 @@ select:focus {
     left: 50% !important;
     transform: translate(-50%, -50%) !important;
   }
+}
+
+.results-table.races-table.eventtest-table thead tr:nth-child(2) th:nth-child(1) {
+  position: sticky !important;
+  left: 0 !important;
+  z-index: 280 !important;
+}
+
+.results-table.races-table.eventtest-table thead tr:nth-child(2) th:nth-child(2) {
+  position: sticky !important;
+  left: var(--col1-width, 1.3cm) !important;
+  z-index: 279 !important;
+}
+
+.results-table.races-table.eventtest-table thead th.sticky-corner-wide {
+  position: sticky !important;
+  left: 0 !important;
+  top: 0 !important;
+  z-index: 320 !important;
+  min-width: calc(var(--col1-width, 4cm) + var(--col2-width, 2.5cm)) !important;
+  max-width: calc(var(--col1-width, 4cm) + var(--col2-width, 2.5cm)) !important;
+  width: calc(var(--col1-width, 4cm) + var(--col2-width, 2.5cm)) !important;
+}
+
+.results-table.races-table.eventtest-table tbody td:nth-child(1) {
+  position: sticky !important;
+  left: 0 !important;
+  z-index: 150 !important;
+}
+
+.results-table.races-table.eventtest-table tbody td:nth-child(2) {
+  position: sticky !important;
+  left: var(--col1-width, 1.3cm) !important;
+  z-index: 149 !important;
+}
+
+/* EventAnalysis_test: keep full-width horizontal scroll context so sticky lead
+   columns remain sticky for the entire scroll range (not capped to ~16 cols). */
+.results-table-container.eventanalysis-test-container {
+  display: inline-block !important;
+  width: fit-content !important;
+  max-width: var(--ea-max-visible-width, 100%) !important;
+  overflow-x: auto !important;
+  overflow-y: auto;
+}
+
+@media (max-width: 768px) {
+  .results-table-container.eventanalysis-test-container {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-left: 0 !important;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+  }
+}
+
+.results-table.races-table.eventtest-table {
+  display: table !important;
+  width: max-content !important;
+  max-width: none !important;
+}
+
+.results-table.races-table.eventtest-table thead th.sticky-header,
+.results-table.races-table.eventtest-table thead th.sticky-header.second-row {
+  min-width: var(--ea-period-col-width, 2.0cm) !important;
+  max-width: var(--ea-period-col-width, 2.0cm) !important;
+  width: var(--ea-period-col-width, 2.0cm) !important;
+}
+
+.results-table.races-table.eventtest-table tbody td:nth-child(n+3) {
+  min-width: var(--ea-period-col-width, 2.0cm) !important;
+  max-width: var(--ea-period-col-width, 2.0cm) !important;
+  width: var(--ea-period-col-width, 2.0cm) !important;
+}
+
+.eventanalysis-scroll-slider {
+  margin-top: 0.2rem;
+  padding-right: 6px;
+}
+
+.eventanalysis-plot-container {
+  display: block;
+  width: 100%;
+  max-width: var(--ea-max-visible-width, 100%);
+  overflow: hidden !important;
+  border: 2px solid #9ca3af;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 10px 18px rgba(15, 23, 42, 0.08);
+}
+
+.results-table.races-table.eventtest-table th .ea-sort-indicator {
+  display: inline-flex;
+  flex-direction: column;
+  margin-left: 0.2rem;
+  line-height: 0.78;
+  font-size: 0.62rem;
+  vertical-align: middle;
 }
 

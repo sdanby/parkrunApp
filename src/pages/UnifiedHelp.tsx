@@ -13,7 +13,9 @@ export const requestUnifiedHelp = (markerId: string = 'top', anchor?: UnifiedHel
 
 export const getPageMarkerForPath = (path: string): string | null => {
     if (path === '/results') return 'page-event-analysis';
+    if (path === '/results_test') return 'page-event-analysis';
     if (path === '/races') return 'page-single-event';
+    if (path === '/event_test') return 'page-single-event';
     if (path === '/courses') return 'page-course';
     if (path === '/athletes') return 'page-participant';
     if (path === '/clubs') return 'page-club';
@@ -24,8 +26,18 @@ export const getPageMarkerForPath = (path: string): string | null => {
 export const getMarkerForControlLabel = (label: string): string => {
     const key = String(label || '').trim().toLowerCase();
     const map: Record<string, string> = {
-        type: 'control-type',
+        type: 'control-filter',
+        calc: 'control-type',
         filter: 'control-filter',
+        view: 'control-table-view',
+        'table view': 'control-table-view',
+        'athlete code': 'control-athlete-code',
+        'estimated age': 'control-estimated-age',
+        'total runs': 'control-total-runs',
+        'recent club': 'control-recent-club',
+        'course adj': 'control-course-adj',
+        'other adj': 'control-other-adj',
+        'hardness adj': 'control-hardness-adj',
         period: 'control-period',
         agg: 'control-agg',
         'cell agg': 'control-cell-agg',
@@ -50,7 +62,7 @@ Understanding these terms will help you make the most of the features available.
 
 ## [page-event-analysis] Event Analysis
 Event Analysis compares events over time and supports table and plot views.
-Start with [[Type|control-type]], then set [[Filter|control-filter]], [[Period|control-period]] and [[Agg|control-agg]].
+Start with [[Calc|control-type]], then set [[Type|control-filter]], [[Period|control-period]] and [[Agg|control-agg]].
 
 ## [section-event-stats-comparison] Event statistics comparison
 This plot compares selected event statistics across dates.
@@ -58,7 +70,7 @@ Use legend selection and zoom controls to focus on trends, outliers and cross-ev
 
 ## [page-single-event] Single Event
 Single Event is the drill-down view for one event/date and is best used together with Event Analysis.
-Use Event Analysis first, then inspect details in Single Event with the same intent for [[Type|control-type]] and [[Filter|control-filter]].
+Use Event Analysis first, then inspect details in Single Event with the same intent for [[Calc|control-type]] and [[Type|control-filter]].
 
 ## [page-course] Course
 Course provides course-level information and views for each parkrun location.
@@ -84,13 +96,13 @@ Use this page to explore participation patterns across clubs.
 Lists provides predefined collections and focused subsets of data.
 Use this page when you want quick access to common filtered views.
 
-## [control-type] Type
-Type controls the metric family shown in the analysis.
+## [control-type] Calc
+Calc controls the metric family shown in the analysis.
 Use it first because it determines how values are interpreted in other controls.
 
-## [control-filter] Filter
-Filter selects the subgroup or metric variant.
-It works with Type to decide what each cell means.
+## [control-filter] Type
+Type selects the subgroup or metric variant.
+It works with Calc to decide what each cell means.
 
 ## [control-period] Period
 Period controls the time window or aggregation period.
@@ -107,6 +119,48 @@ Use this when you want to switch between single-value and averaged cell behaviou
 ## [control-time-adj] Time Adj
 Time Adj applies optional adjustments for time-based analysis.
 Use this only when comparing pace/time values across different conditions.
+
+## [control-table-view] Table View
+Table View enables the user to select different column sets, i.e. Basic (most important), Detailed (more columns) and All Time Adjustments (how times adjust according to analysis).
+
+## [control-athlete-code] Athlete Code
+Athlete Code shows the unique identifier for the selected participant.
+Use it to confirm you are viewing the intended runner when switching between pages and links.
+
+## [control-estimated-age] Estimated Age
+Estimated Age shows the participant's current age estimate used for context in performance interpretation.
+Use it to quickly understand age-related context when reviewing run history and adjustments.
+
+## [control-total-runs] Total Runs
+Total Runs shows the total number of runs recorded for the selected participant.
+Use this value as quick context for how large the participant history is before interpreting trends or adjustments.
+
+## [control-recent-club] Recent Club
+Recent Club shows the latest known club affiliation for the selected participant.
+Use it to confirm current club context before comparing participant runs or opening club-level pages.
+
+## [control-course-adj] Course Adj
+Course Adj controls whether course-condition factors are applied to the displayed results.
+Use no adjustment (default) when you want the raw recorded values.
+Use seasonal adjustments when you want to account for broad seasonal effects across the course.
+Use full event adjustments when you want the strongest correction for event-level difficulty on that specific date.
+For consistency, keep this setting fixed while comparing rows in the same table.
+
+## [control-other-adj] Other Adj
+Other Adj controls participant-level adjustment type applied in the table.
+Use no adjustment (default) to keep the non-course-adjusted baseline.
+Use age adjustments to normalize for age differences.
+Use sex adjustments to normalize for sex differences.
+Use age & sex adjustment to apply both factors together.
+When comparing columns, keep Other Adj fixed so differences reflect the data rather than a setting change.
+
+## [control-hardness-adj] Hardness Adj
+Hardness Adj shows the combined hardness indicator for the selected event and settings.
+Use it as context when interpreting adjusted time comparisons across events.
+Higher hardness values generally indicate tougher conditions relative to the baseline.
+Keep in mind that hardness is an explanatory indicator and should be read together with course and other adjustment choices.
+Use the same Course Adj and Other Adj settings while comparing events so hardness context stays consistent.
+Hardness Adj does not replace raw time interpretation; it is a companion metric to explain why adjusted columns may differ.
 `;
 
 type ManualSection = {

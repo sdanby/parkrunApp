@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { fetchEventPositions, fetchEventInfo, fetchEventByNumber, fetchEventTimeAdjustment } from '../api/backendAPI';
+import { navigateBackWithNavStack, navigateWithNavStack } from '../utils/navigationStack';
+import { requestUnifiedHelp } from './UnifiedHelp';
 import './ResultsTable.css';
 
 type CourseAdjOption = 'none' | 'seasonal' | 'full';
@@ -166,7 +168,7 @@ const Races: React.FC = () => {
             params.set('source_date', sourceEventDate);
         }
         
-        navigate(`/athletes?${params.toString()}`, {
+        navigateWithNavStack(navigate, location, `/athletes?${params.toString()}`, {
             state: {
                 athleteCode: String(athleteCode),
                 athleteName: athleteName ? String(athleteName) : undefined,
@@ -191,7 +193,7 @@ const Races: React.FC = () => {
         const params = new URLSearchParams();
         params.set('club', club);
 
-        navigate(`/clubs?${params.toString()}`, {
+        navigateWithNavStack(navigate, location, `/clubs?${params.toString()}`, {
             state: {
                 returnTo: {
                     pathname: '/races',
@@ -704,6 +706,39 @@ const Races: React.FC = () => {
         return date;
     })();
 
+    const handleHeaderCourseNavigate = () => {
+        const selectedEventCode = isNumericIdentifier(rawEventParam)
+            ? String(rawEventParam)
+            : ((eventInfo?.event_code !== undefined && eventInfo?.event_code !== null)
+                ? String(eventInfo.event_code)
+                : (eventCodeVal !== null && eventCodeVal !== undefined ? String(eventCodeVal) : ''));
+        const selectedEventName = String(eventName || '').trim();
+
+        if (!selectedEventCode && !selectedEventName) {
+            return;
+        }
+
+        const params = new URLSearchParams();
+        if (selectedEventCode) {
+            params.set('event_code', selectedEventCode);
+        }
+        if (selectedEventName) {
+            params.set('event_name', selectedEventName);
+        }
+
+        navigateWithNavStack(navigate, location, `/courses?${params.toString()}`, {
+            state: {
+                eventCode: selectedEventCode || undefined,
+                eventName: selectedEventName || undefined,
+                from: 'races',
+                returnTo: {
+                    pathname: '/races',
+                    search: location.search || ''
+                }
+            }
+        });
+    };
+
     const combinedHardnessRaw = (() => {
         if (rows && rows.length > 0) {
             const adjustments = rows
@@ -814,6 +849,9 @@ const Races: React.FC = () => {
         const locationState: any = location.state ?? {};
         const fromCourses = locationState?.from === 'courses' || params.get('from_courses') === '1';
         const handleBack = () => {
+            if (navigateBackWithNavStack(navigate, location.pathname)) {
+                return;
+            }
             if (fromList) {
                 navigate('/lists');
                 return;
@@ -1097,7 +1135,22 @@ const Races: React.FC = () => {
             <div className="races-header" style={{ marginBottom: '0.0em', display: 'flex', alignItems: 'normal',marginLeft: '1.0em' }}>
                 <BackButton />
                 <div className="races-header-text">
-                    <div className="races-header-title">{eventName || <em>none</em>}</div>
+                    <div className="races-header-title">
+                        {String(eventName || '').trim() ? (
+                            <button
+                                type="button"
+                                className="races-athlete-button"
+                                onClick={handleHeaderCourseNavigate}
+                                title={`Open course: ${String(eventName)}`}
+                                aria-label={`Open course ${String(eventName)}`}
+                                style={{ fontSize: 'inherit', fontWeight: 700 }}
+                            >
+                                {eventName}
+                            </button>
+                        ) : (
+                            <em>none</em>
+                        )}
+                    </div>
                     <div className="races-header-sub">
                         {displayDate || ''}
                         { (displayDate && (eventNumberVal || eventCodeVal)) && (
@@ -1125,11 +1178,28 @@ const Races: React.FC = () => {
                                         >▼</button>
                                     </span>
                                     <span className="races-view-control">
-                                        <div className="races-view-control-item">
-                                            <label htmlFor="races-view-select">View:</label>
+                                        <div className="races-view-control-item" style={{ marginLeft: '0.5cm' }}>
+                                            <span className="help-tooltip" style={{ display: 'inline-flex' }}>
+                                                <button
+                                                    type="button"
+                                                    className="help-trigger help-trigger-label"
+                                                    onClick={(event) => {
+                                                        const rect = (event.currentTarget as HTMLButtonElement).getBoundingClientRect();
+                                                        requestUnifiedHelp('control-table-view', {
+                                                            x: rect.left,
+                                                            y: rect.bottom
+                                                        });
+                                                    }}
+                                                    title="Table View help"
+                                                    aria-label="Table View help"
+                                                >
+                                                    <span className="help-trigger-text">Table View:</span>
+                                                </button>
+                                            </span>
                                             <select
                                                 id="races-view-select"
                                                 value={viewMode}
+                                                style={{ marginLeft: '-1.0cm' }}
                                                 onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
                                                     const v = e.target.value;
                                                     const next = v === 'detailed' ? 'detailed' : v === 'allTimeAdjustments' ? 'allTimeAdjustments' : 'basic';

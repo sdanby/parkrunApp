@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { API_BASE_URL, fetchAdminStatus, logoutSession } from '../api/backendAPI';
+import { clearNavStack } from '../utils/navigationStack';
 import './HamburgerMenu.css';
 
 const AUTH_TOKEN_KEY = 'auth_token_v1';
@@ -129,7 +130,9 @@ const HamburgerMenu: React.FC = () => {
     };
 
     const handleMenuClick = async (path: string) => {
-        if (path === '/races') {
+        clearNavStack(path);
+
+        if (path === '/races' || path === '/event_old') {
             const getPreferredEventCode = (): string => {
                 try {
                     const raw = localStorage.getItem(AUTH_USER_KEY);
@@ -167,7 +170,7 @@ const HamburgerMenu: React.FC = () => {
                         const latestDate = latestEvent.event_date || latestEvent.eventDate;
                         if (latestDate) {
                             // Navigate with the latest date
-                            navigate(`/races?event_code=${encodeURIComponent(preferredEventCode)}&date=${encodeURIComponent(latestDate)}`);
+                            navigate(`${path}?event_code=${encodeURIComponent(preferredEventCode)}&date=${encodeURIComponent(latestDate)}`);
                             setOpen(false);
                             return;
                         }
@@ -177,9 +180,13 @@ const HamburgerMenu: React.FC = () => {
                 console.warn('Could not fetch latest event data, using defaults:', error);
             }
             // Fallback to event_code=1 when no preferred course is set, else preferred code
-            navigate(`/races?event_code=${encodeURIComponent(preferredEventCode)}`);
+            navigate(`${path}?event_code=${encodeURIComponent(preferredEventCode)}`);
         } else {
-            navigate(path);
+            if (path === '/results_test') {
+                navigate(path, { state: { fromHamburgerMenu: true, resetSortDefaults: true } });
+            } else {
+                navigate(path);
+            }
         }
         setOpen(false);
     };
@@ -192,9 +199,9 @@ const HamburgerMenu: React.FC = () => {
             {open && (
                 <ul className="hamburger-list">
                     <li onClick={() => handleMenuClick('/')}>Home</li>
-                    <li onClick={() => handleMenuClick('/results')}>Event Analysis</li>
+                    <li onClick={() => handleMenuClick('/results_test')}>Event Analysis</li>
                     <li onClick={() => handleMenuClick('/races')}>Event</li>
-                    <li onClick={() => handleMenuClick('/courses')}>Course</li>
+                    <li onClick={() => handleMenuClick('/courses_test')}>Course</li>
                     <li onClick={() => handleMenuClick('/athletes')}>Participant</li>
                     <li onClick={() => handleMenuClick('/clubs')}>Club</li>
                     <li onClick={() => handleMenuClick('/lists')}>Lists</li>

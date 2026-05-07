@@ -4,12 +4,16 @@ import HamburgerMenu from './components/HamburgerMenu';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Results from './pages/Results';
+import EventAnalysisTest from './pages/EventAnalysisTest';
 import Races from './pages/Races';
+import EventTest from './pages/EventTest';
 import Courses from './pages/Courses';
+import CourseTest from './pages/CourseTest';
 import Clubs from './pages/Clubs';
 import Athletes from './pages/Athletes';
 import Lists from './pages/Lists';
 import Admin from './pages/Admin';
+import NavigationStackOverlay from './components/NavigationStackOverlay';
 import EventHelpManual, { UnifiedHelpOverlay, UNIFIED_HELP_EVENT, getPageMarkerForPath, type UnifiedHelpAnchor } from './pages/UnifiedHelp';
 import { API_BASE_URL } from './api/backendAPI';
 import './styles/main.css';
@@ -19,9 +23,13 @@ const AUTH_TOKEN_KEY = 'auth_token_v1';
 const headings: { [key: string]: string } = {
     '/': 'Home',
     '/login': 'Login',
-    '/results': 'Event Analysis',
+    '/results': 'Event Analysis Old',
+    '/results_test': 'Event Analysis',
     '/races': 'Event',
-    '/courses': 'Course',
+    '/event_test': 'Event',
+    '/event_old': 'Event_old',
+    '/courses': 'Course Old',
+    '/courses_test': 'Course',
     '/clubs': 'Club',
     '/athletes': 'Participant',
     '/lists': 'Lists',
@@ -192,6 +200,7 @@ const RootLayout: React.FC = () => (
     <>
         <PageActivityTracker />
         <TopBar />
+        <NavigationStackOverlay />
         <div className="app">
             <Outlet />
         </div>
@@ -223,8 +232,12 @@ const router = createBrowserRouter([
         children: [
             { index: true, element: <Home /> },
             { path: 'results', element: <Results /> },
-            { path: 'races', element: <Races /> },
+            { path: 'results_test', element: <EventAnalysisTest /> },
+            { path: 'races', element: <EventTest /> },
+            { path: 'event_test', element: <EventTest /> },
+            { path: 'event_old', element: <Races /> },
             { path: 'courses', element: <Courses /> },
+            { path: 'courses_test', element: <CourseTest /> },
             { path: 'clubs', element: <Clubs /> },
             { path: 'athletes', element: <Athletes /> },
             { path: 'lists', element: <Lists /> },

@@ -1,0 +1,305 @@
+{
+  "version": "1.0.0-draft",
+  "page": "EventAnalysis",
+  "units": "cm",
+  "anchor": "event-analysis-header-root",
+  "notes": "Config-driven Event Analysis test layout.",
+  "viewports": {
+    "laptop": {
+      "breakpointMin": 641
+    },
+    "mobile": {
+      "breakpointMax": 640
+    }
+  },
+  "elements": [
+    {
+      "id": "eventAnalysis.type",
+      "type": "label",
+      "name": "Calc:",
+      "helpTarget": "control-type",
+      "style": {
+        "fontSize": "0.8rem",
+        "fontWeight": 600,
+        "color": "#111827",
+        "lineHeight": 1.0
+      },
+      "helpLabel": true,
+      "laptop": { "x": "0.3cm", "y": "0.0cm" },
+      "mobile": { "x": "0.3cm", "y": "0.0cm" }
+    },
+        {
+      "id": "eventAnalysis.typeSelect",
+      "type": "select",
+      "name": "Actual",
+      "options": ["Actual", "Actual%", "%Total","%Deviation","#Actual Deviation","Times","Age"],
+      "laptop": { "x": "2.0cm", "y": "0.0cm", "width": "3.5cm" },
+      "mobile": { "x": "2.0cm", "y": "0.0cm", "width": "3.5cm" }
+    },
+    {
+      "id": "eventAnalysis.periodLabel",
+      "type": "label",
+      "name": "Period:",
+      "helpTarget": "control-period",
+      "helpLabel": true,
+      "style": {
+        "fontSize": "0.8rem",
+        "fontWeight": 600,
+        "color": "#111827",
+        "lineHeight": 1.0
+      },
+      "laptop": { "x": "6.0cm", "y": "0.0cm" },
+      "mobile": { "x": "5.7cm", "y": "0.0cm" }
+    },
+    {
+      "id": "eventAnalysis.periodSelect",
+      "type": "select",
+      "name": "Recent Events",
+      "options": ["Recent Events", "Last 50 Events", "Since Lockdown", "All Events", "Annual", "Qtr Seasonality", "Mnth Seasonality"],
+      "laptop": { "x": "8.0cm", "y": "0.0cm", "width": "3.5cm" },
+      "mobile": { "x": "7.6cm", "y": "0.0cm", "width": "3.5cm" }
+    },
+    {
+      "id": "eventAnalysis.filterLabel",
+      "type": "label",
+      "name": "Type:",
+      "helpTarget": "control-filter",
+      "helpLabel": true,
+      "style": {
+        "fontSize": "0.8rem",
+        "fontWeight": 600,
+        "color": "#111827",
+        "lineHeight": 1.0
+      },
+      "laptop": { "x": "0.3cm", "y": "0.7cm" },
+      "mobile": { "x": "0.3cm", "y": "0.7cm" }
+    },
+    {
+      "id": "eventAnalysis.filterSelect",
+      "type": "select",
+      "name": "All Participants",
+      "options": ["All Participants", "Event Number", "Seasonal Hardness", "Event Hardness", "Combined Hardness", "Volunteers", "Tourists", "Super Tourists", "First Timers", "Clubbers", "PBs", "Recent Bests", "Regulars", "Returners", "Eligible Times", "Unknowns"],
+      "laptop": { "x": "2.0cm", "y": "0.7cm", "width": "3.5cm" },
+      "mobile": { "x": "2.0cm", "y": "0.7cm", "width": "3.5cm" }
+    },
+    {
+      "id": "eventAnalysis.aggLabel",
+      "type": "label",
+      "name": "Agg",
+      "helpTarget": "control-agg",
+      "helpLabel": true,
+      "style": {
+        "fontSize": "0.8rem",
+        "fontWeight": 600,
+        "color": "#111827",
+        "lineHeight": 1.0
+      },
+      "laptop": { "x": "0.3cm", "y": "1.4cm" },
+      "mobile": { "x": "0.3cm", "y": "1.4cm" }
+    },
+    {
+      "id": "eventAnalysis.aggSelect",
+      "type": "select",
+      "name": "Average",
+      "options": ["Average", "Total", "Maximum", "Minimum", "Range", "Growth"],
+      "laptop": { "x": "2.0cm", "y": "1.4cm", "width": "3.5cm" },
+      "mobile": { "x": "2.0cm", "y": "1.4cm", "width": "3.5cm" }
+    },
+    {
+      "id": "eventAnalysis.cellAggLabel",
+      "type": "label",
+      "name": "Cell Agg",
+      "helpTarget": "control-cell-agg",
+      "helpLabel": true,
+      "style": {
+        "fontSize": "0.8rem",
+        "fontWeight": 600,
+        "color": "#111827",
+        "lineHeight": 1.0
+      },
+      "laptop": { "x": "6.0cm", "y": "0.7cm" },
+      "mobile": { "x": "5.7cm", "y": "0.7cm" }
+    },
+    {
+      "id": "eventAnalysis.cellAggSelect",
+      "type": "select",
+      "name": "Single Value",
+      "options": ["Single Value", "Average"],
+      "laptop": { "x": "8.0cm", "y": "0.7cm", "width": "3.5cm" },
+      "mobile": { "x": "7.6cm", "y": "0.7cm", "width": "3.5cm" }
+    },
+    {
+      "id": "eventAnalysis.timeAdjLabel",
+      "type": "label",
+      "name": "Time Adj",
+      "helpTarget": "control-time-adj",
+      "helpLabel": true,
+      "style": {
+        "fontSize": "0.8rem",
+        "fontWeight": 600,
+        "color": "#111827",
+        "lineHeight": 1.0
+      },
+      "laptop": { "x": "6.0cm", "y": "1.4cm" },
+      "mobile": { "x": "5.7cm", "y": "1.4cm" }
+    },
+    {
+      "id": "eventAnalysis.timeAdjSelect",
+      "type": "select",
+      "name": "No Adjustment",
+      "options": ["No Adjustment", "Hardness Adjusted", "Age Adjusted", "Hardness and Age Adjusted"],
+      "laptop": { "x": "8.0cm", "y": "1.4cm", "width": "3.5cm" },
+      "mobile": { "x": "7.6cm", "y": "1.4cm", "width": "3.5cm" }
+    },
+    {
+      "id": "eventAnalysis.statusMessage",
+      "type": "field",
+      "name": "click a cell to see event details",
+      "style": {
+        "fontSize": "0.75rem",
+        "fontStyle": "italic"
+      },
+      "laptop": { "x": "0.3cm", "y": "3.1cm", "width": "15.5cm" },
+      "mobile": { "x": "0.3cm", "y": "3.1cm", "width": "15.5cm" }
+     },
+    {
+      "id": "eventAnalysis.viewSelect",
+      "type": "button",
+      "name": "Plot",
+      "style": {
+        "fontSize": "0.5rem",
+        "fontWeight": 700,
+        "lineHeight": 1.0,
+        "height": "1cm"
+      },
+      "laptop": { "x": "0.3cm", "y": "2.2cm", "width": "1.0cm", "height": "0.7cm" },
+      "mobile": { "x": "0.3cm", "y": "2.2cm", "width": "1.0cm", "height": "0.7cm" }
+    },
+    {
+      "id": "eventAnalysis.expandSelect",
+      "type": "button",
+      "name": "Expand",
+      "style": {
+        "fontSize": "0.5rem",
+        "fontWeight": 700,
+        "lineHeight": 1.0,
+        "height": "1cm"
+      },
+      "laptop": { "x": "1.4cm", "y": "2.2cm", "width": "1.0cm", "height": "0.7cm" },
+      "mobile": { "x": "1.4cm", "y": "2.2cm", "width": "1.0cm", "height": "0.7cm" }
+    },
+    {
+      "id": "eventAnalysis.plotPanel",
+      "type": "plot",
+      "name": "plotPanel",
+      "laptop": { "x": "0.1cm", "y": "3.6cm", "width": "20cm", "height": "13.3cm" },
+      "mobile": { "x": "0.1cm", "y": "3.6cm", "width": "11cm", "height": "10.3cm" },
+      "laptopExpanded": { "x": "0.1cm", "y": "3.6cm", "width": "40cm", "height": "14.6cm" },
+      "mobileExpanded": { "x": "0.1cm", "y": "3.6cm", "width": "16.0cm", "height": "11.2cm" }
+    },
+    {
+      "id": "eventAnalysis.table.corner",
+      "type": "table",
+      "name": "corner",
+      "laptop": { "x": "0.1cm", "y": "3.6cm" },
+      "mobile": { "x": "0.1cm", "y": "3.6cm" }
+    }
+  ],
+  "tableModel": {
+    "mode": "pivot",
+    "sort": {
+      "enabled": true,
+      "showInactiveArrows": true,
+      "activeColor": "#111827",
+      "inactiveColor": "#9ca3af"
+    },
+    "viewport": {
+      "maxVisibleWidth": "45cm",
+      "slider": {
+        "enabled": true
+      }
+    },
+    "sticky": {
+      "headerRows": ["row1", "row2"],
+      "leadingColumns": ["col1", "col2"]
+    },
+    "periodColumns": {
+      "id": "periodColumns",
+      "role": "dynamicPeriodColumns",
+      "sortable": true,
+      "style": {
+        "textAlign": "center",
+        "color": "#111111"
+      },
+      "link": {
+        "enabled": true,
+        "target": "/races",
+        "paramsExpr": "{ date: column.periodDate, event_code: row.event_code, event: row.event_code, course: row.event_name }",
+        "navMode": "stack",
+        "style": {
+          "color": "#111111",
+          "textDecoration": "none"
+        }
+      },
+      "laptop": { "width": "2.5cm" },
+      "mobile": { "width": "1.7cm" }
+    },
+    "row1": {
+      "id": "row1",
+      "role": "periodHeaders",
+      "sticky": true,
+      "columnsExpr": "periodColumns(period)",
+      "labelExpr": "periodColumnLabel(column, period)",
+      "keyExpr": "periodColumnKey(column, period)",
+      "sort": "asc"
+    },
+    "row2": {
+      "id": "row2",
+      "role": "periodAggregates",
+      "sticky": true,
+      "dependsOn": ["agg", "period", "filter", "type", "timeAdj"],
+      "valueExpr": "aggregateColumn(column, agg, filter, type, timeAdj)",
+      "formatExpr": "formatAggregate(value, type, agg)",
+      "align": "center"
+    },
+    "col1": {
+      "id": "col1",
+      "role": "rowHeader",
+      "sticky": true,
+      "sortable": true,
+      "label": "Courses",
+      "valueExpr": "courseName(row)",
+      "style": { "textAlign": "left" },
+      "laptop": { "width": "3.5cm" },
+      "mobile": { "width": "3.0cm" },
+      "link": {
+        "enabled": true,
+        "target": "/courses_test",
+        "paramsExpr": "{ course: row.event_name, event: row.event_code }",
+        "navMode": "stack"
+      }
+    },
+    "col2": {
+      "id": "col2",
+      "role": "rowAggregate",
+      "sticky": true,
+      "sortable": true,
+      "headerExpr": "aggHeader(agg)",
+      "valueExpr": "aggregateRow(row, agg, filter, type, timeAdj)",
+      "style": { "textAlign": "center" },
+      "laptop": { "width": "1.8cm" },
+      "mobile": { "width": "1.8cm" },
+      "formatExpr": "formatAggregate(value, type, agg)",
+      "sortExpr": "value"
+    },
+    "cells": {
+      "role": "dataCells",
+      "valueExpr": "cellValue(row, column, filter)",
+      "transformExpr": "applyTypeTransform(value, type, column, row)",
+      "timeAdjustExpr": "applyTimeAdjustment(value, timeAdj, row, column)",
+      "displayExpr": "formatCell(value, type, cellAgg)",
+      "nullDisplay": "",
+      "dependsOn": ["filter", "type", "timeAdj", "cellAgg"]
+    }
+  }
+}

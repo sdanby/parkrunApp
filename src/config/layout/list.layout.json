@@ -1,0 +1,161 @@
+{
+  "version": "1.0.0-draft",
+  "page": "Lists",
+  "units": "cm",
+  "anchor": "lists-header-root",
+  "notes": "Config-driven Lists page layout with absolute positioning (0,0 = top-left).",
+  "viewports": {
+    "laptop": {
+      "breakpointMin": 641
+    },
+    "mobile": {
+      "breakpointMax": 640
+    }
+  },
+  "elements": [
+    {
+      "id": "lists.title",
+      "type": "label",
+      "name": "Top 1000 List",
+      "style": {
+        "fontSize": "1.0rem",
+        "fontWeight": 700,
+        "color": "#111827",
+        "lineHeight": 1.2
+      },
+      "laptop": { "x": "0.3cm", "y": "2.5cm" },
+      "mobile": { "x": "0.3cm", "y": "1.6cm" }
+    },
+    {
+      "id": "lists.statusLabel",
+      "type": "label",
+      "name": "retrieving results",
+      "style": {
+        "fontSize": "0.76rem",
+        "fontWeight": 600,
+        "color": "#1d4ed8",
+        "lineHeight": 1.1
+      },
+      "laptop": { "x": "0.3cm", "y": "3.1cm" },
+      "mobile": { "x": "0.3cm", "y": "2.2cm" }
+    },
+    {
+      "id": "lists.listLabel",
+      "type": "label",
+      "name": "List selection:",
+      "helpTarget": "control-list-select",
+      "helpLabel": true,
+      "style": {
+        "fontSize": "0.8rem",
+        "fontWeight": 600,
+        "color": "#111827",
+        "lineHeight": 1.0
+      },
+      "laptop": { "x": "0.6cm", "y": "0.2cm" },
+      "mobile": { "x": "0.6cm", "y": "-0.7cm" }
+    },
+    {
+      "id": "lists.listSelect",
+      "type": "select",
+      "name": "Fastest Athletes - All Time",
+      "options": [
+        "Fastest Athletes - All Time",
+        "Fastest Athletes - Over last 1 Year"
+      ],
+      "laptop": { "x": "3.6cm", "y": "0.2cm", "width": "6.5cm" },
+      "mobile": { "x": "3.6cm", "y": "-0.7cm", "width": "6.0cm" }
+    },
+    {
+      "id": "lists.courseAdjLabel",
+      "type": "label",
+      "name": "Course adj:",
+      "helpTarget": "control-course-adj",
+      "helpLabel": true,
+      "style": {
+        "fontSize": "0.8rem",
+        "fontWeight": 600,
+        "color": "#111827",
+        "lineHeight": 1.0
+      },
+      "laptop": { "x": "1.0cm", "y": "0.9cm" },
+      "mobile": { "x": "1.0cm", "y": "0.0cm" }
+    },
+    {
+      "id": "lists.courseAdjSelect",
+      "type": "select",
+      "name": "no adjustment (default)",
+      "options": [
+        "no adjustment (default)",
+        "seasonal adjustments",
+        "full event adjustments"
+      ],
+      "laptop": { "x": "3.6cm", "y": "0.9cm", "width": "4.5cm" },
+      "mobile": { "x": "3.6cm", "y": "0.0cm", "width": "4.5cm" }
+    },
+    {
+      "id": "lists.otherAdjLabel",
+      "type": "label",
+      "name": "Other adj:",
+      "helpTarget": "control-other-adj",
+      "helpLabel": true,
+      "style": {
+        "fontSize": "0.8rem",
+        "fontWeight": 600,
+        "color": "#111827",
+        "lineHeight": 1.0
+      },
+      "laptop": { "x": "1.3cm", "y": "1.6cm" },
+      "mobile": { "x": "1.3cm", "y": "0.7cm" }
+    },
+    {
+      "id": "lists.otherAdjSelect",
+      "type": "select",
+      "name": "no adjustment (default)",
+      "options": [
+        "no adjustment (default)",
+        "age adjustments",
+        "sex adjustments",
+        "age & sex adjustment"
+      ],
+      "laptop": { "x": "3.6cm", "y": "1.6cm", "width": "4.5cm" },
+      "mobile": { "x": "3.6cm", "y": "0.7cm", "width": "4.5cm" }
+    },
+    {
+      "id": "lists.tableContainer",
+      "type": "table",
+      "name": "tableContainer",
+      "laptop": { "x": "0.0cm", "y": "3.7cm", "width": "calc(100vw - 3.5cm)", "maxWidth": "calc(100vw - 3.5cm)", "maxHeight": "calc(100vh - 7.3cm)" },
+      "mobile": { "x": "-0.1cm", "y": "2.7cm", "width": "calc(100vw - 0.6cm)", "maxWidth": "calc(100vw - 0.6cm)", "maxHeight": "calc(100vh - 7.0cm)" }
+    }
+  ],
+  "tableModel": {
+    "mode": "flat",
+    "sort": {
+      "enabled": true,
+      "showInactiveArrows": true,
+      "activeColor": "#111827",
+      "inactiveColor": "#9ca3af"
+    }
+  },
+  "tableColumns": [
+    { "key": "Rank", "type": "table", "name": "Rank", "headerName": "Rk", "style": { "textAlign": "center" }, "sticky": true, "laptop": { "width": "1.3cm" }, "mobile": { "width": "1.3cm" } },
+    { "key": "Name", "type": "table", "name": "Name", "headerName": "Name", "style": { "textAlign": "left" }, "sticky": true, "laptop": { "width": "4.0cm" }, "mobile": { "width": "3.3cm" } },
+    { "key": "Time", "type": "table", "name": "Time", "headerName": "Time", "style": { "textAlign": "center" }, "laptop": { "width": "1.4cm" }, "mobile": { "width": "1.0cm" } },
+    { "key": "Date", "type": "table", "name": "Date", "headerName": "Date", "style": { "textAlign": "center" }, "laptop": { "width": "2.0cm" }, "mobile": { "width": "1.8cm" } },
+    { "key": "Pos", "type": "table", "name": "Pos", "headerName": "Pos", "style": { "textAlign": "center" }, "laptop": { "width": "1.5cm" }, "mobile": { "width": "0.4cm" } },
+    { "key": "CurveRank", "type": "table", "name": "CurveRank", "headerName": "Rank", "style": { "textAlign": "center" }, "laptop": { "width": "1.6cm" }, "mobile": { "width": "0.6cm" } },
+    { "key": "Age Grd", "type": "table", "name": "Age Grd", "headerName": "Age Grd", "style": { "textAlign": "center" }, "laptop": { "width": "2.0cm" }, "mobile": { "width": "1.8cm" } },
+    { "key": "Age Grp", "type": "table", "name": "Age Grp", "headerName": "Age Grp", "style": { "textAlign": "center" }, "laptop": { "width": "2.0cm" }, "mobile": { "width": "1.8cm" } },
+    { "key": "Event", "type": "table", "name": "Event", "headerName": "Event Name", "style": { "textAlign": "left" }, "laptop": { "width": "3.5cm" }, "mobile": { "width": "2.2cm" } },
+    { "key": "Comment", "type": "table", "name": "Comment", "headerName": "Comment", "style": { "textAlign": "left" }, "laptop": { "width": "2.5cm" }, "mobile": { "width": "2.0cm" } },
+    { "key": "Club", "type": "table", "name": "Club", "headerName": "Club", "style": { "textAlign": "left" }, "laptop": { "width": "3.5cm" }, "mobile": { "width": "2.3cm" } },
+    { "key": "Season", "type": "table", "name": "Season", "headerName": "Season", "style": { "textAlign": "center" }, "laptop": { "width": "2.0cm" }, "mobile": { "width": "1.0cm" } },
+    { "key": "EventAdj", "type": "table", "name": "EventAdj", "headerName": "Event", "style": { "textAlign": "center" }, "laptop": { "width": "2.0cm" }, "mobile": { "width": "1.0cm" } },
+    { "key": "AgeAdj", "type": "table", "name": "AgeAdj", "headerName": "Age", "style": { "textAlign": "center" }, "laptop": { "width": "2.0cm" }, "mobile": { "width": "1.0cm" } },
+    { "key": "SexAdj", "type": "table", "name": "SexAdj", "headerName": "Sex", "style": { "textAlign": "center" }, "laptop": { "width": "2.0cm" }, "mobile": { "width": "1.0cm" } },
+    { "key": "EventAgeAdj", "type": "table", "name": "EventAgeAdj", "headerName": "Ev+Age", "style": { "textAlign": "center" }, "laptop": { "width": "2.0cm" }, "mobile": { "width": "1.0cm" } },
+    { "key": "EventSexAdj", "type": "table", "name": "EventSexAdj", "headerName": "Ev+Sx", "style": { "textAlign": "center" }, "laptop": { "width": "2.0cm" }, "mobile": { "width": "1.0cm" } },
+    { "key": "AgeSexAdj", "type": "table", "name": "AgeSexAdj", "headerName": "Age+Sx", "style": { "textAlign": "center" }, "laptop": { "width": "2.0cm" }, "mobile": { "width": "1.0cm" } },
+    { "key": "EventAgeSexAdj", "type": "table", "name": "EventAgeSexAdj", "headerName": "Ev+A+Sx", "style": { "textAlign": "center" }, "laptop": { "width": "2.0cm" }, "mobile": { "width": "1.1cm" } }
+  ]
+}

@@ -1,8 +1,3 @@
-.clubs-linked-athlete-row > th,
-.clubs-linked-athlete-row > td {
-    color: #1976d2 !important; /* Material blue */
-}
-
 .clubs-linked-athlete-button {
     color: #1976d2 !important;
     font-weight: 600;
@@ -61,6 +56,7 @@
 .clubs-search-wrap {
     position: relative;
     width: min(460px, calc(100% - 0.4rem));
+    overflow: visible;
 }
 
 .clubs-search-input {
@@ -85,22 +81,45 @@
     border: 1px solid rgba(0, 0, 0, 0.15);
     border-radius: 4px;
     box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+    min-height: 2.2rem;
     max-height: 240px;
     overflow-y: auto;
 }
 
+@media (max-width: 768px) {
+    .clubs-search-dropdown {
+        width: 100%;
+        max-width: 100%;
+        min-height: 2.6rem;
+        max-height: min(45vh, 320px);
+        left: 0;
+        right: auto;
+        box-sizing: border-box;
+    }
+
+    .clubs-search-loading,
+    .clubs-search-option {
+        min-height: 1.55rem;
+    }
+}
+
 .clubs-search-loading {
-    padding: 0.5rem 0.65rem;
+    padding: 0.3rem 0.55rem;
     color: #6b7280;
     font-size: 0.88rem;
+    line-height: 1.1;
+    min-height: 1.4rem;
+    display: flex;
+    align-items: center;
 }
 
 .clubs-search-option {
-    padding: 8px 10px;
+    padding: 4px 10px;
     cursor: pointer;
     display: flex;
     justify-content: space-between;
     gap: 8px;
+    line-height: 1.1;
 }
 
 .clubs-search-option--highlight {
@@ -166,6 +185,10 @@
     color: #111;
 }
 
+.clubs-members-table-wrap .athlete-runs-table tbody td {
+    color: #111;
+}
+
 .clubs-members-loading {
     font-size: 0.9rem;
     color: #4b5563;
@@ -181,7 +204,7 @@
 .clubs-athlete-button {
     border: none;
     background: transparent;
-    color: inherit;
+    color: #1976d2;
     padding: 0;
     margin: 0;
     font: inherit;
@@ -193,7 +216,7 @@
 .clubs-current-club-button {
     border: none;
     background: transparent;
-    color: inherit;
+    color: #1976d2;
     padding: 0;
     margin: 0;
     font: inherit;

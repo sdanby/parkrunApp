@@ -1,7 +1,9 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { fetchAthleteRuns } from '../api/backendAPI';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { fetchClubMembers, fetchClubsSearch } from '../api/backendAPI';
+import { navigateBackWithNavStack, navigateWithNavStack } from '../utils/navigationStack';
 import './ResultsTable.css';
 import './Clubs.css';
 
@@ -296,6 +298,12 @@ const Clubs: React.FC = () => {
     const [sortDirection, setSortDirection] = useState<ClubSortDirection>(initialSortDirection);
     const [drillHistory, setDrillHistory] = useState<ClubViewState[]>([]);
     const [localHighlightAthleteCode, setLocalHighlightAthleteCode] = useState<string>(highlightedAthleteCode);
+    const containerRef = useRef<HTMLDivElement | null>(null);
+    const inputRef = useRef<HTMLInputElement | null>(null);
+    const dropdownRef = useRef<HTMLDivElement | null>(null);
+    const [dropdownTop, setDropdownTop] = useState(0);
+    const [dropdownLeft, setDropdownLeft] = useState(0);
+    const [dropdownWidth, setDropdownWidth] = useState(0);
 
     const activeHighlightAthleteCode = localHighlightAthleteCode || highlightedAthleteCode;
 
@@ -305,6 +313,34 @@ const Clubs: React.FC = () => {
         }
         return '/results';
     }, [locationState.returnTo]);
+
+    const persistEventReturnHighlight = () => {
+        if (locationState.returnTo?.pathname !== '/races') {
+            return;
+        }
+
+        const clubToken = String(selectedClub?.club || '').trim();
+        if (!clubToken) {
+            return;
+        }
+
+        const params = new URLSearchParams(locationState.returnTo?.search || '');
+        const eventCode = String(params.get('event_code') || params.get('eventCode') || '').trim();
+        const eventDate = String(params.get('date') || params.get('event_date') || params.get('eventDate') || '').trim();
+        if (!eventCode || !eventDate) {
+            return;
+        }
+
+        try {
+            window.sessionStorage.setItem('event_test_return_highlight', JSON.stringify({
+                eventCode,
+                eventDate,
+                columnKey: 'club',
+                token: clubToken
+            }));
+        } catch (_err) {
+        }
+    };
 
     const handleBack = () => {
         if (drillHistory.length > 0) {
@@ -318,8 +354,29 @@ const Clubs: React.FC = () => {
             setLocalHighlightAthleteCode(previous.highlightAthleteCode || '');
             return;
         }
+
+        persistEventReturnHighlight();
+
+        if (navigateBackWithNavStack(navigate, location.pathname)) {
+            return;
+        }
         navigate(backTarget);
     };
+
+    useEffect(() => {
+        const onWindowClick = (event: MouseEvent) => {
+            const target = event.target as Node;
+            const clickedInsideInput = Boolean(containerRef.current && containerRef.current.contains(target));
+            const clickedInsideDropdown = Boolean(dropdownRef.current && dropdownRef.current.contains(target));
+            if (!clickedInsideInput && !clickedInsideDropdown) {
+                setOpen(false);
+            }
+        };
+        window.addEventListener('click', onWindowClick);
+        return () => {
+            window.removeEventListener('click', onWindowClick);
+        };
+    }, []);
 
     useEffect(() => {
         const trimmed = query.trim();
@@ -342,6 +399,8 @@ const Clubs: React.FC = () => {
 
         let cancelled = false;
         setLoading(true);
+        setOpen(true);
+        setHighlight(-1);
         const timer = window.setTimeout(async () => {
             try {
                 const data = await fetchClubsSearch(trimmed, 25);
@@ -353,7 +412,7 @@ const Clubs: React.FC = () => {
             } catch (_err) {
                 if (!cancelled) {
                     setClubOptions([]);
-                    setOpen(false);
+                    setOpen(true);
                 }
             } finally {
                 if (!cancelled) {
@@ -367,6 +426,33 @@ const Clubs: React.FC = () => {
             window.clearTimeout(timer);
         };
     }, [query, selectedClub]);
+
+    useEffect(() => {
+        if (!open || query.trim().length === 0) {
+            return;
+        }
+
+        const updateDropdownPosition = () => {
+            if (!inputRef.current) {
+                return;
+            }
+            const rect = inputRef.current.getBoundingClientRect();
+            const viewportTopOffset = window.visualViewport ? window.visualViewport.offsetTop : 0;
+            const viewportLeftOffset = window.visualViewport ? window.visualViewport.offsetLeft : 0;
+            setDropdownTop(rect.bottom + 4 + viewportTopOffset);
+            setDropdownLeft(rect.left + viewportLeftOffset);
+            setDropdownWidth(Math.max(rect.width, 220) + 38);
+        };
+
+        updateDropdownPosition();
+        window.addEventListener('resize', updateDropdownPosition);
+        window.addEventListener('scroll', updateDropdownPosition, true);
+
+        return () => {
+            window.removeEventListener('resize', updateDropdownPosition);
+            window.removeEventListener('scroll', updateDropdownPosition, true);
+        };
+    }, [open, query]);
 
     const chooseClub = (club: ClubOption) => {
         setSelectedClub(club);
@@ -501,7 +587,7 @@ const Clubs: React.FC = () => {
         returnParams.set('highlight_athlete', String(athleteCode));
         const returnSearch = `?${returnParams.toString()}`;
 
-        navigate(`/athletes?${params.toString()}`, {
+        navigateWithNavStack(navigate, location, `/athletes?${params.toString()}`, {
             state: {
                 athleteCode: String(athleteCode),
                 athleteName: member.name ? String(member.name) : undefined,
@@ -562,8 +648,9 @@ const Clubs: React.FC = () => {
                     )}
                 </div>
                 <div className="clubs-header-main">
-                    <div className="clubs-search-wrap">
+                    <div className="clubs-search-wrap" ref={containerRef}>
                         <input
+                            ref={inputRef}
                             id="clubs-search-input"
                             aria-label="Search clubs"
                             placeholder="Enter Search"
@@ -574,12 +661,9 @@ const Clubs: React.FC = () => {
                                 setMembers([]);
                             }}
                             onFocus={() => {
-                                if (clubOptions.length > 0) {
+                                if (query.trim().length > 0) {
                                     setOpen(true);
                                 }
-                            }}
-                            onBlur={() => {
-                                window.setTimeout(() => setOpen(false), 150);
                             }}
                             onKeyDown={(event) => {
                                 if (!open) return;
@@ -602,9 +686,23 @@ const Clubs: React.FC = () => {
                             className="clubs-search-input"
                         />
 
-                        {open && (loading || clubOptions.length > 0) && (
-                            <div role="listbox" className="clubs-search-dropdown">
+                        {open && query.trim().length > 0 && createPortal(
+                            <div
+                                ref={dropdownRef}
+                                role="listbox"
+                                className="clubs-search-dropdown"
+                                style={{
+                                    position: 'fixed',
+                                    zIndex: 2147483647,
+                                    top: dropdownTop,
+                                    left: dropdownLeft,
+                                    width: dropdownWidth
+                                }}
+                            >
                                 {loading && <div className="clubs-search-loading">Loading...</div>}
+                                {!loading && clubOptions.length === 0 && (
+                                    <div className="clubs-search-loading">No clubs found</div>
+                                )}
                                 {!loading && clubOptions.map((opt, idx) => (
                                     <div
                                         key={`${opt.club}-${idx}`}
@@ -619,7 +717,8 @@ const Clubs: React.FC = () => {
                                         <span className="clubs-search-option-count">{opt.athlete_count}</span>
                                     </div>
                                 ))}
-                            </div>
+                            </div>,
+                            document.body
                         )}
 
                         {selectedClub && (

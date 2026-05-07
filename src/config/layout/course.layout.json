@@ -1,0 +1,212 @@
+{
+  "version": "1.0.0-draft",
+  "page": "Course",
+  "units": "cm",
+  "anchor": "course-header-root",
+  "notes": "Config-driven Course_test layout.",
+  "viewports": {
+    "laptop": {
+      "breakpointMin": 641
+    },
+    "mobile": {
+      "breakpointMax": 640
+    }
+  },
+  "elements": [
+    {
+      "id": "course.viewLabel",
+      "type": "label",
+      "name": "View:",
+      "helpTarget": "control-table-view",
+      "helpLabel": true,
+      "style": {
+        "fontSize": "0.75rem",
+        "fontWeight": 600,
+        "color": "#111827",
+        "lineHeight": 0.9
+      },
+      "laptop": { "x": "11cm", "y": "0cm" },
+      "mobile": { "x": "6.3cm", "y": "0cm" }
+    },
+    {
+      "id": "course.viewSelect",
+      "type": "select",
+      "name": "Basic",
+      "options": ["Basic", "Detailed"],
+      "laptop": { "x": "12.5cm", "y": "0cm", "width": "4.0cm" },
+      "mobile": { "x": "7.8cm", "y": "0cm", "width": "3.2cm" }
+    },
+    {
+      "id": "course.periodLabel",
+      "type": "label",
+      "name": "Period:",
+      "helpTarget": "control-period",
+      "helpLabel": true,
+      "style": {
+        "fontSize": "0.75rem",
+        "fontWeight": 600,
+        "color": "#111827",
+        "lineHeight": 0.9
+      },
+      "laptop": { "x": "10.7cm", "y": "0.8cm" },
+      "mobile": { "x": "6.1cm", "y": "0.8cm" }
+    },
+    {
+      "id": "course.periodSelect",
+      "type": "select",
+      "name": "Recent Events",
+      "options": ["Recent Events", "Last 50 Events", "Since Lockdown", "All Events"],
+      "laptop": { "x": "12.5cm", "y": "0.8cm", "width": "4.0cm" },
+      "mobile": { "x": "7.8cm", "y": "0.8cm", "width": "3.2cm" }
+    },
+    {
+      "id": "course.backButton",
+      "type": "button",
+      "name": "Back",
+      "style": {
+        "fontSize": "1.2rem",
+        "fontWeight": 700,
+        "lineHeight": 1.0,
+        "width": "0.9cm",
+        "height": "0.9cm"
+      },
+      "laptop": { "x": "0.3cm", "y": "0.0cm", "width": "0.9cm", "height": "0.9cm" },
+      "mobile": { "x": "0.3cm", "y": "0.0cm", "width": "0.9cm", "height": "0.9cm" }
+    },
+    {
+      "id": "course.searchInput",
+      "type": "field",
+      "name": "Course Search",
+      "laptop": { "x": "1.7cm", "y": "0.0cm", "width": "8.8cm" },
+      "mobile": { "x": "1.5cm", "y": "0.0cm", "width": "4.5cm" }
+    },
+    {
+      "id": "course.panelToggle",
+      "type": "button",
+      "name": "Top250",
+      "style": {
+        "fontSize": "0.5rem",
+        "fontWeight": 700,
+        "lineHeight": 1.0
+      },
+      "laptop": { "x": "0.3cm", "y": "1.1cm", "width": "1.0cm", "height": "1.0cm" },
+      "mobile": { "x": "0.3cm", "y": "1.1cm", "width": "1.0cm", "height": "1.0cm" }
+    },
+    {
+      "id": "course.resetButton",
+      "type": "button",
+      "name": "Reset",
+      "style": {
+        "fontSize": "0.5rem",
+        "fontWeight": 700,
+        "lineHeight": 1.0
+      },
+      "laptop": { "x": "1.45cm", "y": "1.1cm", "width": "1.0cm", "height": "1.0cm" },
+      "mobile": { "x": "1.45cm", "y": "1.1cm", "width": "1.0cm", "height": "1.0cm" }
+    },
+
+    {
+      "id": "course.totalEvents",
+      "type": "field",
+      "name": "Total events",
+      "style": {
+        "fontSize": "0.75rem",
+        "color": "#374151"
+      },
+      "laptop": { "x": "0.3cm", "y": "2.3cm", "width": "8.8cm" },
+      "mobile": { "x": "0.3cm", "y": "2.3cm", "width": "8.0cm" }
+    },
+    {
+      "id": "course.statusMessage",
+      "type": "field",
+      "name": "Status Messages",
+      "style": {
+        "fontSize": "0.65rem",
+        "fontStyle": "italic",
+        "color": "#6b7280"
+      },
+      "laptop": { "x": "3.3cm", "y": "2.4cm", "width": "8.8cm" },
+      "mobile": { "x": "3.3cm", "y": "2.4cm", "width": "8.0cm" }
+    },
+    {
+      "id": "course.tableContainer",
+      "type": "table",
+      "name": "tableContainer",
+      "laptop": { "x": "0cm", "y": "3cm" },
+      "mobile": { "x": "0cm", "y": "9cm" }
+    },
+    {
+      "id": "course.summaryModeSelect",
+      "type": "select",
+      "name": "Average",
+      "sticky": true,
+      "options": ["Average", "Total", "Maximum", "Minimum", "Range", "Growth"]
+    },
+    {
+      "id": "course.summaryRow",
+      "type": "table",
+      "name": "summaryRow",
+      "sticky": true
+    }
+  ],
+  "tableModel": {
+    "mode": "flat",
+    "sort": {
+      "enabled": true,
+      "showInactiveArrows": true,
+      "activeColor": "#111827",
+      "inactiveColor": "#9ca3af"
+    }
+  },
+  "tableViews": {
+    "basic": [
+      "date",
+      "event_number",
+      "participants",
+      "coeff_combined",
+      "volunteers",
+      "tourist_count",
+      "first_timers_count",
+      "pb_count",
+      "unknown_count"
+    ],
+    "detailed": [
+      "date",
+      "event_number",
+      "participants",
+      "coeff_combined",
+      "volunteers",
+      "tourist_count",
+      "first_timers_count",
+      "pb_count",
+      "unknown_count",
+      "coeff",
+      "coeff_event",
+      "super_tourist_count",
+      "regulars",
+      "returners_count",
+      "club_count",
+      "recentbest_count",
+      "eligible_time_count"
+    ]
+  },
+  "tableColumns": [
+    { "key": "date", "type": "table", "name": "date", "headerName": "Date", "style": { "textAlign": "left" }, "laptop": { "width": "55px" }, "mobile": { "width": "55px" } },
+    { "key": "event_number", "type": "table", "name": "event_number", "headerName": "Event #", "style": { "textAlign": "center" }, "laptop": { "width": "52px" }, "mobile": { "width": "52px" } },
+    { "key": "participants", "type": "table", "name": "participants", "headerName": "Athletes", "style": { "textAlign": "center" }, "laptop": { "width": "64px" }, "mobile": { "width": "58px" } },
+    { "key": "coeff_combined", "type": "table", "name": "coeff_combined", "headerName": "Hardness", "style": { "textAlign": "center" }, "laptop": { "width": "68px" }, "mobile": { "width": "66px" } },
+    { "key": "volunteers", "type": "table", "name": "volunteers", "headerName": "Volunts", "style": { "textAlign": "center" }, "laptop": { "width": "60px" }, "mobile": { "width": "50px" } },
+    { "key": "tourist_count", "type": "table", "name": "tourist_count", "headerName": "Tourists", "style": { "textAlign": "center" }, "laptop": { "width": "60px" }, "mobile": { "width": "57px" } },
+    { "key": "first_timers_count", "type": "table", "name": "first_timers_count", "headerName": "1st timers", "style": { "textAlign": "center" }, "laptop": { "width": "64px" }, "mobile": { "width": "64px" } },
+    { "key": "pb_count", "type": "table", "name": "pb_count", "headerName": "PBs", "style": { "textAlign": "center" }, "laptop": { "width": "60px" }, "mobile": { "width": "60px" } },
+    { "key": "unknown_count", "type": "table", "name": "unknown_count", "headerName": "Unknowns", "style": { "textAlign": "center" }, "laptop": { "width": "68px" }, "mobile": { "width": "68px" } },
+    { "key": "coeff", "type": "table", "name": "coeff", "headerName": "Season Hard", "style": { "textAlign": "center" }, "laptop": { "width": "78px" }, "mobile": { "width": "78px" } },
+    { "key": "coeff_event", "type": "table", "name": "coeff_event", "headerName": "Event Hard", "style": { "textAlign": "center" }, "laptop": { "width": "76px" }, "mobile": { "width": "76px" } },
+    { "key": "super_tourist_count", "type": "table", "name": "super_tourist_count", "headerName": "Super Tourists", "style": { "textAlign": "center" }, "laptop": { "width": "78px" }, "mobile": { "width": "78px" } },
+    { "key": "regulars", "type": "table", "name": "regulars", "headerName": "Regulars", "style": { "textAlign": "center" }, "laptop": { "width": "64px" }, "mobile": { "width": "64px" } },
+    { "key": "returners_count", "type": "table", "name": "returners_count", "headerName": "Returners", "style": { "textAlign": "center" }, "laptop": { "width": "64px" }, "mobile": { "width": "64px" } },
+    { "key": "club_count", "type": "table", "name": "club_count", "headerName": "Clubs", "style": { "textAlign": "center" }, "laptop": { "width": "50px" }, "mobile": { "width": "50px" } },
+    { "key": "recentbest_count", "type": "table", "name": "recentbest_count", "headerName": "Recent Bests", "style": { "textAlign": "center" }, "laptop": { "width": "74px" }, "mobile": { "width": "74px" } },
+    { "key": "eligible_time_count", "type": "table", "name": "eligible_time_count", "headerName": "Eligible", "style": { "textAlign": "center" }, "laptop": { "width": "54px" }, "mobile": { "width": "54px" } }
+  ]
+}

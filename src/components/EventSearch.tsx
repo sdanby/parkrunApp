@@ -28,14 +28,19 @@ const EventSearch: React.FC<Props> = ({
     const [open, setOpen] = useState(false);
     const [highlight, setHighlight] = useState(-1);
     const prefilledRef = useRef(false);
+    const lastAppliedInitialQueryRef = useRef('');
+    const userHasEditedRef = useRef(false);
 
     useEffect(() => {
         if (typeof initialQuery !== 'string') return;
         const trimmed = initialQuery.trim();
         if (!trimmed) return;
+        if (userHasEditedRef.current) return;
+        if (lastAppliedInitialQueryRef.current === trimmed) return;
         if (query.trim() !== '') return;
         setQuery(trimmed);
         prefilledRef.current = true;
+        lastAppliedInitialQueryRef.current = trimmed;
     }, [initialQuery, query]);
 
     const filtered = useMemo(() => {
@@ -61,6 +66,7 @@ const EventSearch: React.FC<Props> = ({
                 placeholder={placeholder}
                 value={query}
                 onChange={(event) => {
+                    userHasEditedRef.current = true;
                     setQuery(event.target.value);
                     setOpen(true);
                     setHighlight(-1);
@@ -100,7 +106,7 @@ const EventSearch: React.FC<Props> = ({
                     fontSize: '0.95rem',
                     fontWeight: 600,
                     letterSpacing: '-0.01em',
-                    color: '#4b5563',
+                    color: query.trim().length > 0 ? '#111827' : '#9ca3af',
                     fontFamily: 'inherit'
                 }}
             />

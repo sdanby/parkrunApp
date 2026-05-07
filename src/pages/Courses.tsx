@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { fetchAllResults, fetchEventSummary, fetchResults } from '../api/backendAPI';
 import EventSearch, { type EventOption } from '../components/EventSearch';
+import { navigateBackWithNavStack, navigateWithNavStack } from '../utils/navigationStack';
+import { requestUnifiedHelp } from './UnifiedHelp';
 import './ResultsTable.css';
 import './Courses.css';
 
@@ -329,8 +331,26 @@ const Courses: React.FC = () => {
     const locationState = toCoursesLocationState(location.state ?? {});
     const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
 
-    const initialEventCode = locationState.eventCode || searchParams.get('event_code') || '';
-    const initialEventName = locationState.eventName || searchParams.get('event_name') || '';
+    const getLoggedInUser = () => {
+        try {
+            const raw = localStorage.getItem('auth_user_v1');
+            if (!raw) return {};
+            const parsed = JSON.parse(raw);
+            return parsed || {};
+        } catch {
+            return {};
+        }
+    };
+    const loggedInUser = getLoggedInUser();
+    const loggedInDefaultCourseCode = typeof loggedInUser.defaultCourseCode === 'string' && loggedInUser.defaultCourseCode.trim()
+        ? loggedInUser.defaultCourseCode.trim()
+        : '';
+    const loggedInDefaultCourseName = typeof loggedInUser.defaultCourseName === 'string' && loggedInUser.defaultCourseName.trim()
+        ? loggedInUser.defaultCourseName.trim()
+        : '';
+
+    const initialEventCode = locationState.eventCode || searchParams.get('event_code') || loggedInDefaultCourseCode || '';
+    const initialEventName = locationState.eventName || searchParams.get('event_name') || loggedInDefaultCourseName || '';
     const initialPanelModeParam = searchParams.get('panel');
     const initialPanelMode: CoursePanelMode = initialPanelModeParam === 'top250'
         ? 'top250'
@@ -607,7 +627,7 @@ const Courses: React.FC = () => {
         [eventOptions, activeEventCode]
     );
 
-    const displayName = selectedEventOption?.eventName || activeEventName || 'Course';
+    const displayName = selectedEventOption?.eventName || activeEventName || '';
     const displayCode = selectedEventOption?.eventCode || activeEventCode;
     const returnTarget = locationState.returnTo;
     const showHeader = Boolean(displayCode);
@@ -647,6 +667,9 @@ const Courses: React.FC = () => {
     };
 
     const handleBackNavigation = () => {
+        if (navigateBackWithNavStack(navigate, location.pathname)) {
+            return;
+        }
         if (returnTarget?.pathname) {
             navigate(`${returnTarget.pathname}${returnTarget.search ?? ''}`);
             return;
@@ -668,7 +691,7 @@ const Courses: React.FC = () => {
             params.set('event_number', String(eventNumber));
         }
 
-        navigate(`/races?${params.toString()}`, {
+        navigateWithNavStack(navigate, location, `/races?${params.toString()}`, {
             state: {
                 from: 'courses',
                 returnTo: {
@@ -699,7 +722,7 @@ const Courses: React.FC = () => {
         returnParams.set('highlight_athlete', String(athleteCode));
         const returnSearch = `?${returnParams.toString()}`;
 
-        navigate(`/athletes?${params.toString()}`, {
+        navigateWithNavStack(navigate, location, `/athletes?${params.toString()}`, {
             state: {
                 athleteCode: String(athleteCode),
                 athleteName: athleteName ? String(athleteName) : undefined,
@@ -978,6 +1001,7 @@ const Courses: React.FC = () => {
                                 inputId="courses-search-input"
                                 options={eventOptions}
                                 initialQuery={displayName}
+                                placeholder="search for course"
                                 onSelect={handleSelectEvent}
                             />
                         </div>
@@ -1003,7 +1027,23 @@ const Courses: React.FC = () => {
                     <div style={{ display: 'flex', justifyContent: 'flex-end', margin: '0 0.3cm 0.28rem 0.3cm' }}>
                         <div className="course-view-control races-view-control" style={{ marginLeft: 0 }}>
                             <div className="races-view-control-item">
-                                <label htmlFor="courses-view-select">View:</label>
+                                <span className="help-tooltip" style={{ display: 'inline-flex', transform: 'translateX(0.7cm)' }}>
+                                        <button
+                                            type="button"
+                                            className="help-trigger help-trigger-label"
+                                            onClick={(event) => {
+                                                const rect = (event.currentTarget as HTMLButtonElement).getBoundingClientRect();
+                                                requestUnifiedHelp('control-table-view', {
+                                                    x: rect.left,
+                                                    y: rect.bottom
+                                                });
+                                            }}
+                                            title="Table View help"
+                                            aria-label="Table View help"
+                                        >
+                                            <span className="help-trigger-text">Table View:</span>
+                                        </button>
+                                    </span>
                                 <select
                                     id="courses-view-select"
                                     value={viewMode}
@@ -1308,7 +1348,21 @@ const Courses: React.FC = () => {
                                                             if (col.key === 'date') {
                                                                 return (
                                                                     <th key={col.key} scope="row" className="athlete-date-cell" style={alignmentStyle}>
-                                                                        {value}
+                                                                        <button
+                                                                            type="button"
+                                                                            className="courses-date-link"
+                                                                            onPointerDown={(event) => {
+                                                                                event.stopPropagation();
+                                                                            }}
+                                                                            onClick={(event) => {
+                                                                                event.stopPropagation();
+                                                                                handleOpenSingleEvent(row);
+                                                                            }}
+                                                                            title="Open this event date"
+                                                                            aria-label={`Open event for ${String(value)}`}
+                                                                        >
+                                                                            {value}
+                                                                        </button>
                                                                     </th>
                                                                 );
                                                             }

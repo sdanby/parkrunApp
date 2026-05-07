@@ -1,14 +1,44 @@
 .courses-page {
     width: 100%;
+    padding-bottom: 10rem;
 }
 
 .course-header {
-    display: flex;
-    align-items: flex-start;
-    gap: 0.35rem;
-    margin-left: 0.3cm;
-    margin-right: 0.3cm;
-    margin-bottom: 0.3rem;
+    display: block;
+    width: 100%;
+    position: relative !important;
+    height: auto;
+}
+
+@media (max-width: 640px) {
+    .courses-page {
+        padding: 0;
+    }
+
+    .course-header {
+        position: relative !important;
+        height: auto;
+        min-height: auto;
+        margin: 0;
+        padding: 0.3rem;
+        top: auto !important;
+        left: auto !important;
+        z-index: 1;
+    }
+
+    .course-runs-section {
+        position: relative !important;
+        margin-top: 0;
+        padding: 0.3rem;
+    }
+
+    .athlete-runs-table-wrapper,
+    .course-table-wrapper {
+        position: relative !important;
+        margin-top: 0 !important;
+        left: auto !important;
+        top: auto !important;
+    }
 }
 
 .course-header-main {
@@ -143,6 +173,18 @@
 .course-clickable-row.highlighted-source-row:hover > th,
 .course-clickable-row.highlighted-source-row:hover > td {
     background-color: #add8e6 !important;
+}
+
+.courses-date-link {
+    border: none;
+    background: none;
+    color: #0a5ad1;
+    padding: 0;
+    margin: 0;
+    font: inherit;
+    cursor: pointer;
+    text-align: left;
+    text-decoration: underline;
 }
 
 .top250-highlighted-row > th,

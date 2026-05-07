@@ -1,0 +1,448 @@
+{
+  "version": "1.0.0-draft",
+  "page": "Event",
+  "units": "cm",
+  "anchor": "event-header-root",
+  "notes": "Draft config only. Not wired into page yet.",
+  "viewports": {
+    "laptop": {
+      "breakpointMin": 641
+    },
+    "mobile": {
+      "breakpointMax": 640
+    }
+  },
+  "elements": [
+    {
+      "id": "event.leftArrow",
+      "type": "button",
+      "name": "Left Arrow",
+      "laptop": { "x": "0.3cm", "y": "0.0cm" },
+      "mobile": { "x": "0.3cm", "y": "0.0cm" }
+    },
+    {
+      "id": "event.course",
+      "type": "field",
+      "name": "course",
+      "interaction": {
+        "enabled": true,
+        "action": "navigate",
+        "target": "/courses",
+        "navMode": "stack",
+        "params": {
+          "event_code": "$eventCode",
+          "event_name": "$eventName"
+        }
+      },
+      "laptop": { "x": "1.4cm", "y": "0.0cm" },
+      "mobile": { "x": "1.4cm", "y": "0.0cm" }
+    },
+    {
+      "id": "event.viewLabel",
+      "type": "label",
+      "name": "Table view:",
+      "helpTarget": "control-table-view",
+      "style": {
+        "fontSize": "0.8rem",
+        "fontWeight": 600,
+        "color": "#111827",
+        "lineHeight": 1.0
+      },
+      "helpLabel": true,
+      "laptop": { "x": "6.3cm", "y": "0.0cm" },
+      "mobile": { "x": "5.3cm", "y": "0.0cm" }
+    },
+    {
+      "id": "event.viewSelect",
+      "type": "select",
+      "name": "Basic",
+      "options": ["Basic", "Detailed", "All Time Adjustments"],
+      "laptop": { "x": "8.7cm", "y": "0.0cm", "width": "4.3cm" },
+      "mobile": { "x": "7.7cm", "y": "0.0cm", "width": "3.9cm" }
+    },
+    {
+      "id": "event.date",
+      "type": "field",
+      "name": "date",
+      "laptop": { "x": "1.4cm", "y": "0.7cm" },
+      "mobile": { "x": "1.4cm", "y": "0.7cm" }
+    },
+    {
+      "id": "event.courseAdjLabel",
+      "type": "label",
+      "name": "Course adj:",
+      "helpTarget": "control-course-adj",
+      "style": {
+        "fontSize": "0.8rem",
+        "fontWeight": 600,
+        "color": "#111827",
+        "lineHeight": 1.0
+      },
+      "helpLabel": true,
+      "laptop": { "x": "6.3cm", "y": "0.7cm" },
+      "mobile": { "x": "5.3cm", "y": "0.7cm" }
+    },
+    {
+      "id": "event.courseAdjSelect",
+      "type": "select",
+      "name": "no adjustment (default)",
+      "options": ["no adjustment (default)", "seasonal adjustments", "full event adjustments"],
+      "laptop": { "x": "8.7cm", "y": "0.7cm", "width": "4.3cm" },
+      "mobile": { "x": "7.7cm", "y": "0.7cm", "width": "3.9cm" }
+    },
+    {
+      "id": "event.eventNo",
+      "type": "field",
+      "name": "event no",
+      "style": {
+        "fontWeight": 600
+      },
+      "laptop": { "x": "1.5cm", "y": "1.5cm" },
+      "mobile": { "x": "1.5cm", "y": "1.5cm" }
+    },
+    {
+      "id": "event.upSort",
+      "type": "button",
+      "name": "Up sort",
+      "style": {
+        "fontSize": "0.65rem",
+        "padding": "1px 5px"
+      },
+      "laptop": { "x": "2.5cm", "y": "1.2cm" },
+      "mobile": { "x": "2.5cm", "y": "1.2cm" }
+    },
+    {
+      "id": "event.downSort",
+      "type": "button",
+      "name": "Down sort",
+      "style": {
+        "fontSize": "0.65rem",
+        "padding": "1px 5px"
+      },
+      "laptop": { "x": "2.5cm", "y": "1.7cm" },
+      "mobile": { "x": "2.5cm", "y": "1.7cm" }
+    },
+    {
+      "id": "event.otherAdjLabel",
+      "type": "label",
+      "name": "Other adj:",
+      "helpTarget": "control-other-adj",
+      "style": {
+        "fontSize": "0.8rem",
+        "fontWeight": 600,
+        "color": "#111827",
+        "lineHeight": 1.0
+      },
+      "helpLabel": true,
+      "laptop": { "x": "6.5cm", "y": "1.4cm" },
+      "mobile": { "x": "5.5cm", "y": "1.4cm" }
+    },
+    {
+      "id": "event.otherAdjSelect",
+      "type": "select",
+      "name": "no adjustment (default)",
+      "options": ["no adjustment (default)", "age adjustments", "sex adjustments", "age & sex adjustment"],
+      "laptop": { "x": "8.7cm", "y": "1.4cm", "width": "4.3cm" },
+      "mobile": { "x": "7.7cm", "y": "1.4cm", "width": "3.9cm" }
+    },
+    {
+      "id": "event.hardnessLabel",
+      "type": "label",
+      "name": "Hardness adj:",
+      "helpTarget": "control-hardness-adj",
+      "style": {
+        "fontSize": "0.8rem",
+        "fontWeight": 600,
+        "color": "#111827",
+        "lineHeight": 1.0
+      },
+      "helpLabel": true,
+      "laptop": { "x": "5.9cm", "y": "2.1cm" },
+      "mobile": { "x": "4.9cm", "y": "2.1cm" }
+    },
+    {
+      "id": "event.hardnessValue",
+      "type": "field",
+      "name": "combined hardness",
+      "interaction": {
+        "enabled": true,
+        "params": {
+          "event_code": "$eventCode",
+          "event_name": "$eventName",
+          "event_date": "$eventDate"
+        }
+      },
+      "style": {
+        "fontWeight": 600
+      },
+      "laptop": { "x": "8.7cm", "y": "2.2cm" },
+      "mobile": { "x": "7.8cm", "y": "2.2cm" }
+    },
+    {
+      "id": "event.statusMessage",
+      "type": "field",
+      "name": "empty",
+      "laptop": { "x": "0.3cm", "y": "2.7cm", "width": "7cm" },
+      "mobile": { "x": "0.3cm", "y": "2.7cm", "width": "7cm" }
+    },
+    {
+      "id": "event.table.corner",
+      "type": "table",
+      "name": "corner",
+      "laptop": { "x": "0.1cm", "y": "3.5cm" },
+      "mobile": { "x": "0.1cm", "y": "3.5cm" }
+    },
+    {
+      "id": "event.table.row1",
+      "type": "table",
+      "name": "row1",
+      "sticky": true,
+      "laptop": { "x": "0cm", "y": "0cm" },
+      "mobile": { "x": "0cm", "y": "0cm" }
+    }
+  ],
+  "tableViews": {
+    "basic": [
+      "position",
+      "athlete",
+      "time",
+      "age_group",
+      "age_grade",
+      "best_curve_ranking_current",
+      "club",
+      "comment"
+    ],
+    "detailed": [
+      "position",
+      "athlete",
+      "time",
+      "age_group",
+      "age_grade",
+      "best_curve_ranking_current",
+      "club",
+      "comment",
+      "total_runs",
+      "last_event_code_count_long",
+      "event_eligible_appearances",
+      "distinct_courses_long"
+    ],
+    "allTimeAdjustments": [
+      "position",
+      "athlete",
+      "time",
+      "age_group",
+      "age_grade",
+      "best_curve_ranking_current",
+      "club",
+      "comment",
+      "season_adj_time",
+      "event_adj_time",
+      "age_adj_time",
+      "sex_adj_time",
+      "age_event_adj_time",
+      "sex_event_adj_time",
+      "age_sex_adj_time",
+      "age_sex_event_adj_time"
+    ]
+  },
+  "tableColumns": [
+    {
+      "key": "position",
+      "type": "table",
+      "name": "col1",
+      "headerName": "Pos",
+      "sticky": true,
+      "style": {
+        "fontSize": "0.8rem",
+        "fontWeight": 700,
+        "backgroundColor": "#e5e7eb"
+      },
+      "laptop": { "width": "1.3cm" },
+      "mobile": { "width": "1.3cm" }
+    },
+    {
+      "key": "athlete",
+      "type": "table",
+      "name": "col2",
+      "headerName": "Athlete",
+      "sticky": true,
+      "style": {
+        "fontSize": "0.8rem",
+        "fontWeight": 700,
+        "backgroundColor": "#e5e7eb",
+        "textAlign": "left"
+      },
+      "interaction": {
+        "enabled": true,
+        "action": "navigate",
+        "target": "/athletes",
+        "navMode": "stack",
+        "params": {
+          "athlete_code": "$row.athlete_code",
+          "athlete_name": "$athleteName",
+          "event_code": "$eventCode",
+          "event_date": "$eventDate"
+        }
+      },
+      "laptop": { "width": "5.5cm" },
+      "mobile": { "width": "4.0cm" }
+    },
+    {
+      "key": "time",
+      "type": "table",
+      "name": "col3",
+      "headerName": "Time",
+      "style": { "timeDisplayFormat": "mm:ss" },
+      "laptop": { "width": "1.9cm" },
+      "mobile": { "width": "1.6cm" }
+    },
+    {
+      "key": "age_group",
+      "type": "table",
+      "name": "col4",
+      "headerName": "Age group",
+      "laptop": { "width": "2.5cm" },
+      "mobile": { "width": "2.0cm" }
+    },
+    {
+      "key": "age_grade",
+      "type": "table",
+      "name": "col5",
+      "headerName": "Age grade",
+      "laptop": { "width": "2.5cm" },
+      "mobile": { "width": "2.0cm" }
+    },
+    {
+      "key": "best_curve_ranking_current",
+      "type": "table",
+      "name": "col6",
+      "headerName": "Rank",
+      "style": { "subFontSize": "0.62rem" },
+      "laptop": { "width": "1.7cm" },
+      "mobile": { "width": "1.3cm" }
+    },
+    {
+      "key": "club",
+      "type": "table",
+      "name": "col7",
+      "interaction": {
+        "enabled": true,
+        "action": "navigate",
+        "target": "/clubs",
+        "navMode": "stack",
+        "params": {
+          "club": "$row.club"
+        }
+      },
+      "style": { "textAlign": "left" },
+      "headerName": "Club",
+      "laptop": { "width": "5.5cm" },
+      "mobile": { "width": "3.5cm" }
+    },
+    {
+      "key": "comment",
+      "type": "table",
+      "name": "col8",
+      "style": { "textAlign": "left" },
+      "headerName": "Detail",
+      "laptop": { "width": "3.4cm" },
+      "mobile": { "width": "2.4cm" }
+    },
+    {
+      "key": "total_runs",
+      "type": "table",
+      "name": "col9",
+      "headerName": "Total runs",
+      "laptop": { "width": "2.4cm" },
+      "mobile": { "width": "1.8cm" }
+    },
+    {
+      "key": "last_event_code_count_long",
+      "type": "table",
+      "name": "col10",
+      "headerName": "Local recent",
+      "laptop": { "width": "3.0cm" },
+      "mobile": { "width": "2.5m" }
+    },
+    {
+      "key": "event_eligible_appearances",
+      "type": "table",
+      "name": "col11",
+      "headerName": "Eligible recent",
+      "laptop": { "width": "3.5cm" },
+      "mobile": { "width": "2.5cm" }
+    },
+    {
+      "key": "distinct_courses_long",
+      "type": "table",
+      "name": "col12",
+      "headerName": "Other events",
+      "laptop": { "width": "3.0cm" },
+      "mobile": { "width": "2.5cm" }
+    },
+    {
+      "key": "season_adj_time",
+      "type": "table",
+      "name": "col9",
+      "headerName": "Season",
+      "laptop": { "width": "2.4cm" },
+      "mobile": { "width": "1.7cm" }
+    },
+    {
+      "key": "event_adj_time",
+      "type": "table",
+      "name": "col10",
+      "headerName": "Event",
+      "laptop": { "width": "2.4cm" },
+      "mobile": { "width": "1.7cm" }
+    },
+    {
+      "key": "age_adj_time",
+      "type": "table",
+      "name": "col11",
+      "headerName": "Age",
+      "laptop": { "width": "2.4cm" },
+      "mobile": { "width": "1.7cm" }
+    },
+    {
+      "key": "sex_adj_time",
+      "type": "table",
+      "name": "col12",
+      "headerName": "Sex",
+      "laptop": { "width": "2.4cm" },
+      "mobile": { "width": "1.7cm" }
+    },
+    {
+      "key": "age_event_adj_time",
+      "type": "table",
+      "name": "col13",
+      "headerName": "Event+Age",
+      "laptop": { "width": "2.4cm" },
+      "mobile": { "width": "1.9cm" }
+    },
+    {
+      "key": "sex_event_adj_time",
+      "type": "table",
+      "name": "col14",
+      "headerName": "Event+Sex",
+      "laptop": { "width": "2.4cm" },
+      "mobile": { "width": "1.9cm" }
+    },
+    {
+      "key": "age_sex_adj_time",
+      "type": "table",
+      "name": "col15",
+      "headerName": "Age+Sex",
+      "laptop": { "width": "2.4cm" },
+      "mobile": { "width": "1.9cm" }
+    },
+    {
+      "key": "age_sex_event_adj_time",
+      "type": "table",
+      "name": "col16",
+      "headerName": "Event+Age+Sex",
+      "laptop": { "width": "3.4cm" },
+      "mobile": { "width": "2.6cm" }
+    }
+  ]
+}

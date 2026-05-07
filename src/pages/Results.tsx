@@ -6,6 +6,7 @@ import './ResultsTable.css'; // Create this CSS file for sticky headers
 import { formatDate,formatDate1,formatDate2,formatAvgTime,formatDateToDDMMYYYY } from '../utilities'; // Utility function to format dates
 import ReactECharts from 'echarts-for-react';
 import { getMarkerForControlLabel, requestUnifiedHelp } from './UnifiedHelp';
+import { navigateWithNavStack } from '../utils/navigationStack';
 
 const queryOptions = [
     { value: 'recent', label: 'Recent Events' },
@@ -743,7 +744,7 @@ const ResultsPageComponent: React.FC = () => {
         const params = new URLSearchParams();
         if (date) params.set('date', String(date));
         if (eventCode) params.set('event', String(eventCode));
-        navigate(`/races?${params.toString()}`);
+        navigateWithNavStack(navigate, location, `/races?${params.toString()}`);
     };
 
     useEffect(() => {
@@ -900,6 +901,12 @@ function getSecondColumnHeaderLabel(analysisType: string, aggType: string): stri
     if (aggType === 'min') return 'Min';
     return '';
 }
+function toOldestToNewestSeries<T>(values: T[], periodQuery: string): T[] {
+    if (periodQuery === 'Mseason' || periodQuery === 'Qseason') {
+        return values;
+    }
+    return values.slice().reverse();
+}
 function getAggregatedValueForDate(
     lookup: { [date: string]: { [code: string]: number } },
     date: string,
@@ -1016,10 +1023,10 @@ function getAggregatedTotalForCode(
         return values.length > 0 ? Math.min(...values) : 0;
     }
     if (aggregation === 'growth') {
-        // compute linear slope (right-to-left). eventDates are latest-first so reverse for chronological
+        // compute linear slope from oldest to newest
         if (values.length < 2) return 0;
         const xs = values.map((_, i) => i); // simple indices as x
-        const ys = values.slice().reverse(); // chronological left-to-right
+        const ys = toOldestToNewestSeries(values, query);
         // compute slope using least-squares
         const n = ys.length;
         const meanX = (n - 1) / 2;
@@ -1632,8 +1639,8 @@ const eventTotals: { [code: string]: number } = {};
                     const r = Math.max(...pcts) - Math.min(...pcts);
                     eventTotals[code] = (analysisType === '%Total' || percentOneDecimalFilters.includes(filterType)) ? (percentOneDecimalFilters.includes(filterType) ? roundTo1(r, 3) : r) : Math.round(r);
                 } else if (aggType === 'growth') {
-                    // Compute slope on chronological percentages (left-to-right)
-                    const ys = pcts.slice().reverse();
+                    // Compute slope from oldest to newest
+                    const ys = toOldestToNewestSeries(pcts, query);
                     const n = ys.length;
                     if (n < 2) {
                         eventTotals[code] = 0;
@@ -1787,7 +1794,7 @@ eventCodes.forEach(code => {
                 } else if (aggType === 'range') {
                     eventTotals[code] = Math.round(Math.max(...diffs) - Math.min(...diffs));
                 } else if (aggType === 'growth') {
-                    const ys = diffs.slice().reverse();
+                    const ys = toOldestToNewestSeries(diffs, query);
                     const n = ys.length;
                     if (n < 2) eventTotals[code] = 0;
                     else {
@@ -1878,7 +1885,7 @@ eventCodes.forEach(code => {
             value={analysisType}
             setValue={setAnalysisType}
             options={analysisOptions}
-            label1="Type"
+            label1="Calc"
             label2="Period"
             value2={query}
             setValue2={setQuery}
@@ -1892,7 +1899,7 @@ eventCodes.forEach(code => {
             value={filterType}
             setValue={setFilterType}
             options={analysisType === 'Times' ? timesFilterOptions : (analysisType === '%Participants' ? percentParticipantFilterOptions : (analysisType === '%Total' ? percentTotalFilterOptions : (analysisType === 'Age' ? ageFilterOptions : participantFilterOptions)))}
-            label1="Filter"
+            label1="Type"
             label2="Cell Agg"
             value2={cellAgg}
             setValue2={setCellAgg}
@@ -1963,6 +1970,9 @@ eventCodes.forEach(code => {
                     {isPlotExpanded ? 'Reduce' : 'Expand'}
                 </button>
             )}
+            <span style={{ marginLeft: '0.2rem', fontSize: '0.72rem', fontStyle: 'italic', color: '#6b7280' }}>
+                click a cell to see event details
+            </span>
         </div>
             {showPlot ? (
                 <div
@@ -2489,6 +2499,9 @@ eventCodes.forEach(code => {
                             </th>
                             {eventDates.map(date => {
                                 let lookup;
+                                if (aggType === 'growth') {
+                                    return <th key={date} className="sticky-header second-row"> </th>;
+                                }
                                 if (analysisType === 'Age') {
                                     const _ageLookupAny: any = avgAgeLookup;
                                     const hdrVal = getAggregatedValueForDate(_ageLookupAny, date, eventCodes, aggType, 1);
@@ -2794,26 +2807,43 @@ eventCodes.forEach(code => {
                             <tr key={code}>
                                 <td
                                     className="sticky-col"
-                                    style={{ cursor: 'pointer' }}
-                                    onClick={() => {
-                                        const eventName = String(results.find(r => r.event_code === code)?.event_name || code);
-                                        const params = new URLSearchParams();
-                                        params.set('event_code', String(code));
-                                        params.set('event_name', eventName);
-                                        navigate(`/courses?${params.toString()}`, {
-                                            state: {
-                                                eventCode: String(code),
-                                                eventName,
-                                                from: 'results',
-                                                returnTo: {
-                                                    pathname: location.pathname,
-                                                    search: location.search
-                                                }
-                                            }
-                                        });
-                                    }}
+                                    style={{ cursor: 'default' }}
                                 >
-                                    {results.find(r => r.event_code === code)?.event_name || code}
+                                    <button
+                                        type="button"
+                                        style={{
+                                            border: 'none',
+                                            background: 'none',
+                                            color: '#0a5ad1',
+                                            padding: 0,
+                                            margin: 0,
+                                            font: 'inherit',
+                                            cursor: 'pointer',
+                                            textAlign: 'left',
+                                            textDecoration: 'underline'
+                                        }}
+                                        onClick={() => {
+                                            const eventName = String(results.find(r => r.event_code === code)?.event_name || code);
+                                            const params = new URLSearchParams();
+                                            params.set('event_code', String(code));
+                                            params.set('event_name', eventName);
+                                            navigateWithNavStack(navigate, location, `/courses?${params.toString()}`, {
+                                                state: {
+                                                    eventCode: String(code),
+                                                    eventName,
+                                                    from: 'results',
+                                                    returnTo: {
+                                                        pathname: location.pathname,
+                                                        search: location.search
+                                                    }
+                                                }
+                                            });
+                                        }}
+                                        title="Open course"
+                                        aria-label={`Open course ${String(results.find(r => r.event_code === code)?.event_name || code)}`}
+                                    >
+                                        {results.find(r => r.event_code === code)?.event_name || code}
+                                    </button>
                                 </td>
                                 <td className="sticky-col-2">
                                     {(() => {
