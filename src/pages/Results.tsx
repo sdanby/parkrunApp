@@ -1,4 +1,10 @@
 /* eslint-disable */
+/*
+    LEGACY PAGE (retiring): `Results.tsx`
+    Active replacement: `EventAnalysisTest.tsx`.
+    Use the replacement page for new feature work and behavior changes.
+    Keep this page functional for now because some legacy links/routes may still land here.
+*/
 import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { fetchResults, fetchAllResults } from '../api/backendAPI';
@@ -1971,7 +1977,9 @@ eventCodes.forEach(code => {
                 </button>
             )}
             <span style={{ marginLeft: '0.2rem', fontSize: '0.72rem', fontStyle: 'italic', color: '#6b7280' }}>
-                click a cell to see event details
+                {['Annual', 'Mseason', 'Qseason'].includes(query)
+                    ? 'cannot click a cell to see event details for aggregation periods'
+                    : 'click a cell to see event details'}
             </span>
         </div>
             {showPlot ? (

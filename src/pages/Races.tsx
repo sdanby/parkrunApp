@@ -1,3 +1,9 @@
+/*
+    LEGACY PAGE (retiring): `Races.tsx`
+    Active replacement: `EventTest.tsx`.
+    Use the replacement page for new feature work and behavior changes.
+    Keep this page functional for now because some legacy links/routes may still land here.
+*/
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { fetchEventPositions, fetchEventInfo, fetchEventByNumber, fetchEventTimeAdjustment } from '../api/backendAPI';

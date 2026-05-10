@@ -27,6 +27,12 @@ const readRowValue = (row: any, key: string): any => {
 };
 
 const parseNumeric = (value: any): number | null => {
+  if (value === null || value === undefined) return null;
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+    if (/^(na|n\/a|null|none)$/i.test(trimmed)) return null;
+  }
   const numeric = Number(value);
   return Number.isFinite(numeric) ? numeric : null;
 };
@@ -95,8 +101,10 @@ const normalizeAggType = (value: string): 'avg' | 'total' | 'max' | 'min' | 'ran
   return 'avg';
 };
 
-const normalizeCellAgg = (value: string): 'single' | 'avg' => {
+const normalizeCellAgg = (value: string): 'single' | 'avg' | 'min' | 'max' => {
   const token = normalizeControlToken(value);
+  if (token === 'minimum' || token === 'min') return 'min';
+  if (token === 'maximum' || token === 'max') return 'max';
   if (token === 'average' || token === 'avg') return 'avg';
   return 'single';
 };
@@ -215,6 +223,20 @@ const parseCombinedDeviation = (row: any): number | null => {
   return directCombined / 100;
 };
 
+// Fields where a value of 0 means "no data" rather than a legitimate zero measurement.
+// These are counts/positions that must be a positive integer to be meaningful.
+const POSITIVE_ONLY_FIELDS = new Set([
+  'last_position', 'event_number', 'avg_age',
+  'avg_time', 'avgtimelim12', 'avgtimelim5'
+]);
+
+const parseCountValue = (raw: any, field: string): number | null => {
+  const value = parseNumeric(raw);
+  if (value === null) return null;
+  if (POSITIVE_ONLY_FIELDS.has(field) && value <= 0) return null;
+  return value;
+};
+
 const getRawMetricValue = (row: any, analysisType: string, filterType: string, timeAdj: string): number | null => {
   if (analysisType === 'Times') {
     const timeField = timeAdj === 'hardness'
@@ -222,10 +244,10 @@ const getRawMetricValue = (row: any, analysisType: string, filterType: string, t
       : (timeAdj === 'age' || timeAdj === 'both')
         ? 'avgtimelim5'
         : 'avg_time';
-    return parseNumeric(readRowValue(row, timeField));
+    return parseCountValue(readRowValue(row, timeField), timeField);
   }
   if (analysisType === 'Age') {
-    return parseNumeric(readRowValue(row, 'avg_age'));
+    return parseCountValue(readRowValue(row, 'avg_age'), 'avg_age');
   }
   if (filterType === 'coeff') {
     const coeff = parseCoefficient(readRowValue(row, 'coeff'));
@@ -244,18 +266,22 @@ const getRawMetricValue = (row: any, analysisType: string, filterType: string, t
     return parseCombinedDeviation(row);
   }
   const field = getFilterField(filterType);
-  const value = parseNumeric(readRowValue(row, field));
+  const value = parseCountValue(readRowValue(row, field), field);
   if (value !== null) return value;
-  if (field === 'first_timers_count') return parseNumeric(readRowValue(row, 'first_timer_count'));
+  if (field === 'first_timers_count') return parseCountValue(readRowValue(row, 'first_timer_count'), 'first_timers_count');
   return null;
 };
 
-const aggregateValues = (values: number[], aggType: string): number | null => {
+const aggregateValues = (values: number[], aggType: string, analysisType?: string): number | null => {
   const valid = values.filter((value) => Number.isFinite(value));
   if (valid.length === 0) return null;
+  const validForExtrema = (analysisType === 'Times' && (aggType === 'min' || aggType === 'max'))
+    ? valid.filter((value) => !isUnavailableTimesValue(value))
+    : valid;
+  if (validForExtrema.length === 0) return null;
   if (aggType === 'total') return valid.reduce((sum, value) => sum + value, 0);
-  if (aggType === 'max') return Math.max(...valid);
-  if (aggType === 'min') return Math.min(...valid);
+  if (aggType === 'max') return Math.max(...validForExtrema);
+  if (aggType === 'min') return Math.min(...validForExtrema);
   if (aggType === 'range') return Math.max(...valid) - Math.min(...valid);
   if (aggType === 'growth') {
     if (valid.length < 2) return 0;
@@ -299,10 +325,18 @@ const getDeviationColor = (value: number | null | undefined, filterType?: string
   return 'inherit';
 };
 
+const isUnavailableTimesValue = (value: number): boolean => {
+  if (!Number.isFinite(value)) return true;
+  return value === 0 || value === (59 * 60 + 59);
+};
+
 const formatByType = (value: number | null, analysisType: string, filterType?: string): string => {
   if (value === null || !Number.isFinite(value)) return '';
   if (filterType && isHardnessFilter(filterType)) return `${(value * 100).toFixed(2)}%`;
-  if (analysisType === 'Times') return formatAvgTime(value);
+  if (analysisType === 'Times') {
+    if (isUnavailableTimesValue(value)) return 'NA';
+    return formatAvgTime(value);
+  }
   if (analysisType === 'Age') return Number(value).toFixed(1);
   if (analysisType === '%Participants') return formatPercent(value, getPercentParticipantsPrecision(filterType));
   if (analysisType === '%Total') return `${value.toFixed(1)}%`;
@@ -594,13 +628,13 @@ const EventAnalysisTest: React.FC = () => {
     }
 
     if (cellAggSelectElement && cellAggSelectElement.type === 'select') {
-      const forcedCellAgg = ['Annual', 'Qseason', 'Mseason'].includes(periodMode)
-        ? 'avg'
-        : (analysisType === 'Times' ? 'avg' : 'single');
+      const allowedCellAgg = ['Annual', 'Qseason', 'Mseason'].includes(periodMode)
+        ? ['avg', 'min', 'max']
+        : (analysisType === 'Times' ? ['avg'] : ['single']);
       const currentCanonicalCellAgg = normalizeCellAgg(controlValues[cellAggSelectElement.id] || '');
-      if (currentCanonicalCellAgg !== forcedCellAgg) {
+      if (!allowedCellAgg.includes(currentCanonicalCellAgg)) {
         const options = (cellAggSelectElement.options || []).map((option) => String(option).trim()).filter(Boolean);
-        updates[cellAggSelectElement.id] = selectDisplayOption(options, forcedCellAgg, normalizeCellAgg);
+        updates[cellAggSelectElement.id] = selectDisplayOption(options, allowedCellAgg[0], normalizeCellAgg);
       }
     }
 
@@ -865,7 +899,10 @@ const EventAnalysisTest: React.FC = () => {
 
     const pickCellValue = (values: number[]): number | null => {
       if (!values || values.length === 0) return null;
-      return cellAgg === 'avg' ? aggregateValues(values, 'avg') : values[values.length - 1];
+      if (cellAgg === 'avg') return aggregateValues(values, 'avg', analysisType);
+      if (cellAgg === 'min') return aggregateValues(values, 'min', analysisType);
+      if (cellAgg === 'max') return aggregateValues(values, 'max', analysisType);
+      return values[values.length - 1];
     };
 
     const rawCell: Record<string, Record<string, number | null>> = {};
@@ -887,7 +924,7 @@ const EventAnalysisTest: React.FC = () => {
         .map((course) => rawCell[course]?.[periodKey])
         .filter((value): value is number => value !== null && Number.isFinite(value));
       columnTotalsRaw[periodKey] = vals.reduce((sum, value) => sum + value, 0);
-      columnAggRaw[periodKey] = aggregateValues(vals, aggType);
+      columnAggRaw[periodKey] = aggregateValues(vals, aggType, analysisType);
     });
 
     const transformedCell: Record<string, Record<string, number | null>> = {};
@@ -952,7 +989,7 @@ const EventAnalysisTest: React.FC = () => {
         .map((periodKey) => rawCell[course]?.[periodKey])
         : periodKeys.map((periodKey) => transformedCell[course]?.[periodKey]))
         .filter((value): value is number => value !== null && Number.isFinite(value));
-      rowAggValue[course] = aggregateValues(vals, aggType);
+      rowAggValue[course] = aggregateValues(vals, aggType, analysisType);
     });
 
     const colAggValue: Record<string, number | null> = {};
@@ -960,7 +997,7 @@ const EventAnalysisTest: React.FC = () => {
       const vals = courses
         .map((course) => transformedCell[course]?.[periodKey])
         .filter((value): value is number => value !== null && Number.isFinite(value));
-      colAggValue[periodKey] = aggType === 'growth' ? null : aggregateValues(vals, aggType);
+      colAggValue[periodKey] = aggType === 'growth' ? null : aggregateValues(vals, aggType, analysisType);
     });
 
     return {
@@ -1572,7 +1609,12 @@ const EventAnalysisTest: React.FC = () => {
 
   const status = loading
     ? 'Loading event analysis…'
-    : (error || statusMessageElement?.name || '');
+    : (
+      error
+      || (['Annual', 'Qseason', 'Mseason'].includes(periodMode)
+        ? 'cannot click a cell to see event details for aggregation periods'
+        : (statusMessageElement?.name || ''))
+    );
 
   return (
     <div className="page-content">

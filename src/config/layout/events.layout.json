@@ -27,7 +27,7 @@
       "interaction": {
         "enabled": true,
         "action": "navigate",
-        "target": "/courses",
+        "target": "/courses_test",
         "navMode": "stack",
         "params": {
           "event_code": "$eventCode",
@@ -301,7 +301,7 @@
       "type": "table",
       "name": "col4",
       "headerName": "Age group",
-      "laptop": { "width": "2.5cm" },
+      "laptop": { "width": "2.6cm" },
       "mobile": { "width": "2.0cm" }
     },
     {
@@ -309,7 +309,7 @@
       "type": "table",
       "name": "col5",
       "headerName": "Age grade",
-      "laptop": { "width": "2.5cm" },
+      "laptop": { "width": "2.6cm" },
       "mobile": { "width": "2.0cm" }
     },
     {

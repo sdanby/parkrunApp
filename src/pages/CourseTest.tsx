@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { fetchAllResults, fetchEventSummary, fetchResults } from '../api/backendAPI';
+import ReactECharts from 'echarts-for-react';
+import { fetchAllResults, fetchEventPositionsMonthlyCascade, fetchEventSummary, fetchResults } from '../api/backendAPI';
 import EventSearch, { type EventOption } from '../components/EventSearch';
 import { navigateBackWithNavStack, navigateWithNavStack } from '../utils/navigationStack';
 import { requestUnifiedHelp } from './UnifiedHelp';
@@ -41,7 +42,22 @@ type ColumnDef = {
 
 type SummaryMode = 'average' | 'total' | 'maximum' | 'minimum' | 'range' | 'growth';
 type PeriodQuery = 'recent' | 'last50' | 'since-lockdown' | 'all';
-type CoursePanelMode = 'table' | 'profile' | 'top250';
+type CoursePanelMode = 'table' | 'profile' | 'harness' | 'groups' | 'top250';
+
+type MonthlyCascadeRow = {
+    month_idx?: number;
+    month_label?: string;
+    events_in_month?: number;
+    unknown_avg?: number;
+    first_first_timer_avg?: number;
+    first_timer_comment_avg?: number;
+    super_tourist_avg?: number;
+    tourist_avg?: number;
+    returner_or_super_returner_avg?: number;
+    super_regular_avg?: number;
+    last_event_code_count_long_gt10_avg?: number;
+    rest_avg?: number;
+};
 
 const COURSES_VIEW_MODE_KEY = 'courses_test_view_mode_v1';
 const COURSES_PERIOD_QUERY_KEY = 'courses_test_period_query_v1';
@@ -448,6 +464,10 @@ const CourseTest: React.FC = () => {
         ? 'top250'
         : initialPanelModeParam === 'profile'
             ? 'profile'
+            : initialPanelModeParam === 'harness' || initialPanelModeParam === 'plot_harness'
+                ? 'harness'
+            : initialPanelModeParam === 'groups' || initialPanelModeParam === 'plot_groups'
+                ? 'groups'
             : 'table';
     const initialTop250SortKeyParam = searchParams.get('top250_sort') || 'total_count';
     const initialTop250SortKey = top250SortableKeys.has(initialTop250SortKeyParam) ? initialTop250SortKeyParam : 'total_count';
@@ -506,6 +526,13 @@ const CourseTest: React.FC = () => {
     const [top250Rows, setTop250Rows] = useState<CourseRecord[]>([]);
     const [top250Loading, setTop250Loading] = useState<boolean>(false);
     const [top250Error, setTop250Error] = useState<string | null>(null);
+    const [monthlyCascadeRows, setMonthlyCascadeRows] = useState<MonthlyCascadeRow[]>([]);
+    const [monthlyCascadeLoading, setMonthlyCascadeLoading] = useState<boolean>(false);
+    const [monthlyCascadeError, setMonthlyCascadeError] = useState<string | null>(null);
+    const [profileXZoom, setProfileXZoom] = useState<{ start: number; end: number }>({ start: 0, end: 100 });
+    const [profileYZoom, setProfileYZoom] = useState<{ start: number; end: number }>({ start: 0, end: 100 });
+    const [profileCumulative, setProfileCumulative] = useState<boolean>(false);
+    const [profileLogScale, setProfileLogScale] = useState<boolean>(false);
 
     useEffect(() => {
         let cancelled = false;
@@ -718,6 +745,46 @@ const CourseTest: React.FC = () => {
     }, [panelMode, activeEventCode]);
 
     useEffect(() => {
+        if (panelMode !== 'groups') {
+            return;
+        }
+
+        const parsedEventCode = Number(activeEventCode);
+        if (!Number.isInteger(parsedEventCode) || parsedEventCode < 1) {
+            setMonthlyCascadeRows([]);
+            setMonthlyCascadeError('Please select a valid event to load group trends.');
+            setMonthlyCascadeLoading(false);
+            return;
+        }
+
+        let cancelled = false;
+        const loadGroups = async () => {
+            try {
+                setMonthlyCascadeLoading(true);
+                setMonthlyCascadeError(null);
+                const data = await fetchEventPositionsMonthlyCascade(parsedEventCode);
+                if (!cancelled) {
+                    setMonthlyCascadeRows(Array.isArray(data) ? data : []);
+                }
+            } catch (err: any) {
+                if (!cancelled) {
+                    setMonthlyCascadeError(err?.message || 'Unable to load monthly cascade groups.');
+                    setMonthlyCascadeRows([]);
+                }
+            } finally {
+                if (!cancelled) {
+                    setMonthlyCascadeLoading(false);
+                }
+            }
+        };
+
+        loadGroups();
+        return () => {
+            cancelled = true;
+        };
+    }, [panelMode, activeEventCode]);
+
+    useEffect(() => {
         if (!activeEventCode) {
             setRows([]);
             return;
@@ -827,11 +894,13 @@ const CourseTest: React.FC = () => {
     const handleSelectEvent = (eventCode: string, eventName: string) => {
         setActiveEventCode(eventCode);
         setActiveEventName(eventName);
-        setPanelMode('table');
+        // Keep the current panel mode — don't reset to table when changing course
         const params = new URLSearchParams();
         params.set('event_code', eventCode);
         params.set('event_name', eventName);
+        params.set('panel', panelMode);
         navigate(`/courses_test?${params.toString()}`, {
+            replace: true,
             state: {
                 eventCode,
                 eventName,
@@ -1016,12 +1085,20 @@ const CourseTest: React.FC = () => {
         ? 'top250'
         : panelMode === 'top250'
             ? 'profile'
-            : 'table';
+            : panelMode === 'profile'
+                ? 'harness'
+                : panelMode === 'harness'
+                    ? 'groups'
+                : 'table';
 
     const panelToggleLabel = nextPanelMode === 'top250'
         ? 'Top250'
         : nextPanelMode === 'profile'
-            ? 'Profile'
+            ? 'Plot Parts'
+            : nextPanelMode === 'harness'
+                ? 'Plot Harness'
+            : nextPanelMode === 'groups'
+                ? 'Plot Groups'
             : 'Table';
 
     const chronologicallySortedRows = useMemo(() => {
@@ -1119,6 +1196,207 @@ const CourseTest: React.FC = () => {
             avgPbs: average('pb_count')
         };
     }, [rows]);
+
+    // ── Profile chart: 6 monthly participant series ─────────────────────────────
+    const profileChartData = useMemo(() => {
+        const MN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const parseRowDate = (row: CourseRecord): Date | null => {
+            const raw = String(pickField(row, ['event_date', 'formatted_date', 'date']) ?? '').trim();
+            // DD/MM/YYYY
+            const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(raw);
+            if (m) return new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1]));
+            // YYYY-MM-DD
+            if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+                const d = new Date(raw);
+                return isNaN(d.getTime()) ? null : d;
+            }
+            return null;
+        };
+        const getParticipants = (row: CourseRecord): number | null => {
+            const raw = pickField(row, ['last_position', 'lastPosition']);
+            const n = Number(raw);
+            return Number.isFinite(n) && n > 0 ? n : null;
+        };
+
+        const nowMs = Date.now();
+        const oneYearAgoMs = nowMs - 365 * 24 * 60 * 60 * 1000;
+
+        // Bucket: course → month (0-11) → number[]
+        type MonthBuckets = number[][];
+        const makeBuckets = (): MonthBuckets => Array.from({ length: 12 }, () => []);
+
+        const courseCode = String(activeEventCode || '');
+        const courseBucketsAll: MonthBuckets = makeBuckets();
+        const courseBuckets1Y: MonthBuckets = makeBuckets();
+
+        // Per-course aggregation for cross-course series
+        // course → month → averages list (one per course per month)
+        const crossAll: number[][] = Array.from({ length: 12 }, () => []);
+        const cross1Y: number[][] = Array.from({ length: 12 }, () => []);
+        // course → month → values
+        const byCourseAll = new Map<string, MonthBuckets>();
+        const byCourse1Y = new Map<string, MonthBuckets>();
+
+        allRows.forEach((row) => {
+            const code = String(pickField(row, ['event_code', 'eventCode']) ?? '');
+            if (!code) return;
+            const d = parseRowDate(row);
+            if (!d) return;
+            const mo = d.getMonth();
+            const p = getParticipants(row);
+            if (p === null) return;
+            const ts = d.getTime();
+
+            // per-selected-course
+            if (code === courseCode) {
+                courseBucketsAll[mo].push(p);
+                if (ts >= oneYearAgoMs) courseBuckets1Y[mo].push(p);
+            }
+
+            // cross-course buckets
+            if (!byCourseAll.has(code)) byCourseAll.set(code, makeBuckets());
+            if (!byCourse1Y.has(code)) byCourse1Y.set(code, makeBuckets());
+            byCourseAll.get(code)![mo].push(p);
+            if (ts >= oneYearAgoMs) byCourse1Y.get(code)![mo].push(p);
+        });
+
+        const avg = (arr: number[]): number | null => {
+            const good = arr.filter(v => v > 0);
+            if (!good.length) return null;
+            return good.reduce((a, b) => a + b, 0) / good.length;
+        };
+
+        // Build per-month avg per course, then derive cross-course series
+        for (let mo = 0; mo < 12; mo++) {
+            byCourseAll.forEach((buckets) => {
+                const a = avg(buckets[mo]);
+                if (a !== null) crossAll[mo].push(a);
+            });
+            byCourse1Y.forEach((buckets) => {
+                const a = avg(buckets[mo]);
+                if (a !== null) cross1Y[mo].push(a);
+            });
+        }
+
+        const series1 = MN.map((_, mo) => avg(courseBucketsAll[mo]));
+        const series2 = MN.map((_, mo) => avg(courseBuckets1Y[mo]));
+        const series3 = MN.map((_, mo) => crossAll[mo].length ? crossAll[mo].reduce((a, b) => a + b, 0) / crossAll[mo].length : null);
+        const series4 = MN.map((_, mo) => cross1Y[mo].length ? cross1Y[mo].reduce((a, b) => a + b, 0) / cross1Y[mo].length : null);
+        const series5 = MN.map((_, mo) => crossAll[mo].length ? Math.max(...crossAll[mo]) : null);
+        const series6 = MN.map((_, mo) => crossAll[mo].length ? Math.min(...crossAll[mo]) : null);
+
+        const cumulate = (arr: (number | null)[]): (number | null)[] => {
+            let acc = 0;
+            return arr.map(v => { if (v === null) return null; acc += v; return acc; });
+        };
+
+        const withCumulative = (arr: (number | null)[]) => profileCumulative ? cumulate(arr) : arr;
+
+        return {
+            months: MN,
+            series: [
+                { name: `${displayName || 'Course'} – All Time`, data: withCumulative(series1), color: '#374151' },
+                { name: `${displayName || 'Course'} – Last 1Y`, data: withCumulative(series2), color: '#60a5fa' },
+                { name: 'All Courses – All Time (avg)', data: withCumulative(series3), color: '#dc2626', lineWidth: 2.5 },
+                { name: 'All Courses – Last 1Y (avg)', data: withCumulative(series4), color: '#f97316' },
+                { name: 'All Courses – Month (avg) Max', data: withCumulative(series5), color: '#9467bd', lineType: 'dashed' },
+                { name: 'All Courses – Month (avg) Min', data: withCumulative(series6), color: '#8c564b', lineType: 'dashed' },
+            ]
+        };
+    }, [allRows, activeEventCode, displayName, profileCumulative]);
+
+    const profileHardnessChartData = useMemo(() => {
+        const MN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const parseRowDate = (row: CourseRecord): Date | null => {
+            const raw = String(pickField(row, ['event_date', 'formatted_date', 'date']) ?? '').trim();
+            const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(raw);
+            if (m) return new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1]));
+            if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+                const d = new Date(raw);
+                return isNaN(d.getTime()) ? null : d;
+            }
+            return null;
+        };
+
+        const nowMs = Date.now();
+        const oneYearAgoMs = nowMs - 365 * 24 * 60 * 60 * 1000;
+
+        const makeBuckets = (): number[][] => Array.from({ length: 12 }, () => []);
+        const courseCode = String(activeEventCode || '');
+
+        const seasonalAll = makeBuckets();
+        const seasonal1Y = makeBuckets();
+        const eventAll = makeBuckets();
+        const event1Y = makeBuckets();
+
+        allRows.forEach((row) => {
+            const code = String(pickField(row, ['event_code', 'eventCode']) ?? '');
+            if (!code || code !== courseCode) return;
+
+            const d = parseRowDate(row);
+            if (!d) return;
+            const mo = d.getMonth();
+            const ts = d.getTime();
+
+            const seasonalCoeff = normalizeCoefficient(pickField(row, ['coeff']));
+            const eventCoeff = normalizeCoefficient(pickField(row, ['coeff_event', 'coeffEvent', 'coefEvent', 'coeffevent']));
+            const seasonalDeviation = seasonalCoeff === null ? null : seasonalCoeff - 1;
+            const eventDeviation = eventCoeff === null ? null : eventCoeff - 1;
+
+            if (seasonalDeviation !== null) {
+                seasonalAll[mo].push(seasonalDeviation);
+                if (ts >= oneYearAgoMs) seasonal1Y[mo].push(seasonalDeviation);
+            }
+            if (eventDeviation !== null) {
+                eventAll[mo].push(eventDeviation);
+                if (ts >= oneYearAgoMs) event1Y[mo].push(eventDeviation);
+            }
+        });
+
+        const avg = (arr: number[]): number | null => {
+            if (!arr.length) return null;
+            return arr.reduce((a, b) => a + b, 0) / arr.length;
+        };
+
+        return {
+            months: MN,
+            allTimeSeasonal: MN.map((_, mo) => avg(seasonalAll[mo])),
+            allTimeEvent: MN.map((_, mo) => avg(eventAll[mo])),
+            last1YSeasonal: MN.map((_, mo) => avg(seasonal1Y[mo])),
+            last1YEvent: MN.map((_, mo) => avg(event1Y[mo]))
+        };
+    }, [allRows, activeEventCode]);
+
+    const profileGroupsChartData = useMemo(() => {
+        const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const byMonth = new Map<number, MonthlyCascadeRow>();
+
+        monthlyCascadeRows.forEach((row) => {
+            const monthIdx = Number(row.month_idx);
+            if (Number.isFinite(monthIdx) && monthIdx >= 1 && monthIdx <= 12) {
+                byMonth.set(monthIdx, row);
+            }
+        });
+
+        const toNum = (value: unknown): number => {
+            const parsed = Number(value);
+            return Number.isFinite(parsed) ? parsed : 0;
+        };
+
+        return {
+            months: monthLabels,
+            eventsInMonth: monthLabels.map((_, index) => toNum(byMonth.get(index + 1)?.events_in_month)),
+            unknown: monthLabels.map((_, index) => toNum(byMonth.get(index + 1)?.unknown_avg)),
+            firstFirstTimer: monthLabels.map((_, index) => toNum(byMonth.get(index + 1)?.first_first_timer_avg)),
+            firstTimerComment: monthLabels.map((_, index) => toNum(byMonth.get(index + 1)?.first_timer_comment_avg)),
+            superTourist: monthLabels.map((_, index) => toNum(byMonth.get(index + 1)?.super_tourist_avg)),
+            tourist: monthLabels.map((_, index) => toNum(byMonth.get(index + 1)?.tourist_avg)),
+            returnerOrSuperReturner: monthLabels.map((_, index) => toNum(byMonth.get(index + 1)?.returner_or_super_returner_avg)),
+            superRegular: monthLabels.map((_, index) => toNum(byMonth.get(index + 1)?.super_regular_avg)),
+            lastCodeGt10: monthLabels.map((_, index) => toNum(byMonth.get(index + 1)?.last_event_code_count_long_gt10_avg)),
+            rest: monthLabels.map((_, index) => toNum(byMonth.get(index + 1)?.rest_avg))
+        };
+    }, [monthlyCascadeRows]);
 
     const sortedTop250Rows = useMemo(() => {
         const withIndex = top250Rows.map((row, index) => ({ row, index }));
@@ -1236,6 +1514,19 @@ const CourseTest: React.FC = () => {
     const summarySelectedLabel = useMemo(() => {
         return summaryControlOptions.find((option) => normalizeSummaryMode(option) === summaryMode) || summaryControlOptions[0] || 'Average';
     }, [summaryControlOptions, summaryMode]);
+
+    const ctrlBtnStyle: React.CSSProperties = {
+        fontSize: '0.7rem',
+        fontWeight: 700,
+        border: '1px solid #9ca3af',
+        borderRadius: '4px',
+        background: '#fff',
+        cursor: 'pointer',
+        padding: '2px 6px',
+        minWidth: '1.4rem',
+        lineHeight: 1.4,
+        color: '#374151'
+    };
 
     return (
         <div className="page-content courses-page" style={{ position: 'relative' }}>
@@ -1582,55 +1873,357 @@ const CourseTest: React.FC = () => {
                                     border: '2px solid #9ca3af',
                                     borderRadius: '12px',
                                     background: '#fff',
-                                    minHeight: '6cm',
                                     marginLeft: '0.3cm',
                                     marginRight: '0.3cm',
                                     overflow: 'hidden',
                                     boxShadow: '0 10px 18px rgba(15, 23, 42, 0.08)'
                                 }}
                             >
-                                <div
-                                    style={{
-                                        background: '#e5e7eb',
-                                        borderBottom: '1px solid #d1d5db',
-                                        padding: '0.55rem 0.8rem',
-                                        textAlign: 'center',
-                                        fontSize: '1.05rem',
-                                        fontWeight: 700
-                                    }}
-                                >
-                                    {displayName}
+                                {/* grey header */}
+                                <div style={{ background: '#e5e7eb', borderBottom: '1px solid #d1d5db', padding: '0.45rem 0.8rem', textAlign: 'center', fontSize: '1rem', fontWeight: 700 }}>
+                                    Event statistics comparison
                                 </div>
-                                <div style={{ padding: '0.7rem 1rem 1rem 1rem' }}>
-                                    {!profileSummary ? (
-                                        <div style={{ color: '#6b7280', fontSize: '0.9rem' }}>No profile summary returned.</div>
-                                    ) : (
-                                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: isMobile ? '0.8rem' : '0.85rem' }}>
-                                            <thead>
-                                                <tr>
-                                                    <th style={{ border: '1px solid #d1d5db', padding: '0.35rem', textAlign: 'center', background: '#f3f4f6' }}>Events</th>
-                                                    <th style={{ border: '1px solid #d1d5db', padding: '0.35rem', textAlign: 'center', background: '#f3f4f6' }}>First Date</th>
-                                                    <th style={{ border: '1px solid #d1d5db', padding: '0.35rem', textAlign: 'center', background: '#f3f4f6' }}>Latest Date</th>
-                                                    <th style={{ border: '1px solid #d1d5db', padding: '0.35rem', textAlign: 'center', background: '#f3f4f6' }}>Avg Volunteers</th>
-                                                    <th style={{ border: '1px solid #d1d5db', padding: '0.35rem', textAlign: 'center', background: '#f3f4f6' }}>Avg Tourists</th>
-                                                    <th style={{ border: '1px solid #d1d5db', padding: '0.35rem', textAlign: 'center', background: '#f3f4f6' }}>Avg First Timers</th>
-                                                    <th style={{ border: '1px solid #d1d5db', padding: '0.35rem', textAlign: 'center', background: '#f3f4f6' }}>Avg PBs</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                <tr>
-                                                    <td style={{ border: '1px solid #d1d5db', padding: '0.35rem', textAlign: 'center' }}>{profileSummary.events}</td>
-                                                    <td style={{ border: '1px solid #d1d5db', padding: '0.35rem', textAlign: 'center' }}>{profileSummary.firstDate}</td>
-                                                    <td style={{ border: '1px solid #d1d5db', padding: '0.35rem', textAlign: 'center' }}>{profileSummary.lastDate}</td>
-                                                    <td style={{ border: '1px solid #d1d5db', padding: '0.35rem', textAlign: 'center' }}>{profileSummary.avgVolunteers}</td>
-                                                    <td style={{ border: '1px solid #d1d5db', padding: '0.35rem', textAlign: 'center' }}>{profileSummary.avgTourists}</td>
-                                                    <td style={{ border: '1px solid #d1d5db', padding: '0.35rem', textAlign: 'center' }}>{profileSummary.avgFirstTimers}</td>
-                                                    <td style={{ border: '1px solid #d1d5db', padding: '0.35rem', textAlign: 'center' }}>{profileSummary.avgPbs}</td>
-                                                </tr>
-                                            </tbody>
-                                        </table>
-                                    )}
+
+                                {/* chart */}
+                                <div style={{ padding: '0.3rem 0.2rem 0 0.2rem', overflowX: 'auto' }}>
+                                    <ReactECharts
+                                        style={{ height: isMobile ? '10.3cm' : '13.3cm', minWidth: isMobile ? '10cm' : '18cm' }}
+                                        option={{
+                                            animation: false,
+                                            grid: { top: 30, bottom: 90, left: 55, right: 20, containLabel: false },
+                                            legend: {
+                                                type: 'plain',
+                                                bottom: 0,
+                                                textStyle: { fontSize: 10 },
+                                                itemGap: 10,
+                                                data: profileChartData.series.map(s => s.name)
+                                            },
+                                            xAxis: {
+                                                type: 'category',
+                                                data: profileChartData.months,
+                                                axisLabel: { fontSize: 11 },
+                                                axisLine: { lineStyle: { color: '#c4c7cf' } }
+                                            },
+                                            yAxis: {
+                                                type: profileLogScale ? 'log' : 'value',
+                                                logBase: 10,
+                                                name: profileCumulative ? 'Cumulative' : 'Participants',
+                                                nameTextStyle: { fontSize: 10 },
+                                                axisLabel: { fontSize: 10 },
+                                                axisLine: { lineStyle: { color: '#c4c7cf' } },
+                                                minorTick: { show: profileLogScale, splitNumber: 9 },
+                                                minorSplitLine: { show: profileLogScale, lineStyle: { color: '#e5e7eb', type: 'dashed' } },
+                                                min: 'dataMin',
+                                                dataZoom: [{ type: 'inside', yAxisIndex: 0, start: profileYZoom.start, end: profileYZoom.end }]
+                                            },
+                                            dataZoom: [
+                                                { type: 'inside', xAxisIndex: 0, start: profileXZoom.start, end: profileXZoom.end },
+                                                { type: 'inside', yAxisIndex: 0, start: profileYZoom.start, end: profileYZoom.end }
+                                            ],
+                                            series: profileChartData.series.map(s => ({
+                                                name: s.name,
+                                                type: 'line',
+                                                data: s.data,
+                                                connectNulls: true,
+                                                lineStyle: { color: s.color, type: s.lineType ?? 'solid', width: s.lineWidth ?? 1.5 },
+                                                itemStyle: { color: s.color },
+                                                symbol: 'circle',
+                                                symbolSize: 4
+                                            })),
+                                            tooltip: {
+                                                trigger: 'axis',
+                                                formatter: (params: any) => {
+                                                    if (!Array.isArray(params) || !params.length) return '';
+                                                    const month = String(params[0]?.axisValue ?? '');
+                                                    const lines = params
+                                                        .filter((p: any) => p.value !== null && p.value !== undefined)
+                                                        .map((p: any) => `${p.seriesName}: ${typeof p.value === 'number' ? Math.round(p.value) : p.value}`);
+                                                    return [month, ...lines].join('<br/>');
+                                                }
+                                            }
+                                        }}
+                                    />
                                 </div>
+
+                                {/* controls */}
+                                <div style={{ display: 'flex', gap: '0.3rem', alignItems: 'center', padding: '0.4rem 0.6rem', flexWrap: 'wrap', borderTop: '1px solid #e5e7eb' }}>
+                                    <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#374151' }}>Date</span>
+                                    <button type="button" style={ctrlBtnStyle} onClick={() => setProfileXZoom(prev => {
+                                        const w = Math.max(12, (prev.end - prev.start) * 0.8);
+                                        const c = (prev.start + prev.end) / 2;
+                                        return { start: Math.max(0, c - w / 2), end: Math.min(100, c + w / 2) };
+                                    })}>+</button>
+                                    <button type="button" style={ctrlBtnStyle} onClick={() => setProfileXZoom(prev => {
+                                        const w = Math.min(100, (prev.end - prev.start) * 1.25);
+                                        const c = (prev.start + prev.end) / 2;
+                                        return { start: Math.max(0, c - w / 2), end: Math.min(100, c + w / 2) };
+                                    })}>-</button>
+                                    <button type="button" style={ctrlBtnStyle} onClick={() => setProfileXZoom(prev => {
+                                        const w = prev.end - prev.start;
+                                        const s = Math.max(0, prev.start - w * 0.15);
+                                        return { start: s, end: Math.min(100, s + w) };
+                                    })}>←</button>
+                                    <button type="button" style={ctrlBtnStyle} onClick={() => setProfileXZoom(prev => {
+                                        const w = prev.end - prev.start;
+                                        const e = Math.min(100, prev.end + w * 0.15);
+                                        return { start: Math.max(0, e - w), end: e };
+                                    })}>→</button>
+
+                                    <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#374151', marginLeft: '0.4rem' }}>Participants</span>
+                                    <button type="button" style={ctrlBtnStyle} onClick={() => setProfileYZoom(prev => {
+                                        const w = Math.max(12, (prev.end - prev.start) * 0.8);
+                                        const c = (prev.start + prev.end) / 2;
+                                        return { start: Math.max(0, c - w / 2), end: Math.min(100, c + w / 2) };
+                                    })}>+</button>
+                                    <button type="button" style={ctrlBtnStyle} onClick={() => setProfileYZoom(prev => {
+                                        const w = Math.min(100, (prev.end - prev.start) * 1.25);
+                                        const c = (prev.start + prev.end) / 2;
+                                        return { start: Math.max(0, c - w / 2), end: Math.min(100, c + w / 2) };
+                                    })}>-</button>
+                                    <button type="button" style={ctrlBtnStyle} onClick={() => setProfileYZoom(prev => {
+                                        const w = prev.end - prev.start;
+                                        const s = Math.max(0, prev.start - w * 0.15);
+                                        return { start: s, end: Math.min(100, s + w) };
+                                    })}>↑</button>
+                                    <button type="button" style={ctrlBtnStyle} onClick={() => setProfileYZoom(prev => {
+                                        const w = prev.end - prev.start;
+                                        const e = Math.min(100, prev.end + w * 0.15);
+                                        return { start: Math.max(0, e - w), end: e };
+                                    })}>↓</button>
+
+                                    <button type="button" style={{ ...ctrlBtnStyle, minWidth: '3.5rem' }} onClick={() => {
+                                        setProfileXZoom({ start: 0, end: 100 });
+                                        setProfileYZoom({ start: 0, end: 100 });
+                                    }}>pan-out</button>
+
+                                    <button type="button" style={{ ...ctrlBtnStyle, minWidth: '4rem', background: profileCumulative ? '#374151' : '#fff', color: profileCumulative ? '#fff' : '#374151' }}
+                                        onClick={() => setProfileCumulative(prev => !prev)}>cumulative</button>
+                                    <button type="button" style={{ ...ctrlBtnStyle, minWidth: '2.5rem', background: profileLogScale ? '#374151' : '#fff', color: profileLogScale ? '#fff' : '#374151' }}
+                                        onClick={() => setProfileLogScale(prev => !prev)}>log</button>
+                                </div>
+                            </div>
+
+                        </div>
+                    ) : panelMode === 'harness' ? (
+                        <div
+                            className="athlete-runs-table-wrapper"
+                            style={{
+                                position: 'absolute',
+                                background: 'transparent',
+                                boxShadow: 'none',
+                                border: 'none',
+                                padding: 0,
+                                left: pTableContainer?.x ?? tableContainerElement?.[viewport]?.x ?? '0cm',
+                                top: pTableContainer?.y ?? tableContainerElement?.[viewport]?.y ?? '3cm'
+                            }}
+                        >
+                            <div
+                                style={{
+                                    border: '2px solid #9ca3af',
+                                    borderRadius: '12px',
+                                    background: '#fff',
+                                    marginLeft: '0.3cm',
+                                    marginRight: '0.3cm',
+                                    overflow: 'hidden',
+                                    boxShadow: '0 10px 18px rgba(15, 23, 42, 0.08)'
+                                }}
+                            >
+                                <div style={{ background: '#e5e7eb', borderBottom: '1px solid #d1d5db', padding: '0.45rem 0.8rem', textAlign: 'center', fontSize: '1rem', fontWeight: 700 }}>
+                                    Event statistics comparison (Hardness)
+                                </div>
+
+                                <div style={{ padding: '0.3rem 0.2rem 0.35rem 0.2rem', overflowX: 'auto' }}>
+                                    <ReactECharts
+                                        style={{ height: isMobile ? '8.8cm' : '10.8cm', minWidth: isMobile ? '10cm' : '18cm' }}
+                                        notMerge={true}
+                                        option={{
+                                            animation: false,
+                                            grid: { top: 42, bottom: 75, left: 58, right: 20, containLabel: false },
+                                            legend: {
+                                                type: 'plain',
+                                                bottom: 0,
+                                                textStyle: { fontSize: 10 },
+                                                itemGap: 10,
+                                                data: [
+                                                    'All Time – Event',
+                                                    'All Time – Seasonal',
+                                                    'Last 1Y – Event',
+                                                    'Last 1Y – Seasonal'
+                                                ]
+                                            },
+                                            xAxis: {
+                                                type: 'category',
+                                                data: profileHardnessChartData.months,
+                                                axisLabel: { fontSize: 11 },
+                                                axisLine: { lineStyle: { color: '#c4c7cf' } }
+                                            },
+                                            yAxis: {
+                                                type: 'value',
+                                                name: 'Hardness',
+                                                nameTextStyle: { fontSize: 10 },
+                                                axisLabel: {
+                                                    fontSize: 10,
+                                                    formatter: (value: number) => `${(value * 100).toFixed(1)}%`
+                                                },
+                                                axisLine: { lineStyle: { color: '#c4c7cf' } },
+                                                splitLine: { lineStyle: { color: '#e5e7eb' } }
+                                            },
+                                            series: [
+                                                {
+                                                    name: 'All Time – Event',
+                                                    type: 'bar',
+                                                    stack: 'all_time',
+                                                    barWidth: '18%',
+                                                    barCategoryGap: '38%',
+                                                    itemStyle: { color: '#1d4ed8' },
+                                                    data: profileHardnessChartData.allTimeEvent
+                                                },
+                                                {
+                                                    name: 'All Time – Seasonal',
+                                                    type: 'bar',
+                                                    stack: 'all_time',
+                                                    barWidth: '18%',
+                                                    itemStyle: { color: '#60a5fa' },
+                                                    data: profileHardnessChartData.allTimeSeasonal
+                                                },
+                                                {
+                                                    name: 'Last 1Y – Event',
+                                                    type: 'bar',
+                                                    stack: 'last_1y',
+                                                    barWidth: '18%',
+                                                    itemStyle: { color: '#ea580c' },
+                                                    data: profileHardnessChartData.last1YEvent
+                                                },
+                                                {
+                                                    name: 'Last 1Y – Seasonal',
+                                                    type: 'bar',
+                                                    stack: 'last_1y',
+                                                    barWidth: '18%',
+                                                    itemStyle: { color: '#fdba74' },
+                                                    data: profileHardnessChartData.last1YSeasonal
+                                                }
+                                            ],
+                                            tooltip: {
+                                                trigger: 'axis',
+                                                axisPointer: { type: 'shadow' },
+                                                formatter: (params: any) => {
+                                                    if (!Array.isArray(params) || !params.length) return '';
+                                                    const month = String(params[0]?.axisValue ?? '');
+                                                    const lines = params
+                                                        .filter((p: any) => p.value !== null && p.value !== undefined)
+                                                        .map((p: any) => `${p.seriesName}: ${((Number(p.value) || 0) * 100).toFixed(1)}%`);
+                                                    return [month, ...lines].join('<br/>');
+                                                }
+                                            }
+                                        }}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    ) : panelMode === 'groups' ? (
+                        <div
+                            className="athlete-runs-table-wrapper"
+                            style={{
+                                position: 'absolute',
+                                background: 'transparent',
+                                boxShadow: 'none',
+                                border: 'none',
+                                padding: 0,
+                                left: pTableContainer?.x ?? tableContainerElement?.[viewport]?.x ?? '0cm',
+                                top: pTableContainer?.y ?? tableContainerElement?.[viewport]?.y ?? '3cm'
+                            }}
+                        >
+                            <div
+                                style={{
+                                    border: '2px solid #9ca3af',
+                                    borderRadius: '12px',
+                                    background: '#fff',
+                                    marginLeft: '0.3cm',
+                                    marginRight: '0.3cm',
+                                    overflow: 'hidden',
+                                    boxShadow: '0 10px 18px rgba(15, 23, 42, 0.08)'
+                                }}
+                            >
+                                <div style={{ background: '#e5e7eb', borderBottom: '1px solid #d1d5db', padding: '0.45rem 0.8rem', textAlign: 'center', fontSize: '1rem', fontWeight: 700 }}>
+                                    Event statistics comparison (Groups)
+                                </div>
+
+                                {monthlyCascadeLoading ? (
+                                    <div style={{ padding: '0.8rem', fontSize: '0.9rem', color: '#4b5563' }}>Loading monthly group trends…</div>
+                                ) : monthlyCascadeError ? (
+                                    <div style={{ padding: '0.8rem', fontSize: '0.9rem', color: '#b91c1c' }}>{monthlyCascadeError}</div>
+                                ) : (
+                                    <div style={{ padding: '0.3rem 0.2rem 0.35rem 0.2rem', overflowX: 'auto' }}>
+                                        <ReactECharts
+                                            style={{ height: isMobile ? '8.8cm' : '10.8cm', minWidth: isMobile ? '10cm' : '18cm' }}
+                                            notMerge={true}
+                                            option={{
+                                                animation: false,
+                                                grid: { top: 42, bottom: 112, left: 58, right: 20, containLabel: false },
+                                                legend: [
+                                                    {
+                                                        type: 'plain',
+                                                        bottom: 24,
+                                                        left: 'center',
+                                                        textStyle: { fontSize: 10 },
+                                                        itemGap: 10,
+                                                        data: ['1st First Timer', 'First Timer event', 'Super Tourist', 'Tourist', 'Returner']
+                                                    },
+                                                    {
+                                                        type: 'plain',
+                                                        bottom: 2,
+                                                        left: 'center',
+                                                        textStyle: { fontSize: 10 },
+                                                        itemGap: 10,
+                                                        data: ['Super Regular', 'Regular', 'Unknown', 'Rest']
+                                                    }
+                                                ],
+                                                xAxis: {
+                                                    type: 'category',
+                                                    data: profileGroupsChartData.months,
+                                                    axisLabel: { fontSize: 11 },
+                                                    axisLine: { lineStyle: { color: '#c4c7cf' } }
+                                                },
+                                                yAxis: {
+                                                    type: 'value',
+                                                    name: 'Avg athletes / event',
+                                                    nameTextStyle: { fontSize: 10 },
+                                                    axisLabel: {
+                                                        fontSize: 10,
+                                                        formatter: (value: number) => `${value.toFixed(1)}`
+                                                    },
+                                                    axisLine: { lineStyle: { color: '#c4c7cf' } },
+                                                    splitLine: { lineStyle: { color: '#e5e7eb' } }
+                                                },
+                                                series: [
+                                                    { name: '1st First Timer', type: 'bar', stack: 'monthly_groups', itemStyle: { color: '#1d4ed8' }, data: profileGroupsChartData.firstFirstTimer },
+                                                    { name: 'First Timer event', type: 'bar', stack: 'monthly_groups', itemStyle: { color: '#60a5fa' }, data: profileGroupsChartData.firstTimerComment },
+                                                    { name: 'Super Tourist', type: 'bar', stack: 'monthly_groups', itemStyle: { color: '#7c3aed' }, data: profileGroupsChartData.superTourist },
+                                                    { name: 'Tourist', type: 'bar', stack: 'monthly_groups', itemStyle: { color: '#a78bfa' }, data: profileGroupsChartData.tourist },
+                                                    { name: 'Returner', type: 'bar', stack: 'monthly_groups', itemStyle: { color: '#059669' }, data: profileGroupsChartData.returnerOrSuperReturner },
+                                                    { name: 'Super Regular', type: 'bar', stack: 'monthly_groups', itemStyle: { color: '#10b981' }, data: profileGroupsChartData.superRegular },
+                                                    { name: 'Regular', type: 'bar', stack: 'monthly_groups', itemStyle: { color: '#86efac' }, data: profileGroupsChartData.lastCodeGt10 },
+                                                    { name: 'Unknown', type: 'bar', stack: 'monthly_groups', itemStyle: { color: '#fbbf24' }, data: profileGroupsChartData.unknown },
+                                                    { name: 'Rest', type: 'bar', stack: 'monthly_groups', itemStyle: { color: '#9ca3af' }, data: profileGroupsChartData.rest }
+                                                ],
+                                                tooltip: {
+                                                    trigger: 'axis',
+                                                    axisPointer: { type: 'shadow' },
+                                                    formatter: (params: any) => {
+                                                        if (!Array.isArray(params) || !params.length) return '';
+                                                        const idx = Number(params[0]?.dataIndex ?? 0);
+                                                        const month = String(params[0]?.axisValue ?? '');
+                                                        const eventsCount = Number(profileGroupsChartData.eventsInMonth[idx] ?? 0);
+                                                        const lines = params
+                                                            .filter((p: any) => p.value !== null && p.value !== undefined && Number(p.value) !== 0)
+                                                            .map((p: any) => `${p.seriesName}: ${(Number(p.value) || 0).toFixed(1)}`);
+                                                        return [`${month} (events: ${eventsCount})`, ...lines].join('<br/>');
+                                                    }
+                                                }
+                                            }}
+                                        />
+                                    </div>
+                                )}
                             </div>
                         </div>
                     ) : panelMode === 'top250' ? (
@@ -1655,6 +2248,7 @@ const CourseTest: React.FC = () => {
                                                 const isSorted = top250SortKey === col.key;
                                                 const headerClasses = ['athlete-table-header'];
                                                 if (col.key === 'name') headerClasses.push('athlete-date-header');
+                                                if (isSorted) headerClasses.push('courses-sorted-column');
                                                 const style: React.CSSProperties = {
                                                     ...getColumnWidthStyle(col),
                                                     textAlign: col.align ?? 'left'
@@ -1675,8 +2269,10 @@ const CourseTest: React.FC = () => {
                                                         aria-sort={isSorted ? (top250SortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
                                                         style={style}
                                                     >
-                                                        <span>{col.label}</span>
-                                                        <span className="athlete-sort-indicator">{isSorted ? (top250SortDir === 'asc' ? '▲' : '▼') : ''}</span>
+                                                        <span className="courses-header-content">
+                                                            <span className="courses-header-label">{col.label}</span>
+                                                            <span className="athlete-sort-indicator courses-sort-indicator">{isSorted ? (top250SortDir === 'asc' ? '▲' : '▼') : ''}</span>
+                                                        </span>
                                                     </th>
                                                 );
                                             })}
@@ -1854,6 +2450,7 @@ const CourseTest: React.FC = () => {
                                                     const isSorted = sortKey === col.key;
                                                     const headerClasses = ['athlete-table-header'];
                                                     if (col.key === 'date') headerClasses.push('athlete-date-header');
+                                                    if (isSorted) headerClasses.push('courses-sorted-column');
                                                     const style: React.CSSProperties = {
                                                         ...getColumnWidthStyle(col),
                                                         textAlign: col.align ?? 'left'
@@ -1874,8 +2471,10 @@ const CourseTest: React.FC = () => {
                                                             aria-sort={isSorted ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
                                                             style={style}
                                                         >
-                                                            <span>{col.label}</span>
-                                                            <span className="athlete-sort-indicator">{isSorted ? (sortDir === 'asc' ? '▲' : '▼') : ''}</span>
+                                                            <span className="courses-header-content">
+                                                                <span className="courses-header-label">{col.label}</span>
+                                                                <span className="athlete-sort-indicator courses-sort-indicator">{isSorted ? (sortDir === 'asc' ? '▲' : '▼') : ''}</span>
+                                                            </span>
                                                         </th>
                                                     );
                                                 })}

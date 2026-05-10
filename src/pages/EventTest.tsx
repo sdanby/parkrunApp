@@ -547,7 +547,7 @@ const EventTest: React.FC = () => {
       return;
     }
 
-    const target = String(interaction.target || '/courses');
+    const target = String(interaction.target || '/courses_test');
     const params = new URLSearchParams();
 
     Object.entries(interaction.params || {}).forEach(([key, rawValue]) => {
@@ -583,7 +583,7 @@ const EventTest: React.FC = () => {
       return;
     }
 
-    const target = String(interaction.target || '/courses');
+    const target = String(interaction.target || '/courses_test');
     const params = new URLSearchParams();
 
     Object.entries(interaction.params || {}).forEach(([key, rawValue]) => {
@@ -1073,7 +1073,9 @@ const EventTest: React.FC = () => {
                 pointerEvents: 'none'
               }}
             >
-              <div>{loading ? 'Loading event positions…' : (error || `${rows.length} rows`)}</div>
+              <div style={{ fontSize: '0.9em' }}>
+                {loading ? 'Loading event positions…' : (error || `${rows.length} participant${rows.length === 1 ? '' : 's'}`)}
+              </div>
             </div>
           </div>
         </div>
@@ -1117,7 +1119,8 @@ const EventTest: React.FC = () => {
                     ...getColumnStyle(column.key, column.style)
                   }}
                 >
-                  <span>{column.headerName}{sortKey === column.key ? (sortDir === 'asc' ? ' ▲' : ' ▼') : ''}</span>
+                  <span className="eventtest-header-label">{column.headerName}</span>
+                  <span className="eventtest-sort-indicator">{sortKey === column.key ? (sortDir === 'asc' ? '▲' : '▼') : ''}</span>
                 </th>
               ))}
             </tr>
@@ -1260,28 +1263,38 @@ const EventTest: React.FC = () => {
                   }
 
                   if (key === 'best_curve_ranking_current') {
-                    const currentRankRaw = readRowValue(row, 'best_curve_ranking_current') || readRowValue(row, 'rank');
-                    const historicRankRaw = readRowValue(row, 'best_curve_ranking_historic');
+                    const currentRankRaw = row?.best_curve_ranking_current ?? row?.bestCurveRankingCurrent ?? row?.rank;
+                    const historicRankRaw = row?.best_curve_ranking_historic ?? row?.bestCurveRankingHistoric;
                     const rankTypeRaw = readRowValue(row, 'best_curve_ranking_current_type');
                     const rankSubFontSize = column?.style?.subFontSize || '0.62rem';
 
-                    const currentRank = Number(currentRankRaw);
-                    const historicRank = Number(historicRankRaw);
-                    const hasCurrent = Number.isFinite(currentRank);
-                    const hasHistoric = Number.isFinite(historicRank);
+                    const toOptionalRankNumber = (value: unknown): number | null => {
+                      if (value === null || value === undefined) return null;
+                      const text = String(value).trim();
+                      if (!text) return null;
+                      const numeric = Number(text);
+                      return Number.isFinite(numeric) ? numeric : null;
+                    };
 
-                    const rankType = String(rankTypeRaw || '').trim() || '*';
-                    const delta = hasCurrent && hasHistoric ? currentRank - historicRank : null;
+                    const currentRank = toOptionalRankNumber(currentRankRaw);
+                    const historicRank = toOptionalRankNumber(historicRankRaw);
+                    const hasCurrent = currentRank !== null;
+                    const hasHistoric = historicRank !== null;
+
+                    const rankType = hasCurrent ? (String(rankTypeRaw || '').trim() || '*') : '';
+                    const delta = hasCurrent && hasHistoric ? (currentRank as number) - (historicRank as number) : null;
                     const deltaText = delta === null ? '' : `${delta >= 0 ? '+' : ''}${delta}`;
 
                     return (
                       <td key={cellKey} className={cellClassName} data-highlight-cell={isHighlightedCell ? 'true' : undefined} style={{ ...cellWidthStyle, ...stickyCellStyle, ...resolvedColumnStyle, ...highlightedCellStyle, textAlign: 'center' }}>
                         <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
                           <span>{hasCurrent ? String(currentRank) : ''}</span>
-                          <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', lineHeight: 1.02 }}>
-                            <span style={{ fontSize: rankSubFontSize, opacity: 0.9 }}>{rankType}</span>
-                            <span style={{ fontSize: rankSubFontSize, opacity: 0.9 }}>{deltaText}</span>
-                          </span>
+                          {(rankType || deltaText) ? (
+                            <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', lineHeight: 1.02 }}>
+                              <span style={{ fontSize: rankSubFontSize, opacity: 0.9 }}>{rankType}</span>
+                              <span style={{ fontSize: rankSubFontSize, opacity: 0.9 }}>{deltaText}</span>
+                            </span>
+                          ) : null}
                         </div>
                       </td>
                     );

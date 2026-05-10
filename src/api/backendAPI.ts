@@ -192,6 +192,19 @@ export const fetchEventSummary = async (eventCode: number, limit = 250) => {
     }
 };
 
+export const fetchEventPositionsMonthlyCascade = async (eventCode: number) => {
+    try {
+        const params = new URLSearchParams();
+        params.set('event_code', String(eventCode));
+        const url = `${API_BASE_URL}/api/eventpositions/monthly-cascade?${params.toString()}`;
+        const response = await axios.get(url);
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching monthly cascade groups:', error);
+        throw error;
+    }
+};
+
 export const fetchEventInfo = async (eventIdentifier: string, eventDate: string) => {
     try {
         const params = new URLSearchParams();

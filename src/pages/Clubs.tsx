@@ -535,6 +535,10 @@ const Clubs: React.FC = () => {
         return sortedMembers.filter((member) => normalizeClubName(member.current_club) === selectedClubName);
     }, [clubMode, selectedClub?.club, sortedMembers]);
 
+    const activeMembersCount = selectedClub
+        ? (selectedClub.athlete_count > 0 ? selectedClub.athlete_count : members.length)
+        : 0;
+
     const handleToggleMode = () => {
         setClubMode((prev) => {
             const idx = modeOrder.indexOf(prev);
@@ -721,20 +725,17 @@ const Clubs: React.FC = () => {
                             document.body
                         )}
 
-                        {selectedClub && (
-                            <div className="clubs-active-members">
-                                {(selectedClub.athlete_count > 0 ? selectedClub.athlete_count : members.length)} active member{(selectedClub.athlete_count > 0 ? selectedClub.athlete_count : members.length) === 1 ? '' : 's'}.
-                            </div>
-                        )}
-
-                        {selectedClub && (
-                            <div className="clubs-mode-label">
-                                View: {modeLabel(clubMode)}
-                            </div>
-                        )}
                     </div>
                 </div>
             </div>
+
+            {selectedClub && (
+                <div className="clubs-members-info-strip">
+                    <div className="clubs-active-members">
+                        {activeMembersCount} active member{activeMembersCount === 1 ? '' : 's'}.
+                    </div>
+                </div>
+            )}
 
             {selectedClub && (clubMode === 'members' || clubMode === 'current_members') && (
                 <div className="athlete-runs-table-wrapper clubs-members-table-wrap">
@@ -753,6 +754,7 @@ const Clubs: React.FC = () => {
                                         const headerClasses: string[] = ['athlete-table-header'];
                                         if (column.key === 'name') headerClasses.push('athlete-date-header');
                                         const isSorted = sortKey === column.key;
+                                        const sortIndicator = isSorted ? (sortDirection === 'asc' ? '▲' : '▼') : '';
                                         return (
                                             <th
                                                 key={String(column.key)}
@@ -770,6 +772,7 @@ const Clubs: React.FC = () => {
                                                 aria-sort={isSorted ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}
                                             >
                                                 <span>{column.label}</span>
+                                                {sortIndicator && <span style={{ marginLeft: 4 }}>{sortIndicator}</span>}
                                             </th>
                                         );
                                     })}

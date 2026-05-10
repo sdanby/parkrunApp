@@ -1,3 +1,9 @@
+/*
+    LEGACY PAGE (retiring): `Courses.tsx`
+    Active replacement: `CourseTest.tsx`.
+    Use the replacement page for new feature work and behavior changes.
+    Keep this page functional for now because some legacy links/routes may still land here.
+*/
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { fetchAllResults, fetchEventSummary, fetchResults } from '../api/backendAPI';
@@ -1152,6 +1158,7 @@ const Courses: React.FC = () => {
                                                 const isSorted = top250SortKey === col.key;
                                                 const headerClasses = ['athlete-table-header'];
                                                 if (col.key === 'name') headerClasses.push('athlete-date-header');
+                                                if (isSorted) headerClasses.push('courses-sorted-column');
                                                 const style: React.CSSProperties = {
                                                     ...getColumnWidthStyle(col),
                                                     textAlign: col.align ?? 'left'
@@ -1172,8 +1179,10 @@ const Courses: React.FC = () => {
                                                         aria-sort={isSorted ? (top250SortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
                                                         style={style}
                                                     >
-                                                        <span>{col.label}</span>
-                                                        <span className="athlete-sort-indicator">{isSorted ? (top250SortDir === 'asc' ? '▲' : '▼') : ''}</span>
+                                                        <span className="courses-header-content">
+                                                            <span className="courses-header-label">{col.label}</span>
+                                                            <span className="athlete-sort-indicator courses-sort-indicator">{isSorted ? (top250SortDir === 'asc' ? '▲' : '▼') : ''}</span>
+                                                        </span>
                                                     </th>
                                                 );
                                             })}
@@ -1286,6 +1295,7 @@ const Courses: React.FC = () => {
                                                     const isSorted = sortKey === col.key;
                                                     const headerClasses = ['athlete-table-header'];
                                                     if (col.key === 'date') headerClasses.push('athlete-date-header');
+                                                    if (isSorted) headerClasses.push('courses-sorted-column');
                                                     const style: React.CSSProperties = {
                                                         ...getColumnWidthStyle(col),
                                                         textAlign: col.align ?? 'left'
@@ -1306,8 +1316,10 @@ const Courses: React.FC = () => {
                                                             aria-sort={isSorted ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
                                                             style={style}
                                                         >
-                                                            <span>{col.label}</span>
-                                                            <span className="athlete-sort-indicator">{isSorted ? (sortDir === 'asc' ? '▲' : '▼') : ''}</span>
+                                                            <span className="courses-header-content">
+                                                                <span className="courses-header-label">{col.label}</span>
+                                                                <span className="athlete-sort-indicator courses-sort-indicator">{isSorted ? (sortDir === 'asc' ? '▲' : '▼') : ''}</span>
+                                                            </span>
                                                         </th>
                                                     );
                                                 })}

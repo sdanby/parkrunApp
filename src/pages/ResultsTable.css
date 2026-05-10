@@ -955,9 +955,32 @@ select:focus {
 .results-table.races-table.eventtest-table thead th {
   padding-top: 0.34rem !important;
   padding-bottom: 0.34rem !important;
+  padding-right: 1.15rem !important;
   line-height: 1.15 !important;
   min-height: 30px;
   background-clip: padding-box;
+  position: relative;
+}
+
+.results-table.races-table.eventtest-table thead th .eventtest-header-label {
+  display: block;
+  overflow: hidden;
+  text-overflow: clip;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.results-table.races-table.eventtest-table thead th .eventtest-sort-indicator {
+  position: absolute;
+  right: 0.24rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0.9rem;
+  text-align: center;
+  font-size: 0.95em;
+  font-weight: 800;
+  color: #0a5ad1;
+  pointer-events: none;
 }
 
 /* EventAnalysis_test: honor configured second sticky header row offset */
@@ -967,6 +990,11 @@ select:focus {
 
 .results-table.races-table.eventtest-table thead th.eventanalysis-row2-corner {
   top: calc(var(--ea-row2-top, 25px) - 1px) !important;
+}
+
+/* Current Event Analysis (/results_test): show period/date headers without trailing ellipsis */
+.eventanalysis-test-container .results-table thead th.sticky-header {
+  text-overflow: clip !important;
 }
 
 .results-table.races-table .sticky-corner,
@@ -1042,6 +1070,11 @@ select:focus {
 .results-table-container.analysis-container {
   max-width: calc(var(--col1-width, 4cm) + var(--col2-width, 2.5cm) + 37cm) !important;
   overflow-x: auto;
+}
+
+/* Event Analysis: prefer showing as much date text as possible without trailing ellipsis */
+.results-table.analysis-table thead th {
+  text-overflow: clip !important;
 }
 
 /* Races header indentation and emphasis */

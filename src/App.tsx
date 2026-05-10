@@ -18,6 +18,13 @@ import EventHelpManual, { UnifiedHelpOverlay, UNIFIED_HELP_EVENT, getPageMarkerF
 import { API_BASE_URL } from './api/backendAPI';
 import './styles/main.css';
 
+/*
+    Routing note:
+    - Preferred active pages: `EventAnalysisTest`, `EventTest`, `CourseTest`.
+    - Legacy pages (`Results`, `Races`, `Courses`) remain routed to support existing links.
+    - Before archiving legacy routes, verify all inbound references/navigation paths are migrated.
+*/
+
 const AUTH_TOKEN_KEY = 'auth_token_v1';
 
 const headings: { [key: string]: string } = {
