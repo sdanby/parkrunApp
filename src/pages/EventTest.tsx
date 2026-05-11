@@ -304,6 +304,9 @@ const EventTest: React.FC = () => {
   }, [rows, sortKey, sortDir]);
   const viewLabelElement = getEventElementById('event.viewLabel');
   const viewLabelStyle = viewLabelElement?.style;
+  const courseLabelElement = getEventElementById('event.courseLabel');
+  const dateLabelElement = getEventElementById('event.dateLabel');
+  const eventNoLabelElement = getEventElementById('event.eventNoLabel');
   const eventNoElement = getEventElementById('event.eventNo');
   const eventNoStyle = eventNoElement?.style;
   const upSortElement = getEventElementById('event.upSort');
@@ -317,9 +320,12 @@ const EventTest: React.FC = () => {
   const hardnessValueStyle = hardnessValueElement?.style;
 
   const pLeftArrow = getEventElementPlacement('event.leftArrow', viewport);
+  const pCourseLabel = getEventElementPlacement('event.courseLabel', viewport);
   const pCourse = getEventElementPlacement('event.course', viewport);
   const courseInteraction = getEventElementInteraction('event.course');
+  const pDateLabel = getEventElementPlacement('event.dateLabel', viewport);
   const pDate = getEventElementPlacement('event.date', viewport);
+  const pEventNoLabel = getEventElementPlacement('event.eventNoLabel', viewport);
   const pEventNo = getEventElementPlacement('event.eventNo', viewport);
   const pUp = getEventElementPlacement('event.upSort', viewport);
   const pDown = getEventElementPlacement('event.downSort', viewport);
@@ -918,6 +924,10 @@ const EventTest: React.FC = () => {
                 eventName || <em>none</em>
               )}
             </div>
+
+            {renderConfigLabel(courseLabelElement, pCourseLabel, 'Course:', 'control-course')}
+            {renderConfigLabel(dateLabelElement, pDateLabel, 'Ev Date:', 'control-event-date')}
+            {renderConfigLabel(eventNoLabelElement, pEventNoLabel, 'Ev Number:', 'control-event-number')}
 
             <div
               className="races-header-sub"

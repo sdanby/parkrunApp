@@ -32,8 +32,7 @@
         padding: 0.3rem;
     }
 
-    .athlete-runs-table-wrapper,
-    .course-table-wrapper {
+    .athlete-runs-table-wrapper:not(.plot-panel-wrapper):not(.course-table-wrapper):not(.top250-table-wrapper) {
         position: relative !important;
         margin-top: 0 !important;
         left: auto !important;

@@ -3,7 +3,6 @@ import { createBrowserRouter, RouterProvider, Outlet, useLocation, Navigate } fr
 import HamburgerMenu from './components/HamburgerMenu';
 import Home from './pages/Home';
 import Login from './pages/Login';
-import Results from './pages/Results';
 import EventAnalysisTest from './pages/EventAnalysisTest';
 import Races from './pages/Races';
 import EventTest from './pages/EventTest';
@@ -238,7 +237,7 @@ const router = createBrowserRouter([
         element: <RequireAuthLayout />,
         children: [
             { index: true, element: <Home /> },
-            { path: 'results', element: <Results /> },
+            { path: 'results', element: <Navigate to="/results_test" replace /> },
             { path: 'results_test', element: <EventAnalysisTest /> },
             { path: 'races', element: <EventTest /> },
             { path: 'event_test', element: <EventTest /> },

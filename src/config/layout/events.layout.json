@@ -21,6 +21,21 @@
       "mobile": { "x": "0.3cm", "y": "0.0cm" }
     },
     {
+      "id": "event.courseLabel",
+      "type": "label",
+      "name": "Course:",
+      "helpTarget": "control-course",
+      "style": {
+        "fontSize": "0.8rem",
+        "fontWeight": 600,
+        "color": "#111827",
+        "lineHeight": 1.0
+      },
+      "helpLabel": true,
+      "laptop": { "x": "1.2cm", "y": "0.0cm" },
+      "mobile": { "x": "1.2cm", "y": "-0.0cm" }
+    },
+    {
       "id": "event.course",
       "type": "field",
       "name": "course",
@@ -34,8 +49,8 @@
           "event_name": "$eventName"
         }
       },
-      "laptop": { "x": "1.4cm", "y": "0.0cm" },
-      "mobile": { "x": "1.4cm", "y": "0.0cm" }
+      "laptop": { "x": "3.1cm", "y": "0.0cm" },
+      "mobile": { "x": "3.1cm", "y": "0.0cm" }
     },
     {
       "id": "event.viewLabel",
@@ -49,23 +64,38 @@
         "lineHeight": 1.0
       },
       "helpLabel": true,
-      "laptop": { "x": "6.3cm", "y": "0.0cm" },
-      "mobile": { "x": "5.3cm", "y": "0.0cm" }
+      "laptop": { "x": "6.3cm", "y": "0.5cm" },
+      "mobile": { "x": "5.3cm", "y": "0.5cm" }
     },
     {
       "id": "event.viewSelect",
       "type": "select",
       "name": "Basic",
       "options": ["Basic", "Detailed", "All Time Adjustments"],
-      "laptop": { "x": "8.7cm", "y": "0.0cm", "width": "4.3cm" },
-      "mobile": { "x": "7.7cm", "y": "0.0cm", "width": "3.9cm" }
+      "laptop": { "x": "8.7cm", "y": "0.5cm", "width": "4.3cm" },
+      "mobile": { "x": "7.7cm", "y": "0.5cm", "width": "3.9cm" }
+    },
+    {
+      "id": "event.dateLabel",
+      "type": "label",
+      "name": "Ev Date:",
+      "helpTarget": "control-event-date",
+      "style": {
+        "fontSize": "0.8rem",
+        "fontWeight": 600,
+        "color": "#111827",
+        "lineHeight": 1.0
+      },
+      "helpLabel": true,
+      "laptop": { "x": "1.2cm", "y": "0.8cm" },
+      "mobile": { "x": "1.2cm", "y": "0.8cm" }
     },
     {
       "id": "event.date",
       "type": "field",
       "name": "date",
-      "laptop": { "x": "1.4cm", "y": "0.7cm" },
-      "mobile": { "x": "1.4cm", "y": "0.7cm" }
+      "laptop": { "x": "3.1cm", "y": "0.8cm" },
+      "mobile": { "x": "3.1cm", "y": "0.8cm" }
     },
     {
       "id": "event.courseAdjLabel",
@@ -79,16 +109,31 @@
         "lineHeight": 1.0
       },
       "helpLabel": true,
-      "laptop": { "x": "6.3cm", "y": "0.7cm" },
-      "mobile": { "x": "5.3cm", "y": "0.7cm" }
+      "laptop": { "x": "6.3cm", "y": "1.2cm" },
+      "mobile": { "x": "5.3cm", "y": "1.2cm" }
     },
     {
       "id": "event.courseAdjSelect",
       "type": "select",
       "name": "no adjustment (default)",
       "options": ["no adjustment (default)", "seasonal adjustments", "full event adjustments"],
-      "laptop": { "x": "8.7cm", "y": "0.7cm", "width": "4.3cm" },
-      "mobile": { "x": "7.7cm", "y": "0.7cm", "width": "3.9cm" }
+      "laptop": { "x": "8.7cm", "y": "1.2cm", "width": "4.3cm" },
+      "mobile": { "x": "7.7cm", "y": "1.2cm", "width": "3.9cm" }
+    },
+    {
+      "id": "event.eventNoLabel",
+      "type": "label",
+      "name": "Ev Number:",
+      "helpTarget": "control-event-number",
+      "style": {
+        "fontSize": "0.8rem",
+        "fontWeight": 600,
+        "color": "#111827",
+        "lineHeight": 1.0
+      },
+      "helpLabel": true,
+      "laptop": { "x": "0.7cm", "y": "1.8cm" },
+      "mobile": { "x": "0.7cm", "y": "1.8cm" }
     },
     {
       "id": "event.eventNo",
@@ -97,8 +142,8 @@
       "style": {
         "fontWeight": 600
       },
-      "laptop": { "x": "1.5cm", "y": "1.5cm" },
-      "mobile": { "x": "1.5cm", "y": "1.5cm" }
+      "laptop": { "x": "3.3cm", "y": "1.8cm" },
+      "mobile": { "x": "3.3cm", "y": "1.8cm" }
     },
     {
       "id": "event.upSort",
@@ -108,8 +153,8 @@
         "fontSize": "0.65rem",
         "padding": "1px 5px"
       },
-      "laptop": { "x": "2.5cm", "y": "1.2cm" },
-      "mobile": { "x": "2.5cm", "y": "1.2cm" }
+      "laptop": { "x": "4.3cm", "y": "1.5cm" },
+      "mobile": { "x": "4.3cm", "y": "1.5cm" }
     },
     {
       "id": "event.downSort",
@@ -119,8 +164,8 @@
         "fontSize": "0.65rem",
         "padding": "1px 5px"
       },
-      "laptop": { "x": "2.5cm", "y": "1.7cm" },
-      "mobile": { "x": "2.5cm", "y": "1.7cm" }
+      "laptop": { "x": "4.3cm", "y": "2.0cm" },
+      "mobile": { "x": "4.3cm", "y": "2.0cm" }
     },
     {
       "id": "event.otherAdjLabel",
@@ -134,16 +179,16 @@
         "lineHeight": 1.0
       },
       "helpLabel": true,
-      "laptop": { "x": "6.5cm", "y": "1.4cm" },
-      "mobile": { "x": "5.5cm", "y": "1.4cm" }
+      "laptop": { "x": "6.5cm", "y": "1.9cm" },
+      "mobile": { "x": "5.5cm", "y": "1.9cm" }
     },
     {
       "id": "event.otherAdjSelect",
       "type": "select",
       "name": "no adjustment (default)",
       "options": ["no adjustment (default)", "age adjustments", "sex adjustments", "age & sex adjustment"],
-      "laptop": { "x": "8.7cm", "y": "1.4cm", "width": "4.3cm" },
-      "mobile": { "x": "7.7cm", "y": "1.4cm", "width": "3.9cm" }
+      "laptop": { "x": "8.7cm", "y": "1.9cm", "width": "4.3cm" },
+      "mobile": { "x": "7.7cm", "y": "1.9cm", "width": "3.9cm" }
     },
     {
       "id": "event.hardnessLabel",
@@ -157,8 +202,8 @@
         "lineHeight": 1.0
       },
       "helpLabel": true,
-      "laptop": { "x": "5.9cm", "y": "2.1cm" },
-      "mobile": { "x": "4.9cm", "y": "2.1cm" }
+      "laptop": { "x": "5.9cm", "y": "2.6cm" },
+      "mobile": { "x": "4.9cm", "y": "2.6cm" }
     },
     {
       "id": "event.hardnessValue",
@@ -175,22 +220,22 @@
       "style": {
         "fontWeight": 600
       },
-      "laptop": { "x": "8.7cm", "y": "2.2cm" },
-      "mobile": { "x": "7.8cm", "y": "2.2cm" }
+      "laptop": { "x": "8.7cm", "y": "2.7cm" },
+      "mobile": { "x": "7.8cm", "y": "2.7cm" }
     },
     {
       "id": "event.statusMessage",
       "type": "field",
       "name": "empty",
-      "laptop": { "x": "0.3cm", "y": "2.7cm", "width": "7cm" },
-      "mobile": { "x": "0.3cm", "y": "2.7cm", "width": "7cm" }
+      "laptop": { "x": "0.3cm", "y": "3.2cm", "width": "7cm" },
+      "mobile": { "x": "0.3cm", "y": "3.2cm", "width": "7cm" }
     },
     {
       "id": "event.table.corner",
       "type": "table",
       "name": "corner",
-      "laptop": { "x": "0.1cm", "y": "3.5cm" },
-      "mobile": { "x": "0.1cm", "y": "3.5cm" }
+      "laptop": { "x": "0.1cm", "y": "4.0cm" },
+      "mobile": { "x": "0.1cm", "y": "4.0cm" }
     },
     {
       "id": "event.table.row1",

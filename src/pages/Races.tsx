@@ -907,9 +907,9 @@ const Races: React.FC = () => {
                     });
                 }
                 const q = rs.toString();
-                navigate(`/results${q ? `?${q}` : ''}`);
+                navigate(`/results_test${q ? `?${q}` : ''}`);
             } catch (e) {
-                navigate('/results');
+                navigate('/results_test');
             }
         };
         return (

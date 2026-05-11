@@ -680,7 +680,7 @@ const Courses: React.FC = () => {
             navigate(`${returnTarget.pathname}${returnTarget.search ?? ''}`);
             return;
         }
-        navigate('/results');
+        navigate('/results_test');
     };
 
     const handleOpenSingleEvent = (row: CourseRecord) => {

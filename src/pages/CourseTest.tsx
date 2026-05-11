@@ -10,6 +10,7 @@ import {
     getCourseElementById,
     getCourseElementPlacement,
     getCourseLayoutConfig,
+    getCourseTableColumnByKey,
     getCourseViewportForWidth,
     type CourseViewport,
     type CourseViewMode
@@ -43,6 +44,7 @@ type ColumnDef = {
 type SummaryMode = 'average' | 'total' | 'maximum' | 'minimum' | 'range' | 'growth';
 type PeriodQuery = 'recent' | 'last50' | 'since-lockdown' | 'all';
 type CoursePanelMode = 'table' | 'profile' | 'harness' | 'groups' | 'top250';
+type GroupsBarMode = 'type' | 'age' | 'both';
 
 type MonthlyCascadeRow = {
     month_idx?: number;
@@ -57,6 +59,17 @@ type MonthlyCascadeRow = {
     super_regular_avg?: number;
     last_event_code_count_long_gt10_avg?: number;
     rest_avg?: number;
+    younger_men_avg?: number;
+    adult_men_avg?: number;
+    senior_men_avg?: number;
+    veteran_men_avg?: number;
+    super_vet_men_avg?: number;
+    younger_women_avg?: number;
+    adult_women_avg?: number;
+    senior_women_avg?: number;
+    veteran_women_avg?: number;
+    super_vet_women_avg?: number;
+    unclassified_avg?: number;
 };
 
 const COURSES_VIEW_MODE_KEY = 'courses_test_view_mode_v1';
@@ -372,22 +385,27 @@ const detailedOnlyColumns: ColumnDef[] = [
     { key: 'eligible_time_count', label: 'Eligible', align: 'center', desktopWidth: 54, mobileWidth: 54 }
 ];
 
-const top250Columns: ColumnDef[] = [
+const top250BasicColumns: ColumnDef[] = [
     { key: 'name', label: 'Participants', align: 'left', desktopWidth: 150, mobileWidth: 140 },
     { key: 'total_count', label: 'Total', align: 'center', desktopWidth: 58, mobileWidth: 52 },
     { key: 'appearances', label: 'Events', align: 'center', desktopWidth: 62, mobileWidth: 58 },
+    { key: 'best_curve_ranking_current', label: 'Cur. Rank', align: 'center', desktopWidth: 68, mobileWidth: 62 },
+    { key: 'min_time_mmss', label: 'Best time', align: 'center', desktopWidth: 68, mobileWidth: 62 },
+    { key: 'last_run_date', label: 'Last Event', align: 'center', desktopWidth: 78, mobileWidth: 72 }
+];
+
+const top250DetailedOnlyColumns: ColumnDef[] = [
     { key: 'volunteer_count', label: 'Volunts', align: 'center', desktopWidth: 58, mobileWidth: 52 },
     { key: 'club', label: 'Club', align: 'left', desktopWidth: 120, mobileWidth: 110 },
-    { key: 'best_curve_ranking_current', label: 'Cur. Rank', align: 'center', desktopWidth: 68, mobileWidth: 62 },
     { key: 'best_curve_ranking_historic', label: 'Hist Rank', align: 'center', desktopWidth: 68, mobileWidth: 62 },
     { key: 'best_curve_ranking_current_type', label: 'Rank Type', align: 'center', desktopWidth: 76, mobileWidth: 72 },
-    { key: 'min_time_mmss', label: 'Best time', align: 'center', desktopWidth: 68, mobileWidth: 62 },
     { key: 'min_event_adj_mmss', label: 'Ev adj time', align: 'center', desktopWidth: 78, mobileWidth: 72 },
     { key: 'min_age_event_adj_mmss', label: 'AE adj time', align: 'center', desktopWidth: 78, mobileWidth: 72 },
     { key: 'min_age_sex_event_adj_mmss', label: 'AES adj time', align: 'center', desktopWidth: 85, mobileWidth: 78 },
-    { key: 'last_run_date', label: 'Last Event', align: 'center', desktopWidth: 78, mobileWidth: 72 },
     { key: 'last_volunteer_date', label: 'Last Volunt', align: 'center', desktopWidth: 82, mobileWidth: 76 }
 ];
+
+const top250Columns: ColumnDef[] = [...top250BasicColumns, ...top250DetailedOnlyColumns];
 
 const top250SortableKeys = new Set<string>(top250Columns.map((col) => col.key));
 
@@ -399,6 +417,7 @@ const CourseTest: React.FC = () => {
     const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
     const layoutConfig = getCourseLayoutConfig();
     const tableModel = layoutConfig.tableModel;
+    const tableWidthMode = (layoutConfig as any)?.tableWidthMode;
 
     const viewLabelElement = getCourseElementById('course.viewLabel');
     const viewSelectElement = getCourseElementById('course.viewSelect');
@@ -407,11 +426,15 @@ const CourseTest: React.FC = () => {
     const backButtonElement = getCourseElementById('course.backButton');
     const panelToggleElement = getCourseElementById('course.panelToggle');
     const resetButtonElement = getCourseElementById('course.resetButton');
+    const expandButtonElement = getCourseElementById('course.expandButton');
+    const groupsLegendDividerElement = getCourseElementById('course.groupsLegendDivider');
+    const courseLabelElement = getCourseElementById('course.courseLabel');
     const searchInputElement = getCourseElementById('course.searchInput');
     const eventCodeElement = getCourseElementById('course.eventCode');
     const totalEventsElement = getCourseElementById('course.totalEvents');
     const statusMessageElement = getCourseElementById('course.statusMessage');
     const summaryModeSelectElement = getCourseElementById('course.summaryModeSelect');
+    const groupsPanelElement = getCourseElementById('course.groupsPanel');
     const tableContainerElement = getCourseElementById('course.tableContainer');
     const summaryRowElement = getCourseElementById('course.summaryRow');
     const [viewport, setViewport] = useState<CourseViewport>(() => getCourseViewportForWidth(window.innerWidth));
@@ -429,11 +452,15 @@ const CourseTest: React.FC = () => {
     const pBackButton = getCourseElementPlacement('course.backButton', viewport);
     const pPanelToggle = getCourseElementPlacement('course.panelToggle', viewport);
     const pResetButton = getCourseElementPlacement('course.resetButton', viewport);
+    const pExpandButton = getCourseElementPlacement('course.expandButton', viewport);
+    const pGroupsLegendDivider = getCourseElementPlacement('course.groupsLegendDivider', viewport);
+    const pCourseLabel = getCourseElementPlacement('course.courseLabel', viewport);
     const pSearchInput = getCourseElementPlacement('course.searchInput', viewport);
     const pEventCode = getCourseElementPlacement('course.eventCode', viewport);
     const pTotalEvents = getCourseElementPlacement('course.totalEvents', viewport);
     const pStatusMessage = getCourseElementPlacement('course.statusMessage', viewport);
     const pSummaryModeSelect = getCourseElementPlacement('course.summaryModeSelect', viewport);
+    const pGroupsPanel = getCourseElementPlacement('course.groupsPanel', viewport);
     const pTableContainer = getCourseElementPlacement('course.tableContainer', viewport);
     const pSummaryRow = getCourseElementPlacement('course.summaryRow', viewport);
 
@@ -529,10 +556,75 @@ const CourseTest: React.FC = () => {
     const [monthlyCascadeRows, setMonthlyCascadeRows] = useState<MonthlyCascadeRow[]>([]);
     const [monthlyCascadeLoading, setMonthlyCascadeLoading] = useState<boolean>(false);
     const [monthlyCascadeError, setMonthlyCascadeError] = useState<string | null>(null);
+    const [groupsBarMode, setGroupsBarMode] = useState<GroupsBarMode>('both');
+    const [isIndexMode, setIsIndexMode] = useState<boolean>(false);
+    const [isPlotExpanded, setIsPlotExpanded] = useState<boolean>(false);
     const [profileXZoom, setProfileXZoom] = useState<{ start: number; end: number }>({ start: 0, end: 100 });
     const [profileYZoom, setProfileYZoom] = useState<{ start: number; end: number }>({ start: 0, end: 100 });
     const [profileCumulative, setProfileCumulative] = useState<boolean>(false);
     const [profileLogScale, setProfileLogScale] = useState<boolean>(false);
+
+    const normalizeSeriesData = (dataArrays: (number[] | undefined)[]): number[][] => {
+        if (!isIndexMode || !dataArrays[0]) return dataArrays.map(d => d || []);
+        
+        // Get the length from the first non-undefined array
+        const length = (dataArrays[0] || []).length;
+        if (length === 0) return dataArrays.map(d => d || []);
+
+        // Normalize each stack independently
+        // Stack 1 (Type group): indices 0-7
+        // Stack 2 (Age group): indices 8-18
+        const normalized: number[][] = dataArrays.map(arr => new Array(length).fill(0));
+        
+        // Normalize Type group stack (indices 0-7)
+        for (let monthIdx = 0; monthIdx < length; monthIdx++) {
+            let typeGroupTotal = 0;
+            for (let i = 0; i < 8; i++) {
+                const value = dataArrays[i]?.[monthIdx] ?? 0;
+                if (typeof value === 'number' && isFinite(value)) {
+                    typeGroupTotal += value;
+                }
+            }
+            
+            if (typeGroupTotal > 0) {
+                for (let i = 0; i < 8; i++) {
+                    const value = dataArrays[i]?.[monthIdx] ?? 0;
+                    if (typeof value === 'number' && isFinite(value)) {
+                        normalized[i][monthIdx] = (value / typeGroupTotal) * 100;
+                    }
+                }
+            }
+        }
+        
+        // Normalize Age group stack (indices 8-18)
+        for (let monthIdx = 0; monthIdx < length; monthIdx++) {
+            let ageGroupTotal = 0;
+            for (let i = 8; i < 19; i++) {
+                const value = dataArrays[i]?.[monthIdx] ?? 0;
+                if (typeof value === 'number' && isFinite(value)) {
+                    ageGroupTotal += value;
+                }
+            }
+            
+            if (ageGroupTotal > 0) {
+                for (let i = 8; i < 19; i++) {
+                    const value = dataArrays[i]?.[monthIdx] ?? 0;
+                    if (typeof value === 'number' && isFinite(value)) {
+                        normalized[i][monthIdx] = (value / ageGroupTotal) * 100;
+                    }
+                }
+            }
+        }
+        
+        return normalized;
+    };
+
+    // Force viewMode to 'detailed' when in top250 mode (top250 doesn't support basic)
+    useEffect(() => {
+        if (panelMode === 'top250' && viewMode !== 'detailed') {
+            setViewMode('detailed');
+        }
+    }, [panelMode, viewMode]);
 
     useEffect(() => {
         let cancelled = false;
@@ -542,7 +634,6 @@ const CourseTest: React.FC = () => {
                 setError(null);
                 const data = await fetchAllResults();
                 if (cancelled) return;
-                console.log('CourseTest: Loaded all results:', data?.length || 0, 'rows');
                 setAllRows(Array.isArray(data) ? data : []);
             } catch (err: any) {
                 if (cancelled) return;
@@ -573,7 +664,6 @@ const CourseTest: React.FC = () => {
             }
         });
         const result = Array.from(byCode.values()).sort((a, b) => a.eventName.localeCompare(b.eventName));
-        console.log('CourseTest: Event options built:', result.length, 'events');
         return result;
     }, [allRows]);
 
@@ -592,7 +682,6 @@ const CourseTest: React.FC = () => {
             return;
         }
         const firstEvent = eventOptions[0];
-        console.log('CourseTest: Auto-selecting first event:', firstEvent.eventCode, firstEvent.eventName);
         setActiveEventCode(firstEvent.eventCode);
         setActiveEventName(firstEvent.eventName);
     }, [activeEventCode, eventOptions]);
@@ -601,7 +690,6 @@ const CourseTest: React.FC = () => {
         if (periodQuery !== 'all') {
             return;
         }
-        console.log('CourseTest: Setting period rows (all):', allRows.length);
         setPeriodRows(allRows);
     }, [periodQuery, allRows]);
 
@@ -802,7 +890,6 @@ const CourseTest: React.FC = () => {
                 }
                 return true;
             });
-        console.log('CourseTest: Filtered rows for event', activeEventCode, ':', filtered.length, 'rows');
         setRows(filtered);
     }, [periodRows, activeEventCode]);
 
@@ -819,6 +906,11 @@ const CourseTest: React.FC = () => {
         }
         return viewMode === 'basic' ? basicColumns : [...basicColumns, ...detailedOnlyColumns];
     }, [viewMode]);
+
+    // Top250 table always shows all columns regardless of basic/detailed mode
+    const visibleTop250Columns = useMemo(() => {
+        return [...top250BasicColumns, ...top250DetailedOnlyColumns];
+    }, []);
 
     const sortedRows = useMemo(() => {
         const withIndex = rows.map((row, index) => ({ row, index }));
@@ -1109,8 +1201,27 @@ const CourseTest: React.FC = () => {
         });
     }, [rows]);
 
+    const calculateColumnsTotalWidth = (cols: ColumnDef[], viewport: CourseViewport): number => {
+        return cols.reduce((total, col) => {
+            const targetWidth = viewport === 'mobile'
+                ? (col.mobileWidth ?? col.desktopWidth)
+                : (col.desktopWidth ?? col.mobileWidth);
+            return total + (targetWidth ?? 0);
+        }, 0);
+    };
+
     const getColumnWidthStyle = (col: ColumnDef): React.CSSProperties => {
         const style: React.CSSProperties = {};
+        const configColumn = getCourseTableColumnByKey(col.key);
+        const configWidth = isMobile
+            ? (configColumn?.mobile?.width ?? configColumn?.laptop?.width)
+            : (configColumn?.laptop?.width ?? configColumn?.mobile?.width);
+        if (configWidth) {
+            style.width = configWidth;
+            style.minWidth = configWidth;
+            style.maxWidth = configWidth;
+            return style;
+        }
         const targetWidth = isMobile
             ? (col.mobileWidth ?? col.desktopWidth)
             : (col.desktopWidth ?? col.mobileWidth);
@@ -1389,14 +1500,143 @@ const CourseTest: React.FC = () => {
             unknown: monthLabels.map((_, index) => toNum(byMonth.get(index + 1)?.unknown_avg)),
             firstFirstTimer: monthLabels.map((_, index) => toNum(byMonth.get(index + 1)?.first_first_timer_avg)),
             firstTimerComment: monthLabels.map((_, index) => toNum(byMonth.get(index + 1)?.first_timer_comment_avg)),
-            superTourist: monthLabels.map((_, index) => toNum(byMonth.get(index + 1)?.super_tourist_avg)),
-            tourist: monthLabels.map((_, index) => toNum(byMonth.get(index + 1)?.tourist_avg)),
+            tourist: monthLabels.map((_, index) => {
+                const month = byMonth.get(index + 1);
+                return toNum(month?.super_tourist_avg) + toNum(month?.tourist_avg);
+            }),
             returnerOrSuperReturner: monthLabels.map((_, index) => toNum(byMonth.get(index + 1)?.returner_or_super_returner_avg)),
             superRegular: monthLabels.map((_, index) => toNum(byMonth.get(index + 1)?.super_regular_avg)),
             lastCodeGt10: monthLabels.map((_, index) => toNum(byMonth.get(index + 1)?.last_event_code_count_long_gt10_avg)),
-            rest: monthLabels.map((_, index) => toNum(byMonth.get(index + 1)?.rest_avg))
+            rest: monthLabels.map((_, index) => toNum(byMonth.get(index + 1)?.rest_avg)),
+            youngerMen: monthLabels.map((_, index) => toNum(byMonth.get(index + 1)?.younger_men_avg)),
+            adultMen: monthLabels.map((_, index) => toNum(byMonth.get(index + 1)?.adult_men_avg)),
+            seniorMen: monthLabels.map((_, index) => toNum(byMonth.get(index + 1)?.senior_men_avg)),
+            veteranMen: monthLabels.map((_, index) => toNum(byMonth.get(index + 1)?.veteran_men_avg)),
+            superVetMen: monthLabels.map((_, index) => toNum(byMonth.get(index + 1)?.super_vet_men_avg)),
+            youngerWomen: monthLabels.map((_, index) => toNum(byMonth.get(index + 1)?.younger_women_avg)),
+            adultWomen: monthLabels.map((_, index) => toNum(byMonth.get(index + 1)?.adult_women_avg)),
+            seniorWomen: monthLabels.map((_, index) => toNum(byMonth.get(index + 1)?.senior_women_avg)),
+            veteranWomen: monthLabels.map((_, index) => toNum(byMonth.get(index + 1)?.veteran_women_avg)),
+            superVetWomen: monthLabels.map((_, index) => toNum(byMonth.get(index + 1)?.super_vet_women_avg)),
+            unclassified: monthLabels.map((_, index) => toNum(byMonth.get(index + 1)?.unclassified_avg))
         };
     }, [monthlyCascadeRows]);
+
+    // Normalize data to percentages if in index mode
+    const displayGroupsChartData = useMemo(() => {
+        if (!isIndexMode) {
+            return profileGroupsChartData;
+        }
+
+        const allDataArrays = [
+            profileGroupsChartData.unknown,
+            profileGroupsChartData.firstFirstTimer,
+            profileGroupsChartData.firstTimerComment,
+            profileGroupsChartData.tourist,
+            profileGroupsChartData.returnerOrSuperReturner,
+            profileGroupsChartData.superRegular,
+            profileGroupsChartData.lastCodeGt10,
+            profileGroupsChartData.rest,
+            profileGroupsChartData.youngerMen,
+            profileGroupsChartData.adultMen,
+            profileGroupsChartData.seniorMen,
+            profileGroupsChartData.veteranMen,
+            profileGroupsChartData.superVetMen,
+            profileGroupsChartData.youngerWomen,
+            profileGroupsChartData.adultWomen,
+            profileGroupsChartData.seniorWomen,
+            profileGroupsChartData.veteranWomen,
+            profileGroupsChartData.superVetWomen,
+            profileGroupsChartData.unclassified
+        ];
+
+        const [normalized_unknown, normalized_firstFirstTimer, normalized_firstTimerComment, normalized_tourist, 
+               normalized_returnerOrSuperReturner, normalized_superRegular, normalized_lastCodeGt10, normalized_rest,
+               normalized_youngerMen, normalized_adultMen, normalized_seniorMen, normalized_veteranMen, normalized_superVetMen,
+               normalized_youngerWomen, normalized_adultWomen, normalized_seniorWomen, normalized_veteranWomen, normalized_superVetWomen,
+               normalized_unclassified] = normalizeSeriesData(allDataArrays);
+
+        return {
+            ...profileGroupsChartData,
+            unknown: normalized_unknown,
+            firstFirstTimer: normalized_firstFirstTimer,
+            firstTimerComment: normalized_firstTimerComment,
+            tourist: normalized_tourist,
+            returnerOrSuperReturner: normalized_returnerOrSuperReturner,
+            superRegular: normalized_superRegular,
+            lastCodeGt10: normalized_lastCodeGt10,
+            rest: normalized_rest,
+            youngerMen: normalized_youngerMen,
+            adultMen: normalized_adultMen,
+            seniorMen: normalized_seniorMen,
+            veteranMen: normalized_veteranMen,
+            superVetMen: normalized_superVetMen,
+            youngerWomen: normalized_youngerWomen,
+            adultWomen: normalized_adultWomen,
+            seniorWomen: normalized_seniorWomen,
+            veteranWomen: normalized_veteranWomen,
+            superVetWomen: normalized_superVetWomen,
+            unclassified: normalized_unclassified
+        };
+    }, [profileGroupsChartData, isIndexMode]);
+
+    const activeTableContainerSpec = useMemo(() => {
+        const baseSpec = tableContainerElement?.[viewport];
+        const expandedSpec = viewport === 'mobile' ? tableContainerElement?.mobileExpanded : tableContainerElement?.laptopExpanded;
+        if (isPlotExpanded && expandedSpec) {
+            return { ...baseSpec, ...expandedSpec };
+        }
+        return baseSpec;
+    }, [isPlotExpanded, tableContainerElement, viewport]);
+
+    const activeGroupsPanelSpec = useMemo(() => {
+        const baseSpec = groupsPanelElement?.[viewport];
+        const expandedSpec = viewport === 'mobile' ? groupsPanelElement?.mobileExpanded : groupsPanelElement?.laptopExpanded;
+        if (isPlotExpanded && expandedSpec) {
+            return { ...baseSpec, ...expandedSpec };
+        }
+        return baseSpec;
+    }, [groupsPanelElement, isPlotExpanded, viewport]);
+
+    const tablePanelTop = String(activeTableContainerSpec?.y ?? pTableContainer?.y ?? tableContainerElement?.[viewport]?.y ?? '3cm');
+    const tablePanelLeft = String(activeTableContainerSpec?.x ?? pTableContainer?.x ?? tableContainerElement?.[viewport]?.x ?? '0cm');
+    
+    // Calculate table width: use tableWidthMode for table mode, detailed width for top250
+    const getTablePanelWidth = () => {
+        if (panelMode === 'table') {
+            // Main course table: width driven exclusively by tableWidthMode config (basic/detailed)
+            return String(tableWidthMode?.[viewport]?.[viewMode] ?? (isMobile ? '11cm' : '14.6cm'));
+        }
+        if (panelMode === 'top250') {
+            // Top250 table: always uses detailed width from tableWidthMode (no basic option)
+            return String(tableWidthMode?.[viewport]?.['detailed'] ?? (isMobile ? '15.5cm' : '33.6cm'));
+        }
+        // For plot modes: use tableContainer x/y/height positioning (width from plots themselves)
+        return String(activeTableContainerSpec?.width ?? pTableContainer?.width ?? (isMobile ? '11cm' : '20cm'));
+    };
+    const tablePanelWidth = getTablePanelWidth();
+    
+    const tablePanelMinHeight = String(activeTableContainerSpec?.height ?? pTableContainer?.height ?? tableContainerElement?.[viewport]?.height ?? (isMobile ? '9cm' : '11cm'));
+
+    const groupsBaseHeight = String(activeGroupsPanelSpec?.height ?? activeTableContainerSpec?.height ?? (isMobile ? '8.8cm' : '10.8cm'));
+    const groupsMessageVisible = panelMode === 'groups' && monthlyCascadeLoading;
+    const groupsPlotHeight = isMobile ? `calc(${groupsBaseHeight} + 3cm)` : `calc(${groupsBaseHeight} + 1cm)`;
+    const groupsWindowHeight = isMobile ? `calc(${groupsBaseHeight} + 4cm)` : `calc(${groupsBaseHeight} + 1cm)`;
+    const groupsWindowFixedHeight = isMobile ? groupsWindowHeight : undefined;
+    const groupsPanelTop = String(activeGroupsPanelSpec?.y ?? pGroupsPanel?.y ?? (isMobile ? '12cm' : '2cm'));
+    const groupsPanelLeft = String(activeGroupsPanelSpec?.x ?? pGroupsPanel?.x ?? '0cm');
+    const groupsPanelWidth = String(activeGroupsPanelSpec?.width ?? pGroupsPanel?.width ?? (isMobile ? '11cm' : '21.2cm'));
+    const groupsPlotWidth = '100%';
+    const showTypeGroupBars = groupsBarMode === 'type' || groupsBarMode === 'both';
+    const showAgeGroupBars = groupsBarMode === 'age' || groupsBarMode === 'both';
+    const groupsToggleLabel = groupsBarMode === 'type'
+        ? 'Age Group'
+        : groupsBarMode === 'age'
+            ? 'Both Group'
+            : 'Type Group';
+    const cycleGroupsBarMode = () => {
+        setGroupsBarMode((prev) => (prev === 'type' ? 'age' : prev === 'age' ? 'both' : 'type'));
+    };
 
     const sortedTop250Rows = useMemo(() => {
         const withIndex = top250Rows.map((row, index) => ({ row, index }));
@@ -1486,6 +1726,14 @@ const CourseTest: React.FC = () => {
         if (options.length === 0) return ['Basic', 'Detailed'];
         return options;
     }, [viewSelectElement?.options]);
+
+    // Filter view options based on panel mode: top250 only shows Detailed
+    const visibleViewControlOptions = useMemo(() => {
+        if (panelMode === 'top250') {
+            return viewControlOptions.filter((opt) => normalizeCourseViewMode(opt) === 'detailed');
+        }
+        return viewControlOptions;
+    }, [panelMode, viewControlOptions]);
 
     const periodControlOptions = useMemo(() => {
         const options = (periodSelectElement?.options || []).map((option) => String(option).trim()).filter(Boolean);
@@ -1641,32 +1889,115 @@ const CourseTest: React.FC = () => {
                     </button>
                 )}
 
-                {searchInputElement && (
-                    <div
-                        className="course-header-title"
-                        title={searchInputElement?.name || 'Course Search'}
+                {showHeader && expandButtonElement && (panelMode === 'profile' || panelMode === 'harness' || panelMode === 'groups') && (
+                    <button
+                        id="courses-expand-plot-btn"
+                        type="button"
+                        onClick={() => setIsPlotExpanded((prev) => !prev)}
+                        title={isPlotExpanded ? 'Reduce plot panel' : 'Expand plot panel'}
+                        aria-label={isPlotExpanded ? 'Reduce plot panel' : 'Expand plot panel'}
                         style={{
+                            width: pExpandButton?.width ?? expandButtonElement?.style?.width ?? '1.1cm',
+                            height: pExpandButton?.height ?? expandButtonElement?.style?.height ?? '1cm',
+                            border: '1px solid #777',
+                            borderRadius: '6px',
+                            background: '#fff',
+                            cursor: 'pointer',
+                            fontSize: expandButtonElement?.style?.fontSize ?? '0.5rem',
+                            fontWeight: expandButtonElement?.style?.fontWeight ?? 700,
+                            lineHeight: Number(expandButtonElement?.style?.lineHeight ?? 1),
+                            padding: 0,
                             position: 'absolute',
-                            left: pSearchInput?.x ?? searchInputElement?.[viewport]?.x ?? '1.6cm',
-                            top: pSearchInput?.y ?? searchInputElement?.[viewport]?.y ?? '0cm',
-                            width: pSearchInput?.width ?? searchInputElement?.[viewport]?.width ?? '8.8cm',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.5em',
-                            overflow: 'visible',
+                            left: pExpandButton?.x ?? expandButtonElement?.[viewport]?.x ?? '2.6cm',
+                            top: pExpandButton?.y ?? expandButtonElement?.[viewport]?.y ?? '1.1cm',
+                            zIndex: 1200,
                             pointerEvents: 'auto'
                         }}
                     >
-                        <EventSearch
-                            inputId="courses-search-input"
-                            options={eventOptions}
-                            initialQuery={displayName}
-                            placeholder="search for course"
-                            inputWidth={pSearchInput?.width ?? searchInputElement?.[viewport]?.width ?? '8.8cm'}
-                            dropdownWidth={pSearchInput?.width ?? searchInputElement?.[viewport]?.width ?? '8.8cm'}
-                            onSelect={handleSelectEvent}
-                        />
-                    </div>
+                        {isPlotExpanded ? 'Reduce' : (expandButtonElement?.name || 'Expand')}
+                    </button>
+                )}
+
+                {searchInputElement && (
+                    <>
+                        {courseLabelElement ? (
+                            <div
+                                style={{
+                                    position: 'absolute',
+                                    left: pCourseLabel?.x ?? courseLabelElement?.[viewport]?.x ?? '1.6cm',
+                                    top: pCourseLabel?.y ?? courseLabelElement?.[viewport]?.y ?? '0cm',
+                                    pointerEvents: 'auto'
+                                }}
+                            >
+                                {courseLabelElement?.helpLabel ? (
+                                    <span className="help-tooltip" style={{ display: 'inline-flex' }}>
+                                        <button
+                                            type="button"
+                                            className="help-trigger help-trigger-label"
+                                            onClick={(event) => {
+                                                const rect = (event.currentTarget as HTMLButtonElement).getBoundingClientRect();
+                                                requestUnifiedHelp(courseLabelElement?.helpTarget || 'control-course', {
+                                                    x: rect.left,
+                                                    y: rect.bottom
+                                                });
+                                            }}
+                                            title={`${String(courseLabelElement?.name || 'Course').replace(/:\s*$/, '')} help`}
+                                            aria-label={`${String(courseLabelElement?.name || 'Course').replace(/:\s*$/, '')} help`}
+                                        >
+                                            <span
+                                                className="help-trigger-text"
+                                                style={{
+                                                    lineHeight: courseLabelElement?.style?.lineHeight ?? 1.1,
+                                                    fontWeight: courseLabelElement?.style?.fontWeight ?? 700,
+                                                    fontSize: courseLabelElement?.style?.fontSize,
+                                                    color: courseLabelElement?.style?.color ?? '#111827'
+                                                }}
+                                            >
+                                                {courseLabelElement?.name || 'Course:'}
+                                            </span>
+                                        </button>
+                                    </span>
+                                ) : (
+                                    <label
+                                        htmlFor="courses-search-input"
+                                        style={{
+                                            lineHeight: courseLabelElement?.style?.lineHeight ?? 1.1,
+                                            fontWeight: courseLabelElement?.style?.fontWeight ?? 700,
+                                            fontSize: courseLabelElement?.style?.fontSize,
+                                            color: courseLabelElement?.style?.color ?? '#111827'
+                                        }}
+                                    >
+                                        {courseLabelElement?.name || 'Course:'}
+                                    </label>
+                                )}
+                            </div>
+                        ) : null}
+                        <div
+                            className="course-header-title"
+                            title={searchInputElement?.name || 'Course Search'}
+                            style={{
+                                position: 'absolute',
+                                left: pSearchInput?.x ?? searchInputElement?.[viewport]?.x ?? '1.6cm',
+                                top: pSearchInput?.y ?? searchInputElement?.[viewport]?.y ?? '0cm',
+                                width: pSearchInput?.width ?? searchInputElement?.[viewport]?.width ?? '8.8cm',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.5em',
+                                overflow: 'visible',
+                                pointerEvents: 'auto'
+                            }}
+                        >
+                            <EventSearch
+                                inputId="courses-search-input"
+                                options={eventOptions}
+                                initialQuery={displayName}
+                                placeholder="search for course"
+                                inputWidth={pSearchInput?.width ?? searchInputElement?.[viewport]?.width ?? '8.8cm'}
+                                dropdownWidth={pSearchInput?.width ?? searchInputElement?.[viewport]?.width ?? '8.8cm'}
+                                onSelect={handleSelectEvent}
+                            />
+                        </div>
+                    </>
                 )}
 
                 {showHeader && eventCodeElement && (
@@ -1761,7 +2092,7 @@ const CourseTest: React.FC = () => {
                         aria-label="Courses view mode"
                         style={{ position: 'absolute', left: pViewSelect?.x, top: pViewSelect?.y, width: pViewSelect?.width, pointerEvents: 'auto' }}
                     >
-                        {viewControlOptions.map((option) => (
+                        {visibleViewControlOptions.map((option) => (
                             <option key={option} value={option}>{option}</option>
                         ))}
                     </select>
@@ -1834,20 +2165,22 @@ const CourseTest: React.FC = () => {
                 </div>
             ) : null}
 
-                 {(loading || error) && statusMessageElement && (
+                 {(loading || error || groupsMessageVisible || (panelMode === 'top250' && top250Loading)) && statusMessageElement && (
                      <div
                          style={{
                              position: 'absolute',
                              left: pStatusMessage?.x ?? statusMessageElement?.[viewport]?.x ?? '0.3cm',
                              top: pStatusMessage?.y ?? statusMessageElement?.[viewport]?.y ?? '2.3cm',
                              width: pStatusMessage?.width ?? statusMessageElement?.[viewport]?.width,
-                             color: statusMessageElement?.style?.color ?? '#6b7280',
+                             color: groupsMessageVisible ? '#dc2626' : (statusMessageElement?.style?.color ?? '#6b7280'),
                              fontSize: statusMessageElement?.style?.fontSize ?? '0.75rem',
                              fontStyle: statusMessageElement?.style?.fontStyle ?? 'normal',
                              zIndex: 100,
                              pointerEvents: 'auto'
                          }}
                      >
+                         {groupsMessageVisible && <p style={{ margin: 0, fontSize: '0.9rem' }}>This process can take up to 30 seconds— click Table button to move on</p>}
+                         {panelMode === 'top250' && top250Loading && <p style={{ margin: 0, fontSize: '0.9rem' }}>Loading Top250 data…</p>}
                          {loading && <p style={{ margin: 0 }}>Loading course data…</p>}
                          {error && <p className="athlete-error" style={{ margin: 0 }}>{error}</p>}
                      </div>
@@ -1857,15 +2190,17 @@ const CourseTest: React.FC = () => {
                 <section className="course-runs-section">
                     {panelMode === 'profile' ? (
                         <div
-                            className="athlete-runs-table-wrapper"
+                            className="athlete-runs-table-wrapper plot-panel-wrapper"
                             style={{
-                                position: 'absolute',
+                                position: isMobile ? 'relative' : 'absolute',
                                 background: 'transparent',
                                 boxShadow: 'none',
                                 border: 'none',
                                 padding: 0,
-                                left: pTableContainer?.x ?? tableContainerElement?.[viewport]?.x ?? '0cm',
-                                top: pTableContainer?.y ?? tableContainerElement?.[viewport]?.y ?? '3cm'
+                                left: isMobile ? 'auto' : groupsPanelLeft,
+                                top: isMobile ? 'auto' : groupsPanelTop,
+                                width: groupsPanelWidth,
+                                marginTop: isMobile ? groupsPanelTop : 0
                             }}
                         >
                             <div
@@ -1876,7 +2211,10 @@ const CourseTest: React.FC = () => {
                                     marginLeft: '0.3cm',
                                     marginRight: '0.3cm',
                                     overflow: 'hidden',
-                                    boxShadow: '0 10px 18px rgba(15, 23, 42, 0.08)'
+                                    boxShadow: '0 10px 18px rgba(15, 23, 42, 0.08)',
+                                    width: activeTableContainerSpec?.width,
+                                    height: groupsWindowFixedHeight,
+                                    minHeight: groupsWindowHeight
                                 }}
                             >
                                 {/* grey header */}
@@ -1885,9 +2223,9 @@ const CourseTest: React.FC = () => {
                                 </div>
 
                                 {/* chart */}
-                                <div style={{ padding: '0.3rem 0.2rem 0 0.2rem', overflowX: 'auto' }}>
+                                <div style={{ padding: '0.3rem 0.2rem 0 0.2rem', overflowX: 'hidden' }}>
                                     <ReactECharts
-                                        style={{ height: isMobile ? '10.3cm' : '13.3cm', minWidth: isMobile ? '10cm' : '18cm' }}
+                                        style={{ height: groupsPlotHeight, width: groupsPlotWidth }}
                                         option={{
                                             animation: false,
                                             grid: { top: 30, bottom: 90, left: 55, right: 20, containLabel: false },
@@ -2006,15 +2344,17 @@ const CourseTest: React.FC = () => {
                         </div>
                     ) : panelMode === 'harness' ? (
                         <div
-                            className="athlete-runs-table-wrapper"
+                            className="athlete-runs-table-wrapper plot-panel-wrapper"
                             style={{
-                                position: 'absolute',
+                                position: isMobile ? 'relative' : 'absolute',
                                 background: 'transparent',
                                 boxShadow: 'none',
                                 border: 'none',
                                 padding: 0,
-                                left: pTableContainer?.x ?? tableContainerElement?.[viewport]?.x ?? '0cm',
-                                top: pTableContainer?.y ?? tableContainerElement?.[viewport]?.y ?? '3cm'
+                                left: isMobile ? 'auto' : groupsPanelLeft,
+                                top: isMobile ? 'auto' : groupsPanelTop,
+                                width: groupsPanelWidth,
+                                marginTop: isMobile ? groupsPanelTop : 0
                             }}
                         >
                             <div
@@ -2025,16 +2365,19 @@ const CourseTest: React.FC = () => {
                                     marginLeft: '0.3cm',
                                     marginRight: '0.3cm',
                                     overflow: 'hidden',
-                                    boxShadow: '0 10px 18px rgba(15, 23, 42, 0.08)'
+                                    boxShadow: '0 10px 18px rgba(15, 23, 42, 0.08)',
+                                    width: activeTableContainerSpec?.width,
+                                    height: groupsWindowFixedHeight,
+                                    minHeight: groupsWindowHeight
                                 }}
                             >
                                 <div style={{ background: '#e5e7eb', borderBottom: '1px solid #d1d5db', padding: '0.45rem 0.8rem', textAlign: 'center', fontSize: '1rem', fontWeight: 700 }}>
                                     Event statistics comparison (Hardness)
                                 </div>
 
-                                <div style={{ padding: '0.3rem 0.2rem 0.35rem 0.2rem', overflowX: 'auto' }}>
+                                <div style={{ padding: '0.3rem 0.2rem 0.35rem 0.2rem', overflowX: 'hidden' }}>
                                     <ReactECharts
-                                        style={{ height: isMobile ? '8.8cm' : '10.8cm', minWidth: isMobile ? '10cm' : '18cm' }}
+                                        style={{ height: groupsPlotHeight, width: groupsPlotWidth }}
                                         notMerge={true}
                                         option={{
                                             animation: false,
@@ -2122,15 +2465,17 @@ const CourseTest: React.FC = () => {
                         </div>
                     ) : panelMode === 'groups' ? (
                         <div
-                            className="athlete-runs-table-wrapper"
+                            className="athlete-runs-table-wrapper groups-panel-wrapper plot-panel-wrapper"
                             style={{
-                                position: 'absolute',
+                                position: isMobile ? 'relative' : 'absolute',
                                 background: 'transparent',
                                 boxShadow: 'none',
                                 border: 'none',
                                 padding: 0,
-                                left: pTableContainer?.x ?? tableContainerElement?.[viewport]?.x ?? '0cm',
-                                top: pTableContainer?.y ?? tableContainerElement?.[viewport]?.y ?? '3cm'
+                                left: isMobile ? 'auto' : groupsPanelLeft,
+                                top: isMobile ? 'auto' : groupsPanelTop,
+                                width: groupsPanelWidth,
+                                marginTop: isMobile ? groupsPanelTop : 0
                             }}
                         >
                             <div
@@ -2141,7 +2486,10 @@ const CourseTest: React.FC = () => {
                                     marginLeft: '0.3cm',
                                     marginRight: '0.3cm',
                                     overflow: 'hidden',
-                                    boxShadow: '0 10px 18px rgba(15, 23, 42, 0.08)'
+                                    boxShadow: '0 10px 18px rgba(15, 23, 42, 0.08)',
+                                    width: activeTableContainerSpec?.width,
+                                    height: groupsWindowFixedHeight,
+                                    minHeight: groupsWindowHeight
                                 }}
                             >
                                 <div style={{ background: '#e5e7eb', borderBottom: '1px solid #d1d5db', padding: '0.45rem 0.8rem', textAlign: 'center', fontSize: '1rem', fontWeight: 700 }}>
@@ -2153,58 +2501,130 @@ const CourseTest: React.FC = () => {
                                 ) : monthlyCascadeError ? (
                                     <div style={{ padding: '0.8rem', fontSize: '0.9rem', color: '#b91c1c' }}>{monthlyCascadeError}</div>
                                 ) : (
-                                    <div style={{ padding: '0.3rem 0.2rem 0.35rem 0.2rem', overflowX: 'auto' }}>
+                                    <div style={{ padding: '0.3rem 0.2rem 0.35rem 0.2rem', overflowX: 'hidden', position: 'relative' }}>
+                                        <button
+                                            type="button"
+                                            onClick={cycleGroupsBarMode}
+                                            title={`Switch groups chart mode (current: ${groupsBarMode})`}
+                                            aria-label={`Switch groups chart mode (current: ${groupsBarMode})`}
+                                            style={{
+                                                position: 'absolute',
+                                                right: '0.45rem',
+                                                top: '0.35rem',
+                                                zIndex: 3,
+                                                border: '1px solid #9ca3af',
+                                                borderRadius: '6px',
+                                                background: '#fff',
+                                                color: '#111827',
+                                                fontSize: '0.65rem',
+                                                fontWeight: 700,
+                                                lineHeight: 1.15,
+                                                padding: '0.18rem 0.45rem',
+                                                cursor: 'pointer',
+                                                boxShadow: '0 1px 2px rgba(15, 23, 42, 0.08)'
+                                            }}
+                                        >
+                                            {groupsToggleLabel}
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setIsIndexMode(!isIndexMode)}
+                                            title={`Toggle between Actual and Index modes`}
+                                            aria-label={`Toggle between Actual and Index modes`}
+                                            style={{
+                                                position: 'absolute',
+                                                right: '0.45rem',
+                                                top: 'calc(1.05rem + 0.3cm)',
+                                                zIndex: 3,
+                                                border: '1px solid #9ca3af',
+                                                borderRadius: '6px',
+                                                background: '#fff',
+                                                color: '#111827',
+                                                fontSize: '0.65rem',
+                                                fontWeight: 700,
+                                                lineHeight: 1.15,
+                                                padding: '0.18rem 0.45rem',
+                                                cursor: 'pointer',
+                                                boxShadow: '0 1px 2px rgba(15, 23, 42, 0.08)'
+                                            }}
+                                        >
+                                            {isIndexMode ? 'Actual' : 'Index'}
+                                        </button>
+                                        {showTypeGroupBars && showAgeGroupBars ? (
+                                            <div
+                                                aria-hidden="true"
+                                                style={{
+                                                    position: 'absolute',
+                                                    left: pGroupsLegendDivider?.x ?? groupsLegendDividerElement?.[viewport]?.x ?? '0.6rem',
+                                                    width: pGroupsLegendDivider?.width ?? groupsLegendDividerElement?.[viewport]?.width ?? 'calc(100% - 1.2rem)',
+                                                    bottom: pGroupsLegendDivider?.y ?? groupsLegendDividerElement?.[viewport]?.y ?? 'calc(2.35rem + 0.3cm)',
+                                                    borderTop: '1px solid #d1d5db',
+                                                    zIndex: 2,
+                                                    pointerEvents: 'none'
+                                                }}
+                                            />
+                                        ) : null}
                                         <ReactECharts
-                                            style={{ height: isMobile ? '8.8cm' : '10.8cm', minWidth: isMobile ? '10cm' : '18cm' }}
+                                            style={{ height: groupsPlotHeight, width: groupsPlotWidth }}
                                             notMerge={true}
                                             option={{
                                                 animation: false,
-                                                grid: { top: 42, bottom: 112, left: 58, right: 20, containLabel: false },
+                                                grid: { top: 42, bottom: isMobile ? 170 : 130, left: 58, right: 20, containLabel: false },
                                                 legend: [
-                                                    {
-                                                        type: 'plain',
-                                                        bottom: 24,
-                                                        left: 'center',
-                                                        textStyle: { fontSize: 10 },
-                                                        itemGap: 10,
-                                                        data: ['1st First Timer', 'First Timer event', 'Super Tourist', 'Tourist', 'Returner']
-                                                    },
-                                                    {
-                                                        type: 'plain',
-                                                        bottom: 2,
-                                                        left: 'center',
-                                                        textStyle: { fontSize: 10 },
-                                                        itemGap: 10,
-                                                        data: ['Super Regular', 'Regular', 'Unknown', 'Rest']
-                                                    }
+                                                    ...(showTypeGroupBars
+                                                        ? (isMobile
+                                                            ? [{ type: 'plain', bottom: 118, left: 'center', textStyle: { fontSize: 10 }, itemGap: 10, data: ['1st First Timer', 'First Timer event', 'Tourist','Returner'] },
+                                                               { type: 'plain', bottom: 96, left: 'center', textStyle: { fontSize: 10 }, itemGap: 10, data: ['Super Regular', 'Regular','Rest', 'Unknown'] }]
+                                                             
+                                                            : [{ type: 'plain', bottom: 70, left: 'center', textStyle: { fontSize: 10 }, itemGap: 10, data: ['1st First Timer', 'First Timer event', 'Tourist', 'Returner'] },
+                                                               { type: 'plain', bottom: 48, left: 'center', textStyle: { fontSize: 10 }, itemGap: 10, data: ['Super Regular', 'Regular', 'Rest', 'Unknown'] }])
+                                                        : []),
+                                                    ...(showAgeGroupBars
+                                                        ? (isMobile
+                                                            ? [{ type: 'plain', bottom: 70, left: 'center', textStyle: { fontSize: 10 }, itemGap: 10, data: ['Younger Men', 'Adult Men', 'Senior Men', 'Veteran Men'] },
+                                                               { type: 'plain', bottom: 48, left: 'center', textStyle: { fontSize: 10 }, itemGap: 10, data: ['Super-vet Men', 'Younger Women', 'Adult Women'] },
+                                                               { type: 'plain', bottom: 26, left: 'center', textStyle: { fontSize: 10 }, itemGap: 10, data: ['Senior Women','Veteran Women', 'Super-vet Women'] }]
+                                                            : [{ type: 'plain', bottom: 24, left: 'center', textStyle: { fontSize: 10 }, itemGap: 10, data: ['Younger Men', 'Adult Men', 'Senior Men', 'Veteran Men', 'Super-vet Men'] },
+                                                               { type: 'plain', bottom: 2, left: 'center', textStyle: { fontSize: 10 }, itemGap: 10, data: ['Younger Women', 'Adult Women', 'Senior Women', 'Veteran Women', 'Super-vet Women', 'unclassified'] }])
+                                                        : [])
                                                 ],
                                                 xAxis: {
                                                     type: 'category',
-                                                    data: profileGroupsChartData.months,
+                                                    data: displayGroupsChartData.months,
                                                     axisLabel: { fontSize: 11 },
                                                     axisLine: { lineStyle: { color: '#c4c7cf' } }
                                                 },
                                                 yAxis: {
                                                     type: 'value',
-                                                    name: 'Avg athletes / event',
+                                                    name: isIndexMode ? 'Percentage (%)' : 'Avg Participants / event',
                                                     nameTextStyle: { fontSize: 10 },
                                                     axisLabel: {
                                                         fontSize: 10,
-                                                        formatter: (value: number) => `${value.toFixed(1)}`
+                                                        formatter: (value: number) => isIndexMode ? `${value.toFixed(0)}%` : `${value.toFixed(1)}`
                                                     },
                                                     axisLine: { lineStyle: { color: '#c4c7cf' } },
                                                     splitLine: { lineStyle: { color: '#e5e7eb' } }
                                                 },
                                                 series: [
-                                                    { name: '1st First Timer', type: 'bar', stack: 'monthly_groups', itemStyle: { color: '#1d4ed8' }, data: profileGroupsChartData.firstFirstTimer },
-                                                    { name: 'First Timer event', type: 'bar', stack: 'monthly_groups', itemStyle: { color: '#60a5fa' }, data: profileGroupsChartData.firstTimerComment },
-                                                    { name: 'Super Tourist', type: 'bar', stack: 'monthly_groups', itemStyle: { color: '#7c3aed' }, data: profileGroupsChartData.superTourist },
-                                                    { name: 'Tourist', type: 'bar', stack: 'monthly_groups', itemStyle: { color: '#a78bfa' }, data: profileGroupsChartData.tourist },
-                                                    { name: 'Returner', type: 'bar', stack: 'monthly_groups', itemStyle: { color: '#059669' }, data: profileGroupsChartData.returnerOrSuperReturner },
-                                                    { name: 'Super Regular', type: 'bar', stack: 'monthly_groups', itemStyle: { color: '#10b981' }, data: profileGroupsChartData.superRegular },
-                                                    { name: 'Regular', type: 'bar', stack: 'monthly_groups', itemStyle: { color: '#86efac' }, data: profileGroupsChartData.lastCodeGt10 },
-                                                    { name: 'Unknown', type: 'bar', stack: 'monthly_groups', itemStyle: { color: '#fbbf24' }, data: profileGroupsChartData.unknown },
-                                                    { name: 'Rest', type: 'bar', stack: 'monthly_groups', itemStyle: { color: '#9ca3af' }, data: profileGroupsChartData.rest }
+                                                    { name: '1st First Timer', type: 'bar', stack: 'monthly_groups', barWidth: isMobile ? 7 : 10, itemStyle: { color: '#1d4ed8', opacity: showTypeGroupBars ? 1 : 0 }, tooltip: { show: showTypeGroupBars }, emphasis: { disabled: !showTypeGroupBars }, data: showTypeGroupBars ? displayGroupsChartData.firstFirstTimer : displayGroupsChartData.firstFirstTimer.map(() => 0) },
+                                                    { name: 'First Timer event', type: 'bar', stack: 'monthly_groups', barWidth: isMobile ? 7 : 10, itemStyle: { color: '#60a5fa', opacity: showTypeGroupBars ? 1 : 0 }, tooltip: { show: showTypeGroupBars }, emphasis: { disabled: !showTypeGroupBars }, data: showTypeGroupBars ? displayGroupsChartData.firstTimerComment : displayGroupsChartData.firstTimerComment.map(() => 0) },
+                                                    { name: 'Tourist', type: 'bar', stack: 'monthly_groups', barWidth: isMobile ? 7 : 10, itemStyle: { color: '#a78bfa', opacity: showTypeGroupBars ? 1 : 0 }, tooltip: { show: showTypeGroupBars }, emphasis: { disabled: !showTypeGroupBars }, data: showTypeGroupBars ? displayGroupsChartData.tourist : displayGroupsChartData.tourist.map(() => 0) },
+                                                    { name: 'Returner', type: 'bar', stack: 'monthly_groups', barWidth: isMobile ? 7 : 10, itemStyle: { color: '#059669', opacity: showTypeGroupBars ? 1 : 0 }, tooltip: { show: showTypeGroupBars }, emphasis: { disabled: !showTypeGroupBars }, data: showTypeGroupBars ? displayGroupsChartData.returnerOrSuperReturner : displayGroupsChartData.returnerOrSuperReturner.map(() => 0) },
+                                                    { name: 'Super Regular', type: 'bar', stack: 'monthly_groups', barWidth: isMobile ? 7 : 10, itemStyle: { color: '#10b981', opacity: showTypeGroupBars ? 1 : 0 }, tooltip: { show: showTypeGroupBars }, emphasis: { disabled: !showTypeGroupBars }, data: showTypeGroupBars ? displayGroupsChartData.superRegular : displayGroupsChartData.superRegular.map(() => 0) },
+                                                    { name: 'Regular', type: 'bar', stack: 'monthly_groups', barWidth: isMobile ? 7 : 10, itemStyle: { color: '#86efac', opacity: showTypeGroupBars ? 1 : 0 }, tooltip: { show: showTypeGroupBars }, emphasis: { disabled: !showTypeGroupBars }, data: showTypeGroupBars ? displayGroupsChartData.lastCodeGt10 : displayGroupsChartData.lastCodeGt10.map(() => 0) },
+                                                    { name: 'Rest', type: 'bar', stack: 'monthly_groups', barWidth: isMobile ? 7 : 10, itemStyle: { color: '#9ca3af', opacity: showTypeGroupBars ? 1 : 0 }, tooltip: { show: showTypeGroupBars }, emphasis: { disabled: !showTypeGroupBars }, data: showTypeGroupBars ? displayGroupsChartData.rest : displayGroupsChartData.rest.map(() => 0) },
+                                                    { name: 'Unknown', type: 'bar', stack: 'monthly_groups', barWidth: isMobile ? 7 : 10, itemStyle: { color: '#fbbf24', opacity: showTypeGroupBars ? 1 : 0 }, tooltip: { show: showTypeGroupBars }, emphasis: { disabled: !showTypeGroupBars }, data: showTypeGroupBars ? displayGroupsChartData.unknown : displayGroupsChartData.unknown.map(() => 0) },
+                                                    { name: 'Younger Men', type: 'bar', stack: 'monthly_age_groups', barWidth: isMobile ? 7 : 10, itemStyle: { color: '#1e3a8a', opacity: showAgeGroupBars ? 1 : 0 }, tooltip: { show: showAgeGroupBars }, emphasis: { disabled: !showAgeGroupBars }, data: showAgeGroupBars ? displayGroupsChartData.youngerMen : displayGroupsChartData.youngerMen.map(() => 0) },
+                                                    { name: 'Adult Men', type: 'bar', stack: 'monthly_age_groups', barWidth: isMobile ? 7 : 10, itemStyle: { color: '#2563eb', opacity: showAgeGroupBars ? 1 : 0 }, tooltip: { show: showAgeGroupBars }, emphasis: { disabled: !showAgeGroupBars }, data: showAgeGroupBars ? displayGroupsChartData.adultMen : displayGroupsChartData.adultMen.map(() => 0) },
+                                                    { name: 'Senior Men', type: 'bar', stack: 'monthly_age_groups', barWidth: isMobile ? 7 : 10, itemStyle: { color: '#60a5fa', opacity: showAgeGroupBars ? 1 : 0 }, tooltip: { show: showAgeGroupBars }, emphasis: { disabled: !showAgeGroupBars }, data: showAgeGroupBars ? displayGroupsChartData.seniorMen : displayGroupsChartData.seniorMen.map(() => 0) },
+                                                    { name: 'Veteran Men', type: 'bar', stack: 'monthly_age_groups', barWidth: isMobile ? 7 : 10, itemStyle: { color: '#93c5fd', opacity: showAgeGroupBars ? 1 : 0 }, tooltip: { show: showAgeGroupBars }, emphasis: { disabled: !showAgeGroupBars }, data: showAgeGroupBars ? displayGroupsChartData.veteranMen : displayGroupsChartData.veteranMen.map(() => 0) },
+                                                    { name: 'Super-vet Men', type: 'bar', stack: 'monthly_age_groups', barWidth: isMobile ? 7 : 10, itemStyle: { color: '#bfdbfe', opacity: showAgeGroupBars ? 1 : 0 }, tooltip: { show: showAgeGroupBars }, emphasis: { disabled: !showAgeGroupBars }, data: showAgeGroupBars ? displayGroupsChartData.superVetMen : displayGroupsChartData.superVetMen.map(() => 0) },
+                                                    { name: 'Younger Women', type: 'bar', stack: 'monthly_age_groups', barWidth: isMobile ? 7 : 10, itemStyle: { color: '#9d174d', opacity: showAgeGroupBars ? 1 : 0 }, tooltip: { show: showAgeGroupBars }, emphasis: { disabled: !showAgeGroupBars }, data: showAgeGroupBars ? displayGroupsChartData.youngerWomen : displayGroupsChartData.youngerWomen.map(() => 0) },
+                                                    { name: 'Adult Women', type: 'bar', stack: 'monthly_age_groups', barWidth: isMobile ? 7 : 10, itemStyle: { color: '#db2777', opacity: showAgeGroupBars ? 1 : 0 }, tooltip: { show: showAgeGroupBars }, emphasis: { disabled: !showAgeGroupBars }, data: showAgeGroupBars ? displayGroupsChartData.adultWomen : displayGroupsChartData.adultWomen.map(() => 0) },
+                                                    { name: 'Senior Women', type: 'bar', stack: 'monthly_age_groups', barWidth: isMobile ? 7 : 10, itemStyle: { color: '#f472b6', opacity: showAgeGroupBars ? 1 : 0 }, tooltip: { show: showAgeGroupBars }, emphasis: { disabled: !showAgeGroupBars }, data: showAgeGroupBars ? displayGroupsChartData.seniorWomen : displayGroupsChartData.seniorWomen.map(() => 0) },
+                                                    { name: 'Veteran Women', type: 'bar', stack: 'monthly_age_groups', barWidth: isMobile ? 7 : 10, itemStyle: { color: '#f9a8d4', opacity: showAgeGroupBars ? 1 : 0 }, tooltip: { show: showAgeGroupBars }, emphasis: { disabled: !showAgeGroupBars }, data: showAgeGroupBars ? displayGroupsChartData.veteranWomen : displayGroupsChartData.veteranWomen.map(() => 0) },
+                                                    { name: 'Super-vet Women', type: 'bar', stack: 'monthly_age_groups', barWidth: isMobile ? 7 : 10, itemStyle: { color: '#fbcfe8', opacity: showAgeGroupBars ? 1 : 0 }, tooltip: { show: showAgeGroupBars }, emphasis: { disabled: !showAgeGroupBars }, data: showAgeGroupBars ? displayGroupsChartData.superVetWomen : displayGroupsChartData.superVetWomen.map(() => 0) },
+                                                    { name: 'unclassified', type: 'bar', stack: 'monthly_age_groups', barWidth: isMobile ? 7 : 10, itemStyle: { color: '#6b7280', opacity: showAgeGroupBars ? 1 : 0 }, tooltip: { show: showAgeGroupBars }, emphasis: { disabled: !showAgeGroupBars }, data: showAgeGroupBars ? displayGroupsChartData.unclassified : displayGroupsChartData.unclassified.map(() => 0) }
                                                 ],
                                                 tooltip: {
                                                     trigger: 'axis',
@@ -2213,10 +2633,10 @@ const CourseTest: React.FC = () => {
                                                         if (!Array.isArray(params) || !params.length) return '';
                                                         const idx = Number(params[0]?.dataIndex ?? 0);
                                                         const month = String(params[0]?.axisValue ?? '');
-                                                        const eventsCount = Number(profileGroupsChartData.eventsInMonth[idx] ?? 0);
+                                                        const eventsCount = Number(displayGroupsChartData.eventsInMonth[idx] ?? 0);
                                                         const lines = params
-                                                            .filter((p: any) => p.value !== null && p.value !== undefined && Number(p.value) !== 0)
-                                                            .map((p: any) => `${p.seriesName}: ${(Number(p.value) || 0).toFixed(1)}`);
+                                                            .filter((p: any) => p.value !== null && p.value !== undefined && Number(p.value) !== 0 && p.seriesName)
+                                                            .map((p: any) => `${p.seriesName}: ${isIndexMode ? (Number(p.value) || 0).toFixed(2) + '%' : (Number(p.value) || 0).toFixed(1)}`);
                                                         return [`${month} (events: ${eventsCount})`, ...lines].join('<br/>');
                                                     }
                                                 }
@@ -2230,21 +2650,23 @@ const CourseTest: React.FC = () => {
                         <div
                             className="athlete-runs-table-wrapper top250-table-wrapper"
                             style={{
-                                position: 'absolute',
-                                marginTop: 0,
-                                left: pTableContainer?.x ?? tableContainerElement?.[viewport]?.x ?? '0cm',
-                                top: pTableContainer?.y ?? tableContainerElement?.[viewport]?.y ?? '3cm'
+                                position: isMobile ? 'relative' : 'absolute',
+                                marginTop: isMobile ? tablePanelTop : 0,
+                                left: isMobile ? 'auto' : tablePanelLeft,
+                                top: isMobile ? 'auto' : tablePanelTop,
+                                width: tablePanelWidth,
+                                minHeight: tablePanelMinHeight
                             }}
                         >
                             {top250Loading ? (
-                                <p className="course-runs-empty">Loading Top250 data…</p>
+                                <p className="course-runs-empty"></p>
                             ) : top250Error ? (
                                 <p className="athlete-error">{top250Error}</p>
                             ) : sortedTop250Rows.length > 0 ? (
                                 <table className="athlete-runs-table" aria-label="Top250 event summary">
                                     <thead>
                                         <tr>
-                                            {top250Columns.map((col) => {
+                                            {visibleTop250Columns.map((col) => {
                                                 const isSorted = top250SortKey === col.key;
                                                 const headerClasses = ['athlete-table-header'];
                                                 if (col.key === 'name') headerClasses.push('athlete-date-header');
@@ -2293,7 +2715,7 @@ const CourseTest: React.FC = () => {
                                                     data-top250-club-token={top250ClubToken || undefined}
                                                     className={top250IsHighlighted ? 'top250-highlighted-row' : ''}
                                                 >
-                                                    {top250Columns.map((col) => {
+                                                    {visibleTop250Columns.map((col) => {
                                                         const alignmentStyle: React.CSSProperties = {
                                                             ...getColumnWidthStyle(col),
                                                             ...(col.align ? { textAlign: col.align } : {})
@@ -2387,10 +2809,12 @@ const CourseTest: React.FC = () => {
                         <div
                             className="athlete-runs-table-wrapper course-table-wrapper"
                             style={{
-                                position: 'absolute',
-                                marginTop: 0,
-                                left: pTableContainer?.x ?? tableContainerElement?.[viewport]?.x ?? '0cm',
-                                top: pTableContainer?.y ?? tableContainerElement?.[viewport]?.y ?? '3cm'
+                                position: isMobile ? 'relative' : 'absolute',
+                                marginTop: isMobile ? tablePanelTop : 0,
+                                left: isMobile ? 'auto' : tablePanelLeft,
+                                top: isMobile ? 'auto' : tablePanelTop,
+                                width: tablePanelWidth,
+                                minHeight: tablePanelMinHeight
                             }}
                         >
                             {rows.length > 0 ? (
