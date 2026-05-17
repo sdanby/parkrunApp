@@ -704,16 +704,75 @@ select:focus {
 /* Extra-small screens: shrink the first column and adjust sticky offsets for mobile */
 @media (max-width: 480px) {
   /* Make first column narrower for phones */
-  .results-table th:first-child,
-  .results-table td:first-child,
-  .sticky-col,
-  .sticky-corner-2-1 {
+  .results-table:not(.races-table) th:first-child,
+  .results-table:not(.races-table) td:first-child,
+  .results-table:not(.races-table) .sticky-col,
+  .results-table:not(.races-table) .sticky-corner-2-1 {
     min-width: 100px !important;
     max-width: 100px !important;
     width: 100px !important;
   }
+  /* Move second column to sit immediately after the smaller first column */
+  .results-table:not(.races-table) th:nth-child(2),
+  .results-table:not(.races-table) td:nth-child(2),
+  .results-table:not(.races-table) .sticky-col-2,
+  .results-table:not(.races-table) .sticky-corner-2-2 {
+    min-width: 70px !important;
+    max-width: 70px !important;
+    width: 70px !important;
+    left: 100px !important; /* must match the first column width */
+  }
 
-  /* Default position for loading and error messages (laptop/desktop) */
+  /* Reduce header date column widths so table fits better */
+  .results-table:not(.races-table) .sticky-header,
+  .results-table:not(.races-table) .sticky-header.second-row {
+    min-width: 56px !important;
+    max-width: 56px !important;
+    width: 56px !important;
+  }
+
+  /* Ensure the wide corner spanning header aligns with smaller columns */
+  .results-table:not(.races-table) .sticky-corner-wide {
+    min-width: 170px !important;
+    max-width: 170px !important;
+    width: 170px !important;
+  }
+
+  /* Slightly reduce overall font size on very small screens */
+  .results-table:not(.races-table) {
+    font-size: 0.82em;
+  }
+
+  /* Make columns 2 and onwards (including date columns) more compact on phones.
+     This tightens the max-widths while leaving laptop/tablet rules unchanged. */
+  .results-table:not(.races-table) th:nth-child(n+2),
+  .results-table:not(.races-table) td:nth-child(n+2) {
+    /* second column and all following columns get a tighter cap on phones */
+    min-width: 60px !important;
+    max-width: 110px !important; /* allow some headroom for wider cells */
+    width: auto !important;
+  }
+
+  /* Dates / columns 3+ should be smaller to make the table more phone-friendly */
+  .results-table:not(.races-table) th:nth-child(n+3),
+  .results-table:not(.races-table) td:nth-child(n+3) {
+    min-width: 40px !important;
+    max-width: 75px !important;
+    width: 48px !important;
+  }
+
+  /* Ensure compact table variant also respects the tighter caps on phones */
+  .results-table:not(.races-table).compact th:nth-child(n+2),
+  .results-table:not(.races-table).compact td:nth-child(n+2),
+  .results-table:not(.races-table).compact th:nth-child(n+3),
+  .results-table:not(.races-table).compact td:nth-child(n+3) {
+    min-width: 40px !important;
+    max-width: 80px !important;
+    width: auto !important;
+  }
+}
+
+/* Default position for loading and error messages (laptop/desktop) */
 .loading-message, .error-message {
   position: absolute;
   color: darkred;
@@ -727,98 +786,8 @@ select:focus {
     left: 27%;
   }
   .error-message {
-
     top: calc(10% + 0.5cm); /* higher on mobile */
     left: 57%;
-  }
-}
-
-
-/* Races-specific enforcement: ensure the --col1/--col2 vars are applied
-   and override any global defaults. This makes the first col 0.5cm and
-   second col 3cm for `.races-table`. */
-.races-table th:first-child,
-.races-table td:first-child {
-  min-width: var(--col1-width) !important;
-  max-width: var(--col1-width) !important;
-  width: var(--col1-width) !important;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.races-table th:nth-child(2),
-.races-table td:nth-child(2) {
-  min-width: var(--col2-width) !important;
-  max-width: var(--col2-width) !important;
-  width: var(--col2-width) !important;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* Sticky offsets must match the variable widths so sticky columns sit correctly */
-.races-table .sticky-col { left: 0 !important; min-width: var(--col1-width) !important; max-width: var(--col1-width) !important; width: var(--col1-width) !important; }
-.races-table .sticky-col-2,
-.races-table .sticky-corner-2-2 { left: var(--col1-width) !important; min-width: var(--col2-width) !important; max-width: var(--col2-width) !important; width: var(--col2-width) !important; }
-.races-table .sticky-corner,
-.races-table .sticky-corner-2 { min-width: calc(var(--col1-width) + var(--col2-width)) !important; }
-  /* Move second column to sit immediately after the smaller first column */
-  .results-table th:nth-child(2),
-  .results-table td:nth-child(2),
-  .sticky-col-2,
-  .sticky-corner-2-2 {
-    min-width: 70px !important;
-    max-width: 70px !important;
-    width: 70px !important;
-    left: 100px !important; /* must match the first column width */
-  }
-
-  /* Reduce header date column widths so table fits better */
-  .sticky-header,
-  .sticky-header.second-row {
-    min-width: 56px !important;
-    max-width: 56px !important;
-    width: 56px !important;
-  }
-
-  /* Ensure the wide corner spanning header aligns with smaller columns */
-  .sticky-corner-wide {
-    min-width: 170px !important;
-    max-width: 170px !important;
-    width: 170px !important;
-  }
-
-  /* Slightly reduce overall font size on very small screens */
-  .results-table {
-    font-size: 0.82em;
-  }
-
-  /* Make columns 2 and onwards (including date columns) more compact on phones.
-     This tightens the max-widths while leaving laptop/tablet rules unchanged. */
-  .results-table th:nth-child(n+2),
-  .results-table td:nth-child(n+2) {
-    /* second column and all following columns get a tighter cap on phones */
-    min-width: 60px !important;
-    max-width: 110px !important; /* allow some headroom for wider cells */
-    width: auto !important;
-  }
-
-  /* Dates / columns 3+ should be smaller to make the table more phone-friendly */
-  .results-table th:nth-child(n+3),
-  .results-table td:nth-child(n+3) {
-    min-width: 40px !important;
-    max-width: 75px !important;
-    width: 48px !important;
-  }
-
-  /* Ensure compact table variant also respects the tighter caps on phones */
-  .results-table.compact th:nth-child(n+2),
-  .results-table.compact td:nth-child(n+2),
-  .results-table.compact th:nth-child(n+3),
-  .results-table.compact td:nth-child(n+3) {
-    min-width: 40px !important;
-    max-width: 80px !important;
-    width: auto !important;
   }
 }
 
@@ -939,6 +908,61 @@ select:focus {
 .results-table.races-table td.sticky-col,
 .results-table.races-table td.sticky-col-2 {
   z-index: 130 !important;
+}
+
+/* Explicit Races sticky lead-column contract.
+   The working sticky tables use page-scoped header/body rules instead of
+   depending on generic sticky classes alone. Mirror that here so mobile
+   browsers keep the first header row aligned with the first two sticky body
+   columns. */
+.results-table.races-table thead th.sticky-col,
+.results-table.races-table thead th.sticky-corner,
+.results-table.races-table thead th.sticky-corner-2-1 {
+  position: sticky !important;
+  top: 0 !important;
+  left: 0 !important;
+  z-index: 620 !important;
+  width: var(--col1-width) !important;
+  min-width: var(--col1-width) !important;
+  max-width: var(--col1-width) !important;
+  background: rgba(224, 224, 224, 0.98) !important;
+  background-clip: padding-box !important;
+}
+
+.results-table.races-table thead th.sticky-col-2,
+.results-table.races-table thead th.sticky-corner-2,
+.results-table.races-table thead th.sticky-corner-2-2 {
+  position: sticky !important;
+  top: 0 !important;
+  left: var(--col1-width) !important;
+  z-index: 615 !important;
+  width: var(--col2-width) !important;
+  min-width: var(--col2-width) !important;
+  max-width: var(--col2-width) !important;
+  background: rgba(224, 224, 224, 0.98) !important;
+  background-clip: padding-box !important;
+}
+
+.results-table.races-table tbody td.sticky-col {
+  position: sticky !important;
+  left: 0 !important;
+  z-index: 310 !important;
+  width: var(--col1-width) !important;
+  min-width: var(--col1-width) !important;
+  max-width: var(--col1-width) !important;
+  background: #fff !important;
+  background-clip: padding-box !important;
+}
+
+.results-table.races-table tbody td.sticky-col-2 {
+  position: sticky !important;
+  left: var(--col1-width) !important;
+  z-index: 305 !important;
+  width: var(--col2-width) !important;
+  min-width: var(--col2-width) !important;
+  max-width: var(--col2-width) !important;
+  background: #fff !important;
+  background-clip: padding-box !important;
 }
 
 /* EventAnalysis_test: drive sticky lead column alignment from config via CSS vars */
@@ -1440,6 +1464,26 @@ select:focus {
   min-width: var(--ea-period-col-width, 2.0cm) !important;
   max-width: var(--ea-period-col-width, 2.0cm) !important;
   width: var(--ea-period-col-width, 2.0cm) !important;
+}
+
+.results-table.races-table.eventtest-table thead th.eventtest-col:not(.eventtest-sticky-col) {
+  z-index: 200 !important;
+}
+
+.results-table.races-table.eventtest-table thead th.eventtest-sticky-col {
+  z-index: 260 !important;
+  background-clip: padding-box !important;
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+.results-table.races-table.eventtest-table tbody td.eventtest-sticky-col {
+  z-index: 120 !important;
+  background-clip: padding-box !important;
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
 
 .results-table.races-table.eventtest-table tbody td:nth-child(n+3) {

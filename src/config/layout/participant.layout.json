@@ -225,7 +225,7 @@
       "type": "table",
       "name": "profileContainer",
       "laptop": { "width": "16cm", "height": "10cm" },
-      "mobile": { "width": "11cm", "height": "8.5cm" }
+      "mobile": { "width": "11.7cm", "height": "8.5cm" }
     },
     {
       "id": "participant.tableContainer",

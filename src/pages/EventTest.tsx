@@ -1108,30 +1108,42 @@ const EventTest: React.FC = () => {
           <thead>
             <tr>
               {columns.map((column, columnIndex) => (
-                <th
-                  key={`${column.key}-${columnIndex}`}
-                  className={`eventtest-col ${column.sticky ? 'eventtest-sticky-col' : ''} ${adjustmentColumnKeys.has(column.key) ? 'sticky-header adjustment-header' : ''}`.trim()}
-                  onClick={() => handleSort(column.key)}
-                  onTouchEnd={(event) => {
-                    event.preventDefault();
-                    handleSort(column.key);
-                  }}
-                  style={{
-                    ['--event-col-width' as any]: column[viewport]?.width || 'auto',
-                    ['--event-col-left' as any]: column.sticky ? (stickyLeftByIndex[columnIndex] || '0px') : 'auto',
-                    width: column[viewport]?.width || 'auto',
-                    minWidth: column[viewport]?.width,
-                    maxWidth: column[viewport]?.width,
-                    position: (tableRow1Sticky || column.sticky) ? 'sticky' : 'static',
-                    top: tableRow1Sticky ? 0 : undefined,
-                    zIndex: column.sticky ? (tableRow1Sticky ? 260 : 160) : (tableRow1Sticky ? 200 : undefined),
-                    cursor: 'pointer',
-                    ...getColumnStyle(column.key, column.style)
-                  }}
-                >
-                  <span className="eventtest-header-label">{column.headerName}</span>
-                  <span className="eventtest-sort-indicator">{sortKey === column.key ? (sortDir === 'asc' ? '▲' : '▼') : ''}</span>
-                </th>
+                (() => {
+                  const configuredWidth = column[viewport]?.width || 'auto';
+                  const stickyLeft = stickyLeftByIndex[columnIndex] || '0px';
+                  const headerTopStyle: React.CSSProperties = tableRow1Sticky
+                    ? {
+                        top: 0,
+                        zIndex: column.sticky ? 260 : 200
+                      }
+                    : {};
+
+                  return (
+                    <th
+                      key={`${column.key}-${columnIndex}`}
+                      className={`eventtest-col ${column.sticky ? 'eventtest-sticky-col' : ''} ${adjustmentColumnKeys.has(column.key) ? 'sticky-header adjustment-header' : ''}`.trim()}
+                      onClick={() => handleSort(column.key)}
+                      onTouchEnd={(event) => {
+                        event.preventDefault();
+                        handleSort(column.key);
+                      }}
+                      style={{
+                        ['--event-col-width' as any]: configuredWidth,
+                        ['--event-col-left' as any]: column.sticky ? stickyLeft : 'auto',
+                        width: configuredWidth,
+                        minWidth: configuredWidth,
+                        maxWidth: configuredWidth,
+                        position: tableRow1Sticky ? 'sticky' : undefined,
+                        cursor: 'pointer',
+                        ...headerTopStyle,
+                        ...getColumnStyle(column.key, column.style)
+                      }}
+                    >
+                      <span className="eventtest-header-label">{column.headerName}</span>
+                      <span className="eventtest-sort-indicator">{sortKey === column.key ? (sortDir === 'asc' ? '▲' : '▼') : ''}</span>
+                    </th>
+                  );
+                })()
               ))}
             </tr>
           </thead>
@@ -1154,6 +1166,7 @@ const EventTest: React.FC = () => {
                   const stickyCellStyle: React.CSSProperties = column.sticky
                     ? {
                         position: 'sticky',
+                        left: stickyLeftByIndex[columnIndex] || '0px',
                         zIndex: 120
                       }
                     : {};
@@ -1292,13 +1305,17 @@ const EventTest: React.FC = () => {
                     const hasHistoric = historicRank !== null;
 
                     const rankType = hasCurrent ? (String(rankTypeRaw || '').trim() || '*') : '';
-                    const delta = hasCurrent && hasHistoric ? (currentRank as number) - (historicRank as number) : null;
+                    const currentRankInt = hasCurrent ? Math.round(currentRank as number) : null;
+                    const historicRankInt = hasHistoric ? Math.round(historicRank as number) : null;
+                    const delta = currentRankInt !== null && historicRankInt !== null
+                      ? currentRankInt - historicRankInt
+                      : null;
                     const deltaText = delta === null ? '' : `${delta >= 0 ? '+' : ''}${delta}`;
 
                     return (
                       <td key={cellKey} className={cellClassName} data-highlight-cell={isHighlightedCell ? 'true' : undefined} style={{ ...cellWidthStyle, ...stickyCellStyle, ...resolvedColumnStyle, ...highlightedCellStyle, textAlign: 'center' }}>
                         <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
-                          <span>{hasCurrent ? String(currentRank) : ''}</span>
+                          <span>{currentRankInt !== null ? String(currentRankInt) : ''}</span>
                           {(rankType || deltaText) ? (
                             <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', lineHeight: 1.02 }}>
                               <span style={{ fontSize: rankSubFontSize, opacity: 0.9 }}>{rankType}</span>

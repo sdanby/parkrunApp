@@ -511,7 +511,7 @@ const getAdjustmentSeconds = (row: AthleteRecord, key: ColumnKey): number | null
     const ageRatioSex = coerceNumber(pickField(row, ['age_ratio_sex', 'ageRatioSex']));
     const sexRatio = ageRatioMale && ageRatioSex ? ageRatioSex / ageRatioMale : null;
 
-    const coeffProduct = coeff && coeffEvent ? coeff * coeffEvent : null;
+    const coeffProduct = coeff && coeffEvent ? coeff + coeffEvent - 1 : null;
     const safeDivide = (numerator: number, denominator: number | null): number | null => {
         if (!denominator) return null;
         return numerator / denominator;
@@ -3613,7 +3613,7 @@ const Athletes: React.FC = () => {
                                                             const renderRankTimeCell = (cell?: AthleteBestSummaryRow) => {
                                                                 const rawRank = cell?.rank;
                                                                 const parsedRank = rawRank === undefined || rawRank === null || rawRank === '' ? NaN : Number(rawRank);
-                                                                const rankDisplay = Number.isFinite(parsedRank) ? String(Math.ceil(parsedRank)) : '--';
+                                                                const rankDisplay = Number.isFinite(parsedRank) ? String(Math.round(parsedRank)) : '--';
 
                                                                 return (
                                                                     <td
@@ -3896,13 +3896,15 @@ const Athletes: React.FC = () => {
                                                             const hasHistoric = Number.isFinite(historicRank);
 
                                                             const rankType = String(rankTypeRaw ?? '').trim() || '*';
-                                                            const delta = hasCurrent && hasHistoric ? currentRank - historicRank : null;
+                                                            const currentRankInt = hasCurrent ? Math.round(currentRank) : null;
+                                                            const historicRankInt = hasHistoric ? Math.round(historicRank) : null;
+                                                            const delta = currentRankInt !== null && historicRankInt !== null ? currentRankInt - historicRankInt : null;
                                                             const deltaText = delta === null ? '' : `${delta >= 0 ? '+' : ''}${delta}`;
 
                                                             return (
                                                                 <td key={col.key} style={{ ...alignmentStyle, textAlign: 'center' }}>
                                                                     <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
-                                                                        <span>{hasCurrent ? String(currentRank) : ''}</span>
+                                                                        <span>{currentRankInt !== null ? String(currentRankInt) : ''}</span>
                                                                         <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', lineHeight: 1.02 }}>
                                                                             <span style={{ fontSize: '0.62rem', opacity: 0.9 }}>{rankType}</span>
                                                                             <span style={{ fontSize: '0.62rem', opacity: 0.9 }}>{deltaText}</span>

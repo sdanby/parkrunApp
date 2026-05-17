@@ -930,37 +930,54 @@ const Races: React.FC = () => {
         const el = containerRef.current;
         if (!el) return;
         try {
-            el.style.setProperty('--col1-width', `${colWidths[0]}px`);
-            el.style.setProperty('--col2-width', `${colWidths[1]}px`);
+            el.style.setProperty('--col1-width', `${isCompactViewport ? 50 : 60}px`);
+            el.style.setProperty('--col2-width', `${isCompactViewport ? 150 : 220}px`);
         } catch (e) {
             // ignore
         }
-    }, [colWidths]);
+    }, [isCompactViewport]);
 
     // Ensure header <th> widths match the rendered <col> widths so header and
     // body columns remain aligned even after resizing. Run after layout via
     // two RAFs to ensure the browser has applied col widths.
     useEffect(() => {
-        const applyHeaderWidths = () => {
+        const syncHeaderWidthsAndStickyOffsets = () => {
             const table = tableRef.current;
             if (!table) return;
+
             const cols = table.querySelectorAll<HTMLTableColElement>('col');
             const ths = table.querySelectorAll<HTMLTableCellElement>('thead th');
             for (let i = 0; i < cols.length; i++) {
                 try {
                     const col = cols[i];
                     const rect = col.getBoundingClientRect();
-                    const w = Math.max(0, Math.round(rect.width));
+                    const widthPx = Math.max(0, Math.round(rect.width));
                     const th = ths[i];
                     if (th && th instanceof HTMLElement) {
-                        // Apply pixel-exact widths on the header to mirror the <col>
-                        th.style.minWidth = `${w}px`;
-                        th.style.width = `${w}px`;
-                        th.style.maxWidth = `${w}px`;
+                        // Apply pixel-exact widths on the header to mirror the <col>.
+                        th.style.minWidth = `${widthPx}px`;
+                        th.style.width = `${widthPx}px`;
+                        th.style.maxWidth = `${widthPx}px`;
                     }
                 } catch (e) {
                     // ignore measurement errors
                 }
+            }
+
+            try {
+                const firstCol = table.querySelector<HTMLTableColElement>('col');
+                if (!firstCol) return;
+                const firstWidthPx = Math.max(0, Math.round(firstCol.getBoundingClientRect().width));
+                const stickySecondColumnCells = table.querySelectorAll<HTMLElement>('.sticky-col-2, .sticky-corner-2-2');
+                stickySecondColumnCells.forEach((element) => {
+                    try {
+                        element.style.left = `${firstWidthPx}px`;
+                    } catch (e) {
+                        // ignore per-element measurement errors
+                    }
+                });
+            } catch (e) {
+                // ignore sticky offset measurement errors
             }
         };
 
@@ -970,23 +987,7 @@ const Races: React.FC = () => {
         raf1 = requestAnimationFrame(() => {
             raf2 = requestAnimationFrame(() => {
                 try {
-                    applyHeaderWidths();
-                    // Ensure sticky second-column left offset exactly matches the
-                    // rendered width of the first <col>. Using the measured width
-                    // prevents overlap from rounding differences (don't use a
-                    // visual shunt — it caused inconsistent overlap on mobile).
-                    const table = tableRef.current;
-                    if (table) {
-                        const firstCol = table.querySelector<HTMLTableColElement>('col');
-                        if (firstCol) {
-                            const firstW = Math.max(0, Math.round(firstCol.getBoundingClientRect().width));
-                            const leftPx = firstW; // position second sticky immediately after first
-                            const sticky2 = table.querySelectorAll<HTMLElement>('.sticky-col-2, .sticky-corner-2-2');
-                            sticky2.forEach(el => {
-                                try { el.style.left = `${leftPx}px`; } catch (e) { /* ignore */ }
-                            });
-                        }
-                    }
+                    syncHeaderWidthsAndStickyOffsets();
                 } catch (err) {
                     // ignore
                 }
@@ -994,7 +995,7 @@ const Races: React.FC = () => {
         });
         const onResize = () => {
             // Recompute after layout stabilises
-            requestAnimationFrame(() => requestAnimationFrame(() => applyHeaderWidths()));
+            requestAnimationFrame(() => requestAnimationFrame(() => syncHeaderWidthsAndStickyOffsets()));
         };
         window.addEventListener('resize', onResize);
         window.addEventListener('orientationchange', onResize);
@@ -1005,7 +1006,7 @@ const Races: React.FC = () => {
             if (raf1) cancelAnimationFrame(raf1);
             if (raf2) cancelAnimationFrame(raf2);
         };
-    }, [colWidths, rows]);
+    }, [colWidths, rows, viewMode, courseAdj, otherAdj, isCompactViewport]);
 
     // Column definitions: base (basic) and additional (detailed)
     const baseColumns = [
@@ -1280,7 +1281,7 @@ const Races: React.FC = () => {
                             <div className="results-table-container" ref={containerRef} style={{ marginTop: '0.1cm' }}>
                             <table
                                 key={viewMode}                 // force remount when view changes
-                                className="results-table races-table"
+                                className="results-table races-table eventtest-table"
                                 ref={tableRef}
                                 style={{ ['--races-table-width' as any]: `${racesTableWidthPx}px` }}
                             >
@@ -1303,10 +1304,17 @@ const Races: React.FC = () => {
                             {/* Top header row: first two sticky headers then the remaining column headers */}
                             <tr>
                                 <th
-                                    className="sticky-col sticky-header"
+                                    className="eventtest-col eventtest-sticky-col"
                                     style={{
+                                        ['--event-col-width' as any]: `${fixedLeadingWidths.position}px`,
+                                        ['--event-col-left' as any]: '0px',
                                         fontWeight: 700,
-                                        position: 'relative',
+                                        position: 'sticky',
+                                        top: 0,
+                                        left: 0,
+                                        zIndex: 650,
+                                        backgroundColor: 'rgba(224,224,224,0.98)',
+                                        backgroundClip: 'padding-box',
                                         cursor: 'pointer',
                                         width: `${fixedLeadingWidths.position}px`,
                                         minWidth: `${fixedLeadingWidths.position}px`,
@@ -1315,7 +1323,8 @@ const Races: React.FC = () => {
                                     onClick={() => handleSort('position')}
                                     onTouchEnd={(e) => { e.preventDefault(); handleSort('position'); }}
                                 >
-                                    <span>Pos{sortKey === 'position' ? (sortDir === 'asc' ? ' ▲' : ' ▼') : ''}</span>
+                                    <span className="eventtest-header-label">Pos{sortKey === 'position' ? ' ▲' : ''}{sortKey === 'position' && sortDir === 'desc' ? ' ▼' : ''}</span>
+                                    <span className="eventtest-sort-indicator">{sortKey === 'position' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</span>
                                     <div
                                         role="separator"
                                         aria-orientation="vertical"
@@ -1324,9 +1333,17 @@ const Races: React.FC = () => {
                                     />
                                 </th>
                                     <th
-                                        className="sticky-col-2 sticky-header"
+                                        className="eventtest-col eventtest-sticky-col"
                                         style={{
+                                            ['--event-col-width' as any]: `${fixedLeadingWidths.athlete}px`,
+                                            ['--event-col-left' as any]: `${fixedLeadingWidths.position}px`,
                                             fontWeight: 700,
+                                            position: 'sticky',
+                                            top: 0,
+                                            left: `${fixedLeadingWidths.position}px`,
+                                            zIndex: 645,
+                                            backgroundColor: 'rgba(224,224,224,0.98)',
+                                            backgroundClip: 'padding-box',
                                             textAlign: 'left',
                                             cursor: 'pointer',
                                             width: `${fixedLeadingWidths.athlete}px`,
@@ -1336,7 +1353,8 @@ const Races: React.FC = () => {
                                         onClick={() => handleSort('name')}
                                         onTouchEnd={(e) => { e.preventDefault(); handleSort('name'); }}
                                     >
-                                        <span>Athlete{sortKey === 'name' ? (sortDir === 'asc' ? ' ▲' : ' ▼') : ''}</span>
+                                        <span className="eventtest-header-label">Athlete</span>
+                                        <span className="eventtest-sort-indicator">{sortKey === 'name' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</span>
                                         <div
                                             role="separator"
                                             aria-orientation="vertical"
@@ -1348,10 +1366,14 @@ const Races: React.FC = () => {
                                     {columns.map((col, idx) => (
                                     <th
                                         key={col.k}
-                                        className={`sticky-header ${adjustmentColumns.find(ac => ac.k === col.k) ? 'adjustment-header' : ''}`}
+                                        className={`eventtest-col ${adjustmentColumns.find(ac => ac.k === col.k) ? 'sticky-header adjustment-header' : ''}`}
                                         style={{
+                                            ['--event-col-width' as any]: `${getFixedDataColumnWidth(col.k)}px`,
+                                            ['--event-col-left' as any]: 'auto',
                                             fontWeight: 700,
-                                            position: 'relative',
+                                            position: 'sticky',
+                                            top: 0,
+                                            zIndex: 200,
                                             cursor: 'pointer',
                                             width: `${getFixedDataColumnWidth(col.k)}px`,
                                             minWidth: `${getFixedDataColumnWidth(col.k)}px`,
@@ -1360,7 +1382,8 @@ const Races: React.FC = () => {
                                         onClick={() => handleSort(col.k)}
                                         onTouchEnd={(e) => { e.preventDefault(); handleSort(col.k); }}  // add this
                                     >
-                                        <span>{col.label}{sortKey === col.k ? (sortDir === 'asc' ? ' ▲' : ' ▼') : ''}</span>
+                                        <span className="eventtest-header-label">{col.label}</span>
+                                        <span className="eventtest-sort-indicator">{sortKey === col.k ? (sortDir === 'asc' ? '▲' : '▼') : ''}</span>
                                         <div
                                         role="separator"
                                         aria-orientation="vertical"
@@ -1388,7 +1411,16 @@ const Races: React.FC = () => {
                                     }}
                                 >
                                     {/* First two sticky columns: position, name */}
-                                    <td className="sticky-col">{String(r['position'] ?? '')}</td>
+                                    <td
+                                        className="eventtest-col eventtest-sticky-col"
+                                        style={{
+                                            ['--event-col-width' as any]: `${fixedLeadingWidths.position}px`,
+                                            ['--event-col-left' as any]: '0px',
+                                            width: `${fixedLeadingWidths.position}px`,
+                                            minWidth: `${fixedLeadingWidths.position}px`,
+                                            maxWidth: `${fixedLeadingWidths.position}px`
+                                        }}
+                                    >{String(r['position'] ?? '')}</td>
                                         {
                                             (() => {
                                                 const athleteName = String(r['name'] ?? r['athlete_name'] ?? '');
@@ -1416,7 +1448,17 @@ const Races: React.FC = () => {
                                                 const athleteLabel = athleteName || 'Unknown athlete';
                                                 const hasAthleteCode = athleteCodeValue !== undefined && athleteCodeValue !== null && athleteCodeValue !== '';
                                                 return (
-                                                    <td className="sticky-col-2" style={{ textAlign: 'left' }}>
+                                                    <td
+                                                        className="eventtest-col eventtest-sticky-col"
+                                                        style={{
+                                                            ['--event-col-width' as any]: `${fixedLeadingWidths.athlete}px`,
+                                                            ['--event-col-left' as any]: `${fixedLeadingWidths.position}px`,
+                                                            width: `${fixedLeadingWidths.athlete}px`,
+                                                            minWidth: `${fixedLeadingWidths.athlete}px`,
+                                                            maxWidth: `${fixedLeadingWidths.athlete}px`,
+                                                            textAlign: 'left'
+                                                        }}
+                                                    >
                                                         {hasAthleteCode ? (
                                                             <button
                                                                 type="button"
@@ -1492,13 +1534,15 @@ const Races: React.FC = () => {
                                             const hasHistoric = Number.isFinite(historicRank);
 
                                             const rankType = String(rankTypeRaw || '').trim() || '*';
-                                            const delta = hasCurrent && hasHistoric ? currentRank - historicRank : null;
+                                            const currentRankInt = hasCurrent ? Math.round(currentRank) : null;
+                                            const historicRankInt = hasHistoric ? Math.round(historicRank) : null;
+                                            const delta = currentRankInt !== null && historicRankInt !== null ? currentRankInt - historicRankInt : null;
                                             const deltaText = delta === null ? '' : `${delta >= 0 ? '+' : ''}${delta}`;
 
                                             return (
                                                 <td key={col.k} style={{ ...cellStyle, textAlign: 'center' }}>
                                                     <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
-                                                        <span>{hasCurrent ? String(currentRank) : ''}</span>
+                                                        <span>{currentRankInt !== null ? String(currentRankInt) : ''}</span>
                                                         <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', lineHeight: 1.02 }}>
                                                             <span style={{ fontSize: '0.62rem', opacity: 0.9 }}>{rankType}</span>
                                                             <span style={{ fontSize: '0.62rem', opacity: 0.9 }}>{deltaText}</span>
