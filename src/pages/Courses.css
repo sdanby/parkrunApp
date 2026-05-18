@@ -84,6 +84,12 @@
     margin-top: -0.7cm;
 }
 
+.course-table-wrapper .athlete-runs-table,
+.top250-table-wrapper .athlete-runs-table {
+    width: 100%;
+    max-width: 100%;
+}
+
 .top250-table-wrapper .athlete-runs-table thead th,
 .top250-table-wrapper .athlete-runs-table thead th.athlete-date-header {
     top: 0;

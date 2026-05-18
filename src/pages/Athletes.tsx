@@ -2277,7 +2277,8 @@ const Athletes: React.FC = () => {
     const plotPanelMaxWidth = configuredPlotWidth ?? (isMobile ? '100%' : isPlotExpanded ? '100%' : '20cm');
     const plotControlsMaxWidth = configuredPlotControlsWidth ?? (isMobile ? '100%' : '20cm');
     const plotChartMinWidth = isMobile ? (configuredPlotWidth ?? '10cm') : isPlotExpanded ? '18cm' : '100%';
-    const plotChartHeight = `calc(${plotPanelHeight} - ${isMobile ? '5.2cm' : '4.8cm'})`;
+    const plotCaptionGapReduction = '0.2cm';
+    const plotChartHeight = `calc(${plotPanelHeight} - ${isMobile ? '5.8cm' : '4.9cm'})`;
 
     const hasTimeRatioForPlot = (row: AthleteRecord): boolean => {
         const timeRatio = pickField(row, ['time_ratio', 'timeRatio']);
@@ -2551,6 +2552,12 @@ const Athletes: React.FC = () => {
             return 'events_only';
         });
     };
+
+    const nextPlotEligibilityLabel =
+        plotEligibilityMode === 'all' ? 'Eligible' : plotEligibilityMode === 'eligible' ? 'Best' : 'All';
+
+    const nextPlotSeriesLabel =
+        plotSeriesMode === 'events_only' ? 'Rank Only' : plotSeriesMode === 'rank_only' ? 'Both Series' : 'Events Only';
 
     const togglePlotExpanded = () => {
         if (!canTogglePlotExpand) {
@@ -3211,7 +3218,7 @@ const Athletes: React.FC = () => {
                                             padding: '0 0.65rem'
                                         }}
                                     >
-                                        {plotEligibilityMode === 'all' ? 'All' : plotEligibilityMode === 'eligible' ? 'Eligible' : 'Best'}
+                                        {nextPlotEligibilityLabel}
                                     </button>
                                     <button
                                         type="button"
@@ -3228,7 +3235,7 @@ const Athletes: React.FC = () => {
                                             padding: '0 0.65rem'
                                         }}
                                     >
-                                        {plotSeriesMode === 'events_only' ? 'Events Only' : plotSeriesMode === 'rank_only' ? 'Rank Only' : 'Both Series'}
+                                        {nextPlotSeriesLabel}
                                     </button>
                                     {canTogglePlotExpand && (
                                         <button
@@ -3310,17 +3317,29 @@ const Athletes: React.FC = () => {
                                         </button>
                                     </div>
                                     <div style={{ padding: '0.6rem 0.8rem 0.9rem 0.8rem' }}>
+                                        <div
+                                            style={{
+                                                color: '#6b7280',
+                                                fontSize: '0.75rem',
+                                                fontWeight: 400,
+                                                lineHeight: 1.2,
+                                                textAlign: 'left',
+                                                marginBottom: `calc(0.35rem - ${plotCaptionGapReduction})`
+                                            }}
+                                        >
+                                            Click on point in graph to see event
+                                        </div>
                                         {plotPointsFilteredByEligibility.length === 0 ? (
                                             <div style={{ color: '#6b7280', fontSize: '0.9rem' }}>No plot data available.</div>
                                         ) : (
                                             <>
-                                            <div style={{ width: '100%', height: plotChartHeight, minHeight: isMobile ? '3.0cm' : '3.6cm', overflow: 'hidden' }}>
+                                            <div style={{ width: '100%', height: `calc(${plotChartHeight} + ${plotCaptionGapReduction})`, minHeight: isMobile ? '3.0cm' : '3.6cm', overflow: 'hidden' }}>
                                                 <ReactECharts
                                                     ref={plotChartRef}
                                                     option={plotOption ?? {}}
                                                     notMerge
                                                     lazyUpdate
-                                                    style={{ width: '100%', minWidth: plotChartMinWidth, height: '100%' }}
+                                                    style={{ width: '100%', minWidth: plotChartMinWidth, height: '100%', marginTop: `-${plotCaptionGapReduction}` }}
                                                     onEvents={{
                                                         datazoom: handlePlotDataZoom,
                                                         click: (params: any) => {

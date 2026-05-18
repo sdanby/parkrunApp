@@ -216,7 +216,7 @@
       "type": "plot",
       "name": "plotContainer",
       "laptop": { "width": "16cm", "height": "14cm" },
-      "mobile": { "width": "11.6cm", "height": "12.5cm" },
+      "mobile": { "width": "11.7cm", "height": "12.5cm" },
       "laptopExpanded": { "width": "30cm", "height": "16cm" },
       "mobileExpanded": { "width": "13.5cm", "height": "13cm" }
     },
@@ -231,7 +231,7 @@
       "id": "participant.tableContainer",
       "type": "table",
       "name": "tableContainer",
-      "laptop": { "x": "0cm", "y": "4.0cm", "width": "40cm", "height": "17cm" },
+      "laptop": { "x": "0cm", "y": "4.0cm", "width": "50cm", "height": "17cm" },
       "mobile": { "x": "0cm", "y": "4.0cm", "width": "30cm", "height": "12.4cm" }
     }
   ],
@@ -304,19 +304,19 @@
         }
       },
       "style": { "textAlign": "left" },
-      "laptop": { "width": "60px" },
-      "mobile": { "width": "60px" }
+      "laptop": { "width": "75px" },
+      "mobile": { "width": "75px" }
     },
-    { "key": "event_display", "type": "table", "name": "event_display", "headerName": "Event name", "interaction": { "enabled": true, "action": "navigate", "target": "/courses_test", "navMode": "stack", "params": { "event_name": "$row.event_display" } }, "style": { "textAlign": "left" }, "laptop": { "width": "90px" }, "mobile": { "width": "90px" } },
-    { "key": "position", "type": "table", "name": "position", "headerName": "Pos", "style": { "textAlign": "center" }, "laptop": { "width": "30px" }, "mobile": { "width": "30px" } },
-    { "key": "time", "type": "table", "name": "time", "headerName": "Time", "style": { "textAlign": "center", "timeDisplayFormat": "mm:ss" }, "laptop": { "width": "40px" }, "mobile": { "width": "40px" } },
-    { "key": "age_group", "type": "table", "name": "age_group", "headerName": "Age grp", "style": { "textAlign": "center" }, "laptop": { "width": "60px" }, "mobile": { "width": "60px" } },
-    { "key": "age_grade", "type": "table", "name": "age_grade", "headerName": "Age grd", "style": { "textAlign": "center" }, "laptop": { "width": "60px" }, "mobile": { "width": "60px" } },
-    { "key": "best_curve_ranking_current", "type": "table", "name": "best_curve_ranking_current", "headerName": "Rank", "style": { "textAlign": "center", "subFontSize": "0.62rem" }, "laptop": { "width": "58px" }, "mobile": { "width": "58px" } },
-    { "key": "comment", "type": "table", "name": "comment", "headerName": "Detail", "style": { "textAlign": "left" }, "laptop": { "width": "80px" }, "mobile": { "width": "80px" } },
+    { "key": "event_display", "type": "table", "name": "event_display", "headerName": "Event name", "interaction": { "enabled": true, "action": "navigate", "target": "/courses_test", "navMode": "stack", "params": { "event_name": "$row.event_display" } }, "style": { "textAlign": "left" }, "laptop": { "width": "140px" }, "mobile": { "width": "120px" } },
+    { "key": "position", "type": "table", "name": "position", "headerName": "Pos", "style": { "textAlign": "center" }, "laptop": { "width": "50px" }, "mobile": { "width": "50px" } },
+    { "key": "time", "type": "table", "name": "time", "headerName": "Time", "style": { "textAlign": "center", "timeDisplayFormat": "mm:ss" }, "laptop": { "width": "70px" }, "mobile": { "width": "70px" } },
+    { "key": "age_group", "type": "table", "name": "age_group", "headerName": "Age grp", "style": { "textAlign": "center" }, "laptop": { "width": "75px" }, "mobile": { "width": "75px" } },
+    { "key": "age_grade", "type": "table", "name": "age_grade", "headerName": "Age grd", "style": { "textAlign": "center" }, "laptop": { "width": "73px" }, "mobile": { "width": "73px" } },
+    { "key": "best_curve_ranking_current", "type": "table", "name": "best_curve_ranking_current", "headerName": "Rank", "style": { "textAlign": "center", "subFontSize": "0.62rem" }, "laptop": { "width": "60px" }, "mobile": { "width": "60px" } },
+    { "key": "comment", "type": "table", "name": "comment", "headerName": "Detail", "style": { "textAlign": "center" }, "laptop": { "width": "90px" }, "mobile": { "width": "90px" } },
 
-    { "key": "season_adj_time", "type": "table", "name": "season_adj_time", "headerName": "Season", "style": { "textAlign": "center", "timeDisplayFormat": "mm:ss" }, "laptop": { "width": "70px" }, "mobile": { "width": "70px" } },
-    { "key": "event_adj_time", "type": "table", "name": "event_adj_time", "headerName": "Event", "style": { "textAlign": "center", "timeDisplayFormat": "mm:ss" }, "laptop": { "width": "70px" }, "mobile": { "width": "70px" } },
+    { "key": "season_adj_time", "type": "table", "name": "season_adj_time", "headerName": "Season", "style": { "textAlign": "center", "timeDisplayFormat": "mm:ss" }, "laptop": { "width": "90px" }, "mobile": { "width": "90px" } },
+    { "key": "event_adj_time", "type": "table", "name": "event_adj_time", "headerName": "Event", "style": { "textAlign": "center", "timeDisplayFormat": "mm:ss" }, "laptop": { "width": "75px" }, "mobile": { "width": "75px" } },
     { "key": "age_adj_time", "type": "table", "name": "age_adj_time", "headerName": "Age", "style": { "textAlign": "center", "timeDisplayFormat": "mm:ss" }, "laptop": { "width": "70px" }, "mobile": { "width": "70px" } },
     { "key": "sex_adj_time", "type": "table", "name": "sex_adj_time", "headerName": "Sex", "style": { "textAlign": "center", "timeDisplayFormat": "mm:ss" }, "laptop": { "width": "70px" }, "mobile": { "width": "70px" } },
     { "key": "event_age_adj_time", "type": "table", "name": "event_age_adj_time", "headerName": "Ev+Age", "style": { "textAlign": "center", "timeDisplayFormat": "mm:ss" }, "laptop": { "width": "80px" }, "mobile": { "width": "80px" } },
@@ -324,15 +324,15 @@
     { "key": "age_sex_adj_time", "type": "table", "name": "age_sex_adj_time", "headerName": "Age+Sex", "style": { "textAlign": "center", "timeDisplayFormat": "mm:ss" }, "laptop": { "width": "80px" }, "mobile": { "width": "80px" } },
     { "key": "event_age_sex_adj_time", "type": "table", "name": "event_age_sex_adj_time", "headerName": "Ev+Age+Sex", "style": { "textAlign": "center", "timeDisplayFormat": "mm:ss" }, "laptop": { "width": "100px" }, "mobile": { "width": "100px" } },
 
-    { "key": "club", "type": "table", "name": "club", "headerName": "Club", "interaction": { "enabled": true, "action": "navigate", "target": "/clubs", "navMode": "stack", "params": { "club": "$row.club" } }, "style": { "textAlign": "left" }, "laptop": { "width": "120px" }, "mobile": { "width": "100px" } },
-    { "key": "last_position", "type": "table", "name": "last_position", "headerName": "Event total", "style": { "textAlign": "center" }, "laptop": { "width": "80px" }, "mobile": { "width": "70px" } },
-    { "key": "event_number", "type": "table", "name": "event_number", "headerName": "Event No", "style": { "textAlign": "center" }, "laptop": { "width": "70px" }, "mobile": { "width": "60px" } },
-    { "key": "total_runs_long", "type": "table", "name": "total_runs_long", "headerName": "Runs in 1Y", "style": { "textAlign": "center" }, "laptop": { "width": "80px" }, "mobile": { "width": "70px" } },
-    { "key": "event_eligible_appearances", "type": "table", "name": "event_eligible_appearances", "headerName": "Eligible events", "style": { "textAlign": "center" }, "laptop": { "width": "100px" }, "mobile": { "width": "90px" } },
-    { "key": "last_event_code_count_long", "type": "table", "name": "last_event_code_count_long", "headerName": "Event Count", "style": { "textAlign": "center" }, "laptop": { "width": "90px" }, "mobile": { "width": "80px" } },
-    { "key": "distinct_courses_long", "type": "table", "name": "distinct_courses_long", "headerName": "Distinct events", "style": { "textAlign": "center" }, "laptop": { "width": "110px" }, "mobile": { "width": "100px" } },
-    { "key": "tourist_flag", "type": "table", "name": "tourist_flag", "headerName": "Tourist", "style": { "textAlign": "center" }, "laptop": { "width": "60px" }, "mobile": { "width": "60px" } },
-    { "key": "super_tourist", "type": "table", "name": "super_tourist", "headerName": "Super tourist", "style": { "textAlign": "center" }, "laptop": { "width": "90px" }, "mobile": { "width": "80px" } },
-    { "key": "returner", "type": "table", "name": "returner", "headerName": "Returner", "style": { "textAlign": "center" }, "laptop": { "width": "70px" }, "mobile": { "width": "60px" } }
+    { "key": "club", "type": "table", "name": "club", "headerName": "Club", "interaction": { "enabled": true, "action": "navigate", "target": "/clubs", "navMode": "stack", "params": { "club": "$row.club" } }, "style": { "textAlign": "left" }, "laptop": { "width": "140px" }, "mobile": { "width": "140px" } },
+    { "key": "last_position", "type": "table", "name": "last_position", "headerName": "Event total", "style": { "textAlign": "center" }, "laptop": { "width": "90px" }, "mobile": { "width": "90px" } },
+    { "key": "event_number", "type": "table", "name": "event_number", "headerName": "Event No", "style": { "textAlign": "center" }, "laptop": { "width": "80px" }, "mobile": { "width": "80px" } },
+    { "key": "total_runs_long", "type": "table", "name": "total_runs_long", "headerName": "Runs in 1Y", "style": { "textAlign": "center" }, "laptop": { "width": "90px" }, "mobile": { "width": "90px" } },
+    { "key": "event_eligible_appearances", "type": "table", "name": "event_eligible_appearances", "headerName": "Eligible events", "style": { "textAlign": "center" }, "laptop": { "width": "120px" }, "mobile": { "width": "120px" } },
+    { "key": "last_event_code_count_long", "type": "table", "name": "last_event_code_count_long", "headerName": "Event Count", "style": { "textAlign": "center" }, "laptop": { "width": "100px" }, "mobile": { "width": "100px" } },
+    { "key": "distinct_courses_long", "type": "table", "name": "distinct_courses_long", "headerName": "Distinct events", "style": { "textAlign": "center" }, "laptop": { "width": "120px" }, "mobile": { "width": "120px" } },
+    { "key": "tourist_flag", "type": "table", "name": "tourist_flag", "headerName": "Tourist", "style": { "textAlign": "center" }, "laptop": { "width": "80px" }, "mobile": { "width": "80px" } },
+    { "key": "super_tourist", "type": "table", "name": "super_tourist", "headerName": "Super tourist", "style": { "textAlign": "center" }, "laptop": { "width": "115px" }, "mobile": { "width": "115px" } },
+    { "key": "returner", "type": "table", "name": "returner", "headerName": "Returner", "style": { "textAlign": "center" }, "laptop": { "width": "90px" }, "mobile": { "width": "90px" } }
   ]
 }

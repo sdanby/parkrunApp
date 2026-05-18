@@ -389,7 +389,6 @@ const top250BasicColumns: ColumnDef[] = [
     { key: 'name', label: 'Participants', align: 'left', desktopWidth: 150, mobileWidth: 140 },
     { key: 'total_count', label: 'Total', align: 'center', desktopWidth: 58, mobileWidth: 52 },
     { key: 'appearances', label: 'Events', align: 'center', desktopWidth: 62, mobileWidth: 58 },
-    { key: 'best_curve_ranking_current', label: 'Cur. Rank', align: 'center', desktopWidth: 68, mobileWidth: 62 },
     { key: 'min_time_mmss', label: 'Best time', align: 'center', desktopWidth: 68, mobileWidth: 62 },
     { key: 'last_run_date', label: 'Last Event', align: 'center', desktopWidth: 78, mobileWidth: 72 }
 ];
@@ -398,6 +397,7 @@ const top250DetailedOnlyColumns: ColumnDef[] = [
     { key: 'volunteer_count', label: 'Volunts', align: 'center', desktopWidth: 58, mobileWidth: 52 },
     { key: 'club', label: 'Club', align: 'left', desktopWidth: 120, mobileWidth: 110 },
     { key: 'best_curve_ranking_historic', label: 'Hist Rank', align: 'center', desktopWidth: 68, mobileWidth: 62 },
+    { key: 'best_curve_ranking_current', label: 'Cur. Rank', align: 'center', desktopWidth: 68, mobileWidth: 62 },
     { key: 'best_curve_ranking_current_type', label: 'Rank Type', align: 'center', desktopWidth: 76, mobileWidth: 72 },
     { key: 'min_event_adj_mmss', label: 'Ev adj time', align: 'center', desktopWidth: 78, mobileWidth: 72 },
     { key: 'min_age_event_adj_mmss', label: 'AE adj time', align: 'center', desktopWidth: 78, mobileWidth: 72 },
@@ -1600,19 +1600,20 @@ const CourseTest: React.FC = () => {
 
     const tablePanelTop = String(activeTableContainerSpec?.y ?? pTableContainer?.y ?? tableContainerElement?.[viewport]?.y ?? '3cm');
     const tablePanelLeft = String(activeTableContainerSpec?.x ?? pTableContainer?.x ?? tableContainerElement?.[viewport]?.x ?? '0cm');
+    const configuredTableContainerWidth = activeTableContainerSpec?.width ?? pTableContainer?.width;
     
     // Calculate table width: use tableWidthMode for table mode, detailed width for top250
     const getTablePanelWidth = () => {
         if (panelMode === 'table') {
-            // Main course table: width driven exclusively by tableWidthMode config (basic/detailed)
-            return String(tableWidthMode?.[viewport]?.[viewMode] ?? (isMobile ? '11cm' : '14.6cm'));
+            // Allow course.tableContainer width to override tableWidthMode when explicitly configured.
+            return String(configuredTableContainerWidth ?? tableWidthMode?.[viewport]?.[viewMode] ?? (isMobile ? '11cm' : '14.6cm'));
         }
         if (panelMode === 'top250') {
             // Top250 table: always uses detailed width from tableWidthMode (no basic option)
             return String(tableWidthMode?.[viewport]?.['detailed'] ?? (isMobile ? '15.5cm' : '33.6cm'));
         }
         // For plot modes: use tableContainer x/y/height positioning (width from plots themselves)
-        return String(activeTableContainerSpec?.width ?? pTableContainer?.width ?? (isMobile ? '11cm' : '20cm'));
+        return String(configuredTableContainerWidth ?? (isMobile ? '11cm' : '20cm'));
     };
     const tablePanelWidth = getTablePanelWidth();
     
@@ -1626,6 +1627,7 @@ const CourseTest: React.FC = () => {
     const groupsPanelTop = String(activeGroupsPanelSpec?.y ?? pGroupsPanel?.y ?? (isMobile ? '12cm' : '2cm'));
     const groupsPanelLeft = String(activeGroupsPanelSpec?.x ?? pGroupsPanel?.x ?? '0cm');
     const groupsPanelWidth = String(activeGroupsPanelSpec?.width ?? pGroupsPanel?.width ?? (isMobile ? '11cm' : '21.2cm'));
+    const groupsWindowWidth = 'calc(100% - 0.6cm)';
     const groupsPlotWidth = '100%';
     const showTypeGroupBars = groupsBarMode === 'type' || groupsBarMode === 'both';
     const showAgeGroupBars = groupsBarMode === 'age' || groupsBarMode === 'both';
@@ -2212,7 +2214,7 @@ const CourseTest: React.FC = () => {
                                     marginRight: '0.3cm',
                                     overflow: 'hidden',
                                     boxShadow: '0 10px 18px rgba(15, 23, 42, 0.08)',
-                                    width: activeTableContainerSpec?.width,
+                                    width: groupsWindowWidth,
                                     height: groupsWindowFixedHeight,
                                     minHeight: groupsWindowHeight
                                 }}
@@ -2366,7 +2368,7 @@ const CourseTest: React.FC = () => {
                                     marginRight: '0.3cm',
                                     overflow: 'hidden',
                                     boxShadow: '0 10px 18px rgba(15, 23, 42, 0.08)',
-                                    width: activeTableContainerSpec?.width,
+                                    width: groupsWindowWidth,
                                     height: groupsWindowFixedHeight,
                                     minHeight: groupsWindowHeight
                                 }}
@@ -2487,7 +2489,7 @@ const CourseTest: React.FC = () => {
                                     marginRight: '0.3cm',
                                     overflow: 'hidden',
                                     boxShadow: '0 10px 18px rgba(15, 23, 42, 0.08)',
-                                    width: activeTableContainerSpec?.width,
+                                    width: groupsWindowWidth,
                                     height: groupsWindowFixedHeight,
                                     minHeight: groupsWindowHeight
                                 }}
@@ -2655,7 +2657,10 @@ const CourseTest: React.FC = () => {
                                 left: isMobile ? 'auto' : tablePanelLeft,
                                 top: isMobile ? 'auto' : tablePanelTop,
                                 width: tablePanelWidth,
-                                minHeight: tablePanelMinHeight
+                                height: tablePanelMinHeight,
+                                maxHeight: tablePanelMinHeight,
+                                overflowX: 'auto',
+                                overflowY: 'auto'
                             }}
                         >
                             {top250Loading ? (

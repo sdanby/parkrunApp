@@ -724,11 +724,13 @@ h1, h2, h3 {
     min-width: 0;
     max-width: none;
     border-collapse: collapse;
+    table-layout: fixed;
     font-size: 0.78rem;
     color: #1f2933;
 }
 .athlete-runs-table th,
 .athlete-runs-table td {
+    box-sizing: border-box;
     padding: 0.4rem 0.65rem;
     border: 1px solid #d9dde5;
     white-space: nowrap;
