@@ -21,6 +21,19 @@ export type EventOption = {
     eventName: string;
 };
 
+export type ClubCourseSummaryRecord = {
+    event_code: number | string;
+    event_name: string;
+    events_held_all_history: number;
+    club_runs_all_history: number;
+    athletes_all_history: number;
+    rank_all_history: number;
+    events_held_last_year: number;
+    club_runs_last_year: number;
+    athletes_last_year: number;
+    rank_last_year: number;
+};
+
 export type AdminStatusResponse = {
     adminCount: number;
     bootstrapOpen: boolean;
@@ -264,6 +277,20 @@ export const fetchClubMembers = async (club: string, limit = 1000) => {
         return response.data;
     } catch (error) {
         console.error('Error fetching club members:', error);
+        throw error;
+    }
+};
+
+export const fetchClubCourseSummary = async (club: string, limit = 1000): Promise<ClubCourseSummaryRecord[]> => {
+    try {
+        const params = new URLSearchParams();
+        params.set('club', club);
+        params.set('limit', String(limit));
+        const url = `${API_BASE_URL}/api/clubs/course-summary?${params.toString()}`;
+        const response = await axios.get(url);
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching club course summary:', error);
         throw error;
     }
 };

@@ -778,13 +778,13 @@ const Athletes: React.FC = () => {
         if (typeof sortKeyFromQuery === 'string' && sortKeyFromQuery.trim()) {
             return sortKeyFromQuery as ColumnKey;
         }
-        return storedAthletesState.sortKey || 'date';
+        return 'date';
     });
     const [sortDir, setSortDir] = useState<'asc' | 'desc'>(() => {
         if (sortDirFromQuery === 'asc' || sortDirFromQuery === 'desc') {
             return sortDirFromQuery;
         }
-        return storedAthletesState.sortDir || 'desc';
+        return 'desc';
     });
     const [plotEligibilityMode, setPlotEligibilityMode] = useState<'all' | 'eligible' | 'best'>(() => {
         if (plotEligibilityFromQuery === 'all' || plotEligibilityFromQuery === 'eligible' || plotEligibilityFromQuery === 'best') {

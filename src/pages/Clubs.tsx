@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { fetchAthleteRuns } from '../api/backendAPI';
+import { ClubCourseSummaryRecord, fetchAthleteRuns } from '../api/backendAPI';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { fetchClubMembers, fetchClubsSearch } from '../api/backendAPI';
+import { fetchClubCourseSummary, fetchClubMembers, fetchClubsSearch } from '../api/backendAPI';
 import { navigateBackWithNavStack, navigateWithNavStack } from '../utils/navigationStack';
 import './ResultsTable.css';
 import './Clubs.css';
@@ -36,6 +36,7 @@ type ClubMember = {
     athlete_code: string;
     name: string;
     current_club: string | null;
+    latest_age_group: string | null;
     club_runs_total: number | null;
     club_runs_last_year: number | null;
     first_club_run_date: string | null;
@@ -73,24 +74,61 @@ type ClubColumn = {
     mobileWidth?: number;
 };
 
+type ClubCourseSummaryColumn = {
+    key: keyof ClubCourseSummaryRecord;
+    label: string;
+    align?: 'left' | 'center' | 'right';
+    desktopWidth?: number;
+    mobileWidth?: number;
+};
+
 const clubColumns: ClubColumn[] = [
-    { key: 'name', label: 'Participants', align: 'left', desktopWidth: 115, mobileWidth: 115 },
-    { key: 'club_runs_total', label: 'Club runs', align: 'center', desktopWidth: 62, mobileWidth: 60 },
-    { key: 'club_runs_last_year', label: 'Club runs 1y', align: 'center', desktopWidth: 65, mobileWidth: 64 },
-    { key: 'total_runs_all_clubs', label: 'All runs', align: 'center', desktopWidth: 60, mobileWidth: 60 },
-    { key: 'first_club_run_date', label: '1st club run', align: 'center', desktopWidth: 75, mobileWidth: 73 },
-    { key: 'last_club_run_date', label: 'Lst club run', align: 'center', desktopWidth: 75, mobileWidth: 73 },
-    { key: 'fastest_time', label: 'Best time', align: 'center', desktopWidth: 60, mobileWidth: 58 },
-    { key: 'best_event_adj_time', label: 'Ev adj', align: 'center', desktopWidth: 55, mobileWidth: 55 },
-    { key: 'best_age_event_adj_time', label: 'AE adj', align: 'center', desktopWidth: 55, mobileWidth: 54 },
-    { key: 'best_age_sex_event_adj_time', label: 'AES adj', align: 'center', desktopWidth: 57, mobileWidth: 55 },
-    { key: 'best_curve_ranking_current', label: 'Cur rank', align: 'center', desktopWidth: 55, mobileWidth: 54 },
-    { key: 'best_curve_ranking_historic', label: 'Hist rank', align: 'center', desktopWidth: 55, mobileWidth: 54 },
-    { key: 'best_curve_ranking_current_type', label: 'Rank type', align: 'center', desktopWidth: 60, mobileWidth: 60 },
-    { key: 'current_club', label: 'Current club', align: 'left', desktopWidth: 132, mobileWidth: 120 }
+    { key: 'name', label: 'Participants', align: 'left', desktopWidth: 130, mobileWidth: 130 },
+    { key: 'club_runs_total', label: 'Club runs', align: 'center', desktopWidth: 100, mobileWidth: 100 },
+    { key: 'club_runs_last_year', label: 'Club runs 1y', align: 'center', desktopWidth: 105, mobileWidth: 105 },
+    { key: 'total_runs_all_clubs', label: 'All runs', align: 'center', desktopWidth: 75, mobileWidth: 75 },
+    { key: 'first_club_run_date', label: '1st club run', align: 'center', desktopWidth: 100, mobileWidth: 100 },
+    { key: 'last_club_run_date', label: 'Lst club run', align: 'center', desktopWidth: 100, mobileWidth: 100 },
+    { key: 'fastest_time', label: 'Best time', align: 'center', desktopWidth: 85, mobileWidth: 85 },
+    { key: 'best_event_adj_time', label: 'Ev adj', align: 'center', desktopWidth: 65, mobileWidth: 65 },
+    { key: 'best_age_event_adj_time', label: 'AE adj', align: 'center', desktopWidth: 65, mobileWidth: 65 },
+    { key: 'best_age_sex_event_adj_time', label: 'AES adj', align: 'center', desktopWidth: 75, mobileWidth: 75 },
+    { key: 'best_curve_ranking_current', label: 'Cur rank', align: 'center', desktopWidth: 85, mobileWidth: 85 },
+    { key: 'best_curve_ranking_historic', label: 'Hist rank', align: 'center', desktopWidth: 85, mobileWidth: 85 },
+    { key: 'best_curve_ranking_current_type', label: 'Rank type', align: 'center', desktopWidth: 85, mobileWidth: 85 },
+    { key: 'latest_age_group', label: 'Age grp', align: 'center', desktopWidth: 78, mobileWidth: 76 },
+    { key: 'current_club', label: 'Current club', align: 'left', desktopWidth: 150, mobileWidth: 140 }
+];
+
+const clubCourseSummaryColumns: ClubCourseSummaryColumn[] = [
+    { key: 'event_name', label: 'Course', align: 'left', desktopWidth: 155, mobileWidth: 145 },
+    { key: 'events_held_all_history', label: 'Events', align: 'center', desktopWidth: 75, mobileWidth: 72 },
+    { key: 'club_runs_all_history', label: 'Runs', align: 'center', desktopWidth: 75, mobileWidth: 72 },
+    { key: 'athletes_all_history', label: 'Athletes', align: 'center', desktopWidth: 80, mobileWidth: 76 },
+    { key: 'rank_all_history', label: 'Rank', align: 'center', desktopWidth: 70, mobileWidth: 66 },
+    { key: 'events_held_last_year', label: 'Events 1y', align: 'center', desktopWidth: 85, mobileWidth: 82 },
+    { key: 'club_runs_last_year', label: 'Runs 1y', align: 'center', desktopWidth: 80, mobileWidth: 76 },
+    { key: 'athletes_last_year', label: 'Athletes 1y', align: 'center', desktopWidth: 92, mobileWidth: 88 },
+    { key: 'rank_last_year', label: 'Rank 1y', align: 'center', desktopWidth: 78, mobileWidth: 74 }
 ];
 
 const clubSortableKeys = new Set<keyof ClubMember>(clubColumns.map((column) => column.key));
+const clubCourseSummarySortableKeys = new Set<keyof ClubCourseSummaryRecord>(clubCourseSummaryColumns.map((column) => column.key));
+
+const CLUBS_MOBILE_BREAKPOINT = 768;
+
+const getClubColumnStyle = (column: ClubColumn | ClubCourseSummaryColumn, isMobileViewport: boolean): React.CSSProperties => {
+    const selectedWidth = isMobileViewport
+        ? (column.mobileWidth ?? column.desktopWidth)
+        : (column.desktopWidth ?? column.mobileWidth);
+    const width = selectedWidth ? `${selectedWidth}px` : undefined;
+    return {
+        textAlign: column.align ?? 'left',
+        width,
+        minWidth: width,
+        maxWidth: width
+    };
+};
 
 const normalizeClubName = (value: string | null | undefined): string => {
     return String(value ?? '').trim().replace(/\s+/g, ' ').toLowerCase();
@@ -108,6 +146,11 @@ const modeButtonLabel = (mode: ClubMode): string => {
     if (mode === 'current_members') return 'Current\nMembers';
     if (mode === 'events') return 'Events';
     return 'Members';
+};
+
+const getNextMode = (mode: ClubMode): ClubMode => {
+    const idx = modeOrder.indexOf(mode);
+    return modeOrder[(idx + 1) % modeOrder.length];
 };
 
 const formatSqlDate = (value: string | null | undefined): string => {
@@ -149,6 +192,10 @@ const formatDisplayValue = (key: keyof ClubMember, value: unknown): string => {
     if (key === 'first_club_run_date' || key === 'last_club_run_date') {
         return formatSqlDate(String(value));
     }
+    if (key === 'best_curve_ranking_current' || key === 'best_curve_ranking_historic') {
+        const numericValue = parseNumber(value);
+        return numericValue === null ? '' : String(Math.round(numericValue));
+    }
     return String(value);
 };
 
@@ -172,6 +219,27 @@ const compareClubValues = (a: ClubMember, b: ClubMember, key: keyof ClubMember, 
     const rightTime = parseTimeToSeconds(right);
     if (leftTime !== null && rightTime !== null) {
         return direction === 'asc' ? leftTime - rightTime : rightTime - leftTime;
+    }
+
+    const leftText = left === null || left === undefined ? '' : String(left).toLowerCase();
+    const rightText = right === null || right === undefined ? '' : String(right).toLowerCase();
+    const result = leftText.localeCompare(rightText);
+    return direction === 'asc' ? result : -result;
+};
+
+const compareClubCourseSummaryValues = (
+    a: ClubCourseSummaryRecord,
+    b: ClubCourseSummaryRecord,
+    key: keyof ClubCourseSummaryRecord,
+    direction: ClubSortDirection
+): number => {
+    const left = a[key];
+    const right = b[key];
+
+    const leftNumber = parseNumber(left);
+    const rightNumber = parseNumber(right);
+    if (leftNumber !== null && rightNumber !== null) {
+        return direction === 'asc' ? leftNumber - rightNumber : rightNumber - leftNumber;
     }
 
     const leftText = left === null || left === undefined ? '' : String(left).toLowerCase();
@@ -296,6 +364,10 @@ const Clubs: React.FC = () => {
     const [membersLoading, setMembersLoading] = useState(false);
     const [sortKey, setSortKey] = useState<keyof ClubMember>(initialSortKey);
     const [sortDirection, setSortDirection] = useState<ClubSortDirection>(initialSortDirection);
+    const [courseSummaryRows, setCourseSummaryRows] = useState<ClubCourseSummaryRecord[]>([]);
+    const [courseSummaryLoading, setCourseSummaryLoading] = useState(false);
+    const [courseSummarySortKey, setCourseSummarySortKey] = useState<keyof ClubCourseSummaryRecord>('club_runs_all_history');
+    const [courseSummarySortDirection, setCourseSummarySortDirection] = useState<ClubSortDirection>('desc');
     const [drillHistory, setDrillHistory] = useState<ClubViewState[]>([]);
     const [localHighlightAthleteCode, setLocalHighlightAthleteCode] = useState<string>(highlightedAthleteCode);
     const containerRef = useRef<HTMLDivElement | null>(null);
@@ -304,6 +376,24 @@ const Clubs: React.FC = () => {
     const [dropdownTop, setDropdownTop] = useState(0);
     const [dropdownLeft, setDropdownLeft] = useState(0);
     const [dropdownWidth, setDropdownWidth] = useState(0);
+    const [isMobileViewport, setIsMobileViewport] = useState(() => {
+        if (typeof window === 'undefined') {
+            return false;
+        }
+        return window.innerWidth <= CLUBS_MOBILE_BREAKPOINT;
+    });
+
+    useEffect(() => {
+        const handleResize = () => {
+            setIsMobileViewport(window.innerWidth <= CLUBS_MOBILE_BREAKPOINT);
+        };
+
+        handleResize();
+        window.addEventListener('resize', handleResize);
+        return () => {
+            window.removeEventListener('resize', handleResize);
+        };
+    }, []);
 
     const activeHighlightAthleteCode = localHighlightAthleteCode || highlightedAthleteCode;
 
@@ -462,6 +552,8 @@ const Clubs: React.FC = () => {
         setClubMode('members');
         setSortKey('club_runs_total');
         setSortDirection('desc');
+        setCourseSummarySortKey('club_runs_all_history');
+        setCourseSummarySortDirection('desc');
         setDrillHistory([]);
         setLocalHighlightAthleteCode('');
     };
@@ -509,6 +601,35 @@ const Clubs: React.FC = () => {
         };
     }, [selectedClub]);
 
+    useEffect(() => {
+        if (!selectedClub) {
+            return;
+        }
+
+        let cancelled = false;
+        setCourseSummaryLoading(true);
+        fetchClubCourseSummary(selectedClub.club)
+            .then((data) => {
+                if (!cancelled) {
+                    setCourseSummaryRows(Array.isArray(data) ? data : []);
+                }
+            })
+            .catch(() => {
+                if (!cancelled) {
+                    setCourseSummaryRows([]);
+                }
+            })
+            .finally(() => {
+                if (!cancelled) {
+                    setCourseSummaryLoading(false);
+                }
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [selectedClub]);
+
     const sortedMembers = useMemo(() => {
         const copy = [...members];
         copy.sort((left, right) => compareClubValues(left, right, sortKey, sortDirection));
@@ -524,6 +645,18 @@ const Clubs: React.FC = () => {
         setSortDirection('asc');
     };
 
+    const onSortCourseSummaryColumn = (key: keyof ClubCourseSummaryRecord) => {
+        if (!clubCourseSummarySortableKeys.has(key)) {
+            return;
+        }
+        if (courseSummarySortKey === key) {
+            setCourseSummarySortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+            return;
+        }
+        setCourseSummarySortKey(key);
+        setCourseSummarySortDirection('asc');
+    };
+
     const rowsToRender = useMemo(() => {
         if (clubMode !== 'current_members') {
             return sortedMembers;
@@ -535,14 +668,19 @@ const Clubs: React.FC = () => {
         return sortedMembers.filter((member) => normalizeClubName(member.current_club) === selectedClubName);
     }, [clubMode, selectedClub?.club, sortedMembers]);
 
+    const sortedCourseSummaryRows = useMemo(() => {
+        const copy = [...courseSummaryRows];
+        copy.sort((left, right) => compareClubCourseSummaryValues(left, right, courseSummarySortKey, courseSummarySortDirection));
+        return copy;
+    }, [courseSummaryRows, courseSummarySortDirection, courseSummarySortKey]);
+
     const activeMembersCount = selectedClub
         ? (selectedClub.athlete_count > 0 ? selectedClub.athlete_count : members.length)
         : 0;
 
     const handleToggleMode = () => {
         setClubMode((prev) => {
-            const idx = modeOrder.indexOf(prev);
-            return modeOrder[(idx + 1) % modeOrder.length];
+            return getNextMode(prev);
         });
     };
 
@@ -569,7 +707,41 @@ const Clubs: React.FC = () => {
         setClubMode('members');
         setSortKey('club_runs_total');
         setSortDirection('desc');
+        setCourseSummarySortKey('club_runs_all_history');
+        setCourseSummarySortDirection('desc');
         setLocalHighlightAthleteCode('');
+    };
+
+    const handleCourseOpen = (row: ClubCourseSummaryRecord) => {
+        const eventCode = String(row.event_code ?? '').trim();
+        const eventName = String(row.event_name ?? '').trim();
+        if (!eventCode) {
+            return;
+        }
+
+        const params = new URLSearchParams();
+        params.set('event_code', eventCode);
+        if (eventName) {
+            params.set('event_name', eventName);
+        }
+
+        const returnParams = new URLSearchParams();
+        if (selectedClub?.club) {
+            returnParams.set('club', selectedClub.club);
+        }
+        returnParams.set('club_mode', 'events');
+
+        navigateWithNavStack(navigate, location, `/courses_test?${params.toString()}`, {
+            state: {
+                eventCode,
+                eventName,
+                from: 'clubs',
+                returnTo: {
+                    pathname: '/clubs',
+                    search: `?${returnParams.toString()}`
+                }
+            }
+        });
     };
 
     const handleParticipantOpen = (member: ClubMember) => {
@@ -621,6 +793,8 @@ const Clubs: React.FC = () => {
         return () => window.clearTimeout(scrollTimeout);
     }, [clubMode, activeHighlightAthleteCode, rowsToRender]);
 
+    const nextClubMode = getNextMode(clubMode);
+
     return (
         <div className="page-content clubs-page">
             <div className="clubs-header">
@@ -631,11 +805,6 @@ const Clubs: React.FC = () => {
                         aria-label="Back to Event analysis"
                         title="Back to Event analysis"
                         onClick={handleBack}
-                        onTouchEnd={(event) => {
-                            event.preventDefault();
-                            event.stopPropagation();
-                            handleBack();
-                        }}
                     >
                         &#8592;
                     </button>
@@ -643,11 +812,11 @@ const Clubs: React.FC = () => {
                         <button
                             type="button"
                             className="clubs-mode-button"
-                            title={`View: ${modeLabel(clubMode)} (click to change)`}
-                            aria-label={`View: ${modeLabel(clubMode)} (click to change)`}
+                            title={`Switch to ${modeLabel(nextClubMode)}`}
+                            aria-label={`Switch to ${modeLabel(nextClubMode)}`}
                             onClick={handleToggleMode}
                         >
-                            {modeButtonLabel(clubMode)}
+                            {modeButtonLabel(nextClubMode)}
                         </button>
                     )}
                 </div>
@@ -746,11 +915,7 @@ const Clubs: React.FC = () => {
                             <thead>
                                 <tr>
                                     {clubColumns.map((column) => {
-                                        const alignStyle = {
-                                            textAlign: column.align ?? 'left',
-                                            width: column.desktopWidth ? `${column.desktopWidth}px` : undefined,
-                                            minWidth: column.desktopWidth ? `${column.desktopWidth}px` : undefined
-                                        } as React.CSSProperties;
+                                        const alignStyle = getClubColumnStyle(column, isMobileViewport);
                                         const headerClasses: string[] = ['athlete-table-header'];
                                         if (column.key === 'name') headerClasses.push('athlete-date-header');
                                         const isSorted = sortKey === column.key;
@@ -796,7 +961,7 @@ const Clubs: React.FC = () => {
                                             className={rowClass}
                                         >
                                             {clubColumns.map((column) => {
-                                                const alignmentStyle = { textAlign: column.align ?? 'left' } as React.CSSProperties;
+                                                const alignmentStyle = getClubColumnStyle(column, isMobileViewport);
                                                 const value = member[column.key];
                                                 if (column.key === 'name') {
                                                     return (
@@ -849,7 +1014,77 @@ const Clubs: React.FC = () => {
 
             {selectedClub && clubMode === 'events' && (
                 <div className="athlete-runs-table-wrapper clubs-members-table-wrap">
-                    <div className="clubs-members-loading">Events view is currently unavailable.</div>
+                    {courseSummaryLoading ? (
+                        <div className="clubs-members-loading">Loading course summary...</div>
+                    ) : (
+                        <table className="athlete-runs-table" aria-label="Club course summary">
+                            <thead>
+                                <tr>
+                                    {clubCourseSummaryColumns.map((column) => {
+                                        const alignStyle = getClubColumnStyle(column, isMobileViewport);
+                                        const headerClasses: string[] = ['athlete-table-header'];
+                                        if (column.key === 'event_name') headerClasses.push('athlete-date-header');
+                                        const isSorted = courseSummarySortKey === column.key;
+                                        const sortIndicator = isSorted ? (courseSummarySortDirection === 'asc' ? '▲' : '▼') : '';
+                                        return (
+                                            <th
+                                                key={String(column.key)}
+                                                className={headerClasses.join(' ')}
+                                                style={alignStyle}
+                                                onClick={() => onSortCourseSummaryColumn(column.key)}
+                                                role="button"
+                                                tabIndex={0}
+                                                onKeyDown={(event) => {
+                                                    if (event.key === 'Enter' || event.key === ' ') {
+                                                        event.preventDefault();
+                                                        onSortCourseSummaryColumn(column.key);
+                                                    }
+                                                }}
+                                                aria-sort={isSorted ? (courseSummarySortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}
+                                            >
+                                                <span>{column.label}</span>
+                                                {sortIndicator && <span style={{ marginLeft: 4 }}>{sortIndicator}</span>}
+                                            </th>
+                                        );
+                                    })}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {sortedCourseSummaryRows.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={clubCourseSummaryColumns.length} className="clubs-members-empty">No course summary found.</td>
+                                    </tr>
+                                ) : sortedCourseSummaryRows.map((row) => (
+                                    <tr key={`${row.event_code}-${row.event_name}`}>
+                                        {clubCourseSummaryColumns.map((column) => {
+                                            const alignmentStyle = getClubColumnStyle(column, isMobileViewport);
+                                            const value = row[column.key];
+                                            if (column.key === 'event_name') {
+                                                return (
+                                                    <th key={String(column.key)} scope="row" className="athlete-date-cell" style={alignmentStyle}>
+                                                        <button
+                                                            type="button"
+                                                            className="clubs-current-club-button"
+                                                            onClick={() => handleCourseOpen(row)}
+                                                            title={`Open course ${String(value ?? '')}`}
+                                                            aria-label={`Open course ${String(value ?? '')}`}
+                                                        >
+                                                            {String(value ?? '')}
+                                                        </button>
+                                                    </th>
+                                                );
+                                            }
+                                            return (
+                                                <td key={String(column.key)} style={alignmentStyle}>
+                                                    {value === null || value === undefined ? '' : String(value)}
+                                                </td>
+                                            );
+                                        })}
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    )}
                 </div>
             )}
         </div>

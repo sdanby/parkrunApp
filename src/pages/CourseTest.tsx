@@ -482,8 +482,12 @@ const CourseTest: React.FC = () => {
         ? loggedInUser.defaultCourseName.trim()
         : '';
 
-    const initialEventCode = locationState.eventCode || searchParams.get('event_code') || loggedInDefaultCourseCode || '';
-    const initialEventName = locationState.eventName || searchParams.get('event_name') || loggedInDefaultCourseName || '';
+    const incomingEventCode = locationState.eventCode || searchParams.get('event_code') || '';
+    const initialEventCode = incomingEventCode || loggedInDefaultCourseCode || '';
+    const initialEventName = locationState.eventName
+        || searchParams.get('event_name')
+        || (!incomingEventCode ? loggedInDefaultCourseName : '')
+        || '';
     const initialPanelModeParam = searchParams.get('panel');
     const initialViewModeParam = searchParams.get('view');
     const initialPeriodQueryParam = searchParams.get('period');
@@ -1003,11 +1007,11 @@ const CourseTest: React.FC = () => {
     };
 
     const handleBackNavigation = () => {
-        if (navigateBackWithNavStack(navigate, location.pathname)) {
-            return;
-        }
         if (returnTarget?.pathname) {
             navigate(`${returnTarget.pathname}${returnTarget.search ?? ''}`);
+            return;
+        }
+        if (navigateBackWithNavStack(navigate, location.pathname)) {
             return;
         }
         navigate('/results_test');
