@@ -1405,6 +1405,51 @@ const Athletes: React.FC = () => {
         headerClub !== '--' &&
         headerClub.toLowerCase() !== '<no club>'
     );
+    const favoriteCourseRow = useMemo(() => {
+        if (runs.length === 0) {
+            return null;
+        }
+
+        const cutoff = new Date();
+        cutoff.setFullYear(cutoff.getFullYear() - 1);
+        const cutoffMs = cutoff.getTime();
+
+        let bestRow: AthleteRecord | null = null;
+        let bestCount = Number.NEGATIVE_INFINITY;
+        let bestDate = Number.NEGATIVE_INFINITY;
+
+        for (const row of runs) {
+            const eventDateMs = parseDateSortValue(pickField(row, ['formatted_date', 'event_date', 'date']));
+            if (eventDateMs === null || eventDateMs < cutoffMs) {
+                continue;
+            }
+
+            const eventCount = parseNumericSortValue(pickField(row, ['last_event_code_count_long', 'lastEventCodeCountLong']));
+            if (eventCount === null) {
+                continue;
+            }
+
+            const eventName = pickField(row, ['event_display', 'eventDisplay', 'event_name', 'eventName', 'event']);
+            if (!eventName || !String(eventName).trim()) {
+                continue;
+            }
+
+            if (eventCount > bestCount || (eventCount === bestCount && eventDateMs > bestDate)) {
+                bestRow = row;
+                bestCount = eventCount;
+                bestDate = eventDateMs;
+            }
+        }
+
+        return bestRow;
+    }, [runs]);
+    const headerFavoriteCourseRaw = pickField(favoriteCourseRow, ['event_display', 'eventDisplay', 'event_name', 'eventName', 'event']);
+    const headerFavoriteCourse = headerFavoriteCourseRaw ? String(headerFavoriteCourseRaw) : '--';
+    const headerFavoriteCourseIsLinkable = Boolean(
+        favoriteCourseRow &&
+        headerFavoriteCourse &&
+        headerFavoriteCourse !== '--'
+    );
 
     const renderCell = (value: unknown): string => {
         if (value === undefined || value === null) return '--';
@@ -1420,6 +1465,81 @@ const Athletes: React.FC = () => {
         }
         return map;
     }, [profileRows]);
+
+    const eventsAllPieSegments = useMemo(() => {
+        const totalRunsRaw = profileTypeMap['total_runs']?.time ?? totalRunsCount ?? runs.length;
+        const totalRunsAll = Math.max(0, Math.round(Number(totalRunsRaw) || 0));
+        if (totalRunsAll <= 0) {
+            return [] as Array<{ name: string; value: number; latestDateMs: number }>;
+        }
+
+        const eventMap = new Map<string, { name: string; value: number; latestDateMs: number }>();
+        for (const row of runs) {
+            const eventNameRaw = pickField(row, ['event_display', 'eventDisplay', 'event_name', 'eventName', 'event']);
+            const eventName = String(eventNameRaw || '').trim();
+            if (!eventName) {
+                continue;
+            }
+
+            const eventCodeRaw = pickField(row, ['event_code', 'eventCode']);
+            const eventKey = `${String(eventCodeRaw ?? '').trim()}__${eventName.toLowerCase()}`;
+            const eventDateMs = parseDateSortValue(pickField(row, ['formatted_date', 'event_date', 'date'])) ?? Number.NEGATIVE_INFINITY;
+            const existing = eventMap.get(eventKey);
+            if (existing) {
+                existing.value += 1;
+                if (eventDateMs > existing.latestDateMs) {
+                    existing.latestDateMs = eventDateMs;
+                }
+            } else {
+                eventMap.set(eventKey, { name: eventName, value: 1, latestDateMs: eventDateMs });
+            }
+        }
+
+        const rankedEvents = Array.from(eventMap.values()).sort((a, b) => {
+            if (b.value !== a.value) return b.value - a.value;
+            if (b.latestDateMs !== a.latestDateMs) return b.latestDateMs - a.latestDateMs;
+            return a.name.localeCompare(b.name);
+        });
+
+        const topEvents = rankedEvents.slice(0, 5);
+        const otherValue = rankedEvents.slice(5).reduce((sum, item) => sum + item.value, 0);
+        const representedValue = topEvents.reduce((sum, item) => sum + item.value, 0) + otherValue;
+        const nonLocalValue = Math.max(totalRunsAll - representedValue, 0);
+
+        const segments: Array<{ name: string; value: number; latestDateMs: number }> = [...topEvents];
+        if (otherValue > 0) {
+            segments.push({ name: 'Other', value: otherValue, latestDateMs: Number.NEGATIVE_INFINITY });
+        }
+        if (nonLocalValue > 0) {
+            segments.push({ name: 'Non-local runs', value: nonLocalValue, latestDateMs: Number.NEGATIVE_INFINITY });
+        }
+        return segments;
+    }, [profileTypeMap, runs, totalRunsCount]);
+
+    const eventsAllPiePalette = ['#0f766e', '#2563eb', '#ca8a04', '#dc2626', '#7c3aed', '#475569', '#9ca3af'];
+
+    const eventsAllPieOption = useMemo(() => ({
+        tooltip: {
+            trigger: 'item',
+            formatter: (params: any) => `${params?.name || ''}: ${params?.value || 0}`
+        },
+        animation: false,
+        series: [
+            {
+                type: 'pie',
+                radius: ['0%', '72%'],
+                center: ['50%', '50%'],
+                avoidLabelOverlap: true,
+                label: { show: false },
+                labelLine: { show: false },
+                data: eventsAllPieSegments.map((segment, index) => ({
+                    name: segment.name,
+                    value: segment.value,
+                    itemStyle: { color: eventsAllPiePalette[index % eventsAllPiePalette.length] }
+                }))
+            }
+        ]
+    }), [eventsAllPieSegments]);
 
     const formatProfileTime = (value: unknown): string => {
         if (value === undefined || value === null || value === '') return '--';
@@ -1621,6 +1741,8 @@ const Athletes: React.FC = () => {
     const estimatedAgeValueElement = getParticipantElementById('participant.estimatedAge');
     const clubLabelElement = getParticipantElementById('participant.clubLabel');
     const recentClubValueElement = getParticipantElementById('participant.recentClub');
+    const freqCourseLabelElement = getParticipantElementById('participant.freqCourseLabel');
+    const freqCourseValueElement = getParticipantElementById('participant.freqCourse');
     const athleteCodeLabelElement = useMemo(
         () => participantElements.find((element) => element.id === 'participant.athleteCodeLabel' && element.type === 'label'),
         [participantElements]
@@ -1636,6 +1758,7 @@ const Athletes: React.FC = () => {
     const resetButtonElement = getParticipantElementById('participant.resetButton');
     const plotContainerElement = getParticipantElementById('participant.plotContainer');
     const profileContainerElement = getParticipantElementById('participant.profileContainer');
+    const eventsAllPieElement = getParticipantElementById('participant.eventsAllPie');
     const tableContainerElement = getParticipantElementById('participant.tableContainer');
     const tableViewLabelPlacement = useMemo(
         () => tableViewLabelElement?.[isMobile ? 'mobile' : 'laptop'],
@@ -1676,6 +1799,14 @@ const Athletes: React.FC = () => {
     const recentClubValuePlacement = useMemo(
         () => recentClubValueElement?.[isMobile ? 'mobile' : 'laptop'],
         [isMobile, recentClubValueElement]
+    );
+    const freqCourseLabelPlacement = useMemo(
+        () => freqCourseLabelElement?.[isMobile ? 'mobile' : 'laptop'],
+        [freqCourseLabelElement, isMobile]
+    );
+    const freqCourseValuePlacement = useMemo(
+        () => freqCourseValueElement?.[isMobile ? 'mobile' : 'laptop'],
+        [freqCourseValueElement, isMobile]
     );
     const athleteCodeLabelPlacement = useMemo(
         () => athleteCodeLabelElement?.[isMobile ? 'mobile' : 'laptop'],
@@ -1733,6 +1864,10 @@ const Athletes: React.FC = () => {
     const profileContainerPlacement = useMemo(
         () => profileContainerElement?.[isMobile ? 'mobile' : 'laptop'],
         [isMobile, profileContainerElement]
+    );
+    const eventsAllPiePlacement = useMemo(
+        () => eventsAllPieElement?.[isMobile ? 'mobile' : 'laptop'],
+        [eventsAllPieElement, isMobile]
     );
     const tableContainerPlacement = useMemo(
         () => tableContainerElement?.[isMobile ? 'mobile' : 'laptop'],
@@ -1836,6 +1971,22 @@ const Athletes: React.FC = () => {
         width: athleteCodeFieldPlacement?.width,
         pointerEvents: 'auto'
     }), [athleteCodeFieldPlacement]);
+
+    const freqCourseLabelWrapperStyle = useMemo<React.CSSProperties>(() => ({
+        display: 'inline-flex',
+        position: 'absolute',
+        left: freqCourseLabelPlacement?.x ?? '8.0cm',
+        top: freqCourseLabelPlacement?.y ?? '2.7cm',
+        pointerEvents: 'auto'
+    }), [freqCourseLabelPlacement]);
+
+    const freqCourseValueStyle = useMemo<React.CSSProperties>(() => ({
+        position: 'absolute',
+        left: freqCourseValuePlacement?.x ?? '10.5cm',
+        top: freqCourseValuePlacement?.y ?? '2.7cm',
+        width: freqCourseValuePlacement?.width,
+        pointerEvents: 'auto'
+    }), [freqCourseValuePlacement]);
 
     const recentClubValueStyle = useMemo<React.CSSProperties>(() => ({
         position: 'absolute',
@@ -2018,6 +2169,16 @@ const Athletes: React.FC = () => {
         };
     }, [otherAdjLabelElement]);
 
+    const freqCourseLabelTextStyle = useMemo<React.CSSProperties>(() => {
+        const style = freqCourseLabelElement?.style;
+        return {
+            fontSize: style?.fontSize,
+            fontWeight: style?.fontWeight,
+            color: style?.color,
+            lineHeight: style?.lineHeight
+        };
+    }, [freqCourseLabelElement]);
+
     const totalRunsLabelTextStyle = useMemo<React.CSSProperties>(() => {
         const style = totalRunsLabelElement?.style;
         return {
@@ -2086,6 +2247,20 @@ const Athletes: React.FC = () => {
         };
     }, [recentClubValueElement, recentClubValuePlacement]);
 
+    const freqCourseValueTextStyle = useMemo<React.CSSProperties>(() => {
+        const style = freqCourseValueElement?.style;
+        return {
+            fontSize: style?.fontSize,
+            fontWeight: style?.fontWeight,
+            color: style?.color,
+            lineHeight: style?.lineHeight,
+            fontStyle: style?.fontStyle,
+            textAlign: style?.textAlign,
+            width: freqCourseValuePlacement?.width ?? style?.width,
+            height: freqCourseValuePlacement?.height ?? style?.height
+        };
+    }, [freqCourseValueElement, freqCourseValuePlacement]);
+
     const estimatedAgeValueTextStyle = useMemo<React.CSSProperties>(() => {
         const style = estimatedAgeValueElement?.style;
         return {
@@ -2099,6 +2274,12 @@ const Athletes: React.FC = () => {
             height: estimatedAgeValuePlacement?.height ?? style?.height
         };
     }, [estimatedAgeValueElement, estimatedAgeValuePlacement]);
+
+    const eventsAllPieDiameter = useMemo(() => {
+        const width = eventsAllPieElement?.style?.width;
+        const height = eventsAllPieElement?.style?.height;
+        return width || height || (isMobile ? '3.1cm' : '3.6cm');
+    }, [eventsAllPieElement, isMobile]);
 
     const statusMessageTextStyle = useMemo<React.CSSProperties>(() => {
         const style = statusMessageElement?.style;
@@ -2180,7 +2361,11 @@ const Athletes: React.FC = () => {
             );
         }
 
-        return <label htmlFor={htmlFor} style={textStyle}>{labelText}</label>;
+        return (
+            <span style={wrapperStyle ?? { display: 'inline-flex' }}>
+                <label htmlFor={htmlFor} style={textStyle}>{labelText}</label>
+            </span>
+        );
     };
 
     const renderConfigInfoLabel = (
@@ -3134,6 +3319,49 @@ const Athletes: React.FC = () => {
                                         <option value="age_sex">age & sex adjustment</option>
                                     </select>
 
+                                    {renderConfigControlLabel(
+                                        freqCourseLabelElement,
+                                        'Freq Course:',
+                                        'control-freq-course',
+                                        'athletes-freq-course',
+                                        freqCourseLabelTextStyle,
+                                        freqCourseLabelWrapperStyle
+                                    )}
+                                    <div className="athlete-header-freq-course" title="Most frequent course in last year" style={{
+                                        ...freqCourseValueStyle,
+                                        ...recentClubValueTextStyle,
+                                        width: freqCourseValuePlacement?.width ?? recentClubValueTextStyle.width,
+                                        height: freqCourseValuePlacement?.height ?? recentClubValueTextStyle.height
+                                    }}>
+                                        {headerFavoriteCourseIsLinkable ? (
+                                            <button
+                                                id="athletes-freq-course"
+                                                type="button"
+                                                className="athletes-club-link"
+                                                onPointerDown={(event) => {
+                                                    event.stopPropagation();
+                                                }}
+                                                onClick={(event) => {
+                                                    event.stopPropagation();
+                                                    handleCourseNavigate(favoriteCourseRow ?? {});
+                                                }}
+                                                title={`Open course: ${headerFavoriteCourse}`}
+                                                aria-label={`Open course ${headerFavoriteCourse}`}
+                                                style={{
+                                                    display: 'inline-block',
+                                                    maxWidth: '100%',
+                                                    whiteSpace: 'nowrap',
+                                                    overflow: 'hidden',
+                                                    textOverflow: 'ellipsis'
+                                                }}
+                                            >
+                                                {headerFavoriteCourse}
+                                            </button>
+                                        ) : (
+                                            headerFavoriteCourse
+                                        )}
+                                    </div>
+
                                     <button
                                         id="athletes-view-cycle-btn"
                                         type="button"
@@ -3671,6 +3899,108 @@ const Athletes: React.FC = () => {
                                                         })}
                                                     </tbody>
                                                 </table>
+                                                {eventsAllPieSegments.length > 0 && (
+                                                    <div
+                                                        style={{
+                                                            marginLeft: eventsAllPiePlacement?.x ?? '0.3cm',
+                                                            marginTop: eventsAllPiePlacement?.y ?? '0.55cm',
+                                                            width: eventsAllPiePlacement?.width ?? '10.5cm',
+                                                            maxWidth: '100%',
+                                                            minHeight: eventsAllPiePlacement?.height ?? '4.2cm',
+                                                            display: 'flex',
+                                                            flexDirection: 'column',
+                                                            alignItems: 'flex-start',
+                                                            gap: '0.35rem'
+                                                        }}
+                                                    >
+                                                        <div
+                                                            style={{
+                                                                fontSize: isMobile ? '0.82rem' : '0.88rem',
+                                                                fontWeight: 700,
+                                                                color: '#111827'
+                                                            }}
+                                                        >
+                                                            Events All
+                                                        </div>
+                                                        <div
+                                                            style={{
+                                                                display: 'flex',
+                                                                flexDirection: 'row',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'flex-start',
+                                                                gap: isMobile ? '0.45rem' : '0.75rem',
+                                                                width: '100%'
+                                                            }}
+                                                        >
+                                                            <div
+                                                                style={{
+                                                                    width: eventsAllPieDiameter,
+                                                                    height: eventsAllPieDiameter,
+                                                                    minWidth: eventsAllPieDiameter,
+                                                                    minHeight: eventsAllPieDiameter,
+                                                                    flexShrink: 0
+                                                                }}
+                                                            >
+                                                                <ReactECharts
+                                                                    option={eventsAllPieOption}
+                                                                    notMerge
+                                                                    lazyUpdate
+                                                                    style={{ width: '100%', height: '100%' }}
+                                                                />
+                                                            </div>
+                                                            <div
+                                                                style={{
+                                                                    display: 'flex',
+                                                                    flexDirection: 'column',
+                                                                    alignItems: 'flex-start',
+                                                                    justifyContent: 'center',
+                                                                    gap: '0.22rem',
+                                                                    minWidth: 0,
+                                                                    flex: 1
+                                                                }}
+                                                            >
+                                                                {eventsAllPieSegments.map((segment, index) => (
+                                                                    <div
+                                                                        key={`${segment.name}-${index}`}
+                                                                        style={{
+                                                                            display: 'flex',
+                                                                            alignItems: 'center',
+                                                                            gap: '0.35rem',
+                                                                            fontSize: isMobile ? '0.72rem' : '0.76rem',
+                                                                            color: '#374151',
+                                                                            minWidth: 0,
+                                                                            width: '100%'
+                                                                        }}
+                                                                        title={`${segment.name}: ${segment.value}`}
+                                                                    >
+                                                                        <span
+                                                                            style={{
+                                                                                width: '0.6rem',
+                                                                                height: '0.6rem',
+                                                                                borderRadius: '999px',
+                                                                                background: eventsAllPiePalette[index % eventsAllPiePalette.length],
+                                                                                flexShrink: 0,
+                                                                                border: '1px solid rgba(15, 23, 42, 0.15)'
+                                                                            }}
+                                                                        />
+                                                                        <span
+                                                                            style={{
+                                                                                whiteSpace: 'nowrap',
+                                                                                overflow: 'hidden',
+                                                                                textOverflow: 'ellipsis',
+                                                                                flex: 1,
+                                                                                minWidth: 0
+                                                                            }}
+                                                                        >
+                                                                            {segment.name}
+                                                                        </span>
+                                                                        <span style={{ fontWeight: 700, flexShrink: 0 }}>{segment.value}</span>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                )}
                                             </div>
                                         )}
                                     </div>

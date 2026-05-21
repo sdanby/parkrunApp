@@ -198,6 +198,28 @@
       "mobile": { "x": "7.8cm", "y": "2.0cm", "width": "3.2cm" }
     },
     {
+      "id": "participant.freqCourseLabel",
+      "type": "label",
+      "name": "Reg Course:",
+      "helpTarget": "control-freq-course",
+      "helpLabel": true,
+      "style": {
+        "fontSize": "0.75rem",
+        "fontWeight": 600,
+        "color": "#111827",
+        "lineHeight": 0.7
+      },
+      "laptop": { "x": "1.3cm", "y": "3.4cm" },
+      "mobile": { "x": "1.3cm", "y": "3.3cm" }
+    },
+    {
+      "id": "participant.freqCourse",
+      "type": "field",
+      "name": "Freq Course",
+      "laptop": { "x": "3.8cm", "y": "3.4cm", "width": "4.4cm" },
+      "mobile": { "x": "3.9cm", "y": "3.2cm", "width": "4.4cm" }
+    },
+    {
       "id": "participant.profileButton",
       "type": "button",
       "name": "Profile",
@@ -224,8 +246,19 @@
       "id": "participant.profileContainer",
       "type": "table",
       "name": "profileContainer",
-      "laptop": { "width": "16cm", "height": "10cm" },
+      "laptop": { "width": "16cm", "height": "13cm" },
       "mobile": { "width": "11.7cm", "height": "8.5cm" }
+    },
+    {
+      "id": "participant.eventsAllPie",
+      "type": "plot",
+      "name": "eventsAllPie",
+      "style": {
+        "width": "3.6cm",
+        "height": "3.6cm"
+      },
+      "laptop": { "x": "0.3cm", "y": "0.55cm", "width": "10.5cm", "height": "4.2cm" },
+      "mobile": { "x": "0.1cm", "y": "0.45cm", "width": "7.8cm", "height": "4.4cm" }
     },
     {
       "id": "participant.tableContainer",

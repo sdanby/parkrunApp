@@ -35,6 +35,7 @@ export const getMarkerForControlLabel = (label: string): string => {
         'estimated age': 'control-estimated-age',
         'total runs': 'control-total-runs',
         'recent club': 'control-recent-club',
+        'freq course': 'control-freq-course',
         'course adj': 'control-course-adj',
         'other adj': 'control-other-adj',
         'hardness adj': 'control-hardness-adj',
@@ -138,6 +139,12 @@ Use this value as quick context for how large the participant history is before 
 ## [control-recent-club] Recent Club
 Recent Club shows the latest known club affiliation for the selected participant.
 Use it to confirm current club context before comparing participant runs or opening club-level pages.
+
+## [control-freq-course] Freq Course
+Freq Course shows the participant's most frequent course over the last 1 year.
+It is derived from the row with the highest Event Count in that 1-year window.
+If multiple courses tie on Event Count, the most recent course is used.
+Use it as a quick shortcut to the course page most associated with the participant's recent running pattern.
 
 ## [control-course-adj] Course Adj
 Course Adj controls whether course-condition factors are applied to the displayed results.
