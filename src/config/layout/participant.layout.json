@@ -24,8 +24,8 @@
       "id": "participant.input",
       "type": "field",
       "name": "Participant Search",
-      "laptop": { "x": "1.3cm", "y": "-0.1cm", "width": "8.8cm" },
-      "mobile": { "x": "1.1cm", "y": "-0.1cm", "width": "5.5cm" }
+      "laptop": { "x": "1.3cm", "y": "0.0cm", "width": "8.8cm" },
+      "mobile": { "x": "1.1cm", "y": "0.0cm", "width": "5.5cm" }
     },
     {
       "id": "participant.athleteCodeLabel",
@@ -39,15 +39,15 @@
         "color": "#111827",
         "lineHeight": 0.9
       },
-      "laptop": { "x": "1.2cm", "y": "0.6cm" },
-      "mobile": { "x": "1.2cm", "y": "0.6cm" }
+      "laptop": { "x": "1.2cm", "y": "0.7cm" },
+      "mobile": { "x": "1.2cm", "y": "0.7cm" }
     },
     {
       "id": "participant.athleteCode",
       "type": "field",
       "name": "athlete_code",
-      "laptop": { "x": "3.6cm", "y": "0.6cm" },
-      "mobile": { "x": "3.7cm", "y": "0.6cm" }
+      "laptop": { "x": "3.6cm", "y": "0.7cm" },
+      "mobile": { "x": "3.7cm", "y": "0.7cm" }
     },
     {
       "id": "participant.estimatedAgeLabel",
@@ -125,8 +125,8 @@
         "fontStyle": "italic",
         "color": "#6b7280"
       },
-      "laptop": { "x": "1.6cm", "y": "3.4cm", "width": "8.0cm" },
-      "mobile": { "x": "1.6cm", "y": "3.4cm", "width": "6.4cm" }
+      "laptop": { "x": "1.6cm", "y": "4.4cm", "width": "8.0cm" },
+      "mobile": { "x": "1.6cm", "y": "4.4cm", "width": "6.4cm" }
     },
     {
       "id": "participant.tableViewLabel",
@@ -140,16 +140,16 @@
         "color": "#111827",
         "lineHeight": 0.9
       },
-      "laptop": { "x": "8.0cm", "y": "0.6cm" },
-      "mobile": { "x": "5.5cm", "y": "0.6cm" }
+      "laptop": { "x": "8.0cm", "y": "0.7cm" },
+      "mobile": { "x": "5.5cm", "y": "0.7cm" }
     },
     {
       "id": "participant.tableViewSelect",
       "type": "select",
       "name": "Basic",
       "options": ["Basic", "Detailed", "All Time Adjustments"],
-      "laptop": { "x": "10.5cm", "y": "0.6cm", "width": "4.3cm" },
-      "mobile": { "x": "7.8cm", "y": "0.6cm", "width": "3.2cm" }
+      "laptop": { "x": "10.5cm", "y": "0.7cm", "width": "4.3cm" },
+      "mobile": { "x": "7.8cm", "y": "0.7cm", "width": "3.2cm" }
     },
     {
       "id": "participant.courseAdjLabel",
@@ -238,7 +238,7 @@
       "type": "plot",
       "name": "plotContainer",
       "laptop": { "width": "16cm", "height": "14cm" },
-      "mobile": { "width": "11.7cm", "height": "12.5cm" },
+      "mobile": { "width": "11.5cm", "height": "12.5cm" },
       "laptopExpanded": { "width": "30cm", "height": "16cm" },
       "mobileExpanded": { "width": "13.5cm", "height": "13cm" }
     },
@@ -247,7 +247,7 @@
       "type": "table",
       "name": "profileContainer",
       "laptop": { "width": "16cm", "height": "13cm" },
-      "mobile": { "width": "11.7cm", "height": "8.5cm" }
+      "mobile": { "width": "11.5cm", "height": "12.5cm" }
     },
     {
       "id": "participant.eventsAllPie",
@@ -266,6 +266,67 @@
       "name": "tableContainer",
       "laptop": { "x": "0cm", "y": "4.0cm", "width": "50cm", "height": "17cm" },
       "mobile": { "x": "0cm", "y": "4.0cm", "width": "30cm", "height": "12.4cm" }
+    },
+    {
+      "id": "participant.plotShowLabel",
+      "type": "label",
+      "name": "Show:",
+      "style": {
+        "fontSize": "0.78rem",
+        "fontWeight": 700,
+        "color": "#111827",
+        "lineHeight": 1.0
+      },
+      "laptop": { "x": "8.8cm", "y": "3.5cm" },
+      "mobile": { "x": "6.8cm", "y": "3.5cm" }
+    },
+    {
+      "id": "participant.plotBestButton",
+      "type": "button",
+      "name": "Best",
+      "style": {
+        "fontSize": "0.7rem",
+        "fontWeight": 700,
+        "color": "#111827",
+        "backgroundColor": "#fff",
+        "border": "1px solid #9ca3af",
+        "borderRadius": "6px",
+        "padding": "0 0.65rem"
+      },
+      "laptop": { "x": "10.0cm", "y": "3.3cm", "width": "1.8cm", "height": "1.7rem" },
+      "mobile": { "x": "8.0cm", "y": "3.3cm", "width": "1.6cm", "height": "1.7rem" }
+    },
+    {
+      "id": "participant.plotRankOnlyButton",
+      "type": "button",
+      "name": "Rank Only",
+      "style": {
+        "fontSize": "0.7rem",
+        "fontWeight": 700,
+        "color": "#111827",
+        "backgroundColor": "#fff",
+        "border": "1px solid #9ca3af",
+        "borderRadius": "6px",
+        "padding": "0 0.65rem"
+      },
+      "laptop": { "x": "11.9cm", "y": "3.3cm", "width": "1.8cm", "height": "1.7rem" },
+      "mobile": { "x": "9.7cm", "y": "3.3cm", "width": "1.6cm", "height": "1.7rem" }
+    },
+    {
+      "id": "participant.plotExpandButton",
+      "type": "button",
+      "name": "Expand",
+      "style": {
+        "fontSize": "0.7rem",
+        "fontWeight": 700,
+        "color": "#111827",
+        "backgroundColor": "#fff",
+        "border": "1px solid #9ca3af",
+        "borderRadius": "6px",
+        "padding": "0 0.65rem"
+      },
+      "laptop": { "x": "13.8cm", "y": "3.3cm", "width": "1.8cm", "height": "1.7rem" },
+      "mobile": { "x": "13.8cm", "y": "3.3cm", "width": "1.8cm", "height": "1.7rem" }
     }
   ],
   "tableViews": {

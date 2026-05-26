@@ -1082,7 +1082,6 @@ const CourseTest: React.FC = () => {
             }
         });
     };
-
     const handleTop250AthleteOpen = (row: CourseRecord) => {
         const athleteCode = pickField(row, ['athlete_code']);
         if (!athleteCode) {
@@ -2206,6 +2205,7 @@ const CourseTest: React.FC = () => {
                                 left: isMobile ? 'auto' : groupsPanelLeft,
                                 top: isMobile ? 'auto' : groupsPanelTop,
                                 width: groupsPanelWidth,
+                                overflow: 'hidden',
                                 marginTop: isMobile ? groupsPanelTop : 0
                             }}
                         >
@@ -2360,6 +2360,7 @@ const CourseTest: React.FC = () => {
                                 left: isMobile ? 'auto' : groupsPanelLeft,
                                 top: isMobile ? 'auto' : groupsPanelTop,
                                 width: groupsPanelWidth,
+                                overflow: 'hidden',
                                 marginTop: isMobile ? groupsPanelTop : 0
                             }}
                         >
@@ -2481,6 +2482,7 @@ const CourseTest: React.FC = () => {
                                 left: isMobile ? 'auto' : groupsPanelLeft,
                                 top: isMobile ? 'auto' : groupsPanelTop,
                                 width: groupsPanelWidth,
+                                overflow: 'hidden',
                                 marginTop: isMobile ? groupsPanelTop : 0
                             }}
                         >
@@ -2660,7 +2662,8 @@ const CourseTest: React.FC = () => {
                                 marginTop: isMobile ? tablePanelTop : 0,
                                 left: isMobile ? 'auto' : tablePanelLeft,
                                 top: isMobile ? 'auto' : tablePanelTop,
-                                width: tablePanelWidth,
+                                width: 'fit-content',
+                                maxWidth: tablePanelWidth,
                                 height: tablePanelMinHeight,
                                 maxHeight: tablePanelMinHeight,
                                 overflowX: 'auto',
@@ -2672,7 +2675,7 @@ const CourseTest: React.FC = () => {
                             ) : top250Error ? (
                                 <p className="athlete-error">{top250Error}</p>
                             ) : sortedTop250Rows.length > 0 ? (
-                                <table className="athlete-runs-table" aria-label="Top250 event summary">
+                                <table className="athlete-runs-table" aria-label="Top250 event summary" style={{ width: 'max-content', tableLayout: 'fixed' }}>
                                     <thead>
                                         <tr>
                                             {visibleTop250Columns.map((col) => {

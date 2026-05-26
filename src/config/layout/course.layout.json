@@ -167,7 +167,7 @@
       "type": "panel",
       "name": "groupsPanel",
       "notes": "Controls position, dimensions for plot windows (Profile, Hardness, Groups)",
-      "laptop": { "x": "0cm", "y": "3.5cm", "width": "21.2cm", "height": "14cm" },
+      "laptop": { "x": "0cm", "y": "3.5cm", "width": "21cm", "height": "14cm" },
       "mobile": { "x": "0cm", "y": "1cm", "width": "11.4cm", "height": "9.0cm" },
       "laptopExpanded": { "x": "0cm", "y": "3.5cm", "width": "41.5cm", "height": "14cm" },
       "mobileExpanded": { "x": "0cm", "y": "1cm", "width": "15.5cm", "height": "11cm" }
@@ -177,7 +177,7 @@
       "type": "table",
       "name": "tableContainer",
       "notes": "Drives position (x, y), height, and optional width override for the main course table. If width is omitted, tableWidthMode is used as fallback.",
-      "laptop": { "x": "0cm", "y": "3.5cm", "width": "45cm", "height": "18cm" },
+      "laptop": { "x": "0cm", "y": "3.5cm", "width": "50.2cm", "height": "18cm" },
       "mobile": { "x": "0cm", "y": "1cm", "width": "11cm", "height": "13.5cm" },
       "laptopExpanded": { "x": "0cm", "y": "3cm", "width": "42.5cm", "height": "14cm" },
       "mobileExpanded": { "x": "0cm", "y": "3cm", "width": "15.5cm", "height": "11cm" }

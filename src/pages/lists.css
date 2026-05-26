@@ -101,13 +101,16 @@
     margin-top: 0 !important;
     max-height: var(--lists-table-max-height, calc(100vh - 4.2cm)) !important;
     overflow-y: auto !important;
-    width: 100%;
+    overflow-x: auto !important;
+    width: fit-content;
     min-width: 0;
+    max-width: 100%;
 }
 
 .lists-page .lists-table {
-    min-width: 100%;
+    min-width: 0 !important;
     width: max-content !important;
+    table-layout: fixed !important;
 }
 
 .lists-link-button {

@@ -21,6 +21,9 @@ export type LayoutElementStyleConfig = {
   fontStyle?: string;
   color?: string;
   backgroundColor?: string;
+  border?: string;
+  borderColor?: string;
+  borderRadius?: string;
   textAlign?: 'left' | 'center' | 'right';
   timeDisplayFormat?: 'raw' | 'mm:ss';
   lineHeight?: string | number;

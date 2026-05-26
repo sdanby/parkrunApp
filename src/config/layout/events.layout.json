@@ -73,7 +73,7 @@
       "name": "Basic",
       "options": ["Basic", "Detailed", "All Time Adjustments"],
       "laptop": { "x": "8.7cm", "y": "0.5cm", "width": "4.3cm" },
-      "mobile": { "x": "7.7cm", "y": "0.5cm", "width": "3.9cm" }
+      "mobile": { "x": "7.7cm", "y": "0.5cm", "width": "3.6cm" }
     },
     {
       "id": "event.dateLabel",
@@ -118,7 +118,7 @@
       "name": "no adjustment (default)",
       "options": ["no adjustment (default)", "seasonal adjustments", "full event adjustments"],
       "laptop": { "x": "8.7cm", "y": "1.2cm", "width": "4.3cm" },
-      "mobile": { "x": "7.7cm", "y": "1.2cm", "width": "3.9cm" }
+      "mobile": { "x": "7.7cm", "y": "1.2cm", "width": "3.6cm" }
     },
     {
       "id": "event.eventNoLabel",
@@ -188,7 +188,7 @@
       "name": "no adjustment (default)",
       "options": ["no adjustment (default)", "age adjustments", "sex adjustments", "age & sex adjustment"],
       "laptop": { "x": "8.7cm", "y": "1.9cm", "width": "4.3cm" },
-      "mobile": { "x": "7.7cm", "y": "1.9cm", "width": "3.9cm" }
+      "mobile": { "x": "7.7cm", "y": "1.9cm", "width": "3.6cm" }
     },
     {
       "id": "event.hardnessLabel",

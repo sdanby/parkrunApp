@@ -161,6 +161,27 @@ Use sex adjustments to normalize for sex differences.
 Use age & sex adjustment to apply both factors together.
 When comparing columns, keep Other Adj fixed so differences reflect the data rather than a setting change.
 
+## [control-list-select] List Selection
+List selection controls which top-1000 leaderboard is loaded on the Lists page.
+Use Fastest Athletes - All Time or Fastest Athletes - Over last 1 Year to rank athletes by best adjusted performance for the chosen Course Adj and Other Adj settings.
+Use Highest Total Runs, Highest Local Runs, or Highest Local Runs - Over last 1 Year to rank athletes by participation counts instead.
+The row still shows one representative performance for each athlete, while the selected list mode decides how the top 1000 are chosen.
+Keep List selection fixed when comparing rows, and use the table headers if you want to re-sort the loaded results client-side.
+
+## [control-adjustment-filter] Filtered By Adjustments
+Filtered By Adjustments controls whether Course Adj and Other Adj change which MV family supplies the representative row.
+When ticked, the selected Course Adj and Other Adj combination chooses the adjusted MV for the current history or 1-year list mode.
+When unticked, the Lists page ignores Course Adj and Other Adj for MV selection and uses the base unadjusted MV for the selected history or 1-year mode.
+You can change this independently after choosing a list, even though each list also sets a default tick or untick state.
+
+## [control-participant-filter] Participants
+Participants controls the minimum participation threshold applied to the Lists page.
+Use all participants to show the full eligible leaderboard.
+Use Participants >50 total-runs to restrict the list to athletes with broader overall parkrun history.
+Use Participants > 50 local-runs to focus on runners with strong local participation.
+Use Participants > 10 local_run_1y to focus on athletes active locally over the last year.
+This filter works together with List selection, Course Adj and Other Adj, so keep those fixed when comparing how thresholds change the leaderboard.
+
 ## [control-hardness-adj] Hardness Adj
 Hardness Adj shows the combined hardness indicator for the selected event and settings.
 Use it as context when interpreting adjusted time comparisons across events.

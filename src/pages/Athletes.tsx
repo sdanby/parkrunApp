@@ -1760,6 +1760,10 @@ const Athletes: React.FC = () => {
     const profileContainerElement = getParticipantElementById('participant.profileContainer');
     const eventsAllPieElement = getParticipantElementById('participant.eventsAllPie');
     const tableContainerElement = getParticipantElementById('participant.tableContainer');
+    const plotShowLabelElement = getParticipantElementById('participant.plotShowLabel');
+    const plotBestButtonElement = getParticipantElementById('participant.plotBestButton');
+    const plotRankOnlyButtonElement = getParticipantElementById('participant.plotRankOnlyButton');
+    const plotExpandButtonElement = getParticipantElementById('participant.plotExpandButton');
     const tableViewLabelPlacement = useMemo(
         () => tableViewLabelElement?.[isMobile ? 'mobile' : 'laptop'],
         [isMobile, tableViewLabelElement]
@@ -1872,6 +1876,22 @@ const Athletes: React.FC = () => {
     const tableContainerPlacement = useMemo(
         () => tableContainerElement?.[isMobile ? 'mobile' : 'laptop'],
         [isMobile, tableContainerElement]
+    );
+    const plotShowLabelPlacement = useMemo(
+        () => plotShowLabelElement?.[isMobile ? 'mobile' : 'laptop'],
+        [isMobile, plotShowLabelElement]
+    );
+    const plotBestButtonPlacement = useMemo(
+        () => plotBestButtonElement?.[isMobile ? 'mobile' : 'laptop'],
+        [isMobile, plotBestButtonElement]
+    );
+    const plotRankOnlyButtonPlacement = useMemo(
+        () => plotRankOnlyButtonElement?.[isMobile ? 'mobile' : 'laptop'],
+        [isMobile, plotRankOnlyButtonElement]
+    );
+    const plotExpandButtonPlacement = useMemo(
+        () => plotExpandButtonElement?.[isMobile ? 'mobile' : 'laptop'],
+        [isMobile, plotExpandButtonElement]
     );
 
     const tableViewLabelWrapperStyle = useMemo<React.CSSProperties>(() => ({
@@ -2138,6 +2158,17 @@ const Athletes: React.FC = () => {
         height: profileContainerPlacement?.height ?? tableWrapperSizeStyle.height,
         maxHeight: profileContainerPlacement?.height ?? tableWrapperSizeStyle.maxHeight
     }), [profileContainerPlacement, tableWrapperSizeStyle.height, tableWrapperSizeStyle.maxHeight, tableWrapperSizeStyle.maxWidth, tableWrapperSizeStyle.width]);
+
+    const activePanelContainerStyle = useMemo<React.CSSProperties>(() => {
+        if (!showProfile) {
+            return tableContainerStyle;
+        }
+        return {
+            ...tableContainerStyle,
+            width: profileContainerPlacement?.width ?? tableContainerStyle.width,
+            height: profileContainerPlacement?.height ?? tableContainerStyle.height
+        };
+    }, [profileContainerPlacement?.height, profileContainerPlacement?.width, showProfile, tableContainerStyle]);
 
     const tableViewLabelTextStyle = useMemo<React.CSSProperties>(() => {
         const style = tableViewLabelElement?.style;
@@ -2750,6 +2781,60 @@ const Athletes: React.FC = () => {
         }
         setIsPlotExpanded((prev) => !prev);
     };
+
+    const getPlotControlOffset = React.useCallback((value?: string, base?: string): string | undefined => {
+        if (!value) {
+            return undefined;
+        }
+        if (!base) {
+            return value;
+        }
+        return `calc(${value} - ${base})`;
+    }, []);
+
+    const plotShowLabelStyle = useMemo<React.CSSProperties>(() => ({
+        position: 'absolute',
+        left: getPlotControlOffset(plotShowLabelPlacement?.x, tableContainerPlacement?.x),
+        top: getPlotControlOffset(plotShowLabelPlacement?.y, tableContainerPlacement?.y),
+        fontSize: plotShowLabelElement?.style?.fontSize ?? '0.78rem',
+        fontWeight: plotShowLabelElement?.style?.fontWeight ?? 700,
+        color: plotShowLabelElement?.style?.color ?? '#111827',
+        lineHeight: plotShowLabelElement?.style?.lineHeight ?? 1.0,
+        pointerEvents: 'auto'
+    }), [getPlotControlOffset, plotShowLabelElement?.style?.color, plotShowLabelElement?.style?.fontSize, plotShowLabelElement?.style?.fontWeight, plotShowLabelElement?.style?.lineHeight, plotShowLabelPlacement?.x, plotShowLabelPlacement?.y, tableContainerPlacement?.x, tableContainerPlacement?.y]);
+
+    const buildPlotButtonStyle = React.useCallback((
+        placement?: { x?: string; y?: string; width?: string; height?: string },
+        element?: { style?: { border?: string; borderRadius?: string; backgroundColor?: string; color?: string; fontSize?: string; fontWeight?: string | number; padding?: string } }
+    ): React.CSSProperties => ({
+        position: 'absolute',
+        left: getPlotControlOffset(placement?.x, tableContainerPlacement?.x),
+        top: getPlotControlOffset(placement?.y, tableContainerPlacement?.y),
+        width: placement?.width,
+        height: placement?.height ?? '1.9rem',
+        border: element?.style?.border ?? '1px solid #9ca3af',
+        borderRadius: element?.style?.borderRadius ?? '6px',
+        background: element?.style?.backgroundColor ?? '#fff',
+        color: element?.style?.color ?? '#111827',
+        fontSize: element?.style?.fontSize ?? '0.78rem',
+        fontWeight: element?.style?.fontWeight ?? 700,
+        cursor: 'pointer',
+        padding: element?.style?.padding ?? '0 0.65rem',
+        pointerEvents: 'auto'
+    }), [getPlotControlOffset, tableContainerPlacement?.x, tableContainerPlacement?.y]);
+
+    const plotBestButtonStyle = useMemo(
+        () => buildPlotButtonStyle(plotBestButtonPlacement, plotBestButtonElement as any),
+        [buildPlotButtonStyle, plotBestButtonElement, plotBestButtonPlacement]
+    );
+    const plotRankOnlyButtonStyle = useMemo(
+        () => buildPlotButtonStyle(plotRankOnlyButtonPlacement, plotRankOnlyButtonElement as any),
+        [buildPlotButtonStyle, plotRankOnlyButtonElement, plotRankOnlyButtonPlacement]
+    );
+    const plotExpandButtonStyle = useMemo(
+        () => buildPlotButtonStyle(plotExpandButtonPlacement, plotExpandButtonElement as any),
+        [buildPlotButtonStyle, plotExpandButtonElement, plotExpandButtonPlacement]
+    );
 
     const handlePlotDataZoom = (params: any) => {
         const events = Array.isArray(params?.batch) ? params.batch : [params];
@@ -3394,97 +3479,46 @@ const Athletes: React.FC = () => {
 
             {!loading && !error && activeSelectedCode && (
                 <>
-                    <section className="athlete-runs-section" style={tableContainerStyle}>
+                    <section className="athlete-runs-section" style={activePanelContainerStyle}>
                         {showPlot ? (
                             <>
                             <div
                                 style={{
                                     width: '100%',
                                     maxWidth: plotControlsMaxWidth,
-                                    display: 'flex',
                                     position: 'relative',
                                     zIndex: isMobile ? 10 : 1400,
-                                    justifyContent: 'flex-end',
-                                    paddingLeft: '0.3cm',
-                                    paddingRight: isMobile ? '2.5cm' : '5.3cm',
-                                    boxSizing: 'border-box',
                                     marginBottom: '0.2rem',
-                                    overflow: 'visible'
+                                    overflow: 'visible',
+                                    minHeight: '0.8cm'
                                 }}
                             >
-                                <div
-                                    style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '0.35rem',
-                                        position: 'relative',
-                                        zIndex: isMobile ? 20 : 1401,
-                                        transform: isMobile ? 'translate(2.1cm, -0.5cm)' : 'translate(3.0cm, -0.7cm)'
-                                    }}
+                                <span style={plotShowLabelStyle}>
+                                    {plotShowLabelElement?.name || 'Show:'}
+                                </span>
+                                <button
+                                    type="button"
+                                    onClick={cyclePlotEligibilityMode}
+                                    style={plotBestButtonStyle}
                                 >
-                                    <span
-                                        style={{
-                                            fontSize: '0.78rem',
-                                            fontWeight: 700,
-                                            color: '#111827'
-                                        }}
-                                    >
-                                        Show:
-                                    </span>
+                                    {nextPlotEligibilityLabel}
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={cyclePlotSeriesMode}
+                                    style={plotRankOnlyButtonStyle}
+                                >
+                                    {nextPlotSeriesLabel}
+                                </button>
+                                {canTogglePlotExpand && (
                                     <button
                                         type="button"
-                                        onClick={cyclePlotEligibilityMode}
-                                        style={{
-                                            height: '1.9rem',
-                                            border: '1px solid #9ca3af',
-                                            borderRadius: '6px',
-                                            background: '#fff',
-                                            color: '#111827',
-                                            fontSize: '0.78rem',
-                                            fontWeight: 700,
-                                            cursor: 'pointer',
-                                            padding: '0 0.65rem'
-                                        }}
+                                        onClick={togglePlotExpanded}
+                                        style={plotExpandButtonStyle}
                                     >
-                                        {nextPlotEligibilityLabel}
+                                        {isPlotExpanded ? 'Reduce' : (plotExpandButtonElement?.name || 'Expand')}
                                     </button>
-                                    <button
-                                        type="button"
-                                        onClick={cyclePlotSeriesMode}
-                                        style={{
-                                            height: '1.9rem',
-                                            border: '1px solid #9ca3af',
-                                            borderRadius: '6px',
-                                            background: '#fff',
-                                            color: '#111827',
-                                            fontSize: '0.78rem',
-                                            fontWeight: 700,
-                                            cursor: 'pointer',
-                                            padding: '0 0.65rem'
-                                        }}
-                                    >
-                                        {nextPlotSeriesLabel}
-                                    </button>
-                                    {canTogglePlotExpand && (
-                                        <button
-                                            type="button"
-                                            onClick={togglePlotExpanded}
-                                            style={{
-                                                height: '1.9rem',
-                                                border: '1px solid #9ca3af',
-                                                borderRadius: '6px',
-                                                background: '#fff',
-                                                color: '#111827',
-                                                fontSize: '0.78rem',
-                                                fontWeight: 700,
-                                                cursor: 'pointer',
-                                                padding: '0 0.65rem'
-                                            }}
-                                        >
-                                            {isPlotExpanded ? 'Reduce' : 'Expand'}
-                                        </button>
-                                    )}
-                                </div>
+                                )}
                             </div>
                             <div
                                 className="athlete-runs-table-wrapper athlete-runs-table-wrapper--plot"
