@@ -4,6 +4,12 @@ import { ClubCourseSummaryRecord, fetchAthleteRuns } from '../api/backendAPI';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { fetchClubCourseSummary, fetchClubMembers, fetchClubsSearch } from '../api/backendAPI';
 import { navigateBackWithNavStack, navigateWithNavStack } from '../utils/navigationStack';
+import {
+    getClubsElementById,
+    getClubsElementPlacement,
+    getClubsViewportForWidth,
+    type ClubsViewport
+} from '../config/layout/clubsLayoutHelper';
 import './ResultsTable.css';
 import './Clubs.css';
 
@@ -376,6 +382,12 @@ const Clubs: React.FC = () => {
     const [dropdownTop, setDropdownTop] = useState(0);
     const [dropdownLeft, setDropdownLeft] = useState(0);
     const [dropdownWidth, setDropdownWidth] = useState(0);
+    const [layoutViewport, setLayoutViewport] = useState<ClubsViewport>(() => {
+        if (typeof window === 'undefined') {
+            return 'laptop';
+        }
+        return getClubsViewportForWidth(window.innerWidth);
+    });
     const [isMobileViewport, setIsMobileViewport] = useState(() => {
         if (typeof window === 'undefined') {
             return false;
@@ -386,6 +398,7 @@ const Clubs: React.FC = () => {
     useEffect(() => {
         const handleResize = () => {
             setIsMobileViewport(window.innerWidth <= CLUBS_MOBILE_BREAKPOINT);
+            setLayoutViewport(getClubsViewportForWidth(window.innerWidth));
         };
 
         handleResize();
@@ -394,6 +407,13 @@ const Clubs: React.FC = () => {
             window.removeEventListener('resize', handleResize);
         };
     }, []);
+
+    const membersTitleElement = getClubsElementById('clubs.membersTitle');
+    const currentMembersTitleElement = getClubsElementById('clubs.currentMembersTitle');
+    const eventsTitleElement = getClubsElementById('clubs.eventsTitle');
+    const pMembersTitle = getClubsElementPlacement('clubs.membersTitle', layoutViewport);
+    const pCurrentMembersTitle = getClubsElementPlacement('clubs.currentMembersTitle', layoutViewport);
+    const pEventsTitle = getClubsElementPlacement('clubs.eventsTitle', layoutViewport);
 
     const activeHighlightAthleteCode = localHighlightAthleteCode || highlightedAthleteCode;
 
@@ -796,7 +816,7 @@ const Clubs: React.FC = () => {
     const nextClubMode = getNextMode(clubMode);
 
     return (
-        <div className="page-content clubs-page">
+        <div className="page-content clubs-page" style={{ position: 'relative' }}>
             <div className="clubs-header">
                 <div className="clubs-left-controls">
                     <button
@@ -903,6 +923,63 @@ const Clubs: React.FC = () => {
                     <div className="clubs-active-members">
                         {activeMembersCount} active member{activeMembersCount === 1 ? '' : 's'}.
                     </div>
+                </div>
+            )}
+
+            {selectedClub && clubMode === 'members' && membersTitleElement && (
+                <div
+                    style={{
+                        position: 'absolute',
+                        left: pMembersTitle?.x ?? membersTitleElement?.[layoutViewport]?.x ?? '0.3cm',
+                        top: pMembersTitle?.y ?? membersTitleElement?.[layoutViewport]?.y ?? '3.2cm',
+                        width: pMembersTitle?.width ?? membersTitleElement?.[layoutViewport]?.width,
+                        color: membersTitleElement?.style?.color ?? '#111827',
+                        fontSize: membersTitleElement?.style?.fontSize ?? '0.95rem',
+                        fontWeight: membersTitleElement?.style?.fontWeight ?? 700,
+                        lineHeight: Number(membersTitleElement?.style?.lineHeight ?? 1),
+                        zIndex: 100,
+                        pointerEvents: 'none'
+                    }}
+                >
+                    {membersTitleElement?.name || 'Current & Historic Membership'}
+                </div>
+            )}
+
+            {selectedClub && clubMode === 'current_members' && currentMembersTitleElement && (
+                <div
+                    style={{
+                        position: 'absolute',
+                        left: pCurrentMembersTitle?.x ?? currentMembersTitleElement?.[layoutViewport]?.x ?? '0.3cm',
+                        top: pCurrentMembersTitle?.y ?? currentMembersTitleElement?.[layoutViewport]?.y ?? '3.2cm',
+                        width: pCurrentMembersTitle?.width ?? currentMembersTitleElement?.[layoutViewport]?.width,
+                        color: currentMembersTitleElement?.style?.color ?? '#111827',
+                        fontSize: currentMembersTitleElement?.style?.fontSize ?? '0.95rem',
+                        fontWeight: currentMembersTitleElement?.style?.fontWeight ?? 700,
+                        lineHeight: Number(currentMembersTitleElement?.style?.lineHeight ?? 1),
+                        zIndex: 100,
+                        pointerEvents: 'none'
+                    }}
+                >
+                    {currentMembersTitleElement?.name || 'Current Membership'}
+                </div>
+            )}
+
+            {selectedClub && clubMode === 'events' && eventsTitleElement && (
+                <div
+                    style={{
+                        position: 'absolute',
+                        left: pEventsTitle?.x ?? eventsTitleElement?.[layoutViewport]?.x ?? '0.3cm',
+                        top: pEventsTitle?.y ?? eventsTitleElement?.[layoutViewport]?.y ?? '3.2cm',
+                        width: pEventsTitle?.width ?? eventsTitleElement?.[layoutViewport]?.width,
+                        color: eventsTitleElement?.style?.color ?? '#111827',
+                        fontSize: eventsTitleElement?.style?.fontSize ?? '0.95rem',
+                        fontWeight: eventsTitleElement?.style?.fontWeight ?? 700,
+                        lineHeight: Number(eventsTitleElement?.style?.lineHeight ?? 1),
+                        zIndex: 100,
+                        pointerEvents: 'none'
+                    }}
+                >
+                    {eventsTitleElement?.name || 'Club popularity'}
                 </div>
             )}
 

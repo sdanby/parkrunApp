@@ -4,7 +4,7 @@
     Use the replacement page for new feature work and behavior changes.
     Keep this page functional for now because some legacy links/routes may still land here.
 */
-import React, { useEffect, useRef, useState, useMemo } from 'react';
+import React, { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { fetchEventPositions, fetchEventInfo, fetchEventByNumber, fetchEventTimeAdjustment } from '../api/backendAPI';
 import { navigateBackWithNavStack, navigateWithNavStack } from '../utils/navigationStack';
@@ -51,25 +51,6 @@ const normalizeOtherAdj = (val: string): OtherAdjOption => {
     return 'none';
 };
 
-const courseAdjDisplay: Record<CourseAdjOption, string> = {
-    none: 'default',
-    seasonal: 'season',
-    full: 'event'
-};
-
-const otherAdjDisplay: Record<OtherAdjOption, string> = {
-    none: 'default',
-    age: 'age adjustment',
-    sex: 'sex adjustment',
-    age_sex: 'age & sex adjustment'
-};
-
-const viewModeDisplay: Record<'basic' | 'detailed' | 'allTimeAdjustments', string> = {
-    basic: 'Basic',
-    detailed: 'Detailed',
-    allTimeAdjustments: 'All Time Adjustments'
-};
-
 const parseNumeric = (value: any): number | null => {
     const num = Number(value);
     return Number.isFinite(num) ? num : null;
@@ -103,6 +84,8 @@ const parseTimeToSeconds = (value: any): number | null => {
     return null;
 };
 
+const defaultWidthsBase = [60, 240, 57, 57, 57, 57, 57];
+
 // Minimal Races page — shows the selected event/date (from query) and attempts to fetch event positions
 const Races: React.FC = () => {
     const navigate = useNavigate();
@@ -114,7 +97,6 @@ const Races: React.FC = () => {
     const tableRef = useRef<HTMLTableElement | null>(null);
     // Column widths in pixels for each table column (Pos, Athlete, ...)
     // Start with sensible defaults; we'll expand when switching to Detailed view.
-    const defaultWidthsBase = [60, 240, 57, 57, 57, 57, 57];
     const [colWidths, setColWidths] = useState<number[]>(() => {
         try {
             const saved = sessionStorage.getItem('races_col_widths_v1');
@@ -217,15 +199,6 @@ const Races: React.FC = () => {
     const resizingColRef = useRef<number | null>(null);
     const startXRef = useRef<number | null>(null);
     const startWidthRef = useRef<number | null>(null);
-    const isDraggingRef = useRef(false);
-    const lastYRef = useRef<number | null>(null);
-    const [thumbHeight, setThumbHeight] = useState<number>(0);
-    const [thumbTop, setThumbTop] = useState<number>(0);
-    const [scrollbarLeft, setScrollbarLeft] = useState<number | null>(null);
-    const [scrollbarTop, setScrollbarTop] = useState<number | null>(null);
-    const [scrollbarHeight, setScrollbarHeight] = useState<number | null>(null);
-    const thumbDragRef = useRef(false);
-    const thumbRef = useRef<HTMLDivElement | null>(null);
     // Sorting state
     const [sortKey, setSortKey] = useState<string | null>(null);
     const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
@@ -249,8 +222,8 @@ const Races: React.FC = () => {
         };
     }, []);
 
-    const snakeToCamel = (s: string) => s.replace(/_(.)/g, (_m, g1) => g1.toUpperCase());
-    const getSortValue = (row: any, key: string) => {
+    const snakeToCamel = useCallback((s: string) => s.replace(/_(.)/g, (_m, g1) => g1.toUpperCase()), []);
+    const getSortValue = useCallback((row: any, key: string) => {
         if (!row) return null;
         let v = row[key];
         if (v === undefined) v = row[snakeToCamel(key)];
@@ -260,7 +233,7 @@ const Races: React.FC = () => {
         // numeric?
         if (/^-?\d+(?:\.\d+)?$/.test(s)) return Number(s);
         return s.toLowerCase();
-    };
+    }, [snakeToCamel]);
 
     const handleSort = (key: string) => {
         if (sortKey === key) {
@@ -290,127 +263,7 @@ const Races: React.FC = () => {
             return 0;
         });
         return copy;
-    }, [rows, sortKey, sortDir]);
-
-    // Start dragging on the fast-scroll overlay
-    const onFastMouseDown = (e: React.MouseEvent) => {
-        e.preventDefault();
-        isDraggingRef.current = true;
-        lastYRef.current = e.clientY;
-        document.addEventListener('mousemove', onFastMouseMove);
-        document.addEventListener('mouseup', onFastMouseUp);
-    };
-
-    const onFastMouseMove = (e: MouseEvent) => {
-        if (!isDraggingRef.current) return;
-        const last = lastYRef.current ?? e.clientY;
-        const dy = e.clientY - last;
-        lastYRef.current = e.clientY;
-        const el = containerRef.current;
-        if (el) {
-            // multiplier controls scroll speed when dragging
-            const multiplier = 2.5;
-            el.scrollTop += dy * multiplier;
-        }
-    };
-
-    const onFastMouseUp = (_e: MouseEvent) => {
-        isDraggingRef.current = false;
-        lastYRef.current = null;
-        document.removeEventListener('mousemove', onFastMouseMove);
-        document.removeEventListener('mouseup', onFastMouseUp);
-    };
-
-    // Click on the overlay jumps to a proportional vertical position
-    const onFastClick = (e: React.MouseEvent) => {
-        const el = containerRef.current;
-        if (!el) return;
-        const rect = el.getBoundingClientRect();
-        const y = e.clientY - rect.top;
-        const target = (y / rect.height) * (el.scrollHeight - el.clientHeight);
-        el.scrollTop = target;
-    };
-
-    // Custom scrollbar: update thumb size/position
-    const updateThumb = () => {
-        const el = containerRef.current;
-        if (!el) return;
-        const visible = el.clientHeight;
-        const total = el.scrollHeight;
-        // If we computed a fixed scrollbar track height, use that; otherwise
-        // fall back to visible height. This keeps thumb position in sync with
-        // the rendered track size (which may exclude padding).
-        const trackHeight = scrollbarHeight ?? Math.max(20, Math.floor(visible - 12));
-        const ratio = visible / total;
-        const h = Math.max(30, Math.floor(ratio * trackHeight));
-        const maxTop = Math.max(0, trackHeight - h);
-        const scrollRatio = el.scrollTop / (total - visible || 1);
-        const top = Math.floor(scrollRatio * maxTop);
-        setThumbHeight(h);
-        setThumbTop(top);
-    };
-
-    const updateScrollbarLeft = () => {
-        const container = containerRef.current;
-        const table = tableRef.current;
-        if (!container || !table) {
-            setScrollbarLeft(null);
-            return;
-        }
-        const crect = container.getBoundingClientRect();
-        const trect = table.getBoundingClientRect();
-        // position the custom scrollbar just left of the table's right edge.
-        const scrollbarWidth = 14; // match CSS .custom-scrollbar width
-        // Use viewport coordinates so the scrollbar can be positioned `fixed`.
-        let fixedLeft = Math.floor(trect.right - scrollbarWidth - 2);
-        // Move the custom scrollbar slightly to the right so it doesn't cover the
-        // last table column. Convert 5mm to pixels (assuming 96dpi) and apply.
-        const mmToPx = (mm: number) => (mm * 96) / 25.4;
-        const offsetPx = Math.round(mmToPx(5)); // ~19px
-        fixedLeft = fixedLeft + offsetPx;
-        // clamp to viewport bounds
-        fixedLeft = Math.max(4, Math.min(fixedLeft, (window.innerWidth || document.documentElement.clientWidth) - scrollbarWidth - 4));
-        // Compute a fixed-screen position (top) and height so the custom scrollbar
-        // stays visible when the page scrolls or when the container scrolls.
-        const top = Math.floor(crect.top + 6); // match CSS top:6px
-        const height = Math.max(20, Math.floor(crect.height - 12));
-        setScrollbarLeft(fixedLeft);
-        setScrollbarTop(top);
-        setScrollbarHeight(height);
-    };
-
-    // Thumb drag handlers — use Pointer Events and pointer capture so the thumb
-    // follows the cursor directly and continues to receive events even if the
-    // pointer leaves the element. This keeps the thumb under the cursor and
-    // avoids flicker.
-    const onThumbPointerDown = (e: React.PointerEvent) => {
-        e.preventDefault();
-        const thumbEl = thumbRef.current;
-        const el = containerRef.current;
-        if (!thumbEl || !el) return;
-        thumbDragRef.current = true;
-        // capture pointer so we keep receiving move/up events
-        try {
-            const target = e.target instanceof Element ? e.target : null;
-            if (target && 'setPointerCapture' in target) {
-                const anyTarget: any = target;
-                anyTarget.setPointerCapture(e.pointerId);
-            }
-        } catch (err) {}
-        // position immediately under cursor
-        const trackEl = thumbEl.parentElement;
-        if (!(trackEl instanceof HTMLElement)) return;
-        const trackRect = trackEl.getBoundingClientRect();
-        const y = e.clientY - trackRect.top;
-        const h = Math.max(30, Math.floor((el.clientHeight / el.scrollHeight) * el.clientHeight));
-        const maxTop = Math.max(0, trackRect.height - h);
-        const newTop = Math.max(0, Math.min(maxTop, y - h / 2));
-        // map to scroll
-        const scrollRatio = newTop / (maxTop || 1);
-        el.scrollTop = scrollRatio * (el.scrollHeight - el.clientHeight);
-        thumbEl.style.top = `${newTop}px`;
-        thumbEl.style.cursor = 'grabbing';
-    };
+    }, [getSortValue, rows, sortKey, sortDir]);
 
     // Column resize handlers
     const onColResizerMouseDown = (e: React.MouseEvent, colIndex: number) => {
@@ -422,7 +275,7 @@ const Races: React.FC = () => {
         document.addEventListener('mouseup', onColResizerMouseUp);
     };
 
-    const onColResizerMouseMove = (e: MouseEvent) => {
+    const onColResizerMouseMove = useCallback((e: MouseEvent) => {
         const col = resizingColRef.current;
         if (col === null) return;
         const startX = startXRef.current ?? e.clientX;
@@ -435,15 +288,15 @@ const Races: React.FC = () => {
             copy[col] = newW;
             return copy;
         });
-    };
+    }, [colWidths]);
 
-    const onColResizerMouseUp = (_e: MouseEvent) => {
+    const onColResizerMouseUp = useCallback((_e: MouseEvent) => {
         resizingColRef.current = null;
         startXRef.current = null;
         startWidthRef.current = null;
         document.removeEventListener('mousemove', onColResizerMouseMove);
         document.removeEventListener('mouseup', onColResizerMouseUp);
-    };
+    }, [onColResizerMouseMove]);
 
     // Ensure any global listeners are removed on unmount
     useEffect(() => {
@@ -453,49 +306,12 @@ const Races: React.FC = () => {
                 document.removeEventListener('mouseup', onColResizerMouseUp);
             } catch (e) {}
         };
-    }, []);
+    }, [onColResizerMouseMove, onColResizerMouseUp]);
 
     // Persist column widths when they change
     useEffect(() => {
         try { sessionStorage.setItem('races_col_widths_v1', JSON.stringify(colWidths)); } catch (e) { /* ignore */ }
     }, [colWidths]);
-
-    const onThumbPointerMove = (e: React.PointerEvent) => {
-        if (!thumbDragRef.current) return;
-        const thumbEl = thumbRef.current;
-        const el = containerRef.current;
-        if (!thumbEl || !el) return;
-        const trackEl = thumbEl.parentElement;
-        if (!(trackEl instanceof HTMLElement)) return;
-        const trackRect = trackEl.getBoundingClientRect();
-        const y = e.clientY - trackRect.top;
-        const visible = el.clientHeight;
-        const total = el.scrollHeight;
-        const h = Math.max(30, Math.floor((visible / total) * visible));
-        const maxTop = Math.max(0, trackRect.height - h);
-        const newTop = Math.max(0, Math.min(maxTop, y - h / 2));
-        const scrollRatio = newTop / (maxTop || 1);
-        el.scrollTop = scrollRatio * (total - visible);
-        thumbEl.style.top = `${newTop}px`;
-    };
-
-    const onThumbPointerUp = (e: React.PointerEvent) => {
-        if (!thumbDragRef.current) return;
-        const thumbEl = thumbRef.current;
-        const el = containerRef.current;
-        if (!thumbEl || !el) return;
-        thumbDragRef.current = false;
-        try {
-            const target = e.target instanceof Element ? e.target : null;
-            if (target && 'releasePointerCapture' in target) {
-                const anyTarget: any = target;
-                anyTarget.releasePointerCapture(e.pointerId);
-            }
-        } catch (err) {}
-        thumbEl.style.cursor = 'grab';
-        // sync visual state into React
-        updateThumb();
-    };
 
     const params = new URLSearchParams(location.search);
     const date = params.get('date') || '';
@@ -629,38 +445,13 @@ const Races: React.FC = () => {
     };
 
     load();
-    }, [rawEventParam, date, paramEventNumber, viewMode, adjustmentKeys]);
+    }, [rawEventParam, date, paramEventNumber, adjustmentKeys]);
 
     useEffect(() => {
         if (adjustmentsActive && viewMode !== 'basic') {
             setViewMode('basic');
         }
     }, [adjustmentsActive, viewMode]);
-
-    // wire scroll/resize to update custom thumb
-    useEffect(() => {
-        const el = containerRef.current;
-        if (!el) return;
-        updateThumb();
-        updateScrollbarLeft();
-        const onScroll = () => updateThumb();
-        const onResize = () => {
-            updateThumb();
-            updateScrollbarLeft();
-        };
-        el.addEventListener('scroll', onScroll);
-        // Also update scrollbar position/size when the page scrolls or container scrolls
-        const onAnyScroll = () => updateScrollbarLeft();
-        el.addEventListener('scroll', onAnyScroll);
-        window.addEventListener('scroll', onAnyScroll);
-        window.addEventListener('resize', onResize);
-        return () => {
-            el.removeEventListener('scroll', onScroll);
-            window.removeEventListener('resize', onResize);
-            el.removeEventListener('scroll', onAnyScroll);
-            window.removeEventListener('scroll', onAnyScroll);
-        };
-    }, [rows]);
 
     // derive a friendly event name and number from fetched rows or the eventInfo API
     // If the identifier query param is numeric, don't show it as the event name
@@ -1009,32 +800,31 @@ const Races: React.FC = () => {
     }, [colWidths, rows, viewMode, courseAdj, otherAdj, isCompactViewport]);
 
     // Column definitions: base (basic) and additional (detailed)
-    const baseColumns = [
+    const baseColumns = useMemo(() => [
         { k: 'time', label: 'Time' },
         { k: 'age_group', label: 'Age group' },
         { k: 'age_grade', label: 'Age grade' },
         { k: 'best_curve_ranking_current', label: 'Rank' },
         { k: 'club', label: 'Club' },
         { k: 'comment', label: 'Detail' }
-    ];
-    const extraColumns = [
+    ], []);
+    const extraColumns = useMemo(() => [
         { k: 'total_runs', label: 'Total runs' },
         { k: 'last_event_code_count_long', label: 'Local recent' },
         { k: 'event_eligible_appearances', label: 'Eligible recent' },
         { k: 'distinct_courses_long', label: 'Other events' }
 
-    ];
-    const seasonalColumn = { k: 'season_adj_time', label: 'Season' };
-    const adjustmentColumns = [
-    seasonalColumn,
-    { k: 'event_adj_time', label: 'Event' },
-    { k: 'age_adj_time', label: 'Age' },
-    { k: 'sex_adj_time', label: 'Sex' },
-    { k: 'age_event_adj_time', label: 'Event+Age' },
-    { k: 'sex_event_adj_time', label: 'Event+Sex' },
-    { k: 'age_sex_adj_time', label: 'Age+Sex' },
-    { k: 'age_sex_event_adj_time', label: 'Event+Age+Sex' }
-    ];
+    ], []);
+    const adjustmentColumns = useMemo(() => [
+        { k: 'season_adj_time', label: 'Season' },
+        { k: 'event_adj_time', label: 'Event' },
+        { k: 'age_adj_time', label: 'Age' },
+        { k: 'sex_adj_time', label: 'Sex' },
+        { k: 'age_event_adj_time', label: 'Event+Age' },
+        { k: 'sex_event_adj_time', label: 'Event+Sex' },
+        { k: 'age_sex_adj_time', label: 'Age+Sex' },
+        { k: 'age_sex_event_adj_time', label: 'Event+Age+Sex' }
+    ], []);
     const compactLeadingWidths = {
         position: 50,
         athlete: 150
@@ -1086,7 +876,10 @@ const Races: React.FC = () => {
         age_sex_event_adj_time: 150
     };
     const fixedDataColumnWidths = isCompactViewport ? compactDataColumnWidths : desktopDataColumnWidths;
-    const getFixedDataColumnWidth = (columnKey: string): number => fixedDataColumnWidths[columnKey] ?? (isCompactViewport ? 90 : 120);
+    const getFixedDataColumnWidth = useCallback(
+        (columnKey: string): number => fixedDataColumnWidths[columnKey] ?? (isCompactViewport ? 90 : 120),
+        [fixedDataColumnWidths, isCompactViewport]
+    );
     // ...after adjustmentColumns definition
     const columns = useMemo(() => {
         if (viewMode === 'detailed') return [...baseColumns, ...extraColumns];
@@ -1109,15 +902,11 @@ const Races: React.FC = () => {
             ...adjustmentCols,
             ...selected.slice(insertAt)
         ];
-    }, [viewMode, adjustmentKeys]);
+    }, [adjustmentColumns, adjustmentKeys, baseColumns, extraColumns, viewMode]);
     const racesTableWidthPx = useMemo(() => {
         const dynamicWidth = columns.reduce((sum, col) => sum + getFixedDataColumnWidth(col.k), 0);
         return fixedLeadingWidths.position + fixedLeadingWidths.athlete + dynamicWidth;
-    }, [columns]);
-    const adjustmentLabelMap: Record<string, string> = {};
-    adjustmentColumns.forEach(col => {
-        adjustmentLabelMap[col.k] = col.label;
-    });
+    }, [columns, fixedLeadingWidths.athlete, fixedLeadingWidths.position, getFixedDataColumnWidth]);
 
 
     // keep colWidths aligned with the current column count

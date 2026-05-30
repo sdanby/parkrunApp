@@ -390,7 +390,8 @@ const top250BasicColumns: ColumnDef[] = [
     { key: 'total_count', label: 'Total', align: 'center', desktopWidth: 58, mobileWidth: 52 },
     { key: 'appearances', label: 'Events', align: 'center', desktopWidth: 62, mobileWidth: 58 },
     { key: 'min_time_mmss', label: 'Best time', align: 'center', desktopWidth: 68, mobileWidth: 62 },
-    { key: 'last_run_date', label: 'Last Event', align: 'center', desktopWidth: 78, mobileWidth: 72 }
+    { key: 'last_run_date', label: 'Last Event', align: 'center', desktopWidth: 78, mobileWidth: 72 },
+    { key: 'age_group', label: 'Age grp', align: 'center', desktopWidth: 90, mobileWidth: 90 }
 ];
 
 const top250DetailedOnlyColumns: ColumnDef[] = [
@@ -433,6 +434,8 @@ const CourseTest: React.FC = () => {
     const eventCodeElement = getCourseElementById('course.eventCode');
     const totalEventsElement = getCourseElementById('course.totalEvents');
     const statusMessageElement = getCourseElementById('course.statusMessage');
+    const tableTitleElement = getCourseElementById('course.tableTitle');
+    const top250TitleElement = getCourseElementById('course.top250Title');
     const summaryModeSelectElement = getCourseElementById('course.summaryModeSelect');
     const groupsPanelElement = getCourseElementById('course.groupsPanel');
     const tableContainerElement = getCourseElementById('course.tableContainer');
@@ -459,6 +462,8 @@ const CourseTest: React.FC = () => {
     const pEventCode = getCourseElementPlacement('course.eventCode', viewport);
     const pTotalEvents = getCourseElementPlacement('course.totalEvents', viewport);
     const pStatusMessage = getCourseElementPlacement('course.statusMessage', viewport);
+    const pTableTitle = getCourseElementPlacement('course.tableTitle', viewport);
+    const pTop250Title = getCourseElementPlacement('course.top250Title', viewport);
     const pSummaryModeSelect = getCourseElementPlacement('course.summaryModeSelect', viewport);
     const pGroupsPanel = getCourseElementPlacement('course.groupsPanel', viewport);
     const pTableContainer = getCourseElementPlacement('course.tableContainer', viewport);
@@ -2193,6 +2198,42 @@ const CourseTest: React.FC = () => {
 
             {!loading && !error && showHeader && (
                 <section className="course-runs-section">
+                    {panelMode === 'table' && tableTitleElement && (
+                        <div
+                            style={{
+                                position: 'absolute',
+                                left: pTableTitle?.x ?? tableTitleElement?.[viewport]?.x ?? '0.3cm',
+                                top: pTableTitle?.y ?? tableTitleElement?.[viewport]?.y ?? '3.0cm',
+                                width: pTableTitle?.width ?? tableTitleElement?.[viewport]?.width,
+                                color: tableTitleElement?.style?.color ?? '#111827',
+                                fontSize: tableTitleElement?.style?.fontSize ?? '0.95rem',
+                                fontWeight: tableTitleElement?.style?.fontWeight ?? 700,
+                                lineHeight: Number(tableTitleElement?.style?.lineHeight ?? 1),
+                                zIndex: 100,
+                                pointerEvents: 'none'
+                            }}
+                        >
+                            {tableTitleElement?.name || 'Course History'}
+                        </div>
+                    )}
+                    {panelMode === 'top250' && top250TitleElement && (
+                        <div
+                            style={{
+                                position: 'absolute',
+                                left: pTop250Title?.x ?? top250TitleElement?.[viewport]?.x ?? '0.3cm',
+                                top: pTop250Title?.y ?? top250TitleElement?.[viewport]?.y ?? '3.0cm',
+                                width: pTop250Title?.width ?? top250TitleElement?.[viewport]?.width,
+                                color: top250TitleElement?.style?.color ?? '#111827',
+                                fontSize: top250TitleElement?.style?.fontSize ?? '0.95rem',
+                                fontWeight: top250TitleElement?.style?.fontWeight ?? 700,
+                                lineHeight: Number(top250TitleElement?.style?.lineHeight ?? 1),
+                                zIndex: 100,
+                                pointerEvents: 'none'
+                            }}
+                        >
+                            {top250TitleElement?.name || 'Top 250 participants'}
+                        </div>
+                    )}
                     {panelMode === 'profile' ? (
                         <div
                             className="athlete-runs-table-wrapper plot-panel-wrapper"

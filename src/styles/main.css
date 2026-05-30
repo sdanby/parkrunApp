@@ -141,6 +141,7 @@ h1, h2, h3 {
     min-height: 0;
     overflow-y: scroll;
     padding: 0.55rem 0.7rem 0.75rem;
+    scroll-behavior: smooth;
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: thin;
@@ -160,6 +161,23 @@ h1, h2, h3 {
     background: #d5c886;
     border-radius: 999px;
     border: 2px solid #fff8cc;
+}
+
+.unified-help-target-highlight {
+    background: rgba(214, 228, 198, 0.75);
+    border-radius: 8px;
+    box-shadow: inset 0 0 0 1px rgba(120, 146, 92, 0.28);
+    padding: 0.15rem 0.45rem 0.35rem;
+    margin: 0 0 0.65rem;
+    transition: background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.unified-help-target-highlight > :first-child {
+    margin-top: 0;
+}
+
+.unified-help-target-highlight > :last-child {
+    margin-bottom: 0;
 }
 
 .unified-help-section {

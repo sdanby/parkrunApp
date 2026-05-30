@@ -1,0 +1,56 @@
+{
+  "version": "1.0.0-draft",
+  "page": "Clubs",
+  "units": "cm",
+  "anchor": "clubs-header-root",
+  "notes": "Config-driven Clubs page section labels.",
+  "viewports": {
+    "laptop": {
+      "breakpointMin": 769
+    },
+    "mobile": {
+      "breakpointMax": 768
+    }
+  },
+  "elements": [
+    {
+      "id": "clubs.membersTitle",
+      "type": "label",
+      "name": "Current & Historic Membership",
+      "style": {
+        "fontSize": "0.95rem",
+        "fontWeight": 700,
+        "color": "#111827",
+        "lineHeight": 1.0
+      },
+      "laptop": { "x": "8.3cm", "y": "2.1cm", "width": "10cm" },
+      "mobile": { "x": "5.2cm", "y": "2.1cm", "width": "10cm" }
+    },
+    {
+      "id": "clubs.currentMembersTitle",
+      "type": "label",
+      "name": "Current Membership",
+      "style": {
+        "fontSize": "0.95rem",
+        "fontWeight": 700,
+        "color": "#111827",
+        "lineHeight": 1.0
+      },
+      "laptop": { "x": "10.3cm", "y": "2.1cm", "width": "10cm" },
+      "mobile": { "x": "7.2cm", "y": "2.1cm", "width": "10cm" }
+    },
+    {
+      "id": "clubs.eventsTitle",
+      "type": "label",
+      "name": "Club popularity",
+      "style": {
+        "fontSize": "0.95rem",
+        "fontWeight": 700,
+        "color": "#111827",
+        "lineHeight": 1.0
+      },
+      "laptop": { "x": "11.1cm", "y": "2.1cm", "width": "10cm" },
+      "mobile": { "x": "8.0cm", "y": "2.1cm", "width": "10cm" }
+    }
+  ]
+}

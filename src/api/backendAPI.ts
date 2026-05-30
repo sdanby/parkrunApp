@@ -75,6 +75,33 @@ export type FeedbackRequest = {
     details: string;
     dateLogged: string;
     status: string;
+    createdBy?: string;
+};
+
+export type FeedbackRequestStatus =
+    | 'logged'
+    | 'updated'
+    | 'in-progress'
+    | 'prioritised'
+    | 'rejected'
+    | 'on-hold'
+    | 'completed';
+
+const AUTH_TOKEN_KEY = 'auth_token_v1';
+
+const getAuthHeaders = () => {
+    if (typeof window === 'undefined') {
+        return undefined;
+    }
+
+    const token = window.localStorage.getItem(AUTH_TOKEN_KEY);
+    if (!token) {
+        return undefined;
+    }
+
+    return {
+        Authorization: `Bearer ${token}`
+    };
 };
 
 export type AuthResponse = {
@@ -521,7 +548,9 @@ export const fetchAdminActivity = async (token: string, limit = 300): Promise<{ 
 
 export const fetchFeedbackRequests = async (): Promise<FeedbackRequest[]> => {
     try {
-        const response = await axios.get(`${API_BASE_URL}/api/feedback-requests`);
+        const response = await axios.get(`${API_BASE_URL}/api/feedback-requests`, {
+            headers: getAuthHeaders()
+        });
         return Array.isArray(response.data) ? response.data : [];
     } catch (error) {
         console.error('Error fetching feedback requests:', error);
@@ -533,12 +562,35 @@ export const createFeedbackRequest = async (payload: {
     type: 'error' | 'suggestion';
     title: string;
     details: string;
+    status?: FeedbackRequestStatus;
 }): Promise<FeedbackRequest> => {
     try {
-        const response = await axios.post(`${API_BASE_URL}/api/feedback-requests`, payload);
+        const response = await axios.post(`${API_BASE_URL}/api/feedback-requests`, payload, {
+            headers: getAuthHeaders()
+        });
         return response.data;
     } catch (error) {
         console.error('Error creating feedback request:', error);
+        throw error;
+    }
+};
+
+export const updateFeedbackRequest = async (
+    requestId: number,
+    payload: {
+        type: 'error' | 'suggestion';
+        title: string;
+        details: string;
+        status: FeedbackRequestStatus;
+    }
+): Promise<FeedbackRequest> => {
+    try {
+        const response = await axios.put(`${API_BASE_URL}/api/feedback-requests/${requestId}`, payload, {
+            headers: getAuthHeaders()
+        });
+        return response.data;
+    } catch (error) {
+        console.error('Error updating feedback request:', error);
         throw error;
     }
 };

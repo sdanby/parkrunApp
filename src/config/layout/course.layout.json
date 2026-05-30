@@ -178,9 +178,35 @@
       "name": "tableContainer",
       "notes": "Drives position (x, y), height, and optional width override for the main course table. If width is omitted, tableWidthMode is used as fallback.",
       "laptop": { "x": "0cm", "y": "3.5cm", "width": "50.2cm", "height": "18cm" },
-      "mobile": { "x": "0cm", "y": "1cm", "width": "11cm", "height": "13.5cm" },
+      "mobile": { "x": "0cm", "y": "0.5cm", "width": "11cm", "height": "13.5cm" },
       "laptopExpanded": { "x": "0cm", "y": "3cm", "width": "42.5cm", "height": "14cm" },
       "mobileExpanded": { "x": "0cm", "y": "3cm", "width": "15.5cm", "height": "11cm" }
+    },
+    {
+      "id": "course.tableTitle",
+      "type": "label",
+      "name": "Course History",
+      "style": {
+        "fontSize": "0.95rem",
+        "fontWeight": 700,
+        "color": "#111827",
+        "lineHeight": 1.0
+      },
+      "laptop": { "x": "13.5cm", "y": "2.7cm", "width": "8cm" },
+      "mobile": { "x": "7.0cm", "y": "-0.2cm", "width": "8cm" }
+    },
+    {
+      "id": "course.top250Title",
+      "type": "label",
+      "name": "Top 250 participants",
+      "style": {
+        "fontSize": "0.95rem",
+        "fontWeight": 700,
+        "color": "#111827",
+        "lineHeight": 1.0
+      },
+     "laptop": { "x": "12.8cm", "y": "2.7cm", "width": "8cm" },
+      "mobile": { "x": "7.0cm", "y": "-0.2cm", "width": "8cm" }
     },
     {
       "id": "course.summaryModeSelect",
@@ -260,6 +286,7 @@
     { "key": "total_count", "type": "table", "name": "total_count", "headerName": "Total", "style": { "textAlign": "center" }, "laptop": { "width": "75px" }, "mobile": { "width": "75px" } },
     { "key": "appearances", "type": "table", "name": "appearances", "headerName": "Events", "style": { "textAlign": "center" }, "laptop": { "width": "80px" }, "mobile": { "width": "80px" } },
     { "key": "volunteer_count", "type": "table", "name": "volunteer_count", "headerName": "Volunts", "style": { "textAlign": "center" }, "laptop": { "width": "85px" }, "mobile": { "width": "85px" } },
+    { "key": "age_group", "type": "table", "name": "age_group", "headerName": "Age grp", "style": { "textAlign": "center" }, "laptop": { "width": "86px" }, "mobile": { "width": "86px" } },
     { "key": "club", "type": "table", "name": "club", "headerName": "Club", "style": { "textAlign": "left" }, "laptop": { "width": "150px" }, "mobile": { "width": "150px" } },
     { "key": "best_curve_ranking_current", "type": "table", "name": "best_curve_ranking_current", "headerName": "Cur. Rank", "style": { "textAlign": "center" }, "laptop": { "width": "100px" }, "mobile": { "width": "100px" } },
     { "key": "best_curve_ranking_historic", "type": "table", "name": "best_curve_ranking_historic", "headerName": "Hist Rank", "style": { "textAlign": "center" }, "laptop": { "width": "100px" }, "mobile": { "width": "100px" } },
@@ -274,8 +301,8 @@
   "tableWidthMode": {
     "notes": "Configures table container widths for different view modes",
     "laptop": {
-      "basic": "21.2cm",
-      "detailed": "41.5cm"
+      "basic": "22.2cm",
+      "detailed": "42.5cm"
     },
     "mobile": {
       "basic": "11cm",

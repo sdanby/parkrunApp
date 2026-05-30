@@ -205,6 +205,7 @@ const HamburgerMenu: React.FC = () => {
                     <li onClick={() => handleMenuClick('/athletes')}>Participant</li>
                     <li onClick={() => handleMenuClick('/clubs')}>Club</li>
                     <li onClick={() => handleMenuClick('/lists')}>Lists</li>
+                    <li onClick={() => handleMenuClick('/feedback')}>Log Error / Suggestion</li>
                     {canSeeAdmin && <li onClick={() => handleMenuClick('/admin')}>Admin</li>}
                     <li onClick={() => (isAuthenticated ? handleLogout() : handleMenuClick('/login'))}>
                         {isAuthenticated ? 'Logout' : 'Login'}

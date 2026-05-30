@@ -1932,6 +1932,9 @@ const EventAnalysisTest: React.FC = () => {
         style={{
           marginTop: pTableCorner?.y ? `calc(${pTableCorner.y} - ${headerAnchorHeight})` : '0.1cm',
           marginLeft: pTableCorner?.x ?? undefined,
+          height: pTableCorner?.height,
+          minHeight: pTableCorner?.minHeight,
+          maxHeight: pTableCorner?.maxHeight,
           ['--ea-max-visible-width' as any]: tableMaxVisibleWidth || '100%'
         }}
       >

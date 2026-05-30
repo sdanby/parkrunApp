@@ -201,8 +201,8 @@
       "id": "eventAnalysis.table.corner",
       "type": "table",
       "name": "corner",
-      "laptop": { "x": "0.1cm", "y": "3.6cm" },
-      "mobile": { "x": "0.1cm", "y": "3.6cm" }
+      "laptop": { "x": "0.1cm", "y": "3.6cm", "height": "17.0cm" },
+      "mobile": { "x": "0.1cm", "y": "3.6cm", "height": "13.0cm" }
     }
   ],
   "tableModel": {

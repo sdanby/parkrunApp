@@ -11,6 +11,7 @@ import CourseTest from './pages/CourseTest';
 import Clubs from './pages/Clubs';
 import Athletes from './pages/Athletes';
 import Lists from './pages/Lists';
+import Feedback from './pages/Feedback';
 import Admin from './pages/Admin';
 import NavigationStackOverlay from './components/NavigationStackOverlay';
 import EventHelpManual, { UnifiedHelpOverlay, UNIFIED_HELP_EVENT, getPageMarkerForPath, type UnifiedHelpAnchor } from './pages/UnifiedHelp';
@@ -39,6 +40,7 @@ const headings: { [key: string]: string } = {
     '/clubs': 'Club',
     '/athletes': 'Participant',
     '/lists': 'Lists',
+    '/feedback': 'Error / Suggestion Log',
     '/admin': 'Admin',
     '/help-manual': 'Help Manual'
 };
@@ -247,6 +249,7 @@ const router = createBrowserRouter([
             { path: 'clubs', element: <Clubs /> },
             { path: 'athletes', element: <Athletes /> },
             { path: 'lists', element: <Lists /> },
+            { path: 'feedback', element: <Feedback /> },
             { path: 'admin', element: <Admin /> },
             { path: 'help-manual', element: <EventHelpManual /> }
         ]
