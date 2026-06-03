@@ -198,6 +198,28 @@
       "mobile": { "x": "7.8cm", "y": "2.0cm", "width": "3.2cm" }
     },
     {
+      "id": "participant.estRankLabel",
+      "type": "label",
+      "name": "Est. Rank:",
+      "helpTarget": "control-other-adj",
+      "helpLabel": true,
+      "style": {
+        "fontSize": "0.75rem",
+        "fontWeight": 600,
+        "color": "#111827",
+        "lineHeight": 0.9
+      },
+      "laptop": { "x": "8.1cm", "y": "2.7cm" },
+      "mobile": { "x": "8.5cm", "y": "2.7cm" }
+    },
+    {
+      "id": "participant.estRankValue",
+      "type": "field",
+      "name": "Est. Rank value",
+      "laptop": { "x": "10.5cm", "y": "2.7cm" },
+      "mobile": { "x": "8.8cm", "y": "3.5cm" }
+    },
+    {
       "id": "participant.freqCourseLabel",
       "type": "label",
       "name": "Reg Course:",

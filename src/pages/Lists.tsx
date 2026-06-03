@@ -27,6 +27,8 @@ type Run = {
     name: string;
     position: number;
     rank?: number | string;
+    ev_rank?: number | string;
+    cur_rank?: number | string;
     time: string;
     originalRank?: number;
     season_adj_time?: string;
@@ -615,7 +617,8 @@ const Lists: React.FC = () => {
                 case 'Date': return getIsoDate(run.event_date);
                 case 'Event': return run.event_name || run.event_code;
                 case 'Pos': return run.position;
-                case 'CurveRank': return run.rank ?? '';
+                case 'EvRank': return run.ev_rank ?? '';
+                case 'CurRank': return run.cur_rank ?? '';
                 case 'Age Grd': return run.age_grade;
                 case 'Age Grp': return run.age_group;
                 case 'Comment': return run.comment;
@@ -641,7 +644,8 @@ const Lists: React.FC = () => {
                 sortKey === 'Rank'
                 || sortKey === 'Event'
                 || sortKey === 'Pos'
-                || sortKey === 'CurveRank'
+                || sortKey === 'EvRank'
+                || sortKey === 'CurRank'
                 || sortKey === 'TotalRuns'
                 || sortKey === 'TotalLocalRuns'
                 || sortKey === 'LocalRuns1Y'
@@ -923,8 +927,10 @@ const Lists: React.FC = () => {
                 return <td style={commonStyle}>{formatDate(run.event_date)}</td>;
             case 'Pos':
                 return <td style={commonStyle}>{run.position}</td>;
-            case 'CurveRank':
-                return <td style={commonStyle}>{run.rank ?? ''}</td>;
+            case 'EvRank':
+                return <td style={commonStyle}>{run.ev_rank === undefined || run.ev_rank === null || run.ev_rank === '' ? '' : Math.round(Number(run.ev_rank))}</td>;
+            case 'CurRank':
+                return <td style={commonStyle}>{run.cur_rank === undefined || run.cur_rank === null || run.cur_rank === '' ? '' : Math.round(Number(run.cur_rank))}</td>;
             case 'Age Grd':
                 return <td style={commonStyle}>{run.age_grade}</td>;
             case 'Age Grp':

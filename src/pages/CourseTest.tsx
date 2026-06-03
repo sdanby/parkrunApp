@@ -2889,24 +2889,31 @@ const CourseTest: React.FC = () => {
                                                     if (col.key === 'date') {
                                                         return (
                                                             <th key={col.key} scope="row" className="athlete-date-cell" style={baseStyle}>
-                                                                <select
-                                                                    id="courses-summary-mode-select"
-                                                                    value={summarySelectedLabel}
-                                                                    onChange={(event) => setSummaryMode(normalizeSummaryMode(event.target.value))}
-                                                                    aria-label="Summary metric"
-                                                                    className="course-summary-mode-select"
+                                                                <div
+                                                                    className="course-summary-mode-select-wrap"
                                                                     style={{
                                                                         width: summaryModeSelectElement?.[viewport]?.width,
                                                                         position: summaryModeSelectElement?.sticky ? 'sticky' : 'relative',
                                                                         top: summaryModeSelectElement?.sticky ? 0 : undefined,
-                                                                        zIndex: summaryModeSelectElement?.sticky ? 110 : undefined,
-                                                                        background: summaryModeSelectElement?.sticky ? '#e0e0e0' : undefined
+                                                                        zIndex: summaryModeSelectElement?.sticky ? 110 : undefined
                                                                     }}
                                                                 >
-                                                                    {summaryControlOptions.map((option) => (
-                                                                        <option key={option} value={option}>{option}</option>
-                                                                    ))}
-                                                                </select>
+                                                                    <select
+                                                                        id="courses-summary-mode-select"
+                                                                        value={summarySelectedLabel}
+                                                                        onChange={(event) => setSummaryMode(normalizeSummaryMode(event.target.value))}
+                                                                        aria-label="Summary metric"
+                                                                        className="course-summary-mode-select"
+                                                                        style={{
+                                                                            background: summaryModeSelectElement?.sticky ? '#e0e0e0' : undefined
+                                                                        }}
+                                                                    >
+                                                                        {summaryControlOptions.map((option) => (
+                                                                            <option key={option} value={option}>{option}</option>
+                                                                        ))}
+                                                                    </select>
+                                                                    <span className="course-summary-mode-caret" aria-hidden="true">▼</span>
+                                                                </div>
                                                             </th>
                                                         );
                                                     }

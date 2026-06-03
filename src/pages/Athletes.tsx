@@ -92,6 +92,7 @@ type AthleteBestSummaryRow = {
 };
 
 const ATHLETES_STATE_KEY = 'athletes_state_v1';
+const ATHLETES_PREFERENCES_KEY = 'athletes_preferences_v1';
 const ATHLETES_RETURN_SCROLL_KEY = 'athletes_return_scroll_v1';
 
 const normalizeAthletePanel = (value: string | null): 'table' | 'profile' | 'plot' | null => {
@@ -183,7 +184,7 @@ const normalizeAthleteResponse = (payload: any, fallbackCode?: string): AthleteR
     fill('athlete_name', ['athlete_name', 'name', 'display_name']);
     fill('club', ['club', 'athlete_club']);
     fill('sex', ['sex', 'gender']);
-    fill('current_age_estimate', ['current_age_estimate', 'age_estimate', 'age']);
+    fill('current_age_estimate', ['athlete_current_age_estimate', 'athleteCurrentAgeEstimate', 'current_age_estimate', 'age_estimate', 'age']);
     fill('total_runs', ['total_runs', 'totalRuns', 'run_count', 'runs']);
 
     if (summary.total_runs === undefined && runs.length > 0) {
@@ -377,15 +378,14 @@ const adjustmentColumnMatrix: Record<CourseAdjOption, Record<OtherAdjOption, str
     },
     full: {
         none: ['event_adj_time'],
-        age: ['event_age_adj_time'],
-        sex: ['event_sex_adj_time'],
-        age_sex: ['event_age_sex_adj_time']
+        age: ['age_event_adj_time'],
+        sex: ['sex_event_adj_time'],
+        age_sex: ['age_sex_event_adj_time']
     }
 };
 
 const getAdjustmentKeys = (course: CourseAdjOption, other: OtherAdjOption): string[] => {
     const courseMap = adjustmentColumnMatrix[course];
-    if (!courseMap) return [];
     return courseMap[other] ?? [];
 };
 
@@ -687,8 +687,24 @@ const Athletes: React.FC = () => {
         isPlotExpanded: boolean;
         selectedPlotLegendKey: string | null;
     }> => {
+        const readStoredValue = (): string | null => {
+            try {
+                const localValue = localStorage.getItem(ATHLETES_PREFERENCES_KEY);
+                if (localValue) {
+                    return localValue;
+                }
+            } catch {
+                // ignore storage failures
+            }
+            try {
+                return sessionStorage.getItem(ATHLETES_STATE_KEY);
+            } catch {
+                return null;
+            }
+        };
+
         try {
-            const raw = sessionStorage.getItem(ATHLETES_STATE_KEY);
+            const raw = readStoredValue();
             if (!raw) return {};
             const parsed = JSON.parse(raw);
             if (!parsed || typeof parsed !== 'object') return {};
@@ -954,7 +970,7 @@ const Athletes: React.FC = () => {
 
     useEffect(() => {
         let cancelled = false;
-        if (!showProfile || !activeSelectedCode) {
+        if (!activeSelectedCode) {
             return () => {
                 cancelled = true;
             };
@@ -985,7 +1001,7 @@ const Athletes: React.FC = () => {
         return () => {
             cancelled = true;
         };
-    }, [showProfile, activeSelectedCode]);
+    }, [activeSelectedCode]);
 
     // Auto-scroll to highlighted row when coming from Single Event
     useEffect(() => {
@@ -1375,7 +1391,7 @@ const Athletes: React.FC = () => {
     };
 
     const latestRun = useMemo(() => (runs.length > 0 ? runs[runs.length - 1] : null), [runs]);
-    const rawLatestAge = pickField(latestRun, ['current_age_estimate', 'currentAgeEstimate', 'age_estimate', 'age']) ??
+    const rawLatestAge = pickField(latestRun, ['athlete_current_age_estimate', 'athleteCurrentAgeEstimate', 'current_age_estimate', 'currentAgeEstimate', 'age_estimate', 'age']) ??
         summary?.current_age_estimate;
     const formattedLatestAge = formatAgeEstimate(rawLatestAge);
 
@@ -1464,6 +1480,52 @@ const Athletes: React.FC = () => {
             map[String(row.best_type)] = row;
         }
         return map;
+    }, [profileRows]);
+
+    const estimatedRankSummary = useMemo(() => {
+        const oneYearTypeToMetric: Record<string, { metric: string; order: number }> = {
+            best_1y: { metric: 'B', order: 1 },
+            event_1y: { metric: 'E', order: 2 },
+            age_event_1y: { metric: 'AE', order: 3 },
+            sex_event_1y: { metric: 'ES', order: 4 },
+            age_sex_event_1y: { metric: 'AES', order: 5 }
+        };
+
+        const candidates = profileRows
+            .map((row) => {
+                const bestType = String(row?.best_type ?? '').trim();
+                const mapping = oneYearTypeToMetric[bestType];
+                if (!mapping) return null;
+                const rankRaw = Number(row?.rank);
+                if (!Number.isFinite(rankRaw)) return null;
+                return {
+                    rank: rankRaw,
+                    metric: mapping.metric,
+                    order: mapping.order
+                };
+            })
+            .filter((item): item is { rank: number; metric: string; order: number } => Boolean(item));
+
+        if (candidates.length === 0) {
+            return {
+                label: 'Est. Rank',
+                value: '--',
+                hasValue: false
+            };
+        }
+
+        candidates.sort((a, b) => {
+            if (b.rank !== a.rank) return b.rank - a.rank;
+            return a.order - b.order;
+        });
+
+        const best = candidates[0];
+        const displayMetric = best.metric === 'B' ? '*' : best.metric;
+        return {
+            label: 'Est. Rank',
+            value: `${Math.round(best.rank)} ${displayMetric}`,
+            hasValue: true
+        };
     }, [profileRows]);
 
     const eventsAllPieSegments = useMemo(() => {
@@ -1613,20 +1675,28 @@ const Athletes: React.FC = () => {
     };
 
     useEffect(() => {
+        const nextState = JSON.stringify({
+            sortKey,
+            sortDir,
+            viewMode,
+            courseAdj,
+            otherAdj,
+            showPlot,
+            showProfile,
+            plotEligibilityMode,
+            plotSeriesMode,
+            isPlotExpanded,
+            selectedPlotLegendKey
+        });
+
         try {
-            sessionStorage.setItem(ATHLETES_STATE_KEY, JSON.stringify({
-                sortKey,
-                sortDir,
-                viewMode,
-                courseAdj,
-                otherAdj,
-                showPlot,
-                showProfile,
-                plotEligibilityMode,
-                plotSeriesMode,
-                isPlotExpanded,
-                selectedPlotLegendKey
-            }));
+            sessionStorage.setItem(ATHLETES_STATE_KEY, nextState);
+        } catch {
+            // ignore storage failures
+        }
+
+        try {
+            localStorage.setItem(ATHLETES_PREFERENCES_KEY, nextState);
         } catch {
             // ignore storage failures
         }
@@ -1754,6 +1824,8 @@ const Athletes: React.FC = () => {
     const tableViewSelectElement = getParticipantElementById('participant.tableViewSelect');
     const courseAdjSelectElement = getParticipantElementById('participant.courseAdjSelect');
     const otherAdjSelectElement = getParticipantElementById('participant.otherAdjSelect');
+    const estRankLabelElement = getParticipantElementById('participant.estRankLabel');
+    const estRankValueElement = getParticipantElementById('participant.estRankValue');
     const profileButtonElement = getParticipantElementById('participant.profileButton');
     const resetButtonElement = getParticipantElementById('participant.resetButton');
     const plotContainerElement = getParticipantElementById('participant.plotContainer');
@@ -1839,6 +1911,14 @@ const Athletes: React.FC = () => {
     const otherAdjSelectPlacement = useMemo(
         () => otherAdjSelectElement?.[isMobile ? 'mobile' : 'laptop'],
         [isMobile, otherAdjSelectElement]
+    );
+    const estRankLabelPlacement = useMemo(
+        () => estRankLabelElement?.[isMobile ? 'mobile' : 'laptop'],
+        [estRankLabelElement, isMobile]
+    );
+    const estRankValuePlacement = useMemo(
+        () => estRankValueElement?.[isMobile ? 'mobile' : 'laptop'],
+        [estRankValueElement, isMobile]
     );
     const profileButtonPlacement = useMemo(
         () => profileButtonElement?.[isMobile ? 'mobile' : 'laptop'],
@@ -2088,6 +2168,30 @@ const Athletes: React.FC = () => {
         };
     }, [otherAdjSelectPlacement]);
 
+    const estRankLabelWrapperStyle = useMemo<React.CSSProperties>(() => ({
+        position: 'absolute',
+        left: estRankLabelPlacement?.x ?? otherAdjSelectPlacement?.x ?? '8.7cm',
+        top: estRankLabelPlacement?.y ?? `calc(${otherAdjSelectPlacement?.y ?? '1.8cm'} + 0.85cm)`,
+        display: 'inline-flex',
+        zIndex: 25,
+        background: 'rgba(255, 255, 255, 0.92)',
+        padding: '0 0.08cm',
+        pointerEvents: 'auto',
+        whiteSpace: 'nowrap'
+    }), [estRankLabelPlacement, otherAdjSelectPlacement]);
+
+    const estRankValueStyle = useMemo<React.CSSProperties>(() => ({
+        position: 'absolute',
+        left: estRankValuePlacement?.x ?? `calc(${estRankLabelPlacement?.x ?? otherAdjSelectPlacement?.x ?? '8.7cm'} + 2.1cm)`,
+        top: estRankValuePlacement?.y ?? estRankLabelPlacement?.y ?? `calc(${otherAdjSelectPlacement?.y ?? '1.8cm'} + 0.85cm)`,
+        zIndex: 25,
+        background: 'rgba(255, 255, 255, 0.92)',
+        padding: '0 0.08cm',
+        pointerEvents: 'none',
+        whiteSpace: 'nowrap',
+        opacity: estimatedRankSummary.hasValue ? 1 : 0.45
+    }), [estRankLabelPlacement?.x, estRankLabelPlacement?.y, estRankValuePlacement, estimatedRankSummary.hasValue, otherAdjSelectPlacement?.x, otherAdjSelectPlacement?.y]);
+
     const profileButtonStyle = useMemo<React.CSSProperties>(() => ({
         position: 'absolute',
         left: profileButtonPlacement?.x ?? '13.3cm',
@@ -2250,6 +2354,16 @@ const Athletes: React.FC = () => {
         };
     }, [athleteCodeLabelElement]);
 
+    const estRankLabelTextStyle = useMemo<React.CSSProperties>(() => {
+        const style = estRankLabelElement?.style;
+        return {
+            fontSize: style?.fontSize ?? (isMobile ? '0.72rem' : '0.76rem'),
+            fontWeight: style?.fontWeight ?? 700,
+            color: style?.color ?? '#111827',
+            lineHeight: style?.lineHeight ?? 1.2
+        };
+    }, [estRankLabelElement, isMobile]);
+
     const totalRunsValueTextStyle = useMemo<React.CSSProperties>(() => {
         const style = totalRunsValueElement?.style;
         return {
@@ -2305,6 +2419,20 @@ const Athletes: React.FC = () => {
             height: estimatedAgeValuePlacement?.height ?? style?.height
         };
     }, [estimatedAgeValueElement, estimatedAgeValuePlacement]);
+
+    const estRankValueTextStyle = useMemo<React.CSSProperties>(() => {
+        const style = estRankValueElement?.style;
+        return {
+            fontSize: style?.fontSize ?? (isMobile ? '0.72rem' : '0.76rem'),
+            fontWeight: style?.fontWeight ?? 700,
+            color: style?.color ?? (estimatedRankSummary.hasValue ? '#111827' : '#6b7280'),
+            lineHeight: style?.lineHeight ?? 1.2,
+            fontStyle: style?.fontStyle,
+            textAlign: style?.textAlign,
+            width: estRankValuePlacement?.width ?? style?.width,
+            height: estRankValuePlacement?.height ?? style?.height
+        };
+    }, [estRankValueElement, estRankValuePlacement, estimatedRankSummary.hasValue, isMobile]);
 
     const eventsAllPieDiameter = useMemo(() => {
         const width = eventsAllPieElement?.style?.width;
@@ -3336,7 +3464,8 @@ const Athletes: React.FC = () => {
                                 left: 0,
                                 top: 0,
                                 width: '100%',
-                                height: isMobile ? '5.0cm' : '2.6cm',
+                                height: isMobile ? '5.2cm' : '3.3cm',
+                                overflow: 'visible',
                                 pointerEvents: 'none',
                                 zIndex: 20
                             }}
@@ -3403,6 +3532,19 @@ const Athletes: React.FC = () => {
                                         <option value="sex">sex adjustments</option>
                                         <option value="age_sex">age & sex adjustment</option>
                                     </select>
+                                    {showHeader && (
+                                        <>
+                                            {renderConfigControlLabel(
+                                                estRankLabelElement,
+                                                `${estimatedRankSummary.label}:`,
+                                                estRankLabelElement?.helpTarget || 'control-other-adj',
+                                                'athletes-est-rank-label',
+                                                estRankLabelTextStyle,
+                                                estRankLabelWrapperStyle
+                                            )}
+                                            <div style={{ ...estRankValueStyle, ...estRankValueTextStyle }}>{estimatedRankSummary.value}</div>
+                                        </>
+                                    )}
 
                                     {renderConfigControlLabel(
                                         freqCourseLabelElement,

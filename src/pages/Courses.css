@@ -141,29 +141,50 @@
     font-weight: 700;
 }
 
+.course-summary-mode-select-wrap {
+    position: relative;
+    display: inline-block;
+}
+
 .course-summary-mode-select {
-    width: 110%;
-    border: none;
-    background: transparent;
+    width: 100%;
+    border: 1px solid #8aa7c7;
+    border-radius: 0.22rem;
+    background-color: #f7fbff;
     font: inherit;
     font-size: 0.72rem;
-    font-weight: 600;
-    color: #111;
+    font-weight: 700;
+    color: #0f172a;
     cursor: pointer;
-    padding: 0.00rem 0.0rem 0 0;
+    padding: 0.06rem 1.15rem 0.06rem 0.3rem;
     outline: none;
     appearance: none;
     -webkit-appearance: none;
     -moz-appearance: none;
     line-height: 1.15;
-    background-image:
-        linear-gradient(45deg, transparent 50%, #111 50%),
-        linear-gradient(135deg, #111 50%, transparent 50%);
-    background-position:
-        calc(100% - 0.20rem) calc(60% + 2px),
-        calc(100% + 0.00rem) calc(60% + 2px);
-    background-size: 0.3rem 0.3rem, 0.3rem 0.3rem;
-    background-repeat: no-repeat;
+    background-image: linear-gradient(#f7fbff, #f7fbff);
+    background-repeat: repeat;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75);
+}
+
+.course-summary-mode-caret {
+    position: absolute;
+    right: 0.32rem;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.62rem;
+    color: #0f172a;
+    pointer-events: none;
+    line-height: 1;
+}
+
+.course-summary-mode-select:hover {
+    background-color: #edf5ff;
+}
+
+.course-summary-mode-select:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
 }
 
 .course-summary-mode-select::-ms-expand {

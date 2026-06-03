@@ -264,7 +264,7 @@
     ]
   },
   "tableColumns": [
-    { "key": "date", "type": "table", "name": "date", "headerName": "Date", "style": { "textAlign": "left" }, "laptop": { "width": "75px" }, "mobile": { "width": "75px" } },
+    { "key": "date", "type": "table", "name": "date", "headerName": "Date", "style": { "textAlign": "right" }, "laptop": { "width": "100px" }, "mobile": { "width": "100px" } },
     { "key": "event_number", "type": "table", "name": "event_number", "headerName": "Event #", "style": { "textAlign": "center" }, "laptop": { "width": "80px" }, "mobile": { "width": "80px" } },
     { "key": "participants", "type": "table", "name": "participants", "headerName": "Participt", "style": { "textAlign": "center" }, "laptop": { "width": "85px" }, "mobile": { "width": "85px" } },
     { "key": "coeff_combined", "type": "table", "name": "coeff_combined", "headerName": "Hardness", "style": { "textAlign": "center" }, "laptop": { "width": "95px" }, "mobile": { "width": "95px" } },
