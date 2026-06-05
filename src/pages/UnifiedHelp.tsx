@@ -9,8 +9,14 @@ export type UnifiedHelpAnchor = {
     y: number;
 };
 
-export const requestUnifiedHelp = (markerId: string = 'top', anchor?: UnifiedHelpAnchor | null) => {
-    window.dispatchEvent(new CustomEvent(UNIFIED_HELP_EVENT, { detail: { markerId, anchor: anchor || null } }));
+export type UnifiedHelpRequestDetail = {
+    markerId?: string;
+    anchor?: UnifiedHelpAnchor | null;
+    query?: string;
+};
+
+export const requestUnifiedHelp = (markerId: string = 'top', anchor?: UnifiedHelpAnchor | null, query?: string) => {
+    window.dispatchEvent(new CustomEvent(UNIFIED_HELP_EVENT, { detail: { markerId, anchor: anchor || null, query: query || '' } }));
 };
 
 export const getPageMarkerForPath = (path: string): string | null => {
@@ -60,11 +66,12 @@ export const getMarkerForControlLabel = (label: string): string => {
 type UnifiedHelpOverlayProps = {
     open: boolean;
     startMarkerId: string;
+    queryTerm?: string;
     anchor?: UnifiedHelpAnchor | null;
     onClose: () => void;
 };
 
-export const UnifiedHelpOverlay: React.FC<UnifiedHelpOverlayProps> = ({ open, startMarkerId, anchor, onClose }) => {
+export const UnifiedHelpOverlay: React.FC<UnifiedHelpOverlayProps> = ({ open, startMarkerId, queryTerm, anchor, onClose }) => {
     const [markdown, setMarkdown] = useState<string>('Loading help...');
     const bodyRef = useRef<HTMLDivElement | null>(null);
     const highlightedRef = useRef<HTMLDivElement | null>(null);
@@ -148,6 +155,22 @@ export const UnifiedHelpOverlay: React.FC<UnifiedHelpOverlayProps> = ({ open, st
         return elements;
     };
 
+    const findElementByQuery = (query: string): HTMLElement | null => {
+        if (!bodyRef.current) return null;
+        const token = String(query || '').trim().toLowerCase();
+        if (!token) return null;
+
+        const candidates = bodyRef.current.querySelectorAll<HTMLElement>('h1, h2, h3, h4, h5, h6, p, li');
+        for (const candidate of candidates) {
+            const text = String(candidate.textContent || '').trim().toLowerCase();
+            if (text.includes(token)) {
+                return candidate;
+            }
+        }
+
+        return null;
+    };
+
     useEffect(() => {
         if (!open) return;
         fetch('/helptext.md')
@@ -166,7 +189,21 @@ export const UnifiedHelpOverlay: React.FC<UnifiedHelpOverlayProps> = ({ open, st
 
         clearHighlight();
 
-        const target = bodyRef.current.querySelector<HTMLElement>(`#${CSS.escape(startMarkerId || 'top')}`);
+        let target: HTMLElement | null = null;
+        const markerId = String(startMarkerId || '').trim();
+
+        if (markerId && markerId !== 'top') {
+            target = bodyRef.current.querySelector<HTMLElement>(`#${CSS.escape(markerId)}`);
+        }
+
+        if (!target) {
+            target = findElementByQuery(queryTerm || '');
+        }
+
+        if (!target && markerId) {
+            target = bodyRef.current.querySelector<HTMLElement>(`#${CSS.escape(markerId)}`);
+        }
+
         if (!target) {
             bodyRef.current.scrollTo({ top: 0, behavior: scrollBehavior });
             return;
@@ -188,7 +225,7 @@ export const UnifiedHelpOverlay: React.FC<UnifiedHelpOverlayProps> = ({ open, st
         return () => {
             clearHighlight();
         };
-    }, [markdown, open, scrollBehavior, startMarkerId]);
+    }, [markdown, open, queryTerm, scrollBehavior, startMarkerId]);
 
     const panelStyle = useMemo(() => {
         if (!anchor || !Number.isFinite(anchor.x) || !Number.isFinite(anchor.y)) return undefined;

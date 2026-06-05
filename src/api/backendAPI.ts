@@ -74,8 +74,10 @@ export type FeedbackRequest = {
     title: string;
     details: string;
     dateLogged: string;
+    lastUpdated?: string;
     status: string;
     createdBy?: string;
+    deleted?: boolean;
 };
 
 export type FeedbackRequestStatus =
@@ -85,7 +87,8 @@ export type FeedbackRequestStatus =
     | 'prioritised'
     | 'rejected'
     | 'on-hold'
-    | 'completed';
+    | 'completed'
+    | 'deleted';
 
 const AUTH_TOKEN_KEY = 'auth_token_v1';
 

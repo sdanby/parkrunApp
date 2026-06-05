@@ -4,6 +4,10 @@
   "units": "cm",
   "anchor": "lists-header-root",
   "notes": "Config-driven Lists page layout with absolute positioning (0,0 = top-left).",
+  "tableHelpTip": {
+    "enabled": true,
+    "delayMs": 2000
+  },
   "viewports": {
     "laptop": {
       "breakpointMin": 641

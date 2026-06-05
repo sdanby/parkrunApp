@@ -14,6 +14,8 @@ import {
 } from '../config/layout/eventAnalysisLayoutHelper';
 import { formatAvgTime, formatDate2 } from '../utilities';
 import { navigateBackWithNavStack, navigateWithNavStack } from '../utils/navigationStack';
+import { useGlobalWaitCursor } from '../utils/useGlobalWaitCursor';
+import { useDelayedUnifiedHelp } from '../utils/useDelayedUnifiedHelp';
 import './ResultsTable.css';
 
 const EVENT_ANALYSIS_TEST_STATE_KEY = 'event_analysis_test_state_v1';
@@ -487,6 +489,7 @@ const EventAnalysisTest: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [rows, setRows] = useState<any[]>([]);
+  useGlobalWaitCursor(loading);
 
   const [controlValues, setControlValues] = useState<Record<string, string>>(() => buildInitialControlValues());
   const [sortKey, setSortKey] = useState<string | null>(() => {
@@ -657,6 +660,11 @@ const EventAnalysisTest: React.FC = () => {
   ]);
 
   const layoutConfig = useMemo(() => getEventAnalysisLayoutConfig(), []);
+  const tableHeaderHelpEnabled = (layoutConfig as any)?.tableHelpTip?.enabled !== false;
+  const tableHeaderHelpDelayMs = Number((layoutConfig as any)?.tableHelpTip?.delayMs) > 0
+    ? Number((layoutConfig as any).tableHelpTip.delayMs)
+    : 2000;
+  const delayedHeaderHelp = useDelayedUnifiedHelp(tableHeaderHelpEnabled, tableHeaderHelpDelayMs);
   const tableModel = layoutConfig.tableModel;
   const tableColumns = layoutConfig.tableColumns ?? [];
 
@@ -1955,6 +1963,15 @@ const EventAnalysisTest: React.FC = () => {
               <th
                 colSpan={2}
                 className="sticky-corner-wide"
+                onMouseEnter={(event) => {
+                  delayedHeaderHelp.schedule({
+                    event,
+                    label: analysisHeaderLabel(analysisType)
+                  });
+                }}
+                onMouseLeave={delayedHeaderHelp.clear}
+                onMouseDown={delayedHeaderHelp.clear}
+                onTouchStart={delayedHeaderHelp.clear}
                 style={{
                   position: tableRow1Sticky ? 'sticky' : 'static',
                   top: tableRow1Sticky ? 0 : undefined,
@@ -1969,6 +1986,15 @@ const EventAnalysisTest: React.FC = () => {
                   key={`h-${periodKey}`}
                   className="sticky-header"
                   onClick={() => onSort(`period:${periodKey}`)}
+                  onMouseEnter={(event) => {
+                    delayedHeaderHelp.schedule({
+                      event,
+                      label: formatPeriodHeader(periodKey, periodMode)
+                    });
+                  }}
+                  onMouseLeave={delayedHeaderHelp.clear}
+                  onMouseDown={delayedHeaderHelp.clear}
+                  onTouchStart={delayedHeaderHelp.clear}
                   style={{
                     cursor: dateHeadersSortable ? 'pointer' : 'default',
                     minWidth: periodColumnWidth,
@@ -1987,6 +2013,15 @@ const EventAnalysisTest: React.FC = () => {
               <th
                 className={`sticky-col sticky-corner-2-1 eventanalysis-col1 eventanalysis-row2-corner ${stickyLeadCol1 ? '' : ''}`.trim()}
                 onClick={() => onSort('col1')}
+                onMouseEnter={(event) => {
+                  delayedHeaderHelp.schedule({
+                    event,
+                    label: String(tableModel?.col1?.label || 'Event')
+                  });
+                }}
+                onMouseLeave={delayedHeaderHelp.clear}
+                onMouseDown={delayedHeaderHelp.clear}
+                onTouchStart={delayedHeaderHelp.clear}
                 style={{
                   cursor: sortingEnabled ? 'pointer' : 'default',
                   textAlign: col1TextAlign,
@@ -1999,6 +2034,15 @@ const EventAnalysisTest: React.FC = () => {
               <th
                 className={`sticky-col-2 sticky-corner-2-2 eventanalysis-col2 eventanalysis-row2-corner ${stickyLeadCol2 ? '' : ''}`.trim()}
                 onClick={() => onSort('col2')}
+                onMouseEnter={(event) => {
+                  delayedHeaderHelp.schedule({
+                    event,
+                    label: aggHeaderLabel(aggType)
+                  });
+                }}
+                onMouseLeave={delayedHeaderHelp.clear}
+                onMouseDown={delayedHeaderHelp.clear}
+                onTouchStart={delayedHeaderHelp.clear}
                 style={{
                   cursor: sortingEnabled ? 'pointer' : 'default',
                   textAlign: col2TextAlign,
@@ -2012,6 +2056,15 @@ const EventAnalysisTest: React.FC = () => {
                 <th
                   key={`p-${periodKey}`}
                   className={`sticky-header ${tableRow2Sticky ? 'second-row' : ''}`.trim()}
+                  onMouseEnter={(event) => {
+                    delayedHeaderHelp.schedule({
+                      event,
+                      label: formatPeriodHeader(periodKey, periodMode)
+                    });
+                  }}
+                  onMouseLeave={delayedHeaderHelp.clear}
+                  onMouseDown={delayedHeaderHelp.clear}
+                  onTouchStart={delayedHeaderHelp.clear}
                   style={{
                     cursor: 'default',
                     position: tableRow2Sticky ? 'sticky' : 'static',

@@ -4,12 +4,17 @@ import { ClubCourseSummaryRecord, fetchAthleteRuns } from '../api/backendAPI';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { fetchClubCourseSummary, fetchClubMembers, fetchClubsSearch } from '../api/backendAPI';
 import { navigateBackWithNavStack, navigateWithNavStack } from '../utils/navigationStack';
+import { useColumnHeaderMode } from '../utils/useColumnHeaderMode';
+import { useGlobalWaitCursor } from '../utils/useGlobalWaitCursor';
 import {
     getClubsElementById,
     getClubsElementPlacement,
+    getClubsLayoutConfig,
     getClubsViewportForWidth,
     type ClubsViewport
 } from '../config/layout/clubsLayoutHelper';
+import { useDelayedUnifiedHelp } from '../utils/useDelayedUnifiedHelp';
+import { requestUnifiedHelp } from './UnifiedHelp';
 import './ResultsTable.css';
 import './Clubs.css';
 
@@ -304,8 +309,35 @@ const getMostRecentClubFromAthletePayload = (payload: unknown): string | null =>
 const Clubs: React.FC = () => {
     const navigate = useNavigate();
     const location = useLocation();
+    const { isHelpMode } = useColumnHeaderMode();
     const locationState = toClubsLocationState(location.state ?? {});
     const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
+    const clubsLayoutConfig = useMemo(() => getClubsLayoutConfig() as any, []);
+    const tableHeaderHelpEnabled = clubsLayoutConfig?.tableHelpTip?.enabled !== false;
+    const tableHeaderHelpDelayMs = Number(clubsLayoutConfig?.tableHelpTip?.delayMs) > 0
+        ? Number(clubsLayoutConfig.tableHelpTip.delayMs)
+        : 2000;
+    const delayedHeaderHelp = useDelayedUnifiedHelp(tableHeaderHelpEnabled, tableHeaderHelpDelayMs);
+
+    const onHeaderActivate = (
+        eventTarget: EventTarget | null,
+        label: string,
+        onSort: () => void
+    ) => {
+        if (!isHelpMode) {
+            onSort();
+            return;
+        }
+
+        const element = eventTarget as HTMLElement | null;
+        if (!element) {
+            requestUnifiedHelp('top', null, label);
+            return;
+        }
+
+        const rect = element.getBoundingClientRect();
+        requestUnifiedHelp('top', { x: rect.left, y: rect.bottom }, label);
+    };
     const initialClubFromUrl = (searchParams.get('club') || '').trim();
     const [userClub, setUserClub] = useState<string | null>(null);
     const initialClub = initialClubFromUrl || userClub || '';
@@ -372,6 +404,8 @@ const Clubs: React.FC = () => {
     const [sortDirection, setSortDirection] = useState<ClubSortDirection>(initialSortDirection);
     const [courseSummaryRows, setCourseSummaryRows] = useState<ClubCourseSummaryRecord[]>([]);
     const [courseSummaryLoading, setCourseSummaryLoading] = useState(false);
+    const waitCursorLoading = loading || (clubMode === 'events' ? courseSummaryLoading : membersLoading);
+    useGlobalWaitCursor(waitCursorLoading);
     const [courseSummarySortKey, setCourseSummarySortKey] = useState<keyof ClubCourseSummaryRecord>('club_runs_all_history');
     const [courseSummarySortDirection, setCourseSummarySortDirection] = useState<ClubSortDirection>('desc');
     const [drillHistory, setDrillHistory] = useState<ClubViewState[]>([]);
@@ -1002,13 +1036,22 @@ const Clubs: React.FC = () => {
                                                 key={String(column.key)}
                                                 className={headerClasses.join(' ')}
                                                 style={alignStyle}
-                                                onClick={() => onSortColumn(column.key)}
+                                                onClick={(event) => onHeaderActivate(event.currentTarget, column.label, () => onSortColumn(column.key))}
+                                                onMouseEnter={(event) => {
+                                                    delayedHeaderHelp.schedule({
+                                                        event,
+                                                        label: column.label
+                                                    });
+                                                }}
+                                                onMouseLeave={delayedHeaderHelp.clear}
+                                                onMouseDown={delayedHeaderHelp.clear}
+                                                onTouchStart={delayedHeaderHelp.clear}
                                                 role="button"
                                                 tabIndex={0}
                                                 onKeyDown={(event) => {
                                                     if (event.key === 'Enter' || event.key === ' ') {
                                                         event.preventDefault();
-                                                        onSortColumn(column.key);
+                                                        onHeaderActivate(event.currentTarget, column.label, () => onSortColumn(column.key));
                                                     }
                                                 }}
                                                 aria-sort={isSorted ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}
@@ -1108,13 +1151,22 @@ const Clubs: React.FC = () => {
                                                 key={String(column.key)}
                                                 className={headerClasses.join(' ')}
                                                 style={alignStyle}
-                                                onClick={() => onSortCourseSummaryColumn(column.key)}
+                                                onClick={(event) => onHeaderActivate(event.currentTarget, column.label, () => onSortCourseSummaryColumn(column.key))}
+                                                onMouseEnter={(event) => {
+                                                    delayedHeaderHelp.schedule({
+                                                        event,
+                                                        label: column.label
+                                                    });
+                                                }}
+                                                onMouseLeave={delayedHeaderHelp.clear}
+                                                onMouseDown={delayedHeaderHelp.clear}
+                                                onTouchStart={delayedHeaderHelp.clear}
                                                 role="button"
                                                 tabIndex={0}
                                                 onKeyDown={(event) => {
                                                     if (event.key === 'Enter' || event.key === ' ') {
                                                         event.preventDefault();
-                                                        onSortCourseSummaryColumn(column.key);
+                                                        onHeaderActivate(event.currentTarget, column.label, () => onSortCourseSummaryColumn(column.key));
                                                     }
                                                 }}
                                                 aria-sort={isSorted ? (courseSummarySortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}

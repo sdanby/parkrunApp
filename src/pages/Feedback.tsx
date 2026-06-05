@@ -10,22 +10,24 @@ import {
 
 type RequestType = 'error' | 'suggestion';
 type RequestStatus = FeedbackRequestStatus;
+type RequestStatusSelect = RequestStatus | 'deleted';
 const AUTH_USER_KEY = 'auth_user_v1';
 
-const STATUS_OPTIONS: Array<{ value: RequestStatus; label: string }> = [
+const STATUS_OPTIONS: Array<{ value: RequestStatusSelect; label: string }> = [
     { value: 'logged', label: 'Logged' },
     { value: 'updated', label: 'Updated' },
     { value: 'in-progress', label: 'In Progress' },
     { value: 'prioritised', label: 'Prioritised' },
     { value: 'rejected', label: 'Rejected' },
     { value: 'on-hold', label: 'On-Hold' },
-    { value: 'completed', label: 'Completed' }
+    { value: 'completed', label: 'Completed' },
+    { value: 'deleted', label: 'Delete Request' }
 ];
 
-const STATUS_LABELS: Record<RequestStatus, string> = STATUS_OPTIONS.reduce((acc, option) => {
+const STATUS_LABELS: Record<RequestStatusSelect, string> = STATUS_OPTIONS.reduce((acc, option) => {
     acc[option.value] = option.label;
     return acc;
-}, {} as Record<RequestStatus, string>);
+}, {} as Record<RequestStatusSelect, string>);
 
 const STATUS_SORT_ORDER: RequestStatus[] = [
     'in-progress',
@@ -48,6 +50,7 @@ type LoggedRequest = {
     title: string;
     details: string;
     dateLogged: string;
+    lastUpdated: string;
     status: RequestStatus;
     createdBy: string;
 };
@@ -117,6 +120,14 @@ const normalizeStatus = (value: unknown): RequestStatus => {
     return STATUS_LABELS[normalized] ? normalized : 'logged';
 };
 
+const normalizeStatusSelect = (value: unknown): RequestStatusSelect => {
+    const normalized = String(value ?? '')
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, '-') as RequestStatusSelect;
+    return STATUS_LABELS[normalized] ? normalized : 'logged';
+};
+
 const sortRequests = (items: LoggedRequest[]): LoggedRequest[] => [...items].sort((left, right) => {
     const statusDiff = (STATUS_RANK[left.status] ?? Number.MAX_SAFE_INTEGER) - (STATUS_RANK[right.status] ?? Number.MAX_SAFE_INTEGER);
     if (statusDiff !== 0) {
@@ -136,7 +147,7 @@ const Feedback: React.FC = () => {
     const currentUser = getLoggedInUser();
     const isAdmin = Boolean(currentUser?.isAdmin);
     const [requestType, setRequestType] = useState<RequestType>('error');
-    const [requestStatus, setRequestStatus] = useState<RequestStatus>('logged');
+    const [requestStatus, setRequestStatus] = useState<RequestStatusSelect>('logged');
     const [requestTitle, setRequestTitle] = useState<string>('');
     const [requestDetails, setRequestDetails] = useState<string>('');
     const [requests, setRequests] = useState<LoggedRequest[]>([]);
@@ -154,6 +165,7 @@ const Feedback: React.FC = () => {
                     title: String(item.title ?? '').trim(),
                     details: String(item.details ?? '').trim(),
                     dateLogged: formatDateForDisplay(String(item.dateLogged ?? formatDateForApi(new Date()))),
+                    lastUpdated: formatDateForDisplay(String(item.lastUpdated ?? item.dateLogged ?? formatDateForApi(new Date()))),
                     status: normalizeStatus(item.status),
                     createdBy: String(item.createdBy ?? '').trim() || 'Unknown'
                 }));
@@ -200,14 +212,21 @@ const Feedback: React.FC = () => {
                     type: requestType,
                     title,
                     details,
-                    status: requestStatus
+                    status: requestStatus as RequestStatus
                 });
+                if (updated?.deleted) {
+                    setRequests((prev) => prev.filter((request) => request.id !== editingRequestId));
+                    setRequestSyncError(null);
+                    resetEditor();
+                    return;
+                }
                 const normalizedUpdated: LoggedRequest = {
                     id: Number(updated.id) || editingRequestId,
                     type: updated.type === 'error' ? 'error' : 'suggestion',
                     title: String(updated.title ?? title),
                     details: String(updated.details ?? details),
                     dateLogged: formatDateForDisplay(String(updated.dateLogged ?? formatDateForApi(new Date()))),
+                    lastUpdated: formatDateForDisplay(String(updated.lastUpdated ?? updated.dateLogged ?? formatDateForApi(new Date()))),
                     status: normalizeStatus(updated.status ?? requestStatus),
                     createdBy: String(updated.createdBy ?? '').trim() || 'Unknown'
                 };
@@ -222,6 +241,7 @@ const Feedback: React.FC = () => {
                     title: String(created.title ?? title),
                     details: String(created.details ?? details),
                     dateLogged: formatDateForDisplay(String(created.dateLogged ?? formatDateForApi(new Date()))),
+                    lastUpdated: formatDateForDisplay(String(created.lastUpdated ?? created.dateLogged ?? formatDateForApi(new Date()))),
                     status: normalizeStatus(created.status ?? 'logged'),
                     createdBy: String(created.createdBy ?? currentUser?.displayName ?? currentUser?.email ?? '').trim() || 'Unknown'
                 };
@@ -274,7 +294,7 @@ const Feedback: React.FC = () => {
                                 <select
                                     id="feedback-request-status"
                                     value={requestStatus}
-                                    onChange={(e) => setRequestStatus(normalizeStatus(e.target.value))}
+                                    onChange={(e) => setRequestStatus(normalizeStatusSelect(e.target.value))}
                                 >
                                     {STATUS_OPTIONS.map((option) => (
                                         <option key={option.value} value={option.value}>{option.label}</option>
@@ -327,14 +347,15 @@ const Feedback: React.FC = () => {
                                 <th>Title</th>
                                 <th>Details</th>
                                 <th>Logged By</th>
-                                <th>Date</th>
+                                <th>Date Logged</th>
+                                <th>Last Updated</th>
                                 <th>Status</th>
                             </tr>
                         </thead>
                         <tbody>
                             {requests.length === 0 ? (
                                 <tr>
-                                    <td colSpan={7}>No requests logged yet.</td>
+                                    <td colSpan={8}>No requests logged yet.</td>
                                 </tr>
                             ) : (
                                 requests.map((request) => (
@@ -351,6 +372,7 @@ const Feedback: React.FC = () => {
                                         <td>{request.details}</td>
                                         <td>{request.createdBy}</td>
                                         <td>{request.dateLogged}</td>
+                                        <td>{request.lastUpdated}</td>
                                         <td>{STATUS_LABELS[request.status]}</td>
                                     </tr>
                                 ))

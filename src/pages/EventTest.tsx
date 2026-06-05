@@ -21,6 +21,9 @@ import {
   getEventViewportForWidth
 } from '../config/layout/eventsLayoutHelper';
 import { navigateBackWithNavStack, navigateWithNavStack } from '../utils/navigationStack';
+import { useGlobalWaitCursor } from '../utils/useGlobalWaitCursor';
+import { useColumnHeaderMode } from '../utils/useColumnHeaderMode';
+import { useDelayedUnifiedHelp } from '../utils/useDelayedUnifiedHelp';
 import './ResultsTable.css';
 
 type CourseAdjOption = 'none' | 'seasonal' | 'full';
@@ -120,6 +123,7 @@ const parseTimeToSeconds = (value: any): number | null => {
 const EventTest: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { isHelpMode } = useColumnHeaderMode();
 
   const params = useMemo(() => new URLSearchParams(location.search), [location.search]);
   const requestedEventCode = params.get('event_code') || '1';
@@ -130,6 +134,7 @@ const EventTest: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [navLoading, setNavLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  useGlobalWaitCursor(loading || navLoading);
   const [rows, setRows] = useState<any[]>([]);
   const [eventName, setEventName] = useState('');
   const [eventCode, setEventCode] = useState<string>(requestedEventCode);
@@ -148,6 +153,11 @@ const EventTest: React.FC = () => {
 
   const [viewport, setViewport] = useState<EventViewport>(() => getEventViewportForWidth(window.innerWidth));
   const layoutConfig = getEventLayoutConfig();
+  const tableHeaderHelpEnabled = (layoutConfig as any)?.tableHelpTip?.enabled !== false;
+  const tableHeaderHelpDelayMs = Number((layoutConfig as any)?.tableHelpTip?.delayMs) > 0
+    ? Number((layoutConfig as any).tableHelpTip.delayMs)
+    : 2000;
+  const delayedHeaderHelp = useDelayedUnifiedHelp(tableHeaderHelpEnabled, tableHeaderHelpDelayMs);
   const headerAnchorHeight = '3.0cm';
 
   useEffect(() => {
@@ -790,6 +800,22 @@ const EventTest: React.FC = () => {
     return `${sign}${totalMinutes}:${String(seconds).padStart(2, '0')}`;
   };
 
+  const onHeaderActivate = (eventTarget: EventTarget | null, columnKey: string, label: string, helpTarget?: string) => {
+    if (!isHelpMode) {
+      handleSort(columnKey);
+      return;
+    }
+
+    const element = eventTarget as HTMLElement | null;
+    if (!element) {
+      requestUnifiedHelp(helpTarget || 'top', null, label);
+      return;
+    }
+
+    const rect = element.getBoundingClientRect();
+    requestUnifiedHelp(helpTarget || 'top', { x: rect.left, y: rect.bottom }, label);
+  };
+
   const renderConfigLabel = (
     element: EventLayoutElement | undefined,
     placement: ReturnType<typeof getEventElementPlacement>,
@@ -1122,11 +1148,33 @@ const EventTest: React.FC = () => {
                     <th
                       key={`${column.key}-${columnIndex}`}
                       className={`eventtest-col ${column.sticky ? 'eventtest-sticky-col' : ''} ${adjustmentColumnKeys.has(column.key) ? 'sticky-header adjustment-header' : ''}`.trim()}
-                      onClick={() => handleSort(column.key)}
+                      onClick={(event) => onHeaderActivate(event.currentTarget, column.key, String(column.headerName || column.key), (column as any)?.helpTarget)}
                       onTouchEnd={(event) => {
                         event.preventDefault();
-                        handleSort(column.key);
+                        delayedHeaderHelp.clear();
+                        onHeaderActivate(event.currentTarget, column.key, String(column.headerName || column.key), (column as any)?.helpTarget);
                       }}
+                      onMouseEnter={(event) => {
+                        const rawHelpTip = (column as any)?.helpTip;
+                        const columnHelpEnabled = typeof rawHelpTip === 'object'
+                          ? rawHelpTip?.enabled !== false
+                          : rawHelpTip !== false;
+                        if (!columnHelpEnabled) {
+                          return;
+                        }
+                        const columnDelayMs = typeof rawHelpTip === 'object' && Number(rawHelpTip?.delayMs) > 0
+                          ? Number(rawHelpTip.delayMs)
+                          : undefined;
+                        delayedHeaderHelp.schedule({
+                          event,
+                          label: String(column.headerName || column.key),
+                          markerId: (column as any)?.helpTarget,
+                          delayMs: columnDelayMs
+                        });
+                      }}
+                      onMouseLeave={delayedHeaderHelp.clear}
+                      onMouseDown={delayedHeaderHelp.clear}
+                      onTouchStart={delayedHeaderHelp.clear}
                       style={{
                         ['--event-col-width' as any]: configuredWidth,
                         ['--event-col-left' as any]: column.sticky ? stickyLeft : 'auto',

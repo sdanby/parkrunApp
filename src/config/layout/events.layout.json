@@ -4,6 +4,10 @@
   "units": "cm",
   "anchor": "event-header-root",
   "notes": "Draft config only. Not wired into page yet.",
+  "tableHelpTip": {
+    "enabled": true,
+    "delayMs": 2000
+  },
   "viewports": {
     "laptop": {
       "breakpointMin": 641

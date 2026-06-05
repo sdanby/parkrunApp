@@ -4,6 +4,9 @@ import ReactECharts from 'echarts-for-react';
 import { fetchAllResults, fetchEventPositionsMonthlyCascade, fetchEventSummary, fetchResults } from '../api/backendAPI';
 import EventSearch, { type EventOption } from '../components/EventSearch';
 import { navigateBackWithNavStack, navigateWithNavStack } from '../utils/navigationStack';
+import { useColumnHeaderMode } from '../utils/useColumnHeaderMode';
+import { useGlobalWaitCursor } from '../utils/useGlobalWaitCursor';
+import { useDelayedUnifiedHelp } from '../utils/useDelayedUnifiedHelp';
 import { requestUnifiedHelp } from './UnifiedHelp';
 import {
     getCourseColumnsForView,
@@ -39,6 +42,9 @@ type ColumnDef = {
     align?: 'left' | 'center' | 'right';
     desktopWidth?: number;
     mobileWidth?: number;
+    helpTarget?: string;
+    helpTipEnabled?: boolean;
+    helpTipDelayMs?: number;
 };
 
 type SummaryMode = 'average' | 'total' | 'maximum' | 'minimum' | 'range' | 'growth';
@@ -413,10 +419,16 @@ const top250SortableKeys = new Set<string>(top250Columns.map((col) => col.key));
 const CourseTest: React.FC = () => {
     const location = useLocation();
     const navigate = useNavigate();
+    const { isHelpMode } = useColumnHeaderMode();
     const isMobile = useMediaQuery('(max-width: 640px)');
     const locationState = toCoursesLocationState(location.state ?? {});
     const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
     const layoutConfig = getCourseLayoutConfig();
+    const tableHeaderHelpEnabled = (layoutConfig as any)?.tableHelpTip?.enabled !== false;
+    const tableHeaderHelpDelayMs = Number((layoutConfig as any)?.tableHelpTip?.delayMs) > 0
+        ? Number((layoutConfig as any).tableHelpTip.delayMs)
+        : 2000;
+    const delayedHeaderHelp = useDelayedUnifiedHelp(tableHeaderHelpEnabled, tableHeaderHelpDelayMs);
     const tableModel = layoutConfig.tableModel;
     const tableWidthMode = (layoutConfig as any)?.tableWidthMode;
 
@@ -565,6 +577,7 @@ const CourseTest: React.FC = () => {
     const [monthlyCascadeRows, setMonthlyCascadeRows] = useState<MonthlyCascadeRow[]>([]);
     const [monthlyCascadeLoading, setMonthlyCascadeLoading] = useState<boolean>(false);
     const [monthlyCascadeError, setMonthlyCascadeError] = useState<string | null>(null);
+    useGlobalWaitCursor(loading || top250Loading || monthlyCascadeLoading);
     const [groupsBarMode, setGroupsBarMode] = useState<GroupsBarMode>('both');
     const [isIndexMode, setIsIndexMode] = useState<boolean>(false);
     const [isPlotExpanded, setIsPlotExpanded] = useState<boolean>(false);
@@ -910,11 +923,36 @@ const CourseTest: React.FC = () => {
                 label: column.headerName || column.key,
                 align: column.style?.textAlign || 'left',
                 desktopWidth: widthToPx(column.laptop?.width),
-                mobileWidth: widthToPx(column.mobile?.width)
+                mobileWidth: widthToPx(column.mobile?.width),
+                helpTarget: (column as any)?.helpTarget,
+                helpTipEnabled: typeof (column as any)?.helpTip === 'object'
+                    ? (column as any).helpTip.enabled !== false
+                    : (column as any)?.helpTip !== false,
+                helpTipDelayMs: typeof (column as any)?.helpTip === 'object' && Number((column as any).helpTip.delayMs) > 0
+                    ? Number((column as any).helpTip.delayMs)
+                    : undefined
             })) as ColumnDef[];
         }
         return viewMode === 'basic' ? basicColumns : [...basicColumns, ...detailedOnlyColumns];
     }, [viewMode]);
+
+    const onHeaderActivate = (eventTarget: EventTarget | null, key: string, label: string, helpTarget?: string, onSort?: (columnKey: string) => void) => {
+        if (!isHelpMode) {
+            if (onSort) {
+                onSort(key);
+            }
+            return;
+        }
+
+        const element = eventTarget as HTMLElement | null;
+        if (!element) {
+            requestUnifiedHelp(helpTarget || 'top', null, label);
+            return;
+        }
+
+        const rect = element.getBoundingClientRect();
+        requestUnifiedHelp(helpTarget || 'top', { x: rect.left, y: rect.bottom }, label);
+    };
 
     // Top250 table always shows all columns regardless of basic/detailed mode
     const visibleTop250Columns = useMemo(() => {
@@ -2732,11 +2770,25 @@ const CourseTest: React.FC = () => {
                                                     <th
                                                         key={col.key}
                                                         className={headerClasses.join(' ')}
-                                                        onClick={() => handleTop250Sort(col.key)}
+                                                        onClick={(event) => onHeaderActivate(event.currentTarget, col.key, col.label, col.helpTarget, handleTop250Sort)}
+                                                        onMouseEnter={(event) => {
+                                                            if (col.helpTipEnabled === false) {
+                                                                return;
+                                                            }
+                                                            delayedHeaderHelp.schedule({
+                                                                event,
+                                                                label: col.label,
+                                                                markerId: col.helpTarget,
+                                                                delayMs: col.helpTipDelayMs
+                                                            });
+                                                        }}
+                                                        onMouseLeave={delayedHeaderHelp.clear}
+                                                        onMouseDown={delayedHeaderHelp.clear}
+                                                        onTouchStart={delayedHeaderHelp.clear}
                                                         onKeyDown={(event) => {
                                                             if (event.key === 'Enter' || event.key === ' ') {
                                                                 event.preventDefault();
-                                                                handleTop250Sort(col.key);
+                                                                onHeaderActivate(event.currentTarget, col.key, col.label, col.helpTarget, handleTop250Sort);
                                                             }
                                                         }}
                                                         tabIndex={0}
@@ -2943,11 +2995,25 @@ const CourseTest: React.FC = () => {
                                                         <th
                                                             key={col.key}
                                                             className={headerClasses.join(' ')}
-                                                            onClick={() => handleSort(col.key)}
+                                                            onClick={(event) => onHeaderActivate(event.currentTarget, col.key, col.label, col.helpTarget, handleSort)}
+                                                            onMouseEnter={(event) => {
+                                                                if (col.helpTipEnabled === false) {
+                                                                    return;
+                                                                }
+                                                                delayedHeaderHelp.schedule({
+                                                                    event,
+                                                                    label: col.label,
+                                                                    markerId: col.helpTarget,
+                                                                    delayMs: col.helpTipDelayMs
+                                                                });
+                                                            }}
+                                                            onMouseLeave={delayedHeaderHelp.clear}
+                                                            onMouseDown={delayedHeaderHelp.clear}
+                                                            onTouchStart={delayedHeaderHelp.clear}
                                                             onKeyDown={(event) => {
                                                                 if (event.key === 'Enter' || event.key === ' ') {
                                                                     event.preventDefault();
-                                                                    handleSort(col.key);
+                                                                    onHeaderActivate(event.currentTarget, col.key, col.label, col.helpTarget, handleSort);
                                                                 }
                                                             }}
                                                             tabIndex={0}

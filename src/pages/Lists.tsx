@@ -1,9 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { navigateWithNavStack } from '../utils/navigationStack';
+import { useColumnHeaderMode } from '../utils/useColumnHeaderMode';
+import { useGlobalWaitCursor } from '../utils/useGlobalWaitCursor';
 import {
     getListsElementById,
     getListsElementPlacement,
+    getListsLayoutConfig,
     getListsTableColumnByKey,
     getListsTableColumns,
     getListsViewportForWidth,
@@ -11,6 +14,7 @@ import {
     type ListsViewport
 } from '../config/layout/listLayoutHelper';
 import { requestUnifiedHelp } from './UnifiedHelp';
+import { useDelayedUnifiedHelp } from '../utils/useDelayedUnifiedHelp';
 import './lists.css'; // Import the new CSS file
 import './ResultsTable.css';
 
@@ -225,8 +229,15 @@ const useMediaQuery = (query: string): boolean => {
 const Lists: React.FC = () => {
     const navigate = useNavigate();
     const location = useLocation();
+    const { isHelpMode } = useColumnHeaderMode();
     const isMobile = useMediaQuery('(max-width: 640px)');
     const [viewport, setViewport] = useState<ListsViewport>(() => getListsViewportForWidth(window.innerWidth));
+    const listsLayoutConfig = React.useMemo(() => getListsLayoutConfig() as any, []);
+    const tableHeaderHelpEnabled = listsLayoutConfig?.tableHelpTip?.enabled !== false;
+    const tableHeaderHelpDelayMs = Number(listsLayoutConfig?.tableHelpTip?.delayMs) > 0
+        ? Number(listsLayoutConfig.tableHelpTip.delayMs)
+        : 2000;
+    const delayedHeaderHelp = useDelayedUnifiedHelp(tableHeaderHelpEnabled, tableHeaderHelpDelayMs);
 
     useEffect(() => {
         const onResize = () => setViewport(getListsViewportForWidth(window.innerWidth));
@@ -324,6 +335,7 @@ const Lists: React.FC = () => {
     const [otherAdj, setOtherAdj] = useState<'1' | '2' | '3' | '4'>(initialOther);
     const [participantFilter, setParticipantFilter] = useState<ParticipantFilter>(initialParticipantFilter);
     const [filteredByAdjustments, setFilteredByAdjustments] = useState<boolean>(initialFilteredByAdjustments);
+    const [selectionRefreshPending, setSelectionRefreshPending] = useState<boolean>(false);
     const [returnScrollHighlightKey, setReturnScrollHighlightKey] = useState<string | null>(null);
     const [pendingScrollKey, setPendingScrollKey] = useState<string | null>(null);
     const tableWrapperRef = useRef<HTMLDivElement | null>(null);
@@ -338,6 +350,13 @@ const Lists: React.FC = () => {
         }
         return statusLabelElement?.name || 'retrieving results';
     }, [loading, pendingScrollKey, selectedList, statusLabelElement?.name]);
+    useGlobalWaitCursor(loading || selectionRefreshPending);
+
+    useEffect(() => {
+        if (!loading && selectionRefreshPending) {
+            setSelectionRefreshPending(false);
+        }
+    }, [loading, selectionRefreshPending]);
 
     useEffect(() => {
         const requestId = activeRequestIdRef.current + 1;
@@ -422,6 +441,7 @@ const Lists: React.FC = () => {
     }, [selectedList, courseAdj, otherAdj, participantFilter, filteredByAdjustments]);
 
     const handleListSelect = (event: React.ChangeEvent<HTMLSelectElement>) => {
+        setSelectionRefreshPending(true);
         const v = event.target.value;
         setSelectedList(v);
         const defaultAdjustmentFilter = getDefaultAdjustmentFilterForList(v);
@@ -436,6 +456,7 @@ const Lists: React.FC = () => {
     };
 
     const handleCourseAdjSelect = (event: React.ChangeEvent<HTMLSelectElement>) => {
+        setSelectionRefreshPending(true);
         const v = event.target.value as '1' | '2' | '3';
         setCourseAdj(v);
         sessionStorage.setItem('lists:courseAdj', v);
@@ -453,6 +474,7 @@ const Lists: React.FC = () => {
     };
 
     const handleOtherAdjSelect = (event: React.ChangeEvent<HTMLSelectElement>) => {
+        setSelectionRefreshPending(true);
         const v = event.target.value as '1' | '2' | '3' | '4';
         setOtherAdj(v);
         sessionStorage.setItem('lists:otherAdj', v);
@@ -464,12 +486,14 @@ const Lists: React.FC = () => {
     };
 
     const handleParticipantFilterSelect = (event: React.ChangeEvent<HTMLSelectElement>) => {
+        setSelectionRefreshPending(true);
         const v = event.target.value as ParticipantFilter;
         setParticipantFilter(v);
         sessionStorage.setItem('lists:participantFilter', v);
     };
 
     const handleAdjustmentFilterToggle = (event: React.ChangeEvent<HTMLInputElement>) => {
+        setSelectionRefreshPending(true);
         const checked = event.target.checked;
         setFilteredByAdjustments(checked);
         sessionStorage.setItem('lists:filteredByAdjustments', checked ? '1' : '0');
@@ -578,6 +602,13 @@ const Lists: React.FC = () => {
             key: column.key,
             label: column.headerName || column.name,
             className: columnClassNameByKey[column.key] || 'sticky-header',
+            helpTarget: (column as any)?.helpTarget,
+            helpTipEnabled: typeof (column as any)?.helpTip === 'object'
+                ? (column as any).helpTip.enabled !== false
+                : (column as any)?.helpTip !== false,
+            helpTipDelayMs: typeof (column as any)?.helpTip === 'object' && Number((column as any).helpTip.delayMs) > 0
+                ? Number((column as any).helpTip.delayMs)
+                : undefined
         })),
         []
     );
@@ -682,6 +713,22 @@ const Lists: React.FC = () => {
     // The active header should always reflect the current display sort.
     const getActiveHeaderKey = (): string => {
         return sortKey;
+    };
+
+    const onHeaderActivate = (eventTarget: EventTarget | null, key: string, label: string, helpTarget?: string) => {
+        if (!isHelpMode) {
+            handleSort(key);
+            return;
+        }
+
+        const element = eventTarget as HTMLElement | null;
+        if (!element) {
+            requestUnifiedHelp(helpTarget || 'top', null, label);
+            return;
+        }
+
+        const rect = element.getBoundingClientRect();
+        requestUnifiedHelp(helpTarget || 'top', { x: rect.left, y: rect.bottom }, label);
     };
 
     const handleSort = (colKey: string) => {
@@ -1442,7 +1489,21 @@ const Lists: React.FC = () => {
                                             <th
                                                 key={col.key}
                                                 className={col.className + extraClass}
-                                                onClick={() => handleSort(col.key)}
+                                                onClick={(event) => onHeaderActivate(event.currentTarget, col.key, col.label, col.helpTarget)}
+                                                onMouseEnter={(event) => {
+                                                    if (col.helpTipEnabled === false) {
+                                                        return;
+                                                    }
+                                                    delayedHeaderHelp.schedule({
+                                                        event,
+                                                        label: col.label,
+                                                        markerId: col.helpTarget,
+                                                        delayMs: col.helpTipDelayMs
+                                                    });
+                                                }}
+                                                onMouseLeave={delayedHeaderHelp.clear}
+                                                onMouseDown={delayedHeaderHelp.clear}
+                                                onTouchStart={delayedHeaderHelp.clear}
                                                 style={{
                                                     cursor: 'pointer',
                                                     userSelect: 'none',

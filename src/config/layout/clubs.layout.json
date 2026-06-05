@@ -4,6 +4,10 @@
   "units": "cm",
   "anchor": "clubs-header-root",
   "notes": "Config-driven Clubs page section labels.",
+  "tableHelpTip": {
+    "enabled": true,
+    "delayMs": 2000
+  },
   "viewports": {
     "laptop": {
       "breakpointMin": 769

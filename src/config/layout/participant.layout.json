@@ -4,6 +4,10 @@
   "units": "cm",
   "anchor": "participant-header-root",
   "notes": "Config for Participants (Athletes) page controls and table columns.",
+  "tableHelpTip": {
+    "enabled": true,
+    "delayMs": 2000
+  },
   "viewports": {
     "laptop": {
       "breakpointMin": 641

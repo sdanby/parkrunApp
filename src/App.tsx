@@ -14,8 +14,9 @@ import Lists from './pages/Lists';
 import Feedback from './pages/Feedback';
 import Admin from './pages/Admin';
 import NavigationStackOverlay from './components/NavigationStackOverlay';
-import EventHelpManual, { UnifiedHelpOverlay, UNIFIED_HELP_EVENT, getPageMarkerForPath, type UnifiedHelpAnchor } from './pages/UnifiedHelp';
+import EventHelpManual, { UnifiedHelpOverlay, UNIFIED_HELP_EVENT, getPageMarkerForPath, type UnifiedHelpAnchor, type UnifiedHelpRequestDetail } from './pages/UnifiedHelp';
 import { API_BASE_URL } from './api/backendAPI';
+import { useColumnHeaderMode } from './utils/useColumnHeaderMode';
 import './styles/main.css';
 
 /*
@@ -45,6 +46,15 @@ const headings: { [key: string]: string } = {
     '/help-manual': 'Help Manual'
 };
 
+const supportsColumnHeaderMode = (path: string): boolean => {
+    return path === '/races'
+        || path === '/event_test'
+        || path === '/athletes'
+        || path === '/courses_test'
+        || path === '/clubs'
+        || path === '/lists';
+};
+
 const getTopBarUserLabel = (): string => {
     try {
         const raw = localStorage.getItem('auth_user_v1');
@@ -66,15 +76,24 @@ const TopBar: React.FC = () => {
     const userLabel = getTopBarUserLabel();
     const [isHelpOpen, setIsHelpOpen] = useState(false);
     const [helpMarkerId, setHelpMarkerId] = useState<string>('top');
+    const [helpQuery, setHelpQuery] = useState<string>('');
     const [helpAnchor, setHelpAnchor] = useState<UnifiedHelpAnchor | null>(null);
+    const { mode: columnHeaderMode, toggleMode: toggleColumnHeaderMode } = useColumnHeaderMode();
     const pageMarker = getPageMarkerForPath(location.pathname);
+    const showColumnModeToggle = supportsColumnHeaderMode(location.pathname);
+    const isColumnHelpMode = columnHeaderMode === 'help';
+    const columnModeTooltip = isColumnHelpMode
+        ? 'click column for help - click this icon to change to column sorting when column header clicked'
+        : 'click column header for sorting - click this icon to change to column help when column header clicked';
 
     useEffect(() => {
         const onHelpRequest = (event: Event) => {
-            const customEvent = event as CustomEvent<{ markerId?: string; anchor?: UnifiedHelpAnchor | null }>;
+            const customEvent = event as CustomEvent<UnifiedHelpRequestDetail>;
             const markerId = String(customEvent?.detail?.markerId || 'top');
             const anchor = customEvent?.detail?.anchor || null;
+            const query = String(customEvent?.detail?.query || '');
             setHelpMarkerId(markerId);
+            setHelpQuery(query);
             setHelpAnchor(anchor);
             setIsHelpOpen(true);
         };
@@ -98,6 +117,7 @@ const TopBar: React.FC = () => {
                             onClick={(event) => {
                                 const rect = (event.currentTarget as HTMLButtonElement).getBoundingClientRect();
                                 setHelpMarkerId(pageMarker);
+                                setHelpQuery('');
                                 setHelpAnchor({
                                     x: rect.left,
                                     y: rect.bottom
@@ -106,6 +126,21 @@ const TopBar: React.FC = () => {
                             }}
                         >
                             📖
+                        </button>
+                    </div>
+                ) : null}
+                {showColumnModeToggle ? (
+                    <div className="top-bar-column-mode-wrap">
+                        <button
+                            type="button"
+                            className={`top-bar-column-mode-btn ${isColumnHelpMode ? 'help-mode' : 'sort-mode'}`}
+                            aria-label={isColumnHelpMode ? 'Column header help mode' : 'Column header sort mode'}
+                            title={columnModeTooltip}
+                            onClick={toggleColumnHeaderMode}
+                        >
+                            <span className="top-bar-column-mode-text top-bar-column-mode-text-top">column</span>
+                            <span className="top-bar-column-mode-icon" aria-hidden="true">{isColumnHelpMode ? '⚑' : '↕'}</span>
+                            <span className="top-bar-column-mode-text">{isColumnHelpMode ? 'help' : 'sort'}</span>
                         </button>
                     </div>
                 ) : null}
@@ -131,6 +166,7 @@ const TopBar: React.FC = () => {
             <UnifiedHelpOverlay
                 open={isHelpOpen}
                 startMarkerId={helpMarkerId}
+                queryTerm={helpQuery}
                 anchor={helpAnchor}
                 onClose={() => setIsHelpOpen(false)}
             />

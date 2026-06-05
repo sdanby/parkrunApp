@@ -6,7 +6,10 @@ import AthleteSearch from '../components/AthleteSearch';
 import ReactECharts from 'echarts-for-react';
 import { requestUnifiedHelp } from './UnifiedHelp';
 import { navigateBackWithNavStack, navigateWithNavStack } from '../utils/navigationStack';
-import { getParticipantElementById, getParticipantElements, getParticipantTableColumnByKey } from '../config/layout/participantLayoutHelper';
+import { useGlobalWaitCursor } from '../utils/useGlobalWaitCursor';
+import { useColumnHeaderMode } from '../utils/useColumnHeaderMode';
+import { useDelayedUnifiedHelp } from '../utils/useDelayedUnifiedHelp';
+import { getParticipantElementById, getParticipantElements, getParticipantLayoutConfig, getParticipantTableColumnByKey } from '../config/layout/participantLayoutHelper';
 
 type AthleteRecord = { [key: string]: any };
 
@@ -439,6 +442,9 @@ type ColumnDef = {
     align?: 'left' | 'center' | 'right';
     desktopWidth?: string;
     mobileWidth?: string;
+    helpTarget?: string;
+    helpTipEnabled?: boolean;
+    helpTipDelayMs?: number;
 };
 
 const baseAthleteColumnKeys: ColumnKey[] = ['date', 'event_display', 'position', 'time', 'age_group', 'age_grade', 'best_curve_ranking_current', 'comment'];
@@ -674,6 +680,7 @@ const resolveColumnSortValue = (row: AthleteRecord, column: ColumnKey): number |
 const Athletes: React.FC = () => {
     const location = useLocation();
     const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
+    const { isHelpMode } = useColumnHeaderMode();
     const readStoredAthletesState = (): Partial<{
         sortKey: ColumnKey;
         sortDir: 'asc' | 'desc';
@@ -785,6 +792,7 @@ const Athletes: React.FC = () => {
     const [showProfile, setShowProfile] = useState<boolean>(() => panelFromQuery ? panelFromQuery === 'profile' : Boolean(storedAthletesState.showProfile));
     const [profileRows, setProfileRows] = useState<AthleteBestSummaryRow[]>([]);
     const [profileLoading, setProfileLoading] = useState<boolean>(false);
+    useGlobalWaitCursor(loading);
     const [profileError, setProfileError] = useState<string | null>(null);
     const [profileJumpDate, setProfileJumpDate] = useState<string | null>(null);
     const [profileJumpRequest, setProfileJumpRequest] = useState<{ date: string; stamp: number } | null>(null);
@@ -1277,6 +1285,13 @@ const Athletes: React.FC = () => {
     };
 
     const participantEventDisplayColumn = useMemo(() => getParticipantTableColumnByKey('event_display'), []);
+    const participantLayoutConfig = useMemo(() => getParticipantLayoutConfig() as any, []);
+    const tableHeaderHelpEnabled = participantLayoutConfig?.tableHelpTip?.enabled !== false;
+    const tableHeaderHelpDelayMs = Number(participantLayoutConfig?.tableHelpTip?.delayMs) > 0
+        ? Number(participantLayoutConfig.tableHelpTip.delayMs)
+        : 2000;
+    const delayedHeaderHelp = useDelayedUnifiedHelp(tableHeaderHelpEnabled, tableHeaderHelpDelayMs);
+
     const participantCourseTarget = useMemo(() => {
         const configuredTarget = String(participantEventDisplayColumn?.interaction?.target || '').trim();
         return configuredTarget || '/courses_test';
@@ -1738,6 +1753,13 @@ const Athletes: React.FC = () => {
 
     const getConfiguredColumnDef = useCallback((key: ColumnKey): ColumnDef => {
         const configuredColumn = getParticipantTableColumnByKey(key);
+        const helpTipConfig = (configuredColumn as any)?.helpTip;
+        const helpTipEnabled = typeof helpTipConfig === 'object'
+            ? helpTipConfig?.enabled !== false
+            : helpTipConfig !== false;
+        const helpTipDelayMs = typeof helpTipConfig === 'object' && Number(helpTipConfig?.delayMs) > 0
+            ? Number(helpTipConfig.delayMs)
+            : undefined;
         return {
             key,
             label: configuredColumn?.headerName ?? configuredColumn?.name ?? key,
@@ -1745,6 +1767,9 @@ const Athletes: React.FC = () => {
             align: (configuredColumn?.style?.textAlign as 'left' | 'center' | 'right' | undefined) ?? 'left',
             desktopWidth: configuredColumn?.laptop?.width,
             mobileWidth: configuredColumn?.mobile?.width,
+            helpTarget: (configuredColumn as any)?.helpTarget,
+            helpTipEnabled,
+            helpTipDelayMs,
         };
     }, []);
 
@@ -1795,6 +1820,27 @@ const Athletes: React.FC = () => {
             ...baseAthleteColumns.slice(insertAt)
         ];
     }, [viewMode, adjustmentKeys, adjustmentColumns, baseAthleteColumns, detailedColumns]);
+
+    const onHeaderActivate = (
+        eventTarget: EventTarget | null,
+        key: ColumnKey,
+        label: string,
+        helpTarget?: string
+    ) => {
+        if (!isHelpMode) {
+            handleSort(key);
+            return;
+        }
+
+        const element = eventTarget as HTMLElement | null;
+        if (!element) {
+            requestUnifiedHelp(helpTarget || 'top', null, label);
+            return;
+        }
+
+        const rect = element.getBoundingClientRect();
+        requestUnifiedHelp(helpTarget || 'top', { x: rect.left, y: rect.bottom }, label);
+    };
 
     const rowsToRender = runs.length > 0 ? sortedRuns : [];
     const participantElements = getParticipantElements();
@@ -4223,22 +4269,37 @@ const Athletes: React.FC = () => {
                                                     <th
                                                         key={col.key}
                                                         className={headerClasses.join(' ')}
-                                                        onClick={() => {
+                                                        onClick={(event) => {
                                                             const now = Date.now();
                                                             if (now - lastSortTouchAtRef.current < 500) {
                                                                 return;
                                                             }
-                                                            handleSort(col.key);
+                                                            onHeaderActivate(event.currentTarget, col.key, col.label, col.helpTarget);
                                                         }}
                                                         onTouchEnd={(event) => {
                                                             event.preventDefault();
                                                             lastSortTouchAtRef.current = Date.now();
-                                                            handleSort(col.key);
+                                                            delayedHeaderHelp.clear();
+                                                            onHeaderActivate(event.currentTarget, col.key, col.label, col.helpTarget);
                                                         }}
+                                                        onMouseEnter={(event) => {
+                                                            if (col.helpTipEnabled === false) {
+                                                                return;
+                                                            }
+                                                            delayedHeaderHelp.schedule({
+                                                                event,
+                                                                label: col.label,
+                                                                markerId: col.helpTarget,
+                                                                delayMs: col.helpTipDelayMs
+                                                            });
+                                                        }}
+                                                        onMouseLeave={delayedHeaderHelp.clear}
+                                                        onMouseDown={delayedHeaderHelp.clear}
+                                                        onTouchStart={delayedHeaderHelp.clear}
                                                         onKeyDown={(event) => {
                                                             if (event.key === 'Enter' || event.key === ' ') {
                                                                 event.preventDefault();
-                                                                handleSort(col.key);
+                                                                onHeaderActivate(event.currentTarget, col.key, col.label, col.helpTarget);
                                                             }
                                                         }}
                                                         tabIndex={0}

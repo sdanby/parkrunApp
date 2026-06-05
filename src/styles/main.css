@@ -9,6 +9,13 @@ body {
     --races-mobile-select-width: 5.05cm;
 }
 
+html.app-wait-cursor,
+html.app-wait-cursor *,
+body.app-wait-cursor,
+body.app-wait-cursor * {
+    cursor: wait !important;
+}
+
 /* Desktop / laptop: move the List selection label left by 1.0cm */
 @media (min-width: 641px) {
     .lists-page .athlete-view-control .races-view-control-item label[for="list-select"] {
@@ -44,6 +51,63 @@ h1, h2, h3 {
     line-height: 1;
     position: relative;
     z-index: 2147483647;
+}
+
+.top-bar-column-mode-wrap {
+    position: relative;
+    margin-left: 10cm;
+    margin-top: 0.42cm;
+    z-index: 2147483647;
+}
+
+@media (max-width: 640px) {
+    .top-bar-column-mode-wrap {
+        margin-left: 12.85rem;
+    }
+}
+
+.top-bar-column-mode-btn {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+}
+
+.top-bar-column-mode-icon {
+    width: 1.7rem;
+    height: 1.7rem;
+    border: 1px solid #8aa5bf;
+    border-radius: 999px;
+    background: #f2f8ff;
+    color: #114a9a;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.92rem;
+    font-weight: 700;
+}
+
+.top-bar-column-mode-btn.help-mode .top-bar-column-mode-icon {
+    border-color: #b56b6b;
+    background: #fff1f1;
+    color: #a02727;
+}
+
+.top-bar-column-mode-text {
+    margin-top: 0.12rem;
+    font-size: 0.62rem;
+    color: #374151;
+    text-transform: lowercase;
+}
+
+.top-bar-column-mode-text-top {
+    margin-top: 0;
+    margin-bottom: 0.12rem;
 }
 
 .top-bar-help-popover {

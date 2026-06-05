@@ -4,6 +4,10 @@
   "units": "cm",
   "anchor": "event-analysis-header-root",
   "notes": "Config-driven Event Analysis test layout.",
+  "tableHelpTip": {
+    "enabled": true,
+    "delayMs": 2000
+  },
   "viewports": {
     "laptop": {
       "breakpointMin": 641
