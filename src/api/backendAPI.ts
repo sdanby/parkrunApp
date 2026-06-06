@@ -540,8 +540,14 @@ export const setAdminUserDefaultCourse = async (
     return response.data || { ok: true };
 };
 
-export const fetchAdminActivity = async (token: string, limit = 300): Promise<{ activity: AdminActivityRecord[]; limit: number }> => {
-    const response = await axios.get(`${API_BASE_URL}/api/admin/activity?limit=${encodeURIComponent(String(limit))}`, {
+export const fetchAdminActivity = async (token: string, limit = 300, since?: string): Promise<{ activity: AdminActivityRecord[]; limit: number }> => {
+    const params = new URLSearchParams();
+    params.set('limit', String(limit));
+    if (since) {
+        params.set('since', since);
+    }
+
+    const response = await axios.get(`${API_BASE_URL}/api/admin/activity?${params.toString()}`, {
         headers: {
             Authorization: `Bearer ${token}`
         }

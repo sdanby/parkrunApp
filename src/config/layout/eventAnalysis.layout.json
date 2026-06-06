@@ -29,16 +29,16 @@
         "lineHeight": 1.0
       },
       "helpLabel": true,
-      "laptop": { "x": "0.3cm", "y": "0.0cm" },
-      "mobile": { "x": "0.3cm", "y": "0.0cm" }
+      "laptop": { "x": "0.3cm", "y": "0.7cm" },
+      "mobile": { "x": "0.3cm", "y": "0.7cm" }
     },
         {
       "id": "eventAnalysis.typeSelect",
       "type": "select",
       "name": "Actual",
-      "options": ["Actual", "Actual%", "%Total","%Deviation","#Actual Deviation","Times","Age"],
-      "laptop": { "x": "2.0cm", "y": "0.0cm", "width": "3.8cm" },
-      "mobile": { "x": "2.0cm", "y": "0.0cm", "width": "3.5cm" }
+          "options": ["Actual", "Actual%", "%Total","%Deviation","#Actual Deviation"],
+      "laptop": { "x": "2.0cm", "y": "0.7cm", "width": "3.8cm" },
+      "mobile": { "x": "2.0cm", "y": "0.7cm", "width": "3.5cm" }
     },
     {
       "id": "eventAnalysis.periodLabel",
@@ -75,16 +75,16 @@
         "color": "#111827",
         "lineHeight": 1.0
       },
-      "laptop": { "x": "0.3cm", "y": "0.7cm" },
-      "mobile": { "x": "0.3cm", "y": "0.7cm" }
+      "laptop": { "x": "0.3cm", "y": "0.0cm" },
+      "mobile": { "x": "0.3cm", "y": "0.0cm" }
     },
     {
       "id": "eventAnalysis.filterSelect",
       "type": "select",
       "name": "All Participants",
-      "options": ["All Participants", "Event Number", "Seasonal Hardness", "Event Hardness", "Combined Hardness", "Volunteers", "Tourists", "Super Tourists", "First Timers", "Clubbers", "PBs", "Recent Bests", "Regulars", "Returners", "Eligible Times", "Unknowns"],
-      "laptop": { "x": "2.0cm", "y": "0.7cm", "width": "3.8cm" },
-      "mobile": { "x": "2.0cm", "y": "0.7cm", "width": "3.5cm" }
+      "options": ["Participants", "Event Number", "Seasonal Hardness", "Event Hardness", "Combined Hardness", "Volunteers", "Tourists", "Super Tourists", "First Timers", "Clubbers", "PBs", "Recent Bests", "Regulars", "Returners", "Eligible Times", "Unknowns", "Times", "Age"],
+      "laptop": { "x": "2.0cm", "y": "0.0cm", "width": "3.8cm" },
+      "mobile": { "x": "2.0cm", "y": "0.0cm", "width": "3.5cm" }
     },
     {
       "id": "eventAnalysis.aggLabel",

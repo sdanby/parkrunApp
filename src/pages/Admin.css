@@ -252,6 +252,205 @@
     height: 6px;
 }
 
+.admin-activity-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin: 0.45rem 0 0.45rem;
+}
+
+.admin-activity-toolbar-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.8rem;
+    color: #334155;
+}
+
+.admin-activity-group-select {
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    padding: 0.22rem 0.35rem;
+    font-size: 0.8rem;
+    background: #fff;
+}
+
+.admin-activity-toolbar-toggle {
+    margin-left: auto;
+}
+
+.admin-activity-filter-inline {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 0.35rem;
+    margin-bottom: 0.5rem;
+}
+
+.admin-activity-blocks {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.65rem;
+}
+
+.admin-activity-block {
+    min-width: 0;
+}
+
+.admin-activity-block-title {
+    margin: 0 0 0.3rem;
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: #1f2937;
+    text-transform: capitalize;
+}
+
+.admin-activity-summary-table {
+    width: 100%;
+    min-width: 100%;
+}
+
+.admin-activity-summary-table th,
+.admin-activity-summary-table td,
+.admin-activity-detail-table th,
+.admin-activity-detail-table td {
+    max-width: 5cm;
+    width: 5cm;
+    min-width: 2.4cm;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.admin-summary-row {
+    cursor: pointer;
+}
+
+.admin-summary-row:hover {
+    background: #f8fafc;
+}
+
+.admin-detail-row {
+    cursor: pointer;
+}
+
+.admin-detail-row:hover {
+    background: #f8fafc;
+}
+
+.admin-activity-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 2147483647;
+    background: rgba(15, 23, 42, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.8rem;
+}
+
+.admin-activity-modal {
+    width: min(52rem, 96vw);
+    max-height: min(80vh, 46rem);
+    background: #fff;
+    border: 1px solid #dbe2ea;
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.admin-activity-modal-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.6rem;
+    padding: 0.5rem 0.65rem;
+    border-bottom: 1px solid #e5e7eb;
+    background: #f8fafc;
+}
+
+.admin-activity-modal-close {
+    border: none;
+    background: transparent;
+    font-size: 0.92rem;
+    cursor: pointer;
+}
+
+.admin-activity-modal-table-wrap {
+    margin: 0.5rem;
+    max-height: min(68vh, 36rem);
+}
+
+.admin-activity-detail-table {
+    width: 100%;
+    min-width: 100%;
+}
+
+.admin-activity-submodal-backdrop {
+    z-index: 2147483648;
+    background: rgba(15, 23, 42, 0.32);
+}
+
+.admin-activity-submodal {
+    width: min(54rem, 96vw);
+    max-height: min(86vh, 52rem);
+}
+
+.admin-activity-submodal-content {
+    padding: 0.7rem;
+    overflow-y: auto;
+}
+
+.admin-activity-submodal-section {
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 0.6rem;
+    background: #fff;
+}
+
+.admin-activity-submodal-section + .admin-activity-submodal-section {
+    margin-top: 0.55rem;
+}
+
+.admin-activity-submodal-section h3 {
+    margin: 0 0 0.45rem;
+    font-size: 0.86rem;
+    color: #1f2937;
+}
+
+.admin-activity-full-detail-box {
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    background: #f8fafc;
+    padding: 0.5rem;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    max-height: 12rem;
+    overflow-y: auto;
+    font-size: 0.82rem;
+    color: #0f172a;
+}
+
+.admin-activity-device-grid {
+    display: grid;
+    grid-template-columns: 9rem minmax(0, 1fr);
+    gap: 0.32rem 0.5rem;
+}
+
+.admin-activity-device-label {
+    font-size: 0.78rem;
+    color: #475569;
+    font-weight: 700;
+}
+
+.admin-activity-device-value {
+    font-size: 0.8rem;
+    color: #0f172a;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
 @media (max-width: 640px) {
     .admin-shell {
         flex-direction: column;
@@ -316,5 +515,30 @@
     .admin-activity-meta-2,
     .admin-activity-meta-3 {
         font-size: 0.64rem;
+    }
+
+    .admin-activity-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .admin-activity-toolbar-toggle {
+        margin-left: 0;
+    }
+
+    .admin-activity-filter-inline {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .admin-activity-blocks {
+        grid-template-columns: 1fr;
+    }
+
+    .admin-activity-device-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .admin-activity-submodal-content {
+        padding: 0.5rem;
     }
 }

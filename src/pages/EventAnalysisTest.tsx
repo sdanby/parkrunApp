@@ -75,6 +75,8 @@ const normalizeAnalysisType = (value: string): 'participants' | '%Participants' 
 const normalizeFilterType = (value: string): string => {
   const token = normalizeControlToken(value);
   if (token === 'all' || token === 'participants' || token === 'allparticipants') return 'all';
+  if (token === 'times' || token === 'time') return 'times';
+  if (token === 'age') return 'age';
   if (token === 'eventnumber') return 'eventNumber';
   if (token === 'seasonalhardness' || token === 'coeff') return 'coeff';
   if (token === 'eventhardness' || token === 'coeffevent') return 'coeff_event';
@@ -401,10 +403,10 @@ const analysisHeaderLabel = (analysisType: string): string => {
   return analysisType;
 };
 
-const participantFilters = ['all', 'eventNumber', 'coeff', 'coeff_event', 'coeff_combined', 'volunteers', 'tourist', 'sTourist', '1time', 'clubs', 'pb', 'recentBest', 'regs', 'returners', 'eligible_time', 'unknown'];
+const participantFilters = ['all', 'times', 'age', 'eventNumber', 'coeff', 'coeff_event', 'coeff_combined', 'volunteers', 'tourist', 'sTourist', '1time', 'clubs', 'pb', 'recentBest', 'regs', 'returners', 'eligible_time', 'unknown'];
 const actualPercentFilters = ['volunteers', 'tourist', 'sTourist', '1time', 'clubs', 'pb', 'recentBest', 'regs', 'returners', 'eligible_time', 'unknown'];
-const timesFilters = ['all', 'tourist', 'regs', 'sTourist', '1time', 'returners', 'clubs', 'unknown'];
-const ageFilters = ['all', 'tourist', 'sTourist', '1time', 'clubs', 'pb', 'recentBest', 'regs', 'returners', 'eligible_time', 'unknown'];
+const timesFilters = ['all', 'times', 'age', 'tourist', 'regs', 'sTourist', '1time', 'returners', 'clubs', 'unknown'];
+const ageFilters = ['all', 'times', 'age', 'tourist', 'sTourist', '1time', 'clubs', 'pb', 'recentBest', 'regs', 'returners', 'eligible_time', 'unknown'];
 
 const getAllowedAggTypes = (analysisType: string, filterType: string): string[] => {
   if (analysisType === '#Actual Deviation' || analysisType === '%Deviation') return ['avg', 'max', 'min'];
@@ -563,7 +565,7 @@ const EventAnalysisTest: React.FC = () => {
     return normalizePeriodMode(value);
   })();
 
-  const analysisType = ((): 'participants' | '%Participants' | '%Total' | '%Deviation' | '#Actual Deviation' | 'Times' | 'Age' => {
+  const baseAnalysisType = ((): 'participants' | '%Participants' | '%Total' | '%Deviation' | '#Actual Deviation' | 'Times' | 'Age' => {
     const key = typeSelectElement?.id || 'eventAnalysis.typeSelect';
     const value = String(controlValues[key] || '').trim();
     return normalizeAnalysisType(value);
@@ -574,6 +576,13 @@ const EventAnalysisTest: React.FC = () => {
     const value = String(controlValues[key] || '').trim();
     return normalizeFilterType(value);
   })();
+
+  const analysisType: 'participants' | '%Participants' | '%Total' | '%Deviation' | '#Actual Deviation' | 'Times' | 'Age' =
+    filterType === 'times'
+      ? 'Times'
+      : filterType === 'age'
+        ? 'Age'
+        : baseAnalysisType;
 
   const aggType = ((): string => {
     const key = aggSelectElement?.id || 'eventAnalysis.aggSelect';
@@ -600,10 +609,25 @@ const EventAnalysisTest: React.FC = () => {
     return participantFilters;
   }, [analysisType]);
 
+  const allowedAnalysisTypes = useMemo<ReturnType<typeof normalizeAnalysisType>[]>(() => {
+    if (filterType === 'times' || filterType === 'age') {
+      return ['participants'];
+    }
+    return ['participants', '%Participants', '%Total', '%Deviation', '#Actual Deviation'];
+  }, [filterType]);
+
   const allowedAggTypes = useMemo(() => getAllowedAggTypes(analysisType, filterType), [analysisType, filterType]);
 
   useEffect(() => {
     const updates: Record<string, string> = {};
+
+    if (typeSelectElement && typeSelectElement.type === 'select') {
+      const typeOptions = (typeSelectElement.options || []).map((option) => String(option).trim()).filter(Boolean);
+      const currentCanonicalType = normalizeAnalysisType(controlValues[typeSelectElement.id] || '');
+      if (!allowedAnalysisTypes.some((option) => option === currentCanonicalType) && typeOptions.length > 0) {
+        updates[typeSelectElement.id] = selectDisplayOption(typeOptions, allowedAnalysisTypes[0], normalizeAnalysisType);
+      }
+    }
 
     if (filterSelectElement && filterSelectElement.type === 'select') {
       const filterOptions = (filterSelectElement.options || []).map((option) => String(option).trim()).filter(Boolean);
@@ -649,6 +673,7 @@ const EventAnalysisTest: React.FC = () => {
     }
   }, [
     aggSelectElement,
+    allowedAnalysisTypes,
     allowedAggTypes,
     allowedFilters,
     analysisType,
@@ -656,6 +681,7 @@ const EventAnalysisTest: React.FC = () => {
     controlValues,
     filterSelectElement,
     periodMode,
+    typeSelectElement,
     timeAdjSelectElement
   ]);
 
@@ -1667,7 +1693,15 @@ const EventAnalysisTest: React.FC = () => {
 
             {typeLabelElement?.type === 'label' ? renderConfigLabel(typeLabelElement, pTypeLabel, 'Type:', 'control-eventAnalysis-type') : null}
             {typeLabelElement?.type === 'select' ? renderConfigSelect(typeLabelElement, pTypeLabel) : null}
-            {renderConfigSelect(typeSelectElement, pTypeSelect)}
+            {renderConfigSelect(
+              typeSelectElement,
+              pTypeSelect,
+              ['Actual'],
+              typeSelectElement?.options?.filter((option) => {
+                const normalized = normalizeAnalysisType(String(option));
+                return allowedAnalysisTypes.some((allowed) => allowed === normalized);
+              })
+            )}
 
             {titleElement ? (
               <div

@@ -17,13 +17,25 @@ type UserFilters = {
 };
 
 type ActivityFilters = {
-    when: string;
-    type: string;
-    user: string;
-    detail: string;
-    pageTime: string;
-    from: string;
+    day: string;
+    person: string;
     device: string;
+    type: string;
+    typeVisit: string;
+    hits: string;
+    minutes: string;
+};
+
+type ActivitySummaryRow = {
+    id: string;
+    day: string;
+    person: string;
+    device: string;
+    type: string;
+    typeVisit: string;
+    hitCount: number;
+    totalDurationMs: number;
+    rows: AdminActivityRecord[];
 };
 
 const formatDateTime = (value?: string | null): string => {
@@ -37,6 +49,47 @@ const formatDateTime = (value?: string | null): string => {
         hour: '2-digit',
         minute: '2-digit'
     });
+};
+
+const formatDay = (value?: string | null): string => {
+    if (!value) return 'Unknown day';
+    const dt = new Date(value);
+    if (Number.isNaN(dt.getTime())) return String(value).slice(0, 10) || 'Unknown day';
+    return dt.toLocaleDateString('en-CA');
+};
+
+const formatDurationTotalMinutes = (durationMs: number): string => {
+    const safeMs = Number.isFinite(durationMs) ? Math.max(0, Math.round(durationMs)) : 0;
+    const totalMinutes = safeMs / 60000;
+    return `${totalMinutes.toFixed(2)} min`;
+};
+
+const inferDeviceLabel = (userAgent?: string | null): string => {
+    const ua = String(userAgent || '').toLowerCase();
+    if (!ua) return 'Unknown';
+    if (ua.includes('ipad') || ua.includes('tablet')) return 'Tablet';
+    if (ua.includes('iphone') || ua.includes('android') || ua.includes('mobile')) return 'Mobile';
+    return 'Desktop';
+};
+
+const getTypeVisitLabel = (row: AdminActivityRecord): string => {
+    const activityType = String(row.activityType || '').toLowerCase();
+    if (activityType !== 'page_visit') {
+        return activityType || 'other';
+    }
+
+    const path = String(row.pagePath || '').trim().toLowerCase();
+    if (!path) return 'unknown';
+    if (path.startsWith('/races') || path.startsWith('/event_test')) return 'races';
+    if (path.startsWith('/admin')) return 'admin';
+    if (path.startsWith('/feedback')) return 'feedback';
+    if (path.startsWith('/results') || path.startsWith('/results_test')) return 'results';
+    if (path.startsWith('/lists')) return 'lists';
+    if (path.startsWith('/clubs')) return 'clubs';
+    if (path.startsWith('/courses') || path.startsWith('/courses_test')) return 'course';
+    if (path.startsWith('/athletes')) return 'participants';
+    if (path.startsWith('/login')) return 'login';
+    return path.replace(/^\//, '').split('/')[0] || 'other';
 };
 
 const escapeForRegex = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -78,14 +131,21 @@ const Admin: React.FC = () => {
         admin: ''
     });
     const [activityFilters, setActivityFilters] = useState<ActivityFilters>({
-        when: '',
+        day: '',
+        person: '',
+        device: '',
         type: '',
-        user: '',
-        detail: '',
-        pageTime: '',
-        from: '',
-        device: ''
+        typeVisit: '',
+        hits: '',
+        minutes: ''
     });
+    const [selectedSummaryRow, setSelectedSummaryRow] = useState<ActivitySummaryRow | null>(null);
+    const [selectedDetailRow, setSelectedDetailRow] = useState<AdminActivityRecord | null>(null);
+    const oneMonthStartIso = useMemo(() => {
+        const now = new Date();
+        const start = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0, 0, 0);
+        return start.toISOString();
+    }, []);
     const token = useMemo(() => localStorage.getItem(AUTH_TOKEN_KEY) || '', []);
 
     const normalizeAdminUsers = (rawUsers: any[]): AdminUser[] => {
@@ -167,7 +227,7 @@ const Admin: React.FC = () => {
         try {
             setActivityLoading(true);
             setError(null);
-            const response = await fetchAdminActivity(token, 500);
+            const response = await fetchAdminActivity(token, 5000, oneMonthStartIso);
             setActivity(Array.isArray(response.activity) ? response.activity : []);
         } catch (err: any) {
             setError(err?.response?.data?.error || 'Unable to load activity.');
@@ -187,7 +247,7 @@ const Admin: React.FC = () => {
         }
         loadActivity();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [canAccess, section]);
+    }, [canAccess, oneMonthStartIso, section]);
 
     const onUserFilterChange = (field: keyof UserFilters, value: string) => {
         setUserFilters((prev) => ({ ...prev, [field]: value }));
@@ -209,13 +269,46 @@ const Admin: React.FC = () => {
         const detail = row.activityType === 'page_visit'
             ? (row.pagePath || 'Page visit')
             : `Login${row.provider ? ` (${row.provider})` : ''}${row.success === false ? ' failed' : ' success'}`;
-        const pageTime = row.durationMs != null ? `${row.durationMs} ms` : '';
+        const pageTime = row.durationMs != null ? formatDurationTotalMinutes(Number(row.durationMs || 0)) : '';
         const referrerRaw = String(row.referrerPath || '').trim();
         const from = referrerRaw ? `from ${referrerRaw}` : '';
         const device = row.userAgent || (row.ipAddress ? `IP ${row.ipAddress}` : '');
 
         return { detail, pageTime, from, device };
     };
+
+    const selectedDetailColumns = useMemo(() => {
+        if (!selectedDetailRow) return null;
+        return getActivityColumns(selectedDetailRow);
+    }, [selectedDetailRow]);
+
+    const selectedDetailDeviceCapture = useMemo(() => {
+        if (!selectedDetailRow) return [] as Array<{ label: string; value: string }>;
+
+        const inferredDevice = inferDeviceLabel(selectedDetailRow.userAgent);
+        const userAgent = String(selectedDetailRow.userAgent || '').trim() || '—';
+        const ipAddress = String(selectedDetailRow.ipAddress || '').trim() || '—';
+        const referrerPath = String(selectedDetailRow.referrerPath || '').trim() || '—';
+        const provider = String(selectedDetailRow.provider || '').trim() || '—';
+        const activityType = String(selectedDetailRow.activityType || '').trim() || '—';
+        const success = selectedDetailRow.success == null
+            ? '—'
+            : (selectedDetailRow.success ? 'true' : 'false');
+        const durationMs = selectedDetailRow.durationMs == null
+            ? '—'
+            : `${Math.max(0, Number(selectedDetailRow.durationMs || 0))} ms`;
+
+        return [
+            { label: 'Inferred device', value: inferredDevice },
+            { label: 'User agent', value: userAgent },
+            { label: 'IP address', value: ipAddress },
+            { label: 'Referrer path', value: referrerPath },
+            { label: 'Provider', value: provider },
+            { label: 'Activity type', value: activityType },
+            { label: 'Success', value: success },
+            { label: 'Duration (raw)', value: durationMs }
+        ];
+    }, [selectedDetailRow]);
 
     const filteredUsers = useMemo(() => users.filter((row) => (
         matchesSqlLike(row.email || '', userFilters.email)
@@ -226,20 +319,93 @@ const Admin: React.FC = () => {
         && matchesSqlLike(row.isAdmin ? 'yes' : 'no', userFilters.admin)
     )), [users, userFilters]);
 
-    const filteredActivity = useMemo(() => activity.filter((row) => {
-        const userLabel = row.displayName || row.email || 'Unknown';
-        const columns = getActivityColumns(row);
+    const windowedActivity = useMemo(() => activity.filter((row) => {
+        const activityAtMs = new Date(row.activityAt || '').getTime();
+        const windowStartMs = new Date(oneMonthStartIso).getTime();
+        if (Number.isFinite(activityAtMs) && Number.isFinite(windowStartMs) && activityAtMs < windowStartMs) {
+            return false;
+        }
+        return true;
+    }), [activity, oneMonthStartIso]);
 
-        return (
-            matchesSqlLike(formatDateTime(row.activityAt), activityFilters.when)
-            && matchesSqlLike(String(row.activityType || ''), activityFilters.type)
-            && matchesSqlLike(userLabel, activityFilters.user)
-            && matchesSqlLike(columns.detail, activityFilters.detail)
-            && matchesSqlLike(columns.pageTime, activityFilters.pageTime)
-            && matchesSqlLike(columns.from, activityFilters.from)
-            && matchesSqlLike(columns.device, activityFilters.device)
-        );
-    }), [activity, activityFilters]);
+    const aggregatedRows = useMemo<ActivitySummaryRow[]>(() => {
+        const buckets = new Map<string, ActivitySummaryRow>();
+
+        for (const row of windowedActivity) {
+            const day = formatDay(row.activityAt);
+            const person = row.displayName || row.email || 'Unknown';
+            const device = inferDeviceLabel(row.userAgent);
+            const type = String(row.activityType || 'unknown');
+            const typeVisit = getTypeVisitLabel(row);
+            const id = [day, person, device, type, typeVisit].join('|');
+
+            if (!buckets.has(id)) {
+                buckets.set(id, {
+                    id,
+                    day,
+                    person,
+                    device,
+                    type,
+                    typeVisit,
+                    hitCount: 0,
+                    totalDurationMs: 0,
+                    rows: []
+                });
+            }
+
+            const bucket = buckets.get(id)!;
+            bucket.hitCount += 1;
+            bucket.totalDurationMs += Number(row.durationMs || 0);
+            bucket.rows.push(row);
+        }
+
+        const sorted = Array.from(buckets.values()).sort((a, b) => {
+            if (a.day !== b.day) return b.day.localeCompare(a.day);
+            if (a.person !== b.person) return a.person.localeCompare(b.person);
+            if (a.device !== b.device) return a.device.localeCompare(b.device);
+            if (a.type !== b.type) return a.type.localeCompare(b.type);
+            return a.typeVisit.localeCompare(b.typeVisit);
+        });
+
+        for (const row of sorted) {
+            row.rows.sort((a, b) => {
+                const left = new Date(a.activityAt || '').getTime();
+                const right = new Date(b.activityAt || '').getTime();
+                return (Number.isFinite(left) ? left : 0) - (Number.isFinite(right) ? right : 0);
+            });
+        }
+
+        return sorted;
+    }, [windowedActivity]);
+
+    const filteredAggregatedRows = useMemo(() => {
+        return aggregatedRows.filter((row) => (
+            matchesSqlLike(row.day, activityFilters.day)
+            && matchesSqlLike(row.person, activityFilters.person)
+            && matchesSqlLike(row.device, activityFilters.device)
+            && matchesSqlLike(row.type, activityFilters.type)
+            && matchesSqlLike(row.typeVisit, activityFilters.typeVisit)
+            && matchesSqlLike(String(row.hitCount), activityFilters.hits)
+            && matchesSqlLike(formatDurationTotalMinutes(row.totalDurationMs), activityFilters.minutes)
+        ));
+    }, [activityFilters.day, activityFilters.device, activityFilters.hits, activityFilters.minutes, activityFilters.person, activityFilters.type, activityFilters.typeVisit, aggregatedRows]);
+
+    const selectedSummaryTitle = useMemo(() => {
+        if (!selectedSummaryRow) return '';
+
+        const summarizeUnique = (values: string[]) => {
+            const unique = Array.from(new Set(values.map((item) => String(item || '').trim() || 'unknown')));
+            return unique.length === 1 ? unique[0] : 'All';
+        };
+
+        const dateValue = summarizeUnique(selectedSummaryRow.rows.map((row) => formatDay(row.activityAt)));
+        const userValue = summarizeUnique(selectedSummaryRow.rows.map((row) => row.displayName || row.email || 'Unknown'));
+        const typeValue = summarizeUnique(selectedSummaryRow.rows.map((row) => String(row.activityType || 'unknown')));
+        const deviceValue = summarizeUnique(selectedSummaryRow.rows.map((row) => inferDeviceLabel(row.userAgent)));
+        const typeVisitValue = summarizeUnique(selectedSummaryRow.rows.map((row) => getTypeVisitLabel(row)));
+
+        return `Date: ${dateValue}; User: ${userValue}; Type: ${typeValue}; Device: ${deviceValue}; type-visit: ${typeVisitValue}`;
+    }, [selectedSummaryRow]);
 
     const handleAdminToggle = async (row: AdminUser, checked: boolean) => {
         if (!token || savingUserId !== null) {
@@ -475,66 +641,32 @@ const Admin: React.FC = () => {
                             <h2>Activity</h2>
                             <div className="admin-meta">
                                 <span>Rolling log</span>
-                                <span>Newest first</span>
+                                <span>Showing at least one month (from start of previous month)</span>
+                            </div>
+
+                            <div className="admin-activity-filter-inline">
+                                <input className="admin-filter-input" placeholder="day" value={activityFilters.day} onChange={(e) => onActivityFilterChange('day', e.target.value)} />
+                                <input className="admin-filter-input" placeholder="person" value={activityFilters.person} onChange={(e) => onActivityFilterChange('person', e.target.value)} />
+                                <input className="admin-filter-input" placeholder="device" value={activityFilters.device} onChange={(e) => onActivityFilterChange('device', e.target.value)} />
+                                <input className="admin-filter-input" placeholder="type" value={activityFilters.type} onChange={(e) => onActivityFilterChange('type', e.target.value)} />
+                                <input className="admin-filter-input" placeholder="type-visit" value={activityFilters.typeVisit} onChange={(e) => onActivityFilterChange('typeVisit', e.target.value)} />
+                                <input className="admin-filter-input" placeholder="total hits" value={activityFilters.hits} onChange={(e) => onActivityFilterChange('hits', e.target.value)} />
+                                <input className="admin-filter-input" placeholder="total minutes" value={activityFilters.minutes} onChange={(e) => onActivityFilterChange('minutes', e.target.value)} />
                             </div>
 
                             {error && <div className="admin-error">{error}</div>}
 
                             <div className="admin-table-wrap">
-                                <table className="admin-table admin-activity-table">
+                                <table className="admin-table admin-activity-summary-table">
                                     <thead>
                                         <tr>
-                                            <th className="admin-activity-when">When</th>
-                                            <th className="admin-activity-type">Type</th>
-                                            <th className="admin-activity-user">User</th>
-                                            <th className="admin-activity-detail">Detail</th>
-                                            <th className="admin-activity-meta-1">Page Time</th>
-                                            <th className="admin-activity-meta-2">from</th>
-                                            <th className="admin-activity-meta-3">device</th>
-                                        </tr>
-                                        <tr className="admin-filter-row">
-                                            <th className="admin-activity-when">
-                                                <div className="admin-filter-cell">
-                                                    <input className="admin-filter-input" value={activityFilters.when} onChange={(e) => onActivityFilterChange('when', e.target.value)} />
-                                                    {activityFilters.when && <button type="button" className="admin-filter-clear" onClick={() => clearActivityFilter('when')}>x</button>}
-                                                </div>
-                                            </th>
-                                            <th className="admin-activity-type">
-                                                <div className="admin-filter-cell">
-                                                    <input className="admin-filter-input" value={activityFilters.type} onChange={(e) => onActivityFilterChange('type', e.target.value)} />
-                                                    {activityFilters.type && <button type="button" className="admin-filter-clear" onClick={() => clearActivityFilter('type')}>x</button>}
-                                                </div>
-                                            </th>
-                                            <th className="admin-activity-user">
-                                                <div className="admin-filter-cell">
-                                                    <input className="admin-filter-input" value={activityFilters.user} onChange={(e) => onActivityFilterChange('user', e.target.value)} />
-                                                    {activityFilters.user && <button type="button" className="admin-filter-clear" onClick={() => clearActivityFilter('user')}>x</button>}
-                                                </div>
-                                            </th>
-                                            <th className="admin-activity-detail">
-                                                <div className="admin-filter-cell">
-                                                    <input className="admin-filter-input" value={activityFilters.detail} onChange={(e) => onActivityFilterChange('detail', e.target.value)} />
-                                                    {activityFilters.detail && <button type="button" className="admin-filter-clear" onClick={() => clearActivityFilter('detail')}>x</button>}
-                                                </div>
-                                            </th>
-                                            <th className="admin-activity-meta-1">
-                                                <div className="admin-filter-cell">
-                                                    <input className="admin-filter-input" value={activityFilters.pageTime} onChange={(e) => onActivityFilterChange('pageTime', e.target.value)} />
-                                                    {activityFilters.pageTime && <button type="button" className="admin-filter-clear" onClick={() => clearActivityFilter('pageTime')}>x</button>}
-                                                </div>
-                                            </th>
-                                            <th className="admin-activity-meta-2">
-                                                <div className="admin-filter-cell">
-                                                    <input className="admin-filter-input" value={activityFilters.from} onChange={(e) => onActivityFilterChange('from', e.target.value)} />
-                                                    {activityFilters.from && <button type="button" className="admin-filter-clear" onClick={() => clearActivityFilter('from')}>x</button>}
-                                                </div>
-                                            </th>
-                                            <th className="admin-activity-meta-3">
-                                                <div className="admin-filter-cell">
-                                                    <input className="admin-filter-input" value={activityFilters.device} onChange={(e) => onActivityFilterChange('device', e.target.value)} />
-                                                    {activityFilters.device && <button type="button" className="admin-filter-clear" onClick={() => clearActivityFilter('device')}>x</button>}
-                                                </div>
-                                            </th>
+                                            <th>Day</th>
+                                            <th>Person</th>
+                                            <th>Device</th>
+                                            <th>Type</th>
+                                            <th>Type-visit</th>
+                                            <th>Total Hits</th>
+                                            <th>Total Minutes</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -542,33 +674,152 @@ const Admin: React.FC = () => {
                                             <tr>
                                                 <td colSpan={7} className="admin-empty">Loading activity...</td>
                                             </tr>
-                                        ) : filteredActivity.length === 0 ? (
+                                        ) : filteredAggregatedRows.length === 0 ? (
                                             <tr>
                                                 <td colSpan={7} className="admin-empty">No matching activity found.</td>
                                             </tr>
-                                        ) : filteredActivity.map((row, idx) => {
-                                            const userLabel = row.displayName || row.email || 'Unknown';
-                                            const { detail, pageTime, from, device } = getActivityColumns(row);
-
-                                            return (
-                                                <tr key={`${row.activityAt || 'na'}-${idx}`}>
-                                                    <td className="admin-activity-when" title={formatDateTime(row.activityAt)}>{formatDateTime(row.activityAt)}</td>
-                                                    <td className="admin-activity-type" title={String(row.activityType || '—')}>{row.activityType}</td>
-                                                    <td className="admin-activity-user" title={userLabel}>{userLabel}</td>
-                                                    <td className="admin-activity-detail" title={detail}>{detail}</td>
-                                                    <td className="admin-activity-meta-1" title={pageTime || '—'}>{pageTime || '—'}</td>
-                                                    <td className="admin-activity-meta-2" title={from || '—'}>
-                                                        <div className="admin-activity-scroll-x">{from || '—'}</div>
-                                                    </td>
-                                                    <td className="admin-activity-meta-3" title={device || '—'}>
-                                                        <div className="admin-activity-scroll-x">{device || '—'}</div>
-                                                    </td>
-                                                </tr>
-                                            );
-                                        })}
+                                        ) : filteredAggregatedRows.map((row) => (
+                                            <tr
+                                                key={row.id}
+                                                className="admin-summary-row"
+                                                onClick={() => setSelectedSummaryRow(row)}
+                                                role="button"
+                                                tabIndex={0}
+                                                onKeyDown={(event) => {
+                                                    if (event.key === 'Enter' || event.key === ' ') {
+                                                        event.preventDefault();
+                                                        setSelectedSummaryRow(row);
+                                                    }
+                                                }}
+                                                aria-label={`Open details for ${row.day} ${row.person} ${row.typeVisit}`}
+                                            >
+                                                <td title={row.day}>{row.day}</td>
+                                                <td title={row.person}>{row.person}</td>
+                                                <td title={row.device}>{row.device}</td>
+                                                <td title={row.type}>{row.type}</td>
+                                                <td title={row.typeVisit}>{row.typeVisit}</td>
+                                                <td>{row.hitCount}</td>
+                                                <td>{formatDurationTotalMinutes(row.totalDurationMs)}</td>
+                                            </tr>
+                                        ))}
                                     </tbody>
                                 </table>
                             </div>
+
+                            {selectedSummaryRow && (
+                                <div className="admin-activity-modal-backdrop" onMouseDown={(event) => {
+                                    if (event.target === event.currentTarget) {
+                                        setSelectedDetailRow(null);
+                                        setSelectedSummaryRow(null);
+                                    }
+                                }}>
+                                    <div className="admin-activity-modal" role="dialog" aria-modal="true" aria-label="Activity detail">
+                                        <div className="admin-activity-modal-head">
+                                            <strong>{selectedSummaryTitle}</strong>
+                                            <button
+                                                type="button"
+                                                className="admin-activity-modal-close"
+                                                onClick={() => {
+                                                    setSelectedDetailRow(null);
+                                                    setSelectedSummaryRow(null);
+                                                }}
+                                                aria-label="Close detail"
+                                            >
+                                                x
+                                            </button>
+                                        </div>
+                                        <div className="admin-table-wrap admin-activity-modal-table-wrap">
+                                            <table className="admin-table admin-activity-detail-table">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Time</th>
+                                                        <th>Detail</th>
+                                                        <th>Page Time</th>
+                                                        <th>from</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {selectedSummaryRow.rows.length === 0 ? (
+                                                        <tr>
+                                                            <td colSpan={4} className="admin-empty">No detail rows found.</td>
+                                                        </tr>
+                                                    ) : selectedSummaryRow.rows.map((row, idx) => {
+                                                        const columns = getActivityColumns(row);
+                                                        return (
+                                                            <tr
+                                                                key={`${selectedSummaryRow.id}-${idx}`}
+                                                                className="admin-detail-row"
+                                                                onClick={() => setSelectedDetailRow(row)}
+                                                                role="button"
+                                                                tabIndex={0}
+                                                                onKeyDown={(event) => {
+                                                                    if (event.key === 'Enter' || event.key === ' ') {
+                                                                        event.preventDefault();
+                                                                        setSelectedDetailRow(row);
+                                                                    }
+                                                                }}
+                                                                aria-label={`Open full detail for ${formatDateTime(row.activityAt)}`}
+                                                            >
+                                                                <td title={formatDateTime(row.activityAt)}>{formatDateTime(row.activityAt)}</td>
+                                                                <td title={columns.detail}>{columns.detail}</td>
+                                                                <td title={columns.pageTime || '—'}>{columns.pageTime || '—'}</td>
+                                                                <td title={columns.from || '—'}>{columns.from || '—'}</td>
+                                                            </tr>
+                                                        );
+                                                    })}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {selectedDetailRow && selectedDetailColumns && (
+                                <div className="admin-activity-modal-backdrop admin-activity-submodal-backdrop" onMouseDown={(event) => {
+                                    if (event.target === event.currentTarget) {
+                                        setSelectedDetailRow(null);
+                                    }
+                                }}>
+                                    <div className="admin-activity-modal admin-activity-submodal" role="dialog" aria-modal="true" aria-label="Full activity detail">
+                                        <div className="admin-activity-modal-head">
+                                            <strong>Full Detail and Device Capture</strong>
+                                            <button type="button" className="admin-activity-modal-close" onClick={() => setSelectedDetailRow(null)} aria-label="Close full detail">x</button>
+                                        </div>
+                                        <div className="admin-activity-submodal-content">
+                                            <div className="admin-activity-submodal-section">
+                                                <h3>Full detail</h3>
+                                                <div className="admin-activity-full-detail-box" title={selectedDetailColumns.detail}>{selectedDetailColumns.detail || '—'}</div>
+                                            </div>
+
+                                            <div className="admin-activity-submodal-section">
+                                                <h3>Detailed device capture</h3>
+                                                <div className="admin-activity-device-grid">
+                                                    {selectedDetailDeviceCapture.map((item) => (
+                                                        <React.Fragment key={item.label}>
+                                                            <div className="admin-activity-device-label">{item.label}</div>
+                                                            <div className="admin-activity-device-value" title={item.value}>{item.value}</div>
+                                                        </React.Fragment>
+                                                    ))}
+                                                </div>
+                                            </div>
+
+                                            <div className="admin-activity-submodal-section">
+                                                <h3>Record context</h3>
+                                                <div className="admin-activity-device-grid">
+                                                    <div className="admin-activity-device-label">Time</div>
+                                                    <div className="admin-activity-device-value">{formatDateTime(selectedDetailRow.activityAt)}</div>
+                                                    <div className="admin-activity-device-label">Page time</div>
+                                                    <div className="admin-activity-device-value">{selectedDetailColumns.pageTime || '—'}</div>
+                                                    <div className="admin-activity-device-label">From</div>
+                                                    <div className="admin-activity-device-value" title={selectedDetailColumns.from || '—'}>{selectedDetailColumns.from || '—'}</div>
+                                                    <div className="admin-activity-device-label">Raw device</div>
+                                                    <div className="admin-activity-device-value" title={selectedDetailColumns.device || '—'}>{selectedDetailColumns.device || '—'}</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                         </>
                     )}
                 </section>

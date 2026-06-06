@@ -22,6 +22,7 @@
     "react-router-dom": "^6.30.1",
     "react-scripts": "4.0.3",
     "rehype-raw": "^6.1.1",
+    "remark-gfm": "^2.0.0",
     "serve": "^14.2.4"
   },
   "devDependencies": {
