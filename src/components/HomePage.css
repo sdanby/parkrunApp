@@ -319,11 +319,16 @@
 /* Small responsive tweak */
 @media (max-width: 640px) {
   .home-page {
+    height: calc(100dvh - 126px);
     grid-template-rows: 23% 55%;
   }
 
   .home-page-welcome {
     grid-template-rows: minmax(0, 1fr);
+  }
+
+  .home-top-region-welcome {
+    padding-bottom: 1.25rem;
   }
 
   .feedback-page {

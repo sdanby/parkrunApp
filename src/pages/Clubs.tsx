@@ -7,10 +7,12 @@ import { navigateBackWithNavStack, navigateWithNavStack } from '../utils/navigat
 import { useColumnHeaderMode } from '../utils/useColumnHeaderMode';
 import { useGlobalWaitCursor } from '../utils/useGlobalWaitCursor';
 import {
+    getClubsColumnsForView,
     getClubsElementById,
     getClubsElementPlacement,
     getClubsLayoutConfig,
     getClubsViewportForWidth,
+    type ClubsTableColumn,
     type ClubsViewport
 } from '../config/layout/clubsLayoutHelper';
 import { useDelayedUnifiedHelp } from '../utils/useDelayedUnifiedHelp';
@@ -77,64 +79,22 @@ type ClubViewState = {
     highlightAthleteCode?: string;
 };
 
-type ClubColumn = {
-    key: keyof ClubMember;
-    label: string;
-    align?: 'left' | 'center' | 'right';
-    desktopWidth?: number;
-    mobileWidth?: number;
-};
+const clubColumns = getClubsColumnsForView('members');
+const clubCourseSummaryColumns = getClubsColumnsForView('events');
 
-type ClubCourseSummaryColumn = {
-    key: keyof ClubCourseSummaryRecord;
-    label: string;
-    align?: 'left' | 'center' | 'right';
-    desktopWidth?: number;
-    mobileWidth?: number;
-};
-
-const clubColumns: ClubColumn[] = [
-    { key: 'name', label: 'Participants', align: 'left', desktopWidth: 130, mobileWidth: 130 },
-    { key: 'club_runs_total', label: 'Club runs', align: 'center', desktopWidth: 100, mobileWidth: 100 },
-    { key: 'club_runs_last_year', label: 'Club runs 1y', align: 'center', desktopWidth: 105, mobileWidth: 105 },
-    { key: 'total_runs_all_clubs', label: 'All runs', align: 'center', desktopWidth: 75, mobileWidth: 75 },
-    { key: 'first_club_run_date', label: '1st club run', align: 'center', desktopWidth: 100, mobileWidth: 100 },
-    { key: 'last_club_run_date', label: 'Lst club run', align: 'center', desktopWidth: 100, mobileWidth: 100 },
-    { key: 'fastest_time', label: 'Best time', align: 'center', desktopWidth: 85, mobileWidth: 85 },
-    { key: 'best_event_adj_time', label: 'Ev adj', align: 'center', desktopWidth: 65, mobileWidth: 65 },
-    { key: 'best_age_event_adj_time', label: 'AE adj', align: 'center', desktopWidth: 65, mobileWidth: 65 },
-    { key: 'best_age_sex_event_adj_time', label: 'AES adj', align: 'center', desktopWidth: 75, mobileWidth: 75 },
-    { key: 'best_curve_ranking_current', label: 'Cur rank', align: 'center', desktopWidth: 85, mobileWidth: 85 },
-    { key: 'best_curve_ranking_historic', label: 'Hist rank', align: 'center', desktopWidth: 85, mobileWidth: 85 },
-    { key: 'best_curve_ranking_current_type', label: 'Rank type', align: 'center', desktopWidth: 85, mobileWidth: 85 },
-    { key: 'latest_age_group', label: 'Age grp', align: 'center', desktopWidth: 78, mobileWidth: 76 },
-    { key: 'current_club', label: 'Current club', align: 'left', desktopWidth: 150, mobileWidth: 140 }
-];
-
-const clubCourseSummaryColumns: ClubCourseSummaryColumn[] = [
-    { key: 'event_name', label: 'Course', align: 'left', desktopWidth: 155, mobileWidth: 145 },
-    { key: 'events_held_all_history', label: 'Events', align: 'center', desktopWidth: 75, mobileWidth: 72 },
-    { key: 'club_runs_all_history', label: 'Runs', align: 'center', desktopWidth: 75, mobileWidth: 72 },
-    { key: 'athletes_all_history', label: 'Athletes', align: 'center', desktopWidth: 80, mobileWidth: 76 },
-    { key: 'rank_all_history', label: 'Rank', align: 'center', desktopWidth: 70, mobileWidth: 66 },
-    { key: 'events_held_last_year', label: 'Events 1y', align: 'center', desktopWidth: 85, mobileWidth: 82 },
-    { key: 'club_runs_last_year', label: 'Runs 1y', align: 'center', desktopWidth: 80, mobileWidth: 76 },
-    { key: 'athletes_last_year', label: 'Athletes 1y', align: 'center', desktopWidth: 92, mobileWidth: 88 },
-    { key: 'rank_last_year', label: 'Rank 1y', align: 'center', desktopWidth: 78, mobileWidth: 74 }
-];
-
-const clubSortableKeys = new Set<keyof ClubMember>(clubColumns.map((column) => column.key));
-const clubCourseSummarySortableKeys = new Set<keyof ClubCourseSummaryRecord>(clubCourseSummaryColumns.map((column) => column.key));
+const clubSortableKeys = new Set<keyof ClubMember>(clubColumns.map((column) => column.key as keyof ClubMember));
+const clubCourseSummarySortableKeys = new Set<keyof ClubCourseSummaryRecord>([
+    ...clubCourseSummaryColumns.map((column) => (column.key === 'club_runs_last_year_summary' ? 'club_runs_last_year' : column.key) as keyof ClubCourseSummaryRecord)
+]);
 
 const CLUBS_MOBILE_BREAKPOINT = 768;
 
-const getClubColumnStyle = (column: ClubColumn | ClubCourseSummaryColumn, isMobileViewport: boolean): React.CSSProperties => {
-    const selectedWidth = isMobileViewport
-        ? (column.mobileWidth ?? column.desktopWidth)
-        : (column.desktopWidth ?? column.mobileWidth);
-    const width = selectedWidth ? `${selectedWidth}px` : undefined;
+const getClubColumnStyle = (column: ClubsTableColumn, isMobileViewport: boolean): React.CSSProperties => {
+    const width = isMobileViewport
+        ? (column.mobile?.width ?? column.laptop?.width)
+        : (column.laptop?.width ?? column.mobile?.width);
     return {
-        textAlign: column.align ?? 'left',
+        textAlign: column.style?.textAlign ?? 'left',
         width,
         minWidth: width,
         maxWidth: width
@@ -442,9 +402,11 @@ const Clubs: React.FC = () => {
         };
     }, []);
 
+    const clubLabelElement = getClubsElementById('clubs.clubLabel');
     const membersTitleElement = getClubsElementById('clubs.membersTitle');
     const currentMembersTitleElement = getClubsElementById('clubs.currentMembersTitle');
     const eventsTitleElement = getClubsElementById('clubs.eventsTitle');
+    const pClubLabel = getClubsElementPlacement('clubs.clubLabel', layoutViewport);
     const pMembersTitle = getClubsElementPlacement('clubs.membersTitle', layoutViewport);
     const pCurrentMembersTitle = getClubsElementPlacement('clubs.currentMembersTitle', layoutViewport);
     const pEventsTitle = getClubsElementPlacement('clubs.eventsTitle', layoutViewport);
@@ -875,78 +837,93 @@ const Clubs: React.FC = () => {
                     )}
                 </div>
                 <div className="clubs-header-main">
-                    <div className="clubs-search-wrap" ref={containerRef}>
-                        <input
-                            ref={inputRef}
-                            id="clubs-search-input"
-                            aria-label="Search clubs"
-                            placeholder="Enter Search"
-                            value={query}
-                            onChange={(event) => {
-                                setQuery(event.target.value);
-                                setSelectedClub(null);
-                                setMembers([]);
+                    <div className="clubs-search-stack">
+                        <label
+                            htmlFor="clubs-search-input"
+                            className="clubs-search-label"
+                            style={{
+                                fontSize: clubLabelElement?.style?.fontSize ?? '0.75rem',
+                                fontWeight: clubLabelElement?.style?.fontWeight ?? 600,
+                                color: clubLabelElement?.style?.color ?? '#111827',
+                                lineHeight: Number(clubLabelElement?.style?.lineHeight ?? 0.9),
+                                marginTop: pClubLabel?.y ?? clubLabelElement?.[layoutViewport]?.y ?? undefined
                             }}
-                            onFocus={() => {
-                                if (query.trim().length > 0) {
-                                    setOpen(true);
-                                }
-                            }}
-                            onKeyDown={(event) => {
-                                if (!open) return;
-                                if (event.key === 'ArrowDown') {
-                                    event.preventDefault();
-                                    setHighlight((prev) => Math.min(prev + 1, clubOptions.length - 1));
-                                } else if (event.key === 'ArrowUp') {
-                                    event.preventDefault();
-                                    setHighlight((prev) => Math.max(prev - 1, 0));
-                                } else if (event.key === 'Enter') {
-                                    if (highlight >= 0 && highlight < clubOptions.length) {
-                                        chooseClub(clubOptions[highlight]);
-                                    } else if (clubOptions.length > 0) {
-                                        chooseClub(clubOptions[0]);
-                                    }
-                                } else if (event.key === 'Escape') {
-                                    setOpen(false);
-                                }
-                            }}
-                            className="clubs-search-input"
-                        />
-
-                        {open && query.trim().length > 0 && createPortal(
-                            <div
-                                ref={dropdownRef}
-                                role="listbox"
-                                className="clubs-search-dropdown"
-                                style={{
-                                    position: 'fixed',
-                                    zIndex: 2147483647,
-                                    top: dropdownTop,
-                                    left: dropdownLeft,
-                                    width: dropdownWidth
+                        >
+                            {clubLabelElement?.name || 'Recent club:'}
+                        </label>
+                        <div className="clubs-search-wrap" ref={containerRef}>
+                            <input
+                                ref={inputRef}
+                                id="clubs-search-input"
+                                aria-label="Search clubs"
+                                placeholder="Enter Search"
+                                value={query}
+                                onChange={(event) => {
+                                    setQuery(event.target.value);
+                                    setSelectedClub(null);
+                                    setMembers([]);
                                 }}
-                            >
-                                {loading && <div className="clubs-search-loading">Loading...</div>}
-                                {!loading && clubOptions.length === 0 && (
-                                    <div className="clubs-search-loading">No clubs found</div>
-                                )}
-                                {!loading && clubOptions.map((opt, idx) => (
-                                    <div
-                                        key={`${opt.club}-${idx}`}
-                                        role="option"
-                                        aria-selected={highlight === idx}
-                                        onMouseDown={(event) => event.preventDefault()}
-                                        onClick={() => chooseClub(opt)}
-                                        onMouseEnter={() => setHighlight(idx)}
-                                        className={highlight === idx ? 'clubs-search-option clubs-search-option--highlight' : 'clubs-search-option'}
-                                    >
-                                        <span className="clubs-search-option-name">{opt.club}</span>
-                                        <span className="clubs-search-option-count">{opt.athlete_count}</span>
-                                    </div>
-                                ))}
-                            </div>,
-                            document.body
-                        )}
+                                onFocus={() => {
+                                    if (query.trim().length > 0) {
+                                        setOpen(true);
+                                    }
+                                }}
+                                onKeyDown={(event) => {
+                                    if (!open) return;
+                                    if (event.key === 'ArrowDown') {
+                                        event.preventDefault();
+                                        setHighlight((prev) => Math.min(prev + 1, clubOptions.length - 1));
+                                    } else if (event.key === 'ArrowUp') {
+                                        event.preventDefault();
+                                        setHighlight((prev) => Math.max(prev - 1, 0));
+                                    } else if (event.key === 'Enter') {
+                                        if (highlight >= 0 && highlight < clubOptions.length) {
+                                            chooseClub(clubOptions[highlight]);
+                                        } else if (clubOptions.length > 0) {
+                                            chooseClub(clubOptions[0]);
+                                        }
+                                    } else if (event.key === 'Escape') {
+                                        setOpen(false);
+                                    }
+                                }}
+                                className="clubs-search-input"
+                            />
+
+                            {open && query.trim().length > 0 && createPortal(
+                                <div
+                                    ref={dropdownRef}
+                                    role="listbox"
+                                    className="clubs-search-dropdown"
+                                    style={{
+                                        position: 'fixed',
+                                        zIndex: 2147483647,
+                                        top: dropdownTop,
+                                        left: dropdownLeft,
+                                        width: dropdownWidth
+                                    }}
+                                >
+                                    {loading && <div className="clubs-search-loading">Loading...</div>}
+                                    {!loading && clubOptions.length === 0 && (
+                                        <div className="clubs-search-loading">No clubs found</div>
+                                    )}
+                                    {!loading && clubOptions.map((opt, idx) => (
+                                        <div
+                                            key={`${opt.club}-${idx}`}
+                                            role="option"
+                                            aria-selected={highlight === idx}
+                                            onMouseDown={(event) => event.preventDefault()}
+                                            onClick={() => chooseClub(opt)}
+                                            onMouseEnter={() => setHighlight(idx)}
+                                            className={highlight === idx ? 'clubs-search-option clubs-search-option--highlight' : 'clubs-search-option'}
+                                        >
+                                            <span className="clubs-search-option-name">{opt.club}</span>
+                                            <span className="clubs-search-option-count">{opt.athlete_count}</span>
+                                        </div>
+                                    ))}
+                                </div>,
+                                document.body
+                            )}
+                        </div>
 
                     </div>
                 </div>
@@ -1031,16 +1008,17 @@ const Clubs: React.FC = () => {
                                         if (column.key === 'name') headerClasses.push('athlete-date-header');
                                         const isSorted = sortKey === column.key;
                                         const sortIndicator = isSorted ? (sortDirection === 'asc' ? '▲' : '▼') : '';
+                                        const headerLabel = column.headerName || column.name || String(column.key);
                                         return (
                                             <th
                                                 key={String(column.key)}
                                                 className={headerClasses.join(' ')}
                                                 style={alignStyle}
-                                                onClick={(event) => onHeaderActivate(event.currentTarget, column.label, () => onSortColumn(column.key))}
+                                                onClick={(event) => onHeaderActivate(event.currentTarget, headerLabel, () => onSortColumn(column.key as keyof ClubMember))}
                                                 onMouseEnter={(event) => {
                                                     delayedHeaderHelp.schedule({
                                                         event,
-                                                        label: column.label
+                                                        label: headerLabel
                                                     });
                                                 }}
                                                 onMouseLeave={delayedHeaderHelp.clear}
@@ -1051,12 +1029,12 @@ const Clubs: React.FC = () => {
                                                 onKeyDown={(event) => {
                                                     if (event.key === 'Enter' || event.key === ' ') {
                                                         event.preventDefault();
-                                                        onHeaderActivate(event.currentTarget, column.label, () => onSortColumn(column.key));
+                                                        onHeaderActivate(event.currentTarget, headerLabel, () => onSortColumn(column.key as keyof ClubMember));
                                                     }
                                                 }}
                                                 aria-sort={isSorted ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}
                                             >
-                                                <span>{column.label}</span>
+                                                <span>{headerLabel}</span>
                                                 {sortIndicator && <span style={{ marginLeft: 4 }}>{sortIndicator}</span>}
                                             </th>
                                         );
@@ -1082,7 +1060,8 @@ const Clubs: React.FC = () => {
                                         >
                                             {clubColumns.map((column) => {
                                                 const alignmentStyle = getClubColumnStyle(column, isMobileViewport);
-                                                const value = member[column.key];
+                                                const key = column.key as keyof ClubMember;
+                                                const value = member[key];
                                                 if (column.key === 'name') {
                                                     return (
                                                         <th key={String(column.key)} scope="row" className="athlete-date-cell" style={alignmentStyle}>
@@ -1119,7 +1098,7 @@ const Clubs: React.FC = () => {
                                                 }
                                                 return (
                                                     <td key={String(column.key)} style={alignmentStyle}>
-                                                        {formatDisplayValue(column.key, value)}
+                                                        {formatDisplayValue(key, value)}
                                                     </td>
                                                 );
                                             })}
@@ -1144,18 +1123,20 @@ const Clubs: React.FC = () => {
                                         const alignStyle = getClubColumnStyle(column, isMobileViewport);
                                         const headerClasses: string[] = ['athlete-table-header'];
                                         if (column.key === 'event_name') headerClasses.push('athlete-date-header');
-                                        const isSorted = courseSummarySortKey === column.key;
+                                        const sortKey = (column.key === 'club_runs_last_year_summary' ? 'club_runs_last_year' : column.key) as keyof ClubCourseSummaryRecord;
+                                        const isSorted = courseSummarySortKey === sortKey;
                                         const sortIndicator = isSorted ? (courseSummarySortDirection === 'asc' ? '▲' : '▼') : '';
+                                        const headerLabel = column.headerName || column.name || String(column.key);
                                         return (
                                             <th
                                                 key={String(column.key)}
                                                 className={headerClasses.join(' ')}
                                                 style={alignStyle}
-                                                onClick={(event) => onHeaderActivate(event.currentTarget, column.label, () => onSortCourseSummaryColumn(column.key))}
+                                                onClick={(event) => onHeaderActivate(event.currentTarget, headerLabel, () => onSortCourseSummaryColumn(sortKey))}
                                                 onMouseEnter={(event) => {
                                                     delayedHeaderHelp.schedule({
                                                         event,
-                                                        label: column.label
+                                                        label: headerLabel
                                                     });
                                                 }}
                                                 onMouseLeave={delayedHeaderHelp.clear}
@@ -1166,12 +1147,12 @@ const Clubs: React.FC = () => {
                                                 onKeyDown={(event) => {
                                                     if (event.key === 'Enter' || event.key === ' ') {
                                                         event.preventDefault();
-                                                        onHeaderActivate(event.currentTarget, column.label, () => onSortCourseSummaryColumn(column.key));
+                                                        onHeaderActivate(event.currentTarget, headerLabel, () => onSortCourseSummaryColumn(sortKey));
                                                     }
                                                 }}
                                                 aria-sort={isSorted ? (courseSummarySortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}
                                             >
-                                                <span>{column.label}</span>
+                                                <span>{headerLabel}</span>
                                                 {sortIndicator && <span style={{ marginLeft: 4 }}>{sortIndicator}</span>}
                                             </th>
                                         );
@@ -1187,7 +1168,8 @@ const Clubs: React.FC = () => {
                                     <tr key={`${row.event_code}-${row.event_name}`}>
                                         {clubCourseSummaryColumns.map((column) => {
                                             const alignmentStyle = getClubColumnStyle(column, isMobileViewport);
-                                            const value = row[column.key];
+                                            const dataKey = (column.key === 'club_runs_last_year_summary' ? 'club_runs_last_year' : column.key) as keyof ClubCourseSummaryRecord;
+                                            const value = row[dataKey];
                                             if (column.key === 'event_name') {
                                                 return (
                                                     <th key={String(column.key)} scope="row" className="athlete-date-cell" style={alignmentStyle}>

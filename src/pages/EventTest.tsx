@@ -38,6 +38,11 @@ type EventTestUiState = {
   sortDir: 'asc' | 'desc';
 };
 
+type SelectOptionConfig = {
+  value: string;
+  label: string;
+};
+
 const EVENT_TEST_UI_STATE_KEY = 'event_test_ui_state';
 
 const adjustmentColumnMatrix: Record<CourseAdjOption, Record<OtherAdjOption, string[]>> = {
@@ -67,6 +72,32 @@ const getAdjustmentKeys = (course: CourseAdjOption, other: OtherAdjOption): stri
   return courseMap[other] ?? [];
 };
 
+const normalizeCourseAdj = (value: string): CourseAdjOption => {
+  if (value === 'seasonal' || value === 'full') return value;
+  return 'none';
+};
+
+const normalizeOtherAdj = (value: string): OtherAdjOption => {
+  if (value === 'age' || value === 'sex' || value === 'age_sex') return value;
+  return 'none';
+};
+
+const sanitizeAdjustmentSelection = (
+  course: CourseAdjOption,
+  other: OtherAdjOption,
+  changed: 'course' | 'other' | 'hydrate'
+): { courseAdj: CourseAdjOption; otherAdj: OtherAdjOption } => {
+  if (course !== 'seasonal' || other === 'none') {
+    return { courseAdj: course, otherAdj: other };
+  }
+
+  if (changed === 'other') {
+    return { courseAdj: 'none', otherAdj: other };
+  }
+
+  return { courseAdj: course, otherAdj: 'none' };
+};
+
 const adjustmentColumnKeys = new Set([
   'season_adj_time',
   'event_adj_time',
@@ -77,6 +108,15 @@ const adjustmentColumnKeys = new Set([
   'age_sex_adj_time',
   'age_sex_event_adj_time'
 ]);
+
+const buildSelectOptionConfigs = (
+  configuredOptions: string[] | undefined,
+  values: readonly string[],
+  fallbackLabels: readonly string[]
+): SelectOptionConfig[] => values.map((value, index) => ({
+  value,
+  label: String(configuredOptions?.[index] || fallbackLabels[index] || value)
+}));
 
 const readRowValue = (row: any, key: string): any => {
   if (!row) return '';
@@ -173,15 +213,13 @@ const EventTest: React.FC = () => {
         setViewMode(parsedView);
       }
 
-      const parsedCourse = String(parsed.courseAdj || '').trim();
-      if (parsedCourse === 'none' || parsedCourse === 'seasonal' || parsedCourse === 'full') {
-        setCourseAdj(parsedCourse);
-      }
-
-      const parsedOther = String(parsed.otherAdj || '').trim();
-      if (parsedOther === 'none' || parsedOther === 'age' || parsedOther === 'sex' || parsedOther === 'age_sex') {
-        setOtherAdj(parsedOther);
-      }
+      const nextAdjustments = sanitizeAdjustmentSelection(
+        normalizeCourseAdj(String(parsed.courseAdj || '').trim()),
+        normalizeOtherAdj(String(parsed.otherAdj || '').trim()),
+        'hydrate'
+      );
+      setCourseAdj(nextAdjustments.courseAdj);
+      setOtherAdj(nextAdjustments.otherAdj);
 
       const parsedSortKey = parsed.sortKey === null ? null : String(parsed.sortKey || '').trim();
       setSortKey(parsedSortKey || null);
@@ -212,6 +250,18 @@ const EventTest: React.FC = () => {
     } catch (_err) {
     }
   }, [uiStateHydrated, location.search, viewMode, courseAdj, otherAdj, sortKey, sortDir]);
+
+  const handleCourseAdjChange = (value: CourseAdjOption) => {
+    const nextAdjustments = sanitizeAdjustmentSelection(value, otherAdj, 'course');
+    setCourseAdj(nextAdjustments.courseAdj);
+    setOtherAdj(nextAdjustments.otherAdj);
+  };
+
+  const handleOtherAdjChange = (value: OtherAdjOption) => {
+    const nextAdjustments = sanitizeAdjustmentSelection(courseAdj, value, 'other');
+    setCourseAdj(nextAdjustments.courseAdj);
+    setOtherAdj(nextAdjustments.otherAdj);
+  };
 
   const adjustmentKeys = useMemo(() => getAdjustmentKeys(courseAdj, otherAdj), [courseAdj, otherAdj]);
   const columns = useMemo(() => {
@@ -259,8 +309,15 @@ const EventTest: React.FC = () => {
 
     return leftMap;
   }, [columns, viewport]);
-  const leadingCol1Width = getEventTableColumnByKey('position')?.[viewport]?.width || 'auto';
-  const leadingCol2Width = getEventTableColumnByKey('athlete')?.[viewport]?.width || 'auto';
+  const leadingStickyWidths = useMemo(() => {
+    const positionColumn = columns.find((column) => column.key === 'position');
+    const athleteColumn = columns.find((column) => column.key === 'athlete');
+
+    return {
+      position: positionColumn?.[viewport]?.width || 'auto',
+      athlete: athleteColumn?.[viewport]?.width || 'auto'
+    };
+  }, [columns, viewport]);
 
   const snakeToCamel = (value: string) => value.replace(/_(.)/g, (_m, g1) => g1.toUpperCase());
   const getSortValue = (row: any, key: string) => {
@@ -323,6 +380,8 @@ const EventTest: React.FC = () => {
   const downSortElement = getEventElementById('event.downSort');
   const courseAdjLabelElement = getEventElementById('event.courseAdjLabel');
   const courseAdjLabelStyle = courseAdjLabelElement?.style;
+    const courseAdjSelectElement = getEventElementById('event.courseAdjSelect');
+    const otherAdjSelectElement = getEventElementById('event.otherAdjSelect');
   const otherAdjLabelElement = getEventElementById('event.otherAdjLabel');
   const otherAdjLabelStyle = otherAdjLabelElement?.style;
   const hardnessLabelElement = getEventElementById('event.hardnessLabel');
@@ -350,6 +409,22 @@ const EventTest: React.FC = () => {
   const pStatusMessage = getEventElementPlacement('event.statusMessage', viewport);
   const pTableCorner = getEventElementPlacement('event.table.corner', viewport);
   const tableRow1Element = getEventElementById('event.table.row1');
+    const courseAdjOptions = useMemo(
+      () => buildSelectOptionConfigs(
+        Array.isArray((courseAdjSelectElement as any)?.options) ? (courseAdjSelectElement as any).options : undefined,
+        ['none', 'seasonal', 'full'] as const,
+        ['no adjustment', 'seasonal adj.', 'full event adj.'] as const
+      ),
+      [courseAdjSelectElement]
+    );
+    const otherAdjOptions = useMemo(
+      () => buildSelectOptionConfigs(
+        Array.isArray((otherAdjSelectElement as any)?.options) ? (otherAdjSelectElement as any).options : undefined,
+        ['none', 'age', 'sex', 'age_sex'] as const,
+        ['no adjustment', 'age adj.', 'sex adj.', 'age & sex adj.'] as const
+      ),
+      [otherAdjSelectElement]
+    );
   const hardnessInteraction = getEventElementInteraction('event.hardnessValue');
   const tableRow1Sticky = tableRow1Element?.sticky !== false;
   const hardnessIsNavigable = Boolean(
@@ -1045,11 +1120,11 @@ const EventTest: React.FC = () => {
               id="event-test-course-adj"
               style={{ position: 'absolute', left: pCourseAdjSelect?.x, top: pCourseAdjSelect?.y, width: pCourseAdjSelect?.width }}
               value={courseAdj}
-              onChange={(e) => setCourseAdj((e.target.value as any) || 'none')}
+              onChange={(e) => handleCourseAdjChange(normalizeCourseAdj(e.target.value))}
             >
-              <option value="none">no adjustment (default)</option>
-              <option value="seasonal">seasonal adjustments</option>
-              <option value="full">full event adjustments</option>
+              {courseAdjOptions.map((option) => (
+                <option key={option.value} value={option.value} disabled={otherAdj !== 'none' && option.value === 'seasonal'}>{option.label}</option>
+              ))}
             </select>
 
             {renderConfigLabel(otherAdjLabelElement, pOtherAdjLabel, 'Other adj:', 'control-other-adj')}
@@ -1057,12 +1132,11 @@ const EventTest: React.FC = () => {
               id="event-test-other-adj"
               style={{ position: 'absolute', left: pOtherAdjSelect?.x, top: pOtherAdjSelect?.y, width: pOtherAdjSelect?.width }}
               value={otherAdj}
-              onChange={(e) => setOtherAdj((e.target.value as any) || 'none')}
+              onChange={(e) => handleOtherAdjChange(normalizeOtherAdj(e.target.value))}
             >
-              <option value="none">no adjustment (default)</option>
-              <option value="age">age adjustments</option>
-              <option value="sex">sex adjustments</option>
-              <option value="age_sex">age & sex adjustment</option>
+              {otherAdjOptions.map((option) => (
+                <option key={option.value} value={option.value} disabled={courseAdj === 'seasonal' && option.value !== 'none'}>{option.label}</option>
+              ))}
             </select>
 
             {renderConfigLabel(hardnessLabelElement, pHardnessLabel, 'Hardness adj:', 'control-hardness-adj')}
@@ -1110,7 +1184,7 @@ const EventTest: React.FC = () => {
               }}
             >
               <div style={{ fontSize: '0.9em' }}>
-                {loading ? 'Loading event positions…' : (error || `${rows.length} participant${rows.length === 1 ? '' : 's'}`)}
+                {loading ? 'Loading event positions…' : (error || `Event Total : ${rows.length} participant${rows.length === 1 ? '' : 's'}`)}
               </div>
             </div>
           </div>
@@ -1127,8 +1201,8 @@ const EventTest: React.FC = () => {
         <table
           className="results-table races-table eventtest-table"
           style={{
-            ['--col1-width' as any]: leadingCol1Width,
-            ['--col2-width' as any]: leadingCol2Width
+            ['--col1-width' as any]: leadingStickyWidths.position,
+            ['--col2-width' as any]: leadingStickyWidths.athlete
           }}
         >
           <thead>
@@ -1413,5 +1487,4 @@ const EventTest: React.FC = () => {
     </div>
   );
 };
-
 export default EventTest;

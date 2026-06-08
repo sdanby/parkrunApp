@@ -7,16 +7,14 @@ This is the single help source for this parkrun app. Use this to navigate throug
 
 ## Contents
 * [Introduction](#section-introduction)
+* [Getting Started](#section-getting-started)
 * [Concepts](#section-concepts)
 * [Feedback](#section-feedback)
 * [Navigation](#section-navigation)
 * [Weekly Data Updates & New Courses](#section-weekly-updates)
 * [Device Differences](#section-device-differences)
 * [Glossary of Terms](#glossary)
-* [Key Vocabulary Used](#section-key-vocabulary)
 * [Pages](#section-pages)
-* [Selection Items and Buttons](#section-selection-items)
-* [Table Columns](#section-table-columns)
 * [Steve Danby](#section-steve-danby)
 
 
@@ -34,7 +32,22 @@ Or is it just another parkrun app?
 
 Your feedback will help decide that.
 
+<a id="section-getting-started"></a>
 
+## Getting Started
+
+To reach this stage you will have had to go through the login security and hopefully set yourself up with a password or used google security feature:
+
+<img src="/help-images/login-dialogbox.png" alt="Login dialog box" height="200" />
+
+Next you will have been asked to asscoiate yourself with the parkrun athlete code and default course. 
+Neither of these are mandatory but they will make navigation features easier when using the app:
+
+<img src="/help-images/confirm-profile.png" alt="Confirm your profile" height="200" />
+
+On the **Home** page navigation is through the burger bar in the top left-hand corner and each page, help is covered in detail: [Pages](#section-pages)
+
+<img src="/help-images/burger-menu.png" alt="Burger Menu" height="200" />
 
 <a id="section-concepts"></a>
 
@@ -61,7 +74,7 @@ The [Event Analysis](#page-event-analysis) page brings together a wide range of 
 - course difficulty  
 - and more  
 
-All of this updates immediately when you change the **Type**, **Calc**, **Period**, or **Agg** controls (see: [Selection Items and Buttons](#section-selection-items)).
+All of this updates immediately when you change the **Type**, **Calc**, **Period**, or **Agg** controls (see: [Glossary of Terms](#glossary)).
 
 The goal is simple:  
 **You get powerful insights without needing to understand complex maths.**
@@ -225,407 +238,798 @@ The goal is simple:
 
 ## Glossary of Terms
 
-So glossary of terms should be the big concepts and written in detail
+This section lists the short labels, columns, controls and metric names used throughout the app. The entries are intentionally brief so they can act as link targets from the UI. Where the app uses a short form in a table or button, it is shown in brackets.
 
-Vocabulary joins together the different language used and refer back to glossary if it can
+The existing `control-*` anchors used by the app are defined here so help jumps land in one place.
 
-pages talks about pages but refers to select items and button and table columns
+<a id="term-actual-deviation"></a>
+### #Actual Deviation
 
-selection items and button are list that refer back to key volcabulary 
+Shows the signed difference between the actual value and the comparison baseline in raw units rather than in percentage terms. Use it when you want to see how large the gap is, not just whether it is relatively high or low.
 
-table columns refer back to voabulary
+<a id="term-percent-deviation"></a>
+### %Deviation
 
----
+Shows how far a value sits above or below its reference level as a percentage. It is mainly used when comparing whether a course or event is running hotter or colder than normal.
 
-<a id="section-key-vocabulary"></a>
+<a id="term-percent-total"></a>
+### %Total
 
-## Key Vocabulary Used
+Shows a selected type as a share of the total population for that row, period or event. It is useful when the raw counts are less important than the proportion they represent.
 
-(Define the specific terminology used throughout the app — this complements the Glossary.)
+<a id="term-first-club-run"></a>
+### 1st club run (Lst club run)
 
+Marks the first date, and where shown the last date, that a participant is recorded for a club-specific history. These fields help show the span of an athlete's relationship with that club.
 
-This section lists the key terms used throughout the app. Understanding these will help you interpret the tables, charts and comparisons more easily.
+<a id="term-first-timers"></a>
+### 1st Timers (First Timers)
 
-All terms are listed in alphabetical order.
+Counts runners who are new, either to parkrun overall or to that specific course depending on the page and dataset being viewed. It is often used to show how welcoming or discovery-driven an event is.
 
-* **Actual** – the underlying raw number before any adjustments or comparisons.
+<a id="term-actual"></a>
+### Actual
 
-* **Actual%** – the percentage that the actual number represents relative to a chosen total.
+The raw value before percentages, deviations or other transformations are applied. Use it when you want the direct count, level or reading rather than a comparison view.
 
-* **Aggregation** (Agg) – methods used to summarise data across multiple events, such as Average, Max, Min, Range or Growth.
+<a id="term-actual-percent"></a>
+### Actual %
 
-* **Age** – the average estimated age of participants at the current event.
+Shows the actual value as a percentage of the selected denominator. It is the percentage version of `Actual` rather than a deviation measure.
 
-* **All Events** – includes every recorded event for the selected course.
+<a id="term-ae-adj"></a>
+### AE Adj
 
-* **Annual** – groups data by calendar year.
+Short label for age-and-event adjusted time or score fields. It indicates that both event conditions and age correction have been applied.
 
-* **Average (Avg)** – the mean value across the selected period.
+<a id="term-aes-adj"></a>
+### AES Adj
 
-* **Calc** – methods applied to data types to produce relative or comparative results (e.g., percentages, deviations).
+Short label for age-sex-event adjusted values. It is typically the most adjusted variant shown when comparing performances on a like-for-like basis.
 
-* **Cell Agg** – how each individual cell in a table is summarised (e.g., single value vs averaged).
+<a id="term-age"></a>
+### Age
 
-* **Clubbers** – number of participants associated with a running club at the current event.
+Used where the app shows an average or estimated age for participants in a selected slice. On analysis pages it is a metric; on participant pages it provides context.
 
-* **Combined Hardness** – a combined measure of Seasonal Hardness and Event Hardness.
+<a id="term-age-adj"></a>
+### Age Adj (Age Adj.)
 
-* **Courses** – the parkrun course associated with an event location. (Note: "Event" refers to a specific date; "Course" refers to the location.)
+Indicates that an age-based normalisation has been applied. This lets performances or counts be compared more fairly across age groups.
 
-* **Eligible Times** – number of participants who ran within their expected time window based on their last 15-week record.
+<a id="term-age-sex-adj"></a>
+### Age and Sex Adj.
 
-* **Event Hardness** – the event-specific difficulty factor based on conditions that are more consistent and measurable.
+Indicates that both age and sex adjustments are applied together. It is used when you want the strongest participant-level normalisation without adding course-condition adjustments.
 
-* **Event Number** – the sequential number of the event for a particular course.
+<a id="term-age-grade"></a>
+### Age grade (Age grd)
 
-* **First Timers** – participants running their first ever parkrun or their first time at this course.
+An age-grading percentage that compares a performance to the best known standard for that athlete's age and sex. Higher values indicate stronger relative performances.
 
-* **Growth (Grth)** – how much a value has increased or decreased over time.
+<a id="term-age-group"></a>
+### Age group (Age grp)
 
-* **Last 50 Events** – uses only the most recent 50 events for analysis.
+The participant's age category label. It is used for sorting, grouping and interpretation across participant, event and course pages.
 
-* **Maximum (Max)** – the highest value in the selected period.
+<a id="control-agg"></a>
+### Aggregation (Agg)
 
-* **Minimum (Min)** – the lowest value in the selected period.
+Aggregation defines how values are summarised across the selected events or grouped periods. Average is a common default, while Total, Maximum, Minimum, Range and Growth are better suited when you want to emphasise scale, extremes or trend direction.
 
-* **Mnth Seasonality** – monthly seasonal patterns affecting course performance.
+<a id="term-all-events"></a>
+### All Events
 
-* **Participants** – parkrunners who run, jog or walk at the current event.
+Uses the full recorded history for the selected course or metric. Choose it when you want maximum history rather than a recent-window view.
 
-* **Personal Bests (PBs)** – number of participants achieving their fastest time at this course at the current event.
+<a id="term-all-time-adjustments"></a>
+### All Time Adjustments
 
-* **Period** – the time window used for analysis (e.g., recent events, annual, monthly, quarterly).
+A table view that exposes multiple adjusted-time variants side by side. It is mainly used on event and participant-style pages when you want to inspect how each adjustment changes the result.
 
-* **Qtr Seasonality** – quarterly seasonal patterns affecting course performance.
+<a id="term-annual"></a>
+### Annual
 
-* **Range (Rng)** – the difference between the maximum and minimum values.
+Groups data by year rather than by single event. Use it when you want broad long-run trend comparisons instead of week-by-week movement.
 
-* **Recent Bests** – number of participants achieving their fastest time in the last 15-week period at this course.
+<a id="term-as-adj"></a>
+### AS Adj
 
-* **Recent Events** – focuses on the most recent set of events (e.g., last 15 weeks).
+Compact label used where space is tight for a combined age and sex adjustment field. It is a shorthand display label rather than a separate concept.
 
-* **Regulars (Regs)** – participants who meet a threshold for attending this course frequently.
+<a id="control-athlete-code"></a>
+### Athlete code
 
-* **Returners** – participants returning to the course after a period of absence.
+Athlete Code is the unique identifier used to find a participant across pages and tables. Use it to confirm you are viewing the intended runner when names are similar or when you move between linked pages.
 
-* **Seasonal Hardness** – the difficulty associated with seasonal conditions (e.g., winter mud, summer heat).
+<a id="term-average"></a>
+### Average (Avg)
 
-* **Since Lockdown** – includes all events from the first post-lockdown restart onwards.
+The arithmetic mean across the selected rows, events or periods. It is usually the default summary because it gives the most familiar central value.
 
-* **Super Tourist** – participants who visit a large number of different parkrun courses in a one year period.
+<a id="term-basic"></a>
+### Basic
 
-* **Times** – the average finish time of participants at the current event.
+The compact table view that focuses on the most important columns. Use it when you want a quicker overview with less horizontal scrolling.
 
-* **Tourists** – participants participating at a course other than their most frequent home course.
+<a id="term-best-time"></a>
+### Best Time
 
-* **Type** (Filter) – the sub-group or metric variant to display (e.g., Volunteers, PBs, Clubbers).
+The strongest recorded raw finish time in the selected context. On Top 250 or participant-style tables it is usually the athlete's best qualifying time in that slice.
 
-* **Unknowns** – participants whose category cannot be determined from available data.
+<a id="control-type"></a>
+### Calc
 
-* **Volunteers** – number of people who volunteered at the current event rather than participating
+Calc controls the calculation family shown in the analysis. Use it first because it determines how the selected metric is interpreted, for example as an actual value, a percentage or a deviation-style comparison.
+
+<a id="control-cell-agg"></a>
+### Cell Agg
+
+Cell Agg controls how each matrix cell value is formed when a grouped view contains multiple underlying events. Use it when you want to switch between single-value and averaged cell behaviour.
+
+<a id="term-club"></a>
+### Club
+
+The running club associated with a participant or a club-focused grouping used elsewhere in the app. Club links are often clickable and act as a drill-down path into Club pages.
+
+<a id="term-club-runs"></a>
+### Club Runs (Club runs 1y)
+
+Counts how many times a participant has appeared for a club in the selected history window. The `1y` variant limits that count to the last year.
+
+<a id="term-clubbers"></a>
+### Clubbers
+
+Counts participants linked to a running club in the current event or slice. It is used as a quick measure of club-based participation.
+
+<a id="term-comb-tot"></a>
+### Comb tot
+
+A compact column label used where space is limited for a combined total. In context it usually represents a total count compiled across multiple qualifying event types or histories.
+
+<a id="term-combined-hardness"></a>
+### Combined Hardness (Hardness)
+
+Combines seasonal and event-specific difficulty into a single indicator. Use it when you want one summary measure of course toughness rather than separate seasonal and event components.
+
+<a id="term-course"></a>
+### Course
+
+The parkrun location or route, distinct from an individual dated event. Many tables let you drill from a course label into deeper course-level history.
+
+<a id="term-course-number"></a>
+### Course #
+
+Short label used where a course-related event count or appearance count needs to fit in a narrow column. It usually refers to the number of times something happened at that course.
+
+<a id="control-course-adj"></a>
+### Course adj
+
+Course Adj controls whether course-condition factors are applied to the displayed results. Use no adjustment when you want the raw recorded values, seasonal adjustment when you want to allow for broad seasonal effects, and full event adjustment when you want the strongest correction for the exact event conditions on that date.
+
+<a id="term-current-club"></a>
+### Current Club
+
+The latest known club associated with a participant. It gives current affiliation context and is often used as a navigation link into club analysis.
+
+<a id="term-detail"></a>
+### Detail (Detailed)
+
+The expanded table view that shows more columns than Basic. Use it when you need more explanatory metrics and are happy to scroll horizontally.
+
+<a id="term-distinct-events"></a>
+### Distinct events
+
+Counts unique events rather than total runs. It is useful when you want to know breadth of attendance instead of repeat participation at the same event.
+
+<a id="term-eligible-runs"></a>
+### Eligible runs / Eligible Times
+
+Represents runs or times that meet the app's eligibility rules for a particular comparison. These fields are used when a calculation only makes sense for runners with enough history or a valid baseline.
+
+<a id="term-es-adj"></a>
+### ES Adj
+
+Compact label for a sex-and-event adjusted value where table space is limited. It indicates a more adjusted comparison than raw or single-factor fields.
+
+<a id="control-estimated-age"></a>
+### Estimated Age
+
+Estimated Age shows the participant's current age estimate used for context in performance interpretation and age-based calculations. It is supporting information rather than a standalone performance metric.
+
+<a id="term-ev-adj"></a>
+### Ev adj
+
+Short label for an event-adjusted value, most often an event-adjusted time. It applies the event-specific hardness correction without adding other participant-level adjustments.
+
+<a id="term-event-date"></a>
+<a id="control-event-date"></a>
+### Event Date (Ev Date)
+
+The specific calendar date for a single event instance. It distinguishes one occurrence of a course from the course itself.
+
+<a id="term-event-hardness"></a>
+### Event Hardness
+
+The event-specific component of difficulty for a single day. It is useful when the course played unusually fast or slow relative to its typical pattern.
+
+<a id="term-event-number"></a>
+<a id="control-event-number"></a>
+### Event Number (Event #, Event # 1Y)
+
+The sequential number of an event at a course. The one-year variant usually applies the same concept within a last-year comparison table.
+
+<a id="term-event-total"></a>
+### Event Total
+
+The full participant total for a single event or summary row. It is typically used as a headline count that sets the scale for other metrics in the same view.
+
+<a id="control-freq-course"></a>
+### Freq Course
+
+Freq Course shows the participant's most frequent course over the last year. It is derived from the course with the highest event count in that window, and if multiple courses tie the most recent one is used.
+
+<a id="term-freq"></a>
+### Freq (Freq 1y)
+
+Compact label for frequency or count-in-window metrics. The `1y` form limits the count to the most recent year.
+
+<a id="term-full-event-adj"></a>
+### Full event Adj
+
+The strongest course-condition adjustment option, applying event-level correction instead of only seasonal correction. Use it when you want to compare performances after allowing for the exact event conditions.
+
+<a id="term-growth"></a>
+### Growth (Grth)
+
+Shows the direction and size of change over time rather than the level itself. It is most useful when comparing trends across periods.
+
+<a id="term-hardness-adj"></a>
+### Hardness adj
+
+Refers to hardness-based adjustment context used when times or comparisons are normalised for course toughness. It is usually explanatory rather than a separate leaderboard target.
+
+<a id="control-hardness-adj"></a>
+### Hardness Adj
+
+Hardness Adj shows the combined hardness context for the selected event and adjustment settings. Use it as explanatory context when interpreting adjusted time comparisons across events, not as a replacement for the raw time itself.
+
+<a id="term-hist-rank"></a>
+### Hist Rank
+
+Historic ranking for a participant or value in the selected comparison framework. It contrasts with current rank to show how standing changes depending on the reference period.
+
+<a id="term-last-50-events"></a>
+### Last 50 Events
+
+Limits the analysis window to the latest 50 events. Use it when recent form matters more than full history.
+
+<a id="term-last-volunt"></a>
+### Last Volunt
+
+Shows the last recorded volunteering date in the selected context. It gives recency information for volunteer activity.
+
+<a id="term-local-runs"></a>
+### Local Runs
+
+Counts runs at a defined local set of courses or the selected local course context. It is often used in lists and participant summaries to distinguish local engagement from overall participation.
+
+<a id="term-maximum"></a>
+### Maximum (Max)
+
+The highest value in the selected set. Use it when you want the extreme upper point rather than the average.
+
+<a id="term-members"></a>
+### Members (Members 1y)
+
+Counts club members or current members in club-focused tables. The `1y` version restricts the count to recent one-year activity.
+
+<a id="term-minimum"></a>
+### Minimum (Min)
+
+The lowest value in the selected set. Use it when you want the minimum observation or the best low-time outcome.
+
+<a id="term-month-seasonality"></a>
+### Mnth seasonality
+
+Monthly grouping of seasonal patterns. It helps show whether a course behaves differently in different months of the year.
+
+<a id="term-order"></a>
+### Order (Order 1y, Ord)
+
+Sort order or ranking order label used in compact tables. The one-year form applies the same ordering idea within the last-year window.
+
+<a id="control-other-adj"></a>
+### Other adj
+
+Other Adj controls the participant-level adjustment type applied in the table. Use no adjustment for the baseline view, age adjustment to normalise for age differences, sex adjustment to normalise for sex differences, and age-and-sex adjustment when you want both factors applied together.
+
+<a id="control-list-select"></a>
+### List Selection
+
+List Selection controls which top-style leaderboard is loaded on the Lists page. Use performance-led lists when you want to rank athletes by their best adjusted result, and participation-led lists when you want to rank by total or local activity instead.
+
+<a id="control-adjustment-filter"></a>
+### Filtered By Adjustments
+
+Filtered By Adjustments controls whether Course Adj and Other Adj also change which adjusted MV family supplies the representative leaderboard row. When it is turned on, the selected adjustment combination determines the underlying list source as well as the displayed context.
+
+<a id="term-other-events"></a>
+### Other events
+
+Used where the app needs to distinguish the selected course or event from all other appearances elsewhere. It provides off-course or outside-slice context.
+
+<a id="term-participant"></a>
+### Participant (Participt)
+
+The individual athlete or row subject being analysed. The short form appears in narrow headers where full text would not fit.
+
+<a id="control-participant-filter"></a>
+### Participants
+
+Participants can mean the count of runners in a row, or the minimum-participation threshold control used on Lists pages depending on context. On Lists pages it is used to restrict the leaderboard to runners with broader total or local history before comparing them.
+
+<a id="term-pbs"></a>
+### PBs
+
+Counts personal best performances for the selected course or slice. It is commonly used as a quick indicator of how fast or favourable an event felt.
+
+<a id="control-period"></a>
+### Period
+
+Period controls the time window or aggregation period used in the analysis. Changing it can switch between granular events, all-history views and grouped Annual, Monthly or Quarterly comparisons.
+
+<a id="term-pos"></a>
+### Pos
+
+Short label for finishing or ranking position. It appears in compact event-style tables where space is limited.
+
+<a id="term-quarter-seasonality"></a>
+### Qtr seasonality
+
+Quarterly grouping of seasonal behaviour. Use it when monthly changes are too noisy and you want broader seasonal blocks.
+
+<a id="term-range"></a>
+### Range (Rng)
+
+The spread between the maximum and minimum values. It shows variability rather than direction.
+
+<a id="term-rank"></a>
+### Rank
+
+An ordering position within the current comparison set. It is used across participants, clubs and courses where the app needs an explicit ranking.
+
+<a id="term-rank-type"></a>
+### Rank type
+
+Indicates the ranking basis or ranking family being used. It helps explain why two rank columns may differ for the same row.
+
+<a id="term-recent-bests"></a>
+### Recent Bests
+
+Counts best performances achieved in the recent lookback window rather than over all history. It helps highlight current form rather than lifetime peak.
+
+<a id="control-recent-club"></a>
+### Recent Club
+
+Recent Club shows the latest known club affiliation for the selected participant. Use it to confirm current club context before comparing participant runs or opening club-level pages.
+
+<a id="term-recent-event-number"></a>
+### Recent Ev #
+
+Compact label for the recent-event count or identifier used in narrow tables. It gives recency context without using a full phrase.
+
+<a id="term-recent-events"></a>
+### Recent Events
+
+Uses only the latest portion of the available history. It is the standard short-window view across several pages.
+
+<a id="term-reg-course"></a>
+### Reg Course
+
+Short label for a participant's regular or most-associated course. It is used where a table needs a compact course-affiliation field.
+
+<a id="term-regulars"></a>
+### Regulars
+
+Counts participants who attend a course frequently enough to meet the app's threshold. It helps distinguish core local runners from casual or one-off visitors.
+
+<a id="term-returners"></a>
+### Returners (T/F in Participants)
+
+Counts or flags runners who have come back after a gap. In some tables it is a count; in others it is a true/false style classification inside a participant grouping.
+
+<a id="term-runs-1y"></a>
+### Runs 1Y
+
+Run count limited to the most recent one-year window. Use it when recent activity matters more than total career volume.
+
+<a id="term-seasonal-adj"></a>
+### Seasonal Adj. (Seas Adj.)
+
+Applies the broader seasonal correction to course performance without using the full event-specific adjustment. It is useful when you want a lighter-touch course-condition correction.
+
+<a id="term-seasonal-hardness"></a>
+### Seasonal Hardness
+
+The season-driven component of course difficulty. It captures recurring factors such as winter mud or summer conditions rather than one-off event effects.
+
+<a id="term-sex-adj"></a>
+### Sex Adj
+
+Shows or applies a sex-based adjustment. It is used when comparing performances after normalising for sex differences.
+
+<a id="term-since-lockdown"></a>
+### Since Lockdown
+
+Uses all events from the post-lockdown restart onward. It is helpful when pre- and post-lockdown data should not be mixed.
+
+<a id="term-single-value"></a>
+### Single Value
+
+A cell or summary mode that shows one direct value rather than an average or derived combination. It is commonly used when grouped periods still need a representative single reading.
+
+<a id="term-super-tourists"></a>
+### Super Tourists
+
+Counts runners who visit many different events in a defined period. It is a way to identify unusually mobile participants.
+
+<a id="control-table-view"></a>
+### Table View
+
+Table View controls which column set is visible on the current page. Typical options are Basic for the key columns, Detailed for a wider field set, and specialist views such as All Time Adjustments where the page supports them.
+
+<a id="control-time-adj"></a>
+### Time Adj
+
+Time Adj applies optional adjustments for time-based analysis. Use it when comparing pace or finish-time style fields across different conditions so that like-for-like comparisons are easier to make.
+
+<a id="term-times"></a>
+### Times (Time)
+
+Time-based metrics, usually average time or a representative finish-time measure for the selected slice. On participant-style tables it may instead be a best or adjusted time field.
+
+<a id="term-total"></a>
+### Total (Tota)
+
+The summed value across the selected events, rows or categories. It is the additive counterpart to Average.
+
+<a id="control-total-runs"></a>
+### Total runs (Tot. runs)
+
+Total Runs shows the total number of recorded runs for a participant or table row. Use it as quick context for how large the underlying history is before interpreting trends, ranks or adjusted bests.
+
+<a id="term-tourists"></a>
+### Tourists
+
+Counts participants who are visiting a course rather than running their usual one. It helps distinguish local participation from visiting traffic.
+
+<a id="control-filter"></a>
+### Type
+
+Type selects the subgroup or metric family being displayed, such as Participants, Volunteers, PBs, Clubbers or Unknowns. It works with Calc to decide what each number means.
+
+<a id="term-unknowns"></a>
+### Unknowns
+
+Counts participants whose classification cannot be resolved from the available data. It is useful as a data-quality or interpretation caution flag.
+
+<a id="term-volunteers"></a>
+### Volunteers (Volunts)
+
+Counts volunteers in the selected event or slice, or shows a volunteer-related participant field where relevant. It is one of the standard participation context measures used across the app.
 
 ---
 
 <a id="section-pages"></a>
 
-## Pages
+## Pages & other key components
 
-(Overview of all major pages: Event Analysis, Single Event, Course, Participant, Lists, etc.)
+This section provides a starting guide to the different pages and components available in this app. 
+They are accessible by the top left-hand burger bar and often a back button is provides which takes you back to the previous page in exacty the same position, with the same sorts and selection from when you left that page.
 
+<img src="/help-images/back-button.png" alt="Back button" width="40" />
 
 <a id="page-event-analysis"></a>
 
 ### Event Analysis Page
 
-* The **Event Analysis** page is a multi-purpose analysis of your local parkruns providing you with up to date and historical stats 
-* The main table is arrange by **event date** and **course**; the intersection cell links to the [**event page**](#page-single-event).
-* Any column can be sorted. Click on a cell to drill down to an event and click on a course to see more detail on that.
-The opening table shows participants in each event. But use the ‘Type’ select (top corner) to change the metrics:
-Event Number, Course hardness factors, Volunteers, Tourists, Regulars, PBs, Clubbers, Eligibles and Unknowns.
-Want more stats? Change the ‘Calc’ recalculate the metrics from actuals to relative to total all participants, relative to the course history, deviation from average
-The ‘Agg’ allows the user to switch the aggregation column and row from average to total, maximum, minimum, range and growth
-Not satisfied with the most recent data use the ‘Period’ selection to go back in time, event to when each course event originally started.
-Go one step further and use the ‘Period’ selection to show Annual. Monthly and Quarterly trends.
+#### Purpose Description
+
+Event Analysis is the main cross-event analysis page for local parkruns. It is designed to compare courses and event dates quickly across a wide range of statistics such as participants, PBs, tourists, volunteers, hardness and other derived measures.
+
+#### Navigation
+
+This page is usually entered from the main burger menu. From here you can drill down by clicking a course/date cell to open the [Event Page](#page-single-event), and you can also click course names where available to move into course-level detail.
+
+#### Label and Selection list
+
+- `Type`: changes the metric being displayed, such as Participants, Event Number, Course Hardness, Volunteers, Tourists, Regulars, PBs, Clubbers, Eligibles and Unknowns.
+- `Calc`: changes how the chosen metric is interpreted, for example Actual, %Total or deviation-style views.
+- `Period`: changes the time window or grouping, including recent events, full history, Annual, Monthly and Quarterly views.
+- `Agg`: changes how rows and columns are summarised, such as Average, Total, Maximum, Minimum, Range and Growth.
+- `Cell Agg`: where shown, changes how grouped cells are summarised.
+
+#### Buttons
+
+- Column header clicks re-sort the table.
+- Drill-down clicks on table cells open the next relevant page.
+- Standard page navigation and back navigation return you to the earlier page state where possible.
+
+#### Tables, Plots and Previews
+
+- Main matrix/table: arranged by event date and course, with sortable columns and drill-down cells.
+- Grouped analysis views: available when Period changes from individual events to broader time buckets.
 
 
 <a id="section-event-stats-comparison"></a>
 
 ### Event Statistics Comparison Chart
 
-This plot compares selected event statistics across dates.
-Use legend selection and zoom controls to focus on trends, outliers and cross-event differences.
+#### Purpose Description
+
+This chart gives a visual comparison of the selected Event Analysis metric across dates and courses. It is intended to make trends, spikes and outliers easier to spot than in the main table alone.
+
+#### Navigation
+
+It sits alongside the Event Analysis page and is interpreted together with the same selections. Users typically review the table first and then use the chart to confirm trend direction or highlight unusual events.
+
+#### Label and Selection list
+
+- Inherits the current Event Analysis selections, especially `Type`, `Calc`, `Period` and `Agg`.
+- Legend labels identify the displayed series.
+
+#### Buttons
+
+- Legend selection shows or hides individual plotted series.
+- Zoom and pan controls, where enabled by the chart component, help focus on a specific time range.
+
+#### Tables, Plots and Previews
+
+- Comparison plot: shows the chosen event statistic across dates.
+- Visual preview of outliers: makes unusually high or low events easier to spot before drilling further.
 
 
 <a id="page-single-event"></a>
 
 ### Event Page 
 
-Single Event is the drill-down view for one event/date and is best used together with Event Analysis.
-Use Event Analysis first, then inspect details in Single Event with the same intent for **Calc** and **Type**.
+#### Purpose Description
+
+Event Page is the drill-down page for a single dated parkrun event. It is used to inspect one event in detail, including participant rows, adjusted times and event-specific context.
+
+#### Navigation
+
+This page is most commonly opened from [Event Analysis](#page-event-analysis). Use the back button to return to the previous summary page in the same state, or follow athlete, course and club links to continue drilling down.
+
+#### Label and Selection list
+
+- `Course Adj`: changes whether raw, seasonal or full event adjustment is applied.
+- `Other Adj`: changes whether no adjustment, age, sex or age-and-sex adjustment is applied.
+- `Table View`: changes the visible event columns.
+- Event headline labels such as `Event Date`, `Event Number` and `Event Total` provide context for the selected day.
+
+#### Buttons
+
+- Back navigation returns to the previous page and state.
+- Sortable column headers reorder the participant table.
+- Linked values can open participant, course or club detail where available.
+
+#### Tables, Plots and Previews
+
+- Main participant table: lists runners and key metrics for the selected event.
+- Adjusted-time views: show how rankings or times change under different adjustment settings.
+- Event summary labels: provide quick context on turnout and event identity.
 
 
 <a id="page-course"></a>
 
 ### Course Page
 
-Course provides course-level information and views for each parkrun location.
-Use this page to understand route context before comparing performance trends.
+#### Purpose Description
+
+Course Page brings together the history and characteristics of a single parkrun course. It is used to understand how that location behaves over time and how participants perform on it.
+
+#### Navigation
+
+This page is normally reached from Event Analysis, Event Page, Participant Page or club/list drill-down links. From here you can move into specific events or participants connected with the course.
+
+#### Label and Selection list
+
+- `Table View`: switches between compact and more detailed course tables.
+- Course-specific labels identify the course and its summary metrics.
+- Top 250 and similar sections may use headings driven by the course layout config.
+
+#### Buttons
+
+- Sortable table headers reorder course-level summaries and Top 250 lists.
+- Linked rows or names navigate to event or participant detail.
+- Back navigation returns to the prior context.
+
+#### Tables, Plots and Previews
+
+- Course summary tables: show key metrics for the selected course.
+- Top participant tables: highlight leading or most notable performances on that course.
+- Any supporting visuals on the page give quick context before deeper drill-down.
 
 
 <a id="page-participant"></a>
 
 ### Participant Page
 
-Participant shows run history and progression for individual athletes.
-Use this page to review consistency, milestones and performance changes over time.
+#### Purpose Description
+
+Participant Page shows the run history, progression and profile of an individual athlete. It is used to compare adjusted and unadjusted performances, check consistency and review milestone patterns.
+
+#### Navigation
+
+This page is usually reached from event, course, club or list tables by clicking a participant. From here you can move into related courses, clubs and dated events for that athlete.
+
+#### Label and Selection list
+
+- `Course Adj`: changes the course-condition adjustment applied to displayed results.
+- `Other Adj`: changes the participant-level adjustment, such as age, sex or age-and-sex.
+- `Table View`: changes the visible participant-history columns.
+- Supporting labels include `Athlete Code`, `Estimated Age`, `Total Runs`, `Recent Club` and `Freq Course`.
+
+#### Buttons
+
+- Sortable headers reorder run-history and summary tables.
+- Linked course, club and event values open the next level of detail.
+- Back navigation returns to the prior page state.
+
+#### Tables, Plots and Previews
+
+- Participant history table: shows the athlete's runs and key fields over time.
+- Profile summary areas: give quick access to best performances and rankings.
+- Time progression visuals help show changes in form across dates.
 
 
 <a id="section-participant-profile"></a>
 
 ### Participant Profile 
 
-Participant Profile summarises best performances and rank/date/time combinations.
-Use this panel to quickly compare adjusted and unadjusted best results.
+#### Purpose Description
+
+Participant Profile is a summary panel within the Participant page. It condenses the runner's standout performances, ranking context and representative dates into a smaller summary view.
+
+#### Navigation
+
+It is part of the broader Participant page rather than a standalone destination. Users typically read it before moving down into the full run-history table or time-by-date chart.
+
+#### Label and Selection list
+
+- Inherits the Participant page adjustment settings.
+- Uses labels such as best time, rank, date and adjusted-time variants to summarise performance.
+
+#### Buttons
+
+- Usually acts as a read-only summary area, with any available links taking the user to the related event or course.
+
+#### Tables, Plots and Previews
+
+- Summary preview panel: shows best-result combinations at a glance.
+- Quick comparison fields: help contrast adjusted and unadjusted achievements without reading the full history table.
 
 
 <a id="section-participant-time-by-date"></a>
 
 ### Time by Date Chart
 
-Time by Date shows progression of times over event dates.
-Use this plot to inspect trajectory, compare event contexts and identify best windows.
+#### Purpose Description
+
+Time by Date Chart visualises how an athlete's times change across event dates. It is used to spot improvement, decline, consistency and standout windows of form.
+
+#### Navigation
+
+It is part of the Participant page and should be read together with the participant summary and history table. Users often inspect a visual pattern here and then cross-check the exact rows below.
+
+#### Label and Selection list
+
+- Inherits the current Participant page adjustment settings.
+- Axis and legend labels identify event dates and the selected time measure.
+
+#### Buttons
+
+- Chart interactions, where enabled, help inspect individual areas of the plot.
+- Standard page links still allow drill-down to the underlying event rows.
+
+#### Tables, Plots and Previews
+
+- Time progression plot: shows the participant's trend across dates.
+- Visual performance windows: make best periods or unusual results easier to spot.
 
 
 <a id="page-club"></a>
 
 ### Club Page
 
-Club groups participants by club affiliation for side-by-side comparison.
-Use this page to explore participation patterns across clubs.
+#### Purpose Description
+
+Club Page groups and analyses participants through their club affiliation. It is used to understand membership patterns, event activity and the relative profile of a club's runners.
+
+#### Navigation
+
+This page is usually opened by clicking a club name from participant, event or list-related tables. From here you can drill into members, current members, events and linked participants.
+
+#### Label and Selection list
+
+- Club headline labels identify the current or recent club being analysed.
+- `Table View` or club-specific mode selection may change whether you are looking at members, current members or events.
+- Supporting labels identify counts such as members and events.
+
+#### Buttons
+
+- Sortable headers reorder club member and event tables.
+- Club-linked participant or course rows open deeper detail pages.
+- Back navigation returns to the source page.
+
+#### Tables, Plots and Previews
+
+- Member tables: compare runners associated with the club.
+- Event tables: show the club's presence across events.
+- Summary labels give quick context before reading the larger tables.
 
 
 <a id="page-lists"></a>
 
 ### Lists Page
 
-Lists provides predefined collections and focused subsets of data.
-Use this page when you want quick access to common filtered views.
+#### Purpose Description
+
+Lists Page provides predefined top-style leaderboards and filtered collections of athletes. It is used when you want quick access to ranked results without building a custom analysis first.
+
+#### Navigation
+
+This page is usually entered directly from the main navigation. From the loaded leaderboard you can drill into participant, course, club or event detail depending on which columns are clicked.
+
+#### Label and Selection list
+
+- `List Selection`: chooses which leaderboard family is loaded.
+- `Filtered By Adjustments`: controls whether adjustment settings change the underlying leaderboard source.
+- `Participants`: applies minimum-history thresholds.
+- `Course Adj` and `Other Adj`: alter the adjustment context used for the list.
+
+#### Buttons
+
+- Header clicks re-sort the loaded list client-side.
+- Linked participant, club, course or event values open the related detail page.
+- Back navigation returns to the previously viewed page if the list was reached via drill-down.
+
+#### Tables, Plots and Previews
+
+- Main leaderboard table: shows the selected top 1000 or filtered list.
+- Representative performance columns: give a quick preview of why each athlete appears in the chosen list.
 
 
 <a id="page-feedback-log"></a>
 
 ### Log Error / Suggestion Page
 
----
+#### Purpose Description
 
+Log Error / Suggestion Page is the place for users to record bugs, data issues and improvement ideas. It supports structured feedback while the app is still being refined.
 
-<a id="section-selection-items"></a>
+#### Navigation
 
-## Selection Items and Buttons
+This page is reached from the main menu. After submitting feedback, users typically return to the page they were testing or reviewing.
 
-(Explain dropdowns, toggles, selectors, filters, and how they interact.)
+#### Label and Selection list
 
+- Form labels identify the type of feedback being logged.
+- Any category or severity selections help route feedback into more useful buckets.
 
-The following list are the help associated with the different selections, labels and column headers throughout the app
+#### Buttons
 
-<a id="control-type"></a>
+- Submission controls send the current error report or suggestion.
+- Standard navigation controls let the user leave the page without submitting.
 
-### Calc
+#### Tables, Plots and Previews
 
-Calc controls the metric family shown in the analysis.
-Use it first because it determines how values are interpreted in other controls.
-
-
-
-<a id="control-filter"></a>
-
-### Type
-
-Type selects the subgroup or metric variant.
-It works with Calc to decide what each cell means.
-
-
-
-<a id="control-period"></a>
-
-### Period
-
-Period controls the time window or aggregation period.
-Changing Period can switch between granular events and grouped periods.
-
-
-
-<a id="control-agg"></a>
-
-### Agg
-
-Agg defines how values are summarised across selected events or periods.
-Average is a common default, while Range and Growth are better for trend interpretation.
-
-
-
-<a id="control-cell-agg"></a>
-
-### Cell Agg
-
-Cell Agg controls how each matrix cell value is formed.
-Use this when you want to switch between single-value and averaged cell behaviour.
-
-
-
-<a id="control-time-adj"></a>
-
-### Time Adj
-
-Time Adj applies optional adjustments for time-based analysis.
-Use this only when comparing pace/time values across different conditions.
-
-
-
-<a id="control-table-view"></a>
-
-### Table View
-
-Table View enables the user to select different column sets, i.e. Basic (most important), Detailed (more columns) and All Time Adjustments (how times adjust according to analysis).
-
-
-
-<a id="control-athlete-code"></a>
-
-### Athlete Code
-
-Athlete Code shows the unique identifier for the selected participant.
-Use it to confirm you are viewing the intended runner when switching between pages and links.
-
-
-
-<a id="control-estimated-age"></a>
-
-### Estimated Age
-
-Estimated Age shows the participant's current age estimate used for context in performance interpretation.
-Use it to quickly understand age-related context when reviewing run history and adjustments.
-
-
-
-<a id="control-total-runs"></a>
-
-### Total Runs
-
-Total Runs shows the total number of runs recorded for the selected participant.
-Use this value as quick context for how large the participant history is before interpreting trends or adjustments.
-
-
-
-<a id="control-recent-club"></a>
-
-### Recent Club
-
-Recent Club shows the latest known club affiliation for the selected participant.
-Use it to confirm current club context before comparing participant runs or opening club-level pages.
-
-
-
-<a id="control-freq-course"></a>
-
-### Freq Course
-
-Freq Course shows the participant's most frequent course over the last 1 year.
-It is derived from the row with the highest Event Count in that 1-year window.
-If multiple courses tie on Event Count, the most recent course is used.
-Use it as a quick shortcut to the course page most associated with the participant's recent running pattern.
-
-
-
-<a id="control-course-adj"></a>
-
-### Course Adj
-
-Course Adj controls whether course-condition factors are applied to the displayed results.
-Use no adjustment (default) when you want the raw recorded values.
-Use seasonal adjustments when you want to account for broad seasonal effects across the course.
-Use full event adjustments when you want the strongest correction for event-level difficulty on that specific date.
-For consistency, keep this setting fixed while comparing rows in the same table.
-
-
-
-<a id="control-other-adj"></a>
-
-### Other Adj
-
-Other Adj controls participant-level adjustment type applied in the table.
-Use no adjustment (default) to keep the non-course-adjusted baseline.
-Use age adjustments to normalize for age differences.
-Use sex adjustments to normalize for sex differences.
-Use age & sex adjustment to apply both factors together.
-When comparing columns, keep Other Adj fixed so differences reflect the data rather than a setting change.
-
-
-
-<a id="control-list-select"></a>
-
-### List Selection
-
-List selection controls which top-1000 leaderboard is loaded on the Lists page.
-Use Fastest Athletes - All Time or Fastest Athletes - Over last 1 Year to rank athletes by best adjusted performance for the chosen Course Adj and Other Adj settings.
-Use Highest Total Runs, Highest Local Runs, or Highest Local Runs - Over last 1 Year to rank athletes by participation counts instead.
-The row still shows one representative performance for each athlete, while the selected list mode decides how the top 1000 are chosen.
-Keep List selection fixed when comparing rows, and use the table headers if you want to re-sort the loaded results client-side.
-
-
-
-<a id="control-adjustment-filter"></a>
-
-### Filtered By Adjustments
-
-Filtered By Adjustments controls whether Course Adj and Other Adj change which MV family supplies the representative row.
-When ticked, the selected Course Adj and Other Adj combination chooses the adjusted MV for the current history or 1-year list mode.
-When unticked, the Lists page ignores Course Adj and Other Adj for MV selection and uses the base unadjusted MV for the selected history or 1-year mode.
-You can change this independently after choosing a list, even though each list also sets a default tick or untick state.
-
-
-
-<a id="control-participant-filter"></a>
-
-### Participants
-
-Participants controls the minimum participation threshold applied to the Lists page.
-Use all participants to show the full eligible leaderboard.
-Use Participants >50 total-runs to restrict the list to athletes with broader overall parkrun history.
-Use Participants > 50 local-runs to focus on runners with strong local participation.
-Use Participants > 10 local_run_1y to focus on athletes active locally over the last year.
-This filter works together with List selection, Course Adj and Other Adj, so keep those fixed when comparing how thresholds change the leaderboard.
-
-
-
-<a id="control-hardness-adj"></a>
-
-### Hardness Adj
-
-Hardness Adj shows the combined hardness indicator for the selected event and settings.
-Use it as context when interpreting adjusted time comparisons across events.
-Higher hardness values generally indicate tougher conditions relative to the baseline.
-Keep in mind that hardness is an explanatory indicator and should be read together with course and other adjustment choices.
-Use the same Course Adj and Other Adj settings while comparing events so hardness context stays consistent.
-Hardness Adj does not replace raw time interpretation; it is a companion metric to explain why adjusted columns may differ.
+- Primary feedback form: acts as the main input area rather than a data table.
+- Any confirmation or preview content is there to help the user review what will be submitted.
 
 ---
-
-<a id="section-table-columns"></a>
-## Table Columns
-
-(Explain each column type, how they are calculated, and how they change with settings.)
-
-
-This section defines the key terms used in the help manual and the app. Understanding these terms will help you make the most of the features available.
-
-**Event** - A single parkrun occurrence on a specific date at a specific location.
-**Course** - The route taken for a parkrun event, which may have specific characteristics.
-**Participant** - A participant in parkrun events, identified by their athlete code.
-**Club** - A group of participants who are associated together, often by location or affiliation.
-**Time** - The recorded time for a participant to complete the course in an event.
-**Age Grade** - A percentage score that compares an athlete's performance to the world record for their age and gender.
-
 ---
 
 <a id="section-steve-danby"></a>

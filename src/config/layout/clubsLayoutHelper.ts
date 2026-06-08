@@ -9,11 +9,12 @@ import {
   LayoutInteractionConfig,
   LayoutInteractionNavMode,
   LayoutPositionSpec,
+  LayoutTableColumn,
   LayoutViewport
 } from './layoutHelperFactory';
 
 export type ClubsViewport = LayoutViewport;
-export type ClubsViewMode = 'default';
+export type ClubsViewMode = 'members' | 'current_members' | 'events';
 export type ClubsElementType = LayoutElementType;
 export type ClubsInteractionAction = LayoutInteractionAction;
 export type ClubsInteractionNavMode = LayoutInteractionNavMode;
@@ -21,6 +22,7 @@ export type ClubsInteractionConfig = LayoutInteractionConfig;
 export type ClubsElementStyleConfig = LayoutElementStyleConfig;
 export type ClubsPositionSpec = LayoutPositionSpec;
 export type ClubsLayoutElement = LayoutElement;
+export type ClubsTableColumn = LayoutTableColumn;
 export type ClubsLayoutConfig = LayoutConfig<'Clubs', ClubsViewMode>;
 
 const config = rawConfig as ClubsLayoutConfig;
@@ -31,4 +33,7 @@ export const getClubsViewportForWidth = (width: number): ClubsViewport => helper
 export const getClubsElementById = (id: string): ClubsLayoutElement | undefined => helpers.getElementById(id);
 export const getClubsElementPlacement = (id: string, viewport: ClubsViewport): ClubsPositionSpec | undefined =>
   helpers.getElementPlacement(id, viewport);
+export const getClubsTableColumns = (): ClubsTableColumn[] => helpers.getTableColumns();
+export const getClubsTableColumnByKey = (key: string): ClubsTableColumn | undefined => helpers.getTableColumnByKey(key);
+export const getClubsColumnsForView = (viewMode: ClubsViewMode): ClubsTableColumn[] => helpers.getColumnsForView(viewMode);
 export const listKnownClubsIds = (): string[] => helpers.listKnownElementIds();

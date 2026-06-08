@@ -20,7 +20,7 @@
     {
       "id": "course.viewLabel",
       "type": "label",
-      "name": "View:",
+      "name": "Table View:",
       "helpTarget": "control-table-view",
       "helpLabel": true,
       "style": {
@@ -29,8 +29,8 @@
         "color": "#111827",
         "lineHeight": 0.9
       },
-      "laptop": { "x": "11cm", "y": "0cm" },
-      "mobile": { "x": "6.3cm", "y": "0cm" }
+      "laptop": { "x": "10.1cm", "y": "0cm" },
+      "mobile": { "x": "5.4cm", "y": "0cm" }
     },
     {
       "id": "course.viewSelect",
@@ -228,6 +228,9 @@
   ],
   "tableModel": {
     "mode": "flat",
+    "header": {
+      "textAlign": "center"
+    },
     "sort": {
       "enabled": true,
       "showInactiveArrows": true,
@@ -265,10 +268,27 @@
       "club_count",
       "recentbest_count",
       "eligible_time_count"
+    ],
+    "top250": [
+      "name",
+      "total_count",
+      "appearances",
+      "volunteer_count",
+      "last_run_date",
+      "last_volunteer_date",
+      "age_group",
+      "club",
+      "best_curve_ranking_current",
+      "best_curve_ranking_current_type",
+      "best_curve_ranking_historic",
+      "min_time_mmss",
+      "min_event_adj_mmss",
+      "min_age_event_adj_mmss",
+      "min_age_sex_event_adj_mmss"
     ]
   },
   "tableColumns": [
-    { "key": "date", "type": "table", "name": "date", "headerName": "Date", "style": { "textAlign": "right" }, "laptop": { "width": "100px" }, "mobile": { "width": "100px" } },
+    { "key": "date", "type": "table", "name": "date", "headerName": "Date", "style": { "textAlign": "right" }, "laptop": { "width": "100px" }, "mobile": { "width": "95px" } },
     { "key": "event_number", "type": "table", "name": "event_number", "headerName": "Event #", "style": { "textAlign": "center" }, "laptop": { "width": "80px" }, "mobile": { "width": "80px" } },
     { "key": "participants", "type": "table", "name": "participants", "headerName": "Participt", "style": { "textAlign": "center" }, "laptop": { "width": "85px" }, "mobile": { "width": "85px" } },
     { "key": "coeff_combined", "type": "table", "name": "coeff_combined", "headerName": "Hardness", "style": { "textAlign": "center" }, "laptop": { "width": "95px" }, "mobile": { "width": "95px" } },
@@ -287,19 +307,19 @@
     { "key": "eligible_time_count", "type": "table", "name": "eligible_time_count", "headerName": "Eligible", "style": { "textAlign": "center" }, "laptop": { "width": "100px" }, "mobile": { "width": "100px" } },
 
     { "key": "name", "type": "table", "name": "name", "headerName": "Participants", "style": { "textAlign": "left" }, "laptop": { "width": "150px" }, "mobile": { "width": "140px" } },
-    { "key": "total_count", "type": "table", "name": "total_count", "headerName": "Total", "style": { "textAlign": "center" }, "laptop": { "width": "75px" }, "mobile": { "width": "75px" } },
-    { "key": "appearances", "type": "table", "name": "appearances", "headerName": "Events", "style": { "textAlign": "center" }, "laptop": { "width": "80px" }, "mobile": { "width": "80px" } },
+    { "key": "total_count", "type": "table", "name": "total_count", "headerName": "Comb tot", "style": { "textAlign": "center" }, "laptop": { "width": "95px" }, "mobile": { "width": "95px" } },
+    { "key": "appearances", "type": "table", "name": "appearances", "headerName": "Course #", "style": { "textAlign": "center" }, "laptop": { "width": "90px" }, "mobile": { "width": "90px" } },
     { "key": "volunteer_count", "type": "table", "name": "volunteer_count", "headerName": "Volunts", "style": { "textAlign": "center" }, "laptop": { "width": "85px" }, "mobile": { "width": "85px" } },
     { "key": "age_group", "type": "table", "name": "age_group", "headerName": "Age grp", "style": { "textAlign": "center" }, "laptop": { "width": "86px" }, "mobile": { "width": "86px" } },
-    { "key": "club", "type": "table", "name": "club", "headerName": "Club", "style": { "textAlign": "left" }, "laptop": { "width": "150px" }, "mobile": { "width": "150px" } },
-    { "key": "best_curve_ranking_current", "type": "table", "name": "best_curve_ranking_current", "headerName": "Cur. Rank", "style": { "textAlign": "center" }, "laptop": { "width": "100px" }, "mobile": { "width": "100px" } },
-    { "key": "best_curve_ranking_historic", "type": "table", "name": "best_curve_ranking_historic", "headerName": "Hist Rank", "style": { "textAlign": "center" }, "laptop": { "width": "100px" }, "mobile": { "width": "100px" } },
-    { "key": "best_curve_ranking_current_type", "type": "table", "name": "best_curve_ranking_current_type", "headerName": "Rank Type", "style": { "textAlign": "center" }, "laptop": { "width": "100px" }, "mobile": { "width": "100px" } },
-    { "key": "min_time_mmss", "type": "table", "name": "min_time_mmss", "headerName": "Best time", "style": { "textAlign": "center" }, "laptop": { "width": "100px" }, "mobile": { "width": "100px" } },
-    { "key": "min_event_adj_mmss", "type": "table", "name": "min_event_adj_mmss", "headerName": "Ev adj time", "style": { "textAlign": "center" }, "laptop": { "width": "110px" }, "mobile": { "width": "110px" } },
-    { "key": "min_age_event_adj_mmss", "type": "table", "name": "min_age_event_adj_mmss", "headerName": "AE adj time", "style": { "textAlign": "center" }, "laptop": { "width": "110px" }, "mobile": { "width": "110px" } },
-    { "key": "min_age_sex_event_adj_mmss", "type": "table", "name": "min_age_sex_event_adj_mmss", "headerName": "AES adj time", "style": { "textAlign": "center" }, "laptop": { "width": "110px" }, "mobile": { "width": "110px" } },
-    { "key": "last_run_date", "type": "table", "name": "last_run_date", "headerName": "Last Event", "style": { "textAlign": "center" }, "laptop": { "width": "100px" }, "mobile": { "width": "100px" } },
+    { "key": "club", "type": "table", "name": "club", "headerName": "Current Club", "style": { "textAlign": "left" }, "laptop": { "width": "150px" }, "mobile": { "width": "150px" } },
+    { "key": "best_curve_ranking_current", "type": "table", "name": "best_curve_ranking_current", "headerName": "Rank", "style": { "textAlign": "center" }, "laptop": { "width": "65px" }, "mobile": { "width": "65px" } },
+    { "key": "best_curve_ranking_historic", "type": "table", "name": "best_curve_ranking_historic", "headerName": "Hist Rank", "style": { "textAlign": "center" }, "laptop": { "width": "95px" }, "mobile": { "width": "95px" } },
+    { "key": "best_curve_ranking_current_type", "type": "table", "name": "best_curve_ranking_current_type", "headerName": "Rank type", "style": { "textAlign": "center" }, "laptop": { "width": "100px" }, "mobile": { "width": "100px" } },
+    { "key": "min_time_mmss", "type": "table", "name": "min_time_mmss", "headerName": "Best Time", "style": { "textAlign": "center" }, "laptop": { "width": "95px" }, "mobile": { "width": "95px" } },
+    { "key": "min_event_adj_mmss", "type": "table", "name": "min_event_adj_mmss", "headerName": "Ev Adj", "style": { "textAlign": "center" }, "laptop": { "width": "80px" }, "mobile": { "width": "80px" } },
+    { "key": "min_age_event_adj_mmss", "type": "table", "name": "min_age_event_adj_mmss", "headerName": "AE adj", "style": { "textAlign": "center" }, "laptop": { "width": "80px" }, "mobile": { "width": "80px" } },
+    { "key": "min_age_sex_event_adj_mmss", "type": "table", "name": "min_age_sex_event_adj_mmss", "headerName": "AES adj", "style": { "textAlign": "center" }, "laptop": { "width": "85px" }, "mobile": { "width": "85px" } },
+    { "key": "last_run_date", "type": "table", "name": "last_run_date", "headerName": "Lst club run", "style": { "textAlign": "center" }, "laptop": { "width": "110px" }, "mobile": { "width": "110px" } },
     { "key": "last_volunteer_date", "type": "table", "name": "last_volunteer_date", "headerName": "Last Volunt", "style": { "textAlign": "center" }, "laptop": { "width": "110px" }, "mobile": { "width": "110px" } }
   ],
   "tableWidthMode": {

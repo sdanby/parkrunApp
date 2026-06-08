@@ -103,7 +103,7 @@ const normalizeControlToken = (value: string): string =>
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, '');
 
-const normalizeCourseViewMode = (value: string): CourseViewMode => {
+const normalizeCourseViewMode = (value: string): 'basic' | 'detailed' => {
     const token = normalizeControlToken(value);
     if (token === 'detailed') return 'detailed';
     return 'basic';
@@ -391,30 +391,26 @@ const detailedOnlyColumns: ColumnDef[] = [
     { key: 'eligible_time_count', label: 'Eligible', align: 'center', desktopWidth: 54, mobileWidth: 54 }
 ];
 
-const top250BasicColumns: ColumnDef[] = [
-    { key: 'name', label: 'Participants', align: 'left', desktopWidth: 150, mobileWidth: 140 },
-    { key: 'total_count', label: 'Total', align: 'center', desktopWidth: 58, mobileWidth: 52 },
-    { key: 'appearances', label: 'Events', align: 'center', desktopWidth: 62, mobileWidth: 58 },
-    { key: 'min_time_mmss', label: 'Best time', align: 'center', desktopWidth: 68, mobileWidth: 62 },
-    { key: 'last_run_date', label: 'Last Event', align: 'center', desktopWidth: 78, mobileWidth: 72 },
-    { key: 'age_group', label: 'Age grp', align: 'center', desktopWidth: 90, mobileWidth: 90 }
-];
-
-const top250DetailedOnlyColumns: ColumnDef[] = [
-    { key: 'volunteer_count', label: 'Volunts', align: 'center', desktopWidth: 58, mobileWidth: 52 },
-    { key: 'club', label: 'Club', align: 'left', desktopWidth: 120, mobileWidth: 110 },
-    { key: 'best_curve_ranking_historic', label: 'Hist Rank', align: 'center', desktopWidth: 68, mobileWidth: 62 },
-    { key: 'best_curve_ranking_current', label: 'Cur. Rank', align: 'center', desktopWidth: 68, mobileWidth: 62 },
-    { key: 'best_curve_ranking_current_type', label: 'Rank Type', align: 'center', desktopWidth: 76, mobileWidth: 72 },
-    { key: 'min_event_adj_mmss', label: 'Ev adj time', align: 'center', desktopWidth: 78, mobileWidth: 72 },
-    { key: 'min_age_event_adj_mmss', label: 'AE adj time', align: 'center', desktopWidth: 78, mobileWidth: 72 },
-    { key: 'min_age_sex_event_adj_mmss', label: 'AES adj time', align: 'center', desktopWidth: 85, mobileWidth: 78 },
-    { key: 'last_volunteer_date', label: 'Last Volunt', align: 'center', desktopWidth: 82, mobileWidth: 76 }
-];
-
-const top250Columns: ColumnDef[] = [...top250BasicColumns, ...top250DetailedOnlyColumns];
+const top250Columns: ColumnDef[] = getCourseColumnsForView('top250').map((column) => ({
+    key: column.key,
+    label: column.headerName || column.key,
+    align: column.style?.textAlign,
+    desktopWidth: widthToPx(column.laptop?.width),
+    mobileWidth: widthToPx(column.mobile?.width)
+}));
 
 const top250SortableKeys = new Set<string>(top250Columns.map((col) => col.key));
+
+const buildConfiguredColumnDef = (column: ColumnDef): ColumnDef => {
+    const configColumn = getCourseTableColumnByKey(column.key);
+    return {
+        ...column,
+        label: configColumn?.headerName || column.label,
+        align: configColumn?.style?.textAlign || column.align,
+        desktopWidth: widthToPx(configColumn?.laptop?.width) ?? column.desktopWidth,
+        mobileWidth: widthToPx(configColumn?.mobile?.width) ?? column.mobileWidth
+    };
+};
 
 const CourseTest: React.FC = () => {
     const location = useLocation();
@@ -424,6 +420,7 @@ const CourseTest: React.FC = () => {
     const locationState = toCoursesLocationState(location.state ?? {});
     const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
     const layoutConfig = getCourseLayoutConfig();
+    const tableHeaderTextAlign = layoutConfig.tableModel?.header?.textAlign ?? 'left';
     const tableHeaderHelpEnabled = (layoutConfig as any)?.tableHelpTip?.enabled !== false;
     const tableHeaderHelpDelayMs = Number((layoutConfig as any)?.tableHelpTip?.delayMs) > 0
         ? Number((layoutConfig as any).tableHelpTip.delayMs)
@@ -954,9 +951,9 @@ const CourseTest: React.FC = () => {
         requestUnifiedHelp(helpTarget || 'top', { x: rect.left, y: rect.bottom }, label);
     };
 
-    // Top250 table always shows all columns regardless of basic/detailed mode
+    // Top250 table column order now comes from course.layout.json tableViews.top250
     const visibleTop250Columns = useMemo(() => {
-        return [...top250BasicColumns, ...top250DetailedOnlyColumns];
+        return top250Columns;
     }, []);
 
     const sortedRows = useMemo(() => {
@@ -2764,7 +2761,7 @@ const CourseTest: React.FC = () => {
                                                 if (isSorted) headerClasses.push('courses-sorted-column');
                                                 const style: React.CSSProperties = {
                                                     ...getColumnWidthStyle(col),
-                                                    textAlign: col.align ?? 'left'
+                                                    textAlign: tableHeaderTextAlign
                                                 };
                                                 return (
                                                     <th
@@ -2989,7 +2986,7 @@ const CourseTest: React.FC = () => {
                                                     if (isSorted) headerClasses.push('courses-sorted-column');
                                                     const style: React.CSSProperties = {
                                                         ...getColumnWidthStyle(col),
-                                                        textAlign: col.align ?? 'left'
+                                                        textAlign: tableHeaderTextAlign
                                                     };
                                                     return (
                                                         <th

@@ -73,6 +73,44 @@ type UnifiedHelpOverlayProps = {
     onClose: () => void;
 };
 
+type PanelRect = {
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+};
+
+type ResizeCorner = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+
+const HELP_PANEL_MARGIN = 12;
+const HELP_PANEL_TOP_MARGIN = 56;
+const HELP_PANEL_MIN_WIDTH = 320;
+const HELP_PANEL_MIN_HEIGHT = 260;
+
+const getViewportSize = () => {
+    if (typeof window === 'undefined') {
+        return { width: 1200, height: 800 };
+    }
+
+    return { width: window.innerWidth, height: window.innerHeight };
+};
+
+const getDefaultPanelRect = (anchor?: UnifiedHelpAnchor | null): PanelRect => {
+    const viewport = getViewportSize();
+    const width = Math.min(704, Math.floor(viewport.width * 0.92));
+    const height = Math.min(640, Math.max(360, Math.floor(viewport.height * 0.74)));
+
+    const left = anchor && Number.isFinite(anchor.x)
+        ? Math.max(HELP_PANEL_MARGIN, Math.min(anchor.x, viewport.width - width - HELP_PANEL_MARGIN))
+        : Math.max(HELP_PANEL_MARGIN, Math.floor((viewport.width - width) / 2));
+
+    const top = anchor && Number.isFinite(anchor.y)
+        ? Math.max(HELP_PANEL_TOP_MARGIN, Math.min(anchor.y + 8, viewport.height - height - HELP_PANEL_MARGIN))
+        : Math.max(HELP_PANEL_TOP_MARGIN, Math.floor(viewport.height * 0.08));
+
+    return { left, top, width, height };
+};
+
 export const UnifiedHelpOverlay: React.FC<UnifiedHelpOverlayProps> = ({ open, startMarkerId, queryTerm, anchor, onClose }) => {
     const [markdown, setMarkdown] = useState<string>('Loading help...');
     const [searchTerm, setSearchTerm] = useState<string>('');
@@ -80,7 +118,9 @@ export const UnifiedHelpOverlay: React.FC<UnifiedHelpOverlayProps> = ({ open, st
     const [searchCounter, setSearchCounter] = useState<{ current: number; total: number }>({ current: 0, total: 0 });
     const [lastSearchKey, setLastSearchKey] = useState<string>('');
     const [lastSearchIndex, setLastSearchIndex] = useState<number>(-1);
+    const [panelRect, setPanelRect] = useState<PanelRect>(() => getDefaultPanelRect(anchor));
     const bodyRef = useRef<HTMLDivElement | null>(null);
+    const panelRef = useRef<HTMLDivElement | null>(null);
     const highlightedRef = useRef<HTMLDivElement | null>(null);
     const inlineMatchRef = useRef<HTMLElement | null>(null);
 
@@ -321,6 +361,29 @@ export const UnifiedHelpOverlay: React.FC<UnifiedHelpOverlayProps> = ({ open, st
     }, [open]);
 
     useEffect(() => {
+        if (!open) return;
+        setPanelRect(getDefaultPanelRect(anchor));
+    }, [anchor, open]);
+
+    useEffect(() => {
+        if (!open) return;
+
+        const handleWindowResize = () => {
+            const viewport = getViewportSize();
+            setPanelRect((current) => {
+                const width = Math.min(current.width, viewport.width - HELP_PANEL_MARGIN * 2);
+                const height = Math.min(current.height, viewport.height - HELP_PANEL_TOP_MARGIN - HELP_PANEL_MARGIN);
+                const left = Math.max(HELP_PANEL_MARGIN, Math.min(current.left, viewport.width - width - HELP_PANEL_MARGIN));
+                const top = Math.max(HELP_PANEL_TOP_MARGIN, Math.min(current.top, viewport.height - height - HELP_PANEL_MARGIN));
+                return { left, top, width, height };
+            });
+        };
+
+        window.addEventListener('resize', handleWindowResize);
+        return () => window.removeEventListener('resize', handleWindowResize);
+    }, [open]);
+
+    useEffect(() => {
         clearInlineMatch();
         setSearchCounter({ current: 0, total: 0 });
         setLastSearchKey('');
@@ -362,25 +425,70 @@ export const UnifiedHelpOverlay: React.FC<UnifiedHelpOverlayProps> = ({ open, st
         };
     }, [markdown, open, queryTerm, scrollBehavior, startMarkerId]);
 
-    const panelStyle = useMemo(() => {
-        if (!anchor || !Number.isFinite(anchor.x) || !Number.isFinite(anchor.y)) return undefined;
+    const panelStyle = useMemo(() => ({
+        position: 'fixed' as const,
+        left: `${panelRect.left}px`,
+        top: `${panelRect.top}px`,
+        width: `${panelRect.width}px`,
+        height: `${panelRect.height}px`,
+        maxWidth: `calc(100vw - ${HELP_PANEL_MARGIN * 2}px)`,
+        maxHeight: `calc(100vh - ${HELP_PANEL_TOP_MARGIN + HELP_PANEL_MARGIN}px)`
+    }), [panelRect]);
 
-        const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 1200;
-        const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 800;
-        const panelWidth = Math.min(704, Math.floor(viewportWidth * 0.92));
-        const margin = 12;
+    const startResize = (corner: ResizeCorner, event: React.MouseEvent<HTMLDivElement>) => {
+        event.preventDefault();
+        event.stopPropagation();
 
-        const left = Math.max(margin, Math.min(anchor.x, viewportWidth - panelWidth - margin));
-        const top = Math.max(56, Math.min(anchor.y + 8, viewportHeight - 120));
-        const maxHeight = Math.max(240, viewportHeight - top - margin);
+        const startX = event.clientX;
+        const startY = event.clientY;
+        const startRect = panelRef.current?.getBoundingClientRect();
+        const origin = startRect
+            ? { left: startRect.left, top: startRect.top, width: startRect.width, height: startRect.height }
+            : panelRect;
 
-        return {
-            position: 'fixed' as const,
-            left: `${left}px`,
-            top: `${top}px`,
-            maxHeight: `${maxHeight}px`
+        const viewport = getViewportSize();
+        const rightEdge = origin.left + origin.width;
+        const bottomEdge = origin.top + origin.height;
+
+        const handleMouseMove = (moveEvent: MouseEvent) => {
+            const deltaX = moveEvent.clientX - startX;
+            const deltaY = moveEvent.clientY - startY;
+
+            let nextLeft = origin.left;
+            let nextTop = origin.top;
+            let nextWidth = origin.width;
+            let nextHeight = origin.height;
+
+            if (corner.includes('left')) {
+                nextLeft = Math.max(HELP_PANEL_MARGIN, Math.min(origin.left + deltaX, rightEdge - HELP_PANEL_MIN_WIDTH));
+                nextWidth = rightEdge - nextLeft;
+            } else {
+                nextWidth = Math.max(HELP_PANEL_MIN_WIDTH, Math.min(origin.width + deltaX, viewport.width - origin.left - HELP_PANEL_MARGIN));
+            }
+
+            if (corner.includes('top')) {
+                nextTop = Math.max(HELP_PANEL_TOP_MARGIN, Math.min(origin.top + deltaY, bottomEdge - HELP_PANEL_MIN_HEIGHT));
+                nextHeight = bottomEdge - nextTop;
+            } else {
+                nextHeight = Math.max(HELP_PANEL_MIN_HEIGHT, Math.min(origin.height + deltaY, viewport.height - origin.top - HELP_PANEL_MARGIN));
+            }
+
+            setPanelRect({
+                left: nextLeft,
+                top: nextTop,
+                width: nextWidth,
+                height: nextHeight
+            });
         };
-    }, [anchor]);
+
+        const handleMouseUp = () => {
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+        };
+
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', handleMouseUp);
+    };
 
     if (!open) return null;
 
@@ -388,7 +496,7 @@ export const UnifiedHelpOverlay: React.FC<UnifiedHelpOverlayProps> = ({ open, st
         <div className="unified-help-backdrop" onMouseDown={(event) => {
             if (event.target === event.currentTarget) onClose();
         }}>
-            <div className="unified-help-panel" style={panelStyle} role="dialog" aria-hidden={!open}>
+            <div ref={panelRef} className="unified-help-panel" style={panelStyle} role="dialog" aria-hidden={!open}>
                 <div className="unified-help-head">
                     <strong>Help Manual</strong>
                     <div className="unified-help-search-controls">
@@ -427,7 +535,6 @@ export const UnifiedHelpOverlay: React.FC<UnifiedHelpOverlayProps> = ({ open, st
                 <div
                     ref={bodyRef}
                     className="unified-help-body"
-                    style={{ overflowY: 'auto', maxHeight: '60vh' }}
                     onClickCapture={(event) => {
                         const target = event.target as HTMLElement | null;
                         const anchorElement = target?.closest('a[href]') as HTMLAnchorElement | null;
@@ -448,6 +555,10 @@ export const UnifiedHelpOverlay: React.FC<UnifiedHelpOverlayProps> = ({ open, st
                 >
                     <ReactMarkdown rehypePlugins={[rehypeRaw as any]}>{markdown}</ReactMarkdown>
                 </div>
+                <div className="unified-help-resize-handle top-left" onMouseDown={(event) => startResize('top-left', event)} />
+                <div className="unified-help-resize-handle top-right" onMouseDown={(event) => startResize('top-right', event)} />
+                <div className="unified-help-resize-handle bottom-left" onMouseDown={(event) => startResize('bottom-left', event)} />
+                <div className="unified-help-resize-handle bottom-right" onMouseDown={(event) => startResize('bottom-right', event)} />
             </div>
         </div>
     );

@@ -14,7 +14,7 @@ import {
 } from './layoutHelperFactory';
 
 export type CourseViewport = LayoutViewport;
-export type CourseViewMode = 'basic' | 'detailed';
+export type CourseViewMode = 'basic' | 'detailed' | 'top250';
 export type CourseElementType = LayoutElementType;
 export type CourseInteractionAction = LayoutInteractionAction;
 export type CourseInteractionNavMode = LayoutInteractionNavMode;

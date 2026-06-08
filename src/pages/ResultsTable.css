@@ -1461,9 +1461,9 @@ select:focus {
 
 .results-table.races-table.eventtest-table thead th.sticky-header,
 .results-table.races-table.eventtest-table thead th.sticky-header.second-row {
-  min-width: var(--ea-period-col-width, 2.0cm) !important;
-  max-width: var(--ea-period-col-width, 2.0cm) !important;
-  width: var(--ea-period-col-width, 2.0cm) !important;
+  min-width: var(--event-col-width, var(--ea-period-col-width, 2.0cm)) !important;
+  max-width: var(--event-col-width, var(--ea-period-col-width, 2.0cm)) !important;
+  width: var(--event-col-width, var(--ea-period-col-width, 2.0cm)) !important;
 }
 
 .results-table.races-table.eventtest-table thead th.eventtest-col:not(.eventtest-sticky-col) {
@@ -1487,9 +1487,9 @@ select:focus {
 }
 
 .results-table.races-table.eventtest-table tbody td:nth-child(n+3) {
-  min-width: var(--ea-period-col-width, 2.0cm) !important;
-  max-width: var(--ea-period-col-width, 2.0cm) !important;
-  width: var(--ea-period-col-width, 2.0cm) !important;
+  min-width: var(--event-col-width, var(--ea-period-col-width, 2.0cm)) !important;
+  max-width: var(--event-col-width, var(--ea-period-col-width, 2.0cm)) !important;
+  width: var(--event-col-width, var(--ea-period-col-width, 2.0cm)) !important;
 }
 
 .eventanalysis-scroll-slider {

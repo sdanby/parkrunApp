@@ -9,6 +9,7 @@ import { navigateBackWithNavStack, navigateWithNavStack } from '../utils/navigat
 import { useGlobalWaitCursor } from '../utils/useGlobalWaitCursor';
 import { useColumnHeaderMode } from '../utils/useColumnHeaderMode';
 import { useDelayedUnifiedHelp } from '../utils/useDelayedUnifiedHelp';
+import { getEventElementById } from '../config/layout/eventsLayoutHelper';
 import { getParticipantElementById, getParticipantElements, getParticipantLayoutConfig, getParticipantTableColumnByKey } from '../config/layout/participantLayoutHelper';
 
 type AthleteRecord = { [key: string]: any };
@@ -365,6 +366,10 @@ const useMediaQuery = (query: string): boolean => {
 type AthleteViewMode = 'basic' | 'detailed' | 'all_time_adjustments';
 type CourseAdjOption = 'none' | 'seasonal' | 'full';
 type OtherAdjOption = 'none' | 'age' | 'sex' | 'age_sex';
+type SelectOptionConfig = {
+    value: string;
+    label: string;
+};
 
 const adjustmentColumnMatrix: Record<CourseAdjOption, Record<OtherAdjOption, string[]>> = {
     none: {
@@ -406,6 +411,31 @@ const normalizeOtherAdjOption = (value: string): OtherAdjOption => {
     if (value === 'age' || value === 'sex' || value === 'age_sex') return value;
     return 'none';
 };
+
+const sanitizeAdjustmentSelection = (
+    course: CourseAdjOption,
+    other: OtherAdjOption,
+    changed: 'course' | 'other' | 'hydrate'
+): { courseAdj: CourseAdjOption; otherAdj: OtherAdjOption } => {
+    if (course !== 'seasonal' || other === 'none') {
+        return { courseAdj: course, otherAdj: other };
+    }
+
+    if (changed === 'other') {
+        return { courseAdj: 'none', otherAdj: other };
+    }
+
+    return { courseAdj: course, otherAdj: 'none' };
+};
+
+const buildSelectOptionConfigs = (
+    configuredOptions: string[] | undefined,
+    values: readonly string[],
+    fallbackLabels: readonly string[]
+): SelectOptionConfig[] => values.map((value, index) => ({
+    value,
+    label: String(configuredOptions?.[index] || fallbackLabels[index] || value)
+}));
 
 type ColumnKey =
     | 'date'
@@ -838,6 +868,34 @@ const Athletes: React.FC = () => {
     const [plotXZoom, setPlotXZoom] = useState<{ start: number; end: number }>({ start: 0, end: 100 });
     const [plotYZoom, setPlotYZoom] = useState<{ start: number; end: number }>({ start: 0, end: 100 });
     const lastSortTouchAtRef = useRef<number>(0);
+    const eventCourseAdjSelectElement = getEventElementById('event.courseAdjSelect');
+    const eventOtherAdjSelectElement = getEventElementById('event.otherAdjSelect');
+    const courseAdjOptions = useMemo(
+        () => buildSelectOptionConfigs(
+            Array.isArray((eventCourseAdjSelectElement as any)?.options) ? (eventCourseAdjSelectElement as any).options : undefined,
+            ['none', 'seasonal', 'full'] as const,
+            ['no adjustment', 'seasonal adj.', 'full event adj.'] as const
+        ),
+        [eventCourseAdjSelectElement]
+    );
+    const otherAdjOptions = useMemo(
+        () => buildSelectOptionConfigs(
+            Array.isArray((eventOtherAdjSelectElement as any)?.options) ? (eventOtherAdjSelectElement as any).options : undefined,
+            ['none', 'age', 'sex', 'age_sex'] as const,
+            ['no adjustment', 'age adj.', 'sex adj.', 'age & sex adj.'] as const
+        ),
+        [eventOtherAdjSelectElement]
+    );
+
+    useEffect(() => {
+        const nextAdjustments = sanitizeAdjustmentSelection(courseAdj, otherAdj, 'hydrate');
+        if (nextAdjustments.courseAdj !== courseAdj) {
+            setCourseAdj(nextAdjustments.courseAdj);
+        }
+        if (nextAdjustments.otherAdj !== otherAdj) {
+            setOtherAdj(nextAdjustments.otherAdj);
+        }
+    }, [courseAdj, otherAdj]);
     const tableRowRefs = useRef<Record<string, HTMLTableRowElement | null>>({});
     const runsTableWrapperRef = useRef<HTMLDivElement | null>(null);
     const plotChartRef = useRef<any>(null);
@@ -1185,7 +1243,9 @@ const Athletes: React.FC = () => {
     };
 
     const handleCourseAdjSelect = (event: React.ChangeEvent<HTMLSelectElement>) => {
-        setCourseAdj(normalizeCourseAdjOption(event.target.value));
+        const nextAdjustments = sanitizeAdjustmentSelection(normalizeCourseAdjOption(event.target.value), otherAdj, 'course');
+        setCourseAdj(nextAdjustments.courseAdj);
+        setOtherAdj(nextAdjustments.otherAdj);
         
         // If course adj is used, reset view mode to Basic
         if (event.target.value !== 'none') {
@@ -1194,7 +1254,9 @@ const Athletes: React.FC = () => {
     };
 
     const handleOtherAdjSelect = (event: React.ChangeEvent<HTMLSelectElement>) => {
-        setOtherAdj(normalizeOtherAdjOption(event.target.value));
+        const nextAdjustments = sanitizeAdjustmentSelection(courseAdj, normalizeOtherAdjOption(event.target.value), 'other');
+        setCourseAdj(nextAdjustments.courseAdj);
+        setOtherAdj(nextAdjustments.otherAdj);
         
         // If other adj is used, reset view mode to Basic
         if (event.target.value !== 'none') {
@@ -3553,9 +3615,9 @@ const Athletes: React.FC = () => {
                                         aria-label="Course adjustment"
                                         style={courseAdjSelectStyle}
                                     >
-                                        <option value="none">no adjustment (default)</option>
-                                        <option value="seasonal">seasonal adjustments</option>
-                                        <option value="full">full event adjustments</option>
+                                        {courseAdjOptions.map((option) => (
+                                            <option key={option.value} value={option.value} disabled={otherAdj !== 'none' && option.value === 'seasonal'}>{option.label}</option>
+                                        ))}
                                     </select>
 
                                     {renderConfigControlLabel(
@@ -3573,10 +3635,9 @@ const Athletes: React.FC = () => {
                                         aria-label="Other adjustment"
                                         style={otherAdjSelectStyle}
                                     >
-                                        <option value="none">no adjustment (default)</option>
-                                        <option value="age">age adjustments</option>
-                                        <option value="sex">sex adjustments</option>
-                                        <option value="age_sex">age & sex adjustment</option>
+                                        {otherAdjOptions.map((option) => (
+                                            <option key={option.value} value={option.value} disabled={courseAdj === 'seasonal' && option.value !== 'none'}>{option.label}</option>
+                                        ))}
                                     </select>
                                     {showHeader && (
                                         <>

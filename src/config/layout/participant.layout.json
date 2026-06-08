@@ -204,7 +204,7 @@
     {
       "id": "participant.estRankLabel",
       "type": "label",
-      "name": "Est. Rank:",
+      "name": "Rank:",
       "helpTarget": "control-other-adj",
       "helpLabel": true,
       "style": {
@@ -213,15 +213,15 @@
         "color": "#111827",
         "lineHeight": 0.9
       },
-      "laptop": { "x": "8.1cm", "y": "2.7cm" },
-      "mobile": { "x": "8.5cm", "y": "2.7cm" }
+      "laptop": { "x": "8.7cm", "y": "2.7cm" },
+      "mobile": { "x": "9.1cm", "y": "2.7cm" }
     },
     {
       "id": "participant.estRankValue",
       "type": "field",
       "name": "Est. Rank value",
-      "laptop": { "x": "10.5cm", "y": "2.7cm" },
-      "mobile": { "x": "8.8cm", "y": "3.5cm" }
+      "laptop": { "x": "10.5cm", "y": "2.8cm" },
+      "mobile": { "x": "8.8cm", "y": "3.6cm" }
     },
     {
       "id": "participant.freqCourseLabel",
@@ -427,7 +427,7 @@
       "laptop": { "width": "75px" },
       "mobile": { "width": "75px" }
     },
-    { "key": "event_display", "type": "table", "name": "event_display", "headerName": "Event name", "interaction": { "enabled": true, "action": "navigate", "target": "/courses_test", "navMode": "stack", "params": { "event_name": "$row.event_display" } }, "style": { "textAlign": "left" }, "laptop": { "width": "140px" }, "mobile": { "width": "120px" } },
+    { "key": "event_display", "type": "table", "name": "event_display", "headerName": "Course", "interaction": { "enabled": true, "action": "navigate", "target": "/courses_test", "navMode": "stack", "params": { "event_name": "$row.event_display" } }, "style": { "textAlign": "left" }, "laptop": { "width": "140px" }, "mobile": { "width": "120px" } },
     { "key": "position", "type": "table", "name": "position", "headerName": "Pos", "style": { "textAlign": "center" }, "laptop": { "width": "50px" }, "mobile": { "width": "50px" } },
     { "key": "time", "type": "table", "name": "time", "headerName": "Time", "style": { "textAlign": "center", "timeDisplayFormat": "mm:ss" }, "laptop": { "width": "70px" }, "mobile": { "width": "70px" } },
     { "key": "age_group", "type": "table", "name": "age_group", "headerName": "Age grp", "style": { "textAlign": "center" }, "laptop": { "width": "75px" }, "mobile": { "width": "75px" } },
@@ -435,21 +435,21 @@
     { "key": "best_curve_ranking_current", "type": "table", "name": "best_curve_ranking_current", "headerName": "Rank", "style": { "textAlign": "center", "subFontSize": "0.62rem" }, "laptop": { "width": "60px" }, "mobile": { "width": "60px" } },
     { "key": "comment", "type": "table", "name": "comment", "headerName": "Detail", "style": { "textAlign": "center" }, "laptop": { "width": "90px" }, "mobile": { "width": "90px" } },
 
-    { "key": "season_adj_time", "type": "table", "name": "season_adj_time", "headerName": "Season", "style": { "textAlign": "center", "timeDisplayFormat": "mm:ss" }, "laptop": { "width": "90px" }, "mobile": { "width": "90px" } },
-    { "key": "event_adj_time", "type": "table", "name": "event_adj_time", "headerName": "Event", "style": { "textAlign": "center", "timeDisplayFormat": "mm:ss" }, "laptop": { "width": "75px" }, "mobile": { "width": "75px" } },
-    { "key": "age_adj_time", "type": "table", "name": "age_adj_time", "headerName": "Age", "style": { "textAlign": "center", "timeDisplayFormat": "mm:ss" }, "laptop": { "width": "70px" }, "mobile": { "width": "70px" } },
-    { "key": "sex_adj_time", "type": "table", "name": "sex_adj_time", "headerName": "Sex", "style": { "textAlign": "center", "timeDisplayFormat": "mm:ss" }, "laptop": { "width": "70px" }, "mobile": { "width": "70px" } },
-    { "key": "event_age_adj_time", "type": "table", "name": "event_age_adj_time", "headerName": "Ev+Age", "style": { "textAlign": "center", "timeDisplayFormat": "mm:ss" }, "laptop": { "width": "80px" }, "mobile": { "width": "80px" } },
-    { "key": "event_sex_adj_time", "type": "table", "name": "event_sex_adj_time", "headerName": "Ev+Sex", "style": { "textAlign": "center", "timeDisplayFormat": "mm:ss" }, "laptop": { "width": "80px" }, "mobile": { "width": "80px" } },
-    { "key": "age_sex_adj_time", "type": "table", "name": "age_sex_adj_time", "headerName": "Age+Sex", "style": { "textAlign": "center", "timeDisplayFormat": "mm:ss" }, "laptop": { "width": "80px" }, "mobile": { "width": "80px" } },
-    { "key": "event_age_sex_adj_time", "type": "table", "name": "event_age_sex_adj_time", "headerName": "Ev+Age+Sex", "style": { "textAlign": "center", "timeDisplayFormat": "mm:ss" }, "laptop": { "width": "100px" }, "mobile": { "width": "100px" } },
+    { "key": "season_adj_time", "type": "table", "name": "season_adj_time", "headerName": "Seas Adj", "style": { "textAlign": "center", "timeDisplayFormat": "mm:ss" }, "laptop": { "width": "78px" }, "mobile": { "width": "78px" } },
+    { "key": "event_adj_time", "type": "table", "name": "event_adj_time", "headerName": "Ev Adj", "style": { "textAlign": "center", "timeDisplayFormat": "mm:ss" }, "laptop": { "width": "75px" }, "mobile": { "width": "75px" } },
+    { "key": "age_adj_time", "type": "table", "name": "age_adj_time", "headerName": "Age Adj", "style": { "textAlign": "center", "timeDisplayFormat": "mm:ss" }, "laptop": { "width": "72px" }, "mobile": { "width": "72px" } },
+    { "key": "sex_adj_time", "type": "table", "name": "sex_adj_time", "headerName": "Sex Adj", "style": { "textAlign": "center", "timeDisplayFormat": "mm:ss" }, "laptop": { "width": "70px" }, "mobile": { "width": "70px" } },
+    { "key": "event_age_adj_time", "type": "table", "name": "event_age_adj_time", "headerName": "AE Adj", "style": { "textAlign": "center", "timeDisplayFormat": "mm:ss" }, "laptop": { "width": "75px" }, "mobile": { "width": "75px" } },
+    { "key": "event_sex_adj_time", "type": "table", "name": "event_sex_adj_time", "headerName": "ES Adj", "style": { "textAlign": "center", "timeDisplayFormat": "mm:ss" }, "laptop": { "width": "75px" }, "mobile": { "width": "75px" } },
+    { "key": "age_sex_adj_time", "type": "table", "name": "age_sex_adj_time", "headerName": "AS Adj", "style": { "textAlign": "center", "timeDisplayFormat": "mm:ss" }, "laptop": { "width": "75px" }, "mobile": { "width": "75px" } },
+    { "key": "event_age_sex_adj_time", "type": "table", "name": "event_age_sex_adj_time", "headerName": "AES Adj", "style": { "textAlign": "center", "timeDisplayFormat": "mm:ss" }, "laptop": { "width": "75px" }, "mobile": { "width": "75px" } },
 
     { "key": "club", "type": "table", "name": "club", "headerName": "Club", "interaction": { "enabled": true, "action": "navigate", "target": "/clubs", "navMode": "stack", "params": { "club": "$row.club" } }, "style": { "textAlign": "left" }, "laptop": { "width": "140px" }, "mobile": { "width": "140px" } },
     { "key": "last_position", "type": "table", "name": "last_position", "headerName": "Event total", "style": { "textAlign": "center" }, "laptop": { "width": "90px" }, "mobile": { "width": "90px" } },
-    { "key": "event_number", "type": "table", "name": "event_number", "headerName": "Event No", "style": { "textAlign": "center" }, "laptop": { "width": "80px" }, "mobile": { "width": "80px" } },
+    { "key": "event_number", "type": "table", "name": "event_number", "headerName": "Event #", "style": { "textAlign": "center" }, "laptop": { "width": "80px" }, "mobile": { "width": "80px" } },
     { "key": "total_runs_long", "type": "table", "name": "total_runs_long", "headerName": "Runs in 1Y", "style": { "textAlign": "center" }, "laptop": { "width": "90px" }, "mobile": { "width": "90px" } },
-    { "key": "event_eligible_appearances", "type": "table", "name": "event_eligible_appearances", "headerName": "Eligible events", "style": { "textAlign": "center" }, "laptop": { "width": "120px" }, "mobile": { "width": "120px" } },
-    { "key": "last_event_code_count_long", "type": "table", "name": "last_event_code_count_long", "headerName": "Event Count", "style": { "textAlign": "center" }, "laptop": { "width": "100px" }, "mobile": { "width": "100px" } },
+    { "key": "event_eligible_appearances", "type": "table", "name": "event_eligible_appearances", "headerName": "Eligible runs", "style": { "textAlign": "center" }, "laptop": { "width": "120px" }, "mobile": { "width": "120px" } },
+    { "key": "last_event_code_count_long", "type": "table", "name": "last_event_code_count_long", "headerName": "Recent Ev #", "style": { "textAlign": "center" }, "laptop": { "width": "100px" }, "mobile": { "width": "100px" } },
     { "key": "distinct_courses_long", "type": "table", "name": "distinct_courses_long", "headerName": "Distinct events", "style": { "textAlign": "center" }, "laptop": { "width": "120px" }, "mobile": { "width": "120px" } },
     { "key": "tourist_flag", "type": "table", "name": "tourist_flag", "headerName": "Tourist", "style": { "textAlign": "center" }, "laptop": { "width": "80px" }, "mobile": { "width": "80px" } },
     { "key": "super_tourist", "type": "table", "name": "super_tourist", "headerName": "Super tourist", "style": { "textAlign": "center" }, "laptop": { "width": "115px" }, "mobile": { "width": "115px" } },

@@ -84,7 +84,7 @@ const normalizeFilterType = (value: string): string => {
   if (token === 'volunteers' || token === 'volunteer') return 'volunteers';
   if (token === 'tourists' || token === 'tourist') return 'tourist';
   if (token === 'supertourists' || token === 'supertourist' || token === 'stourist') return 'sTourist';
-  if (token === 'firsttimers' || token === 'firsttimer' || token === '1time') return '1time';
+  if (token === 'firsttimers' || token === 'firsttimer' || token === '1sttimers' || token === '1sttimer' || token === '1time') return '1time';
   if (token === 'clubbers' || token === 'clubs') return 'clubs';
   if (token === 'pbs' || token === 'pb') return 'pb';
   if (token === 'recentbests' || token === 'recentbest') return 'recentBest';

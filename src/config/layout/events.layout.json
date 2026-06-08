@@ -3,7 +3,7 @@
   "page": "Event",
   "units": "cm",
   "anchor": "event-header-root",
-  "notes": "Draft config only. Not wired into page yet.",
+  "notes": "Used by EventTest on /races and /event_test. The legacy /event_old page still uses hard-coded widths in Races.tsx.",
   "tableHelpTip": {
     "enabled": true,
     "delayMs": 2000
@@ -119,15 +119,15 @@
     {
       "id": "event.courseAdjSelect",
       "type": "select",
-      "name": "no adjustment (default)",
-      "options": ["no adjustment (default)", "seasonal adjustments", "full event adjustments"],
+      "name": "no adjustment",
+      "options": ["no adjustment", "seasonal adj.", "full event adj."],
       "laptop": { "x": "8.7cm", "y": "1.2cm", "width": "4.3cm" },
       "mobile": { "x": "7.7cm", "y": "1.2cm", "width": "3.6cm" }
     },
     {
       "id": "event.eventNoLabel",
       "type": "label",
-      "name": "Ev Number:",
+      "name": "Event #:",
       "helpTarget": "control-event-number",
       "style": {
         "fontSize": "0.8rem",
@@ -136,8 +136,8 @@
         "lineHeight": 1.0
       },
       "helpLabel": true,
-      "laptop": { "x": "0.7cm", "y": "1.8cm" },
-      "mobile": { "x": "0.7cm", "y": "1.8cm" }
+      "laptop": { "x": "1.3cm", "y": "1.8cm" },
+      "mobile": { "x": "1.3cm", "y": "1.8cm" }
     },
     {
       "id": "event.eventNo",
@@ -189,15 +189,15 @@
     {
       "id": "event.otherAdjSelect",
       "type": "select",
-      "name": "no adjustment (default)",
-      "options": ["no adjustment (default)", "age adjustments", "sex adjustments", "age & sex adjustment"],
+      "name": "no adjustment",
+      "options": ["no adjustment", "age adj.", "sex adj.", "age & sex adj."],
       "laptop": { "x": "8.7cm", "y": "1.9cm", "width": "4.3cm" },
       "mobile": { "x": "7.7cm", "y": "1.9cm", "width": "3.6cm" }
     },
     {
       "id": "event.hardnessLabel",
       "type": "label",
-      "name": "Hardness adj:",
+      "name": "Hardness:",
       "helpTarget": "control-hardness-adj",
       "style": {
         "fontSize": "0.8rem",
@@ -206,8 +206,8 @@
         "lineHeight": 1.0
       },
       "helpLabel": true,
-      "laptop": { "x": "5.9cm", "y": "2.6cm" },
-      "mobile": { "x": "4.9cm", "y": "2.6cm" }
+      "laptop": { "x": "6.5cm", "y": "2.6cm" },
+      "mobile": { "x": "5.5cm", "y": "2.6cm" }
     },
     {
       "id": "event.hardnessValue",
@@ -306,14 +306,14 @@
         "fontWeight": 700,
         "backgroundColor": "#e5e7eb"
       },
-      "laptop": { "width": "1.3cm" },
-      "mobile": { "width": "1.3cm" }
+      "laptop": { "width": "1.5cm" },
+      "mobile": { "width": "1.35cm" }
     },
     {
       "key": "athlete",
       "type": "table",
       "name": "col2",
-      "headerName": "Athlete",
+      "headerName": "Participant",
       "sticky": true,
       "style": {
         "fontSize": "0.8rem",
@@ -333,7 +333,7 @@
           "event_date": "$eventDate"
         }
       },
-      "laptop": { "width": "5.5cm" },
+      "laptop": { "width": "5.0cm" },
       "mobile": { "width": "4.0cm" }
     },
     {
@@ -342,7 +342,7 @@
       "name": "col3",
       "headerName": "Time",
       "style": { "timeDisplayFormat": "mm:ss" },
-      "laptop": { "width": "1.9cm" },
+      "laptop": { "width": "1.8cm" },
       "mobile": { "width": "1.6cm" }
     },
     {
@@ -351,7 +351,7 @@
       "name": "col4",
       "headerName": "Age group",
       "laptop": { "width": "2.6cm" },
-      "mobile": { "width": "2.0cm" }
+      "mobile": { "width": "2.3cm" }
     },
     {
       "key": "age_grade",
@@ -359,7 +359,7 @@
       "name": "col5",
       "headerName": "Age grade",
       "laptop": { "width": "2.6cm" },
-      "mobile": { "width": "2.0cm" }
+      "mobile": { "width": "2.3cm" }
     },
     {
       "key": "best_curve_ranking_current",
@@ -368,7 +368,7 @@
       "headerName": "Rank",
       "style": { "subFontSize": "0.62rem" },
       "laptop": { "width": "1.7cm" },
-      "mobile": { "width": "1.3cm" }
+      "mobile": { "width": "1.5cm" }
     },
     {
       "key": "club",
@@ -385,7 +385,7 @@
       },
       "style": { "textAlign": "left" },
       "headerName": "Club",
-      "laptop": { "width": "5.5cm" },
+      "laptop": { "width": "4.5cm" },
       "mobile": { "width": "3.5cm" }
     },
     {
@@ -394,7 +394,7 @@
       "name": "col8",
       "style": { "textAlign": "left" },
       "headerName": "Detail",
-      "laptop": { "width": "3.4cm" },
+      "laptop": { "width": "2.6cm" },
       "mobile": { "width": "2.4cm" }
     },
     {
@@ -402,8 +402,8 @@
       "type": "table",
       "name": "col9",
       "headerName": "Total runs",
-      "laptop": { "width": "2.4cm" },
-      "mobile": { "width": "1.8cm" }
+      "laptop": { "width": "2.5cm" },
+      "mobile": { "width": "2.2cm" }
     },
     {
       "key": "last_event_code_count_long",
@@ -419,7 +419,7 @@
       "name": "col11",
       "headerName": "Eligible recent",
       "laptop": { "width": "3.5cm" },
-      "mobile": { "width": "2.5cm" }
+      "mobile": { "width": "3.0cm" }
     },
     {
       "key": "distinct_courses_long",
@@ -433,65 +433,65 @@
       "key": "season_adj_time",
       "type": "table",
       "name": "col9",
-      "headerName": "Season",
-      "laptop": { "width": "2.4cm" },
-      "mobile": { "width": "1.7cm" }
+      "headerName": "Seas Adj",
+      "laptop": { "width": "2.3cm" },
+      "mobile": { "width": "2.2cm" }
     },
     {
       "key": "event_adj_time",
       "type": "table",
       "name": "col10",
-      "headerName": "Event",
-      "laptop": { "width": "2.4cm" },
-      "mobile": { "width": "1.7cm" }
+      "headerName": "Ev Adj",
+      "laptop": { "width": "2.3cm" },
+      "mobile": { "width": "2.2cm" }
     },
     {
       "key": "age_adj_time",
       "type": "table",
       "name": "col11",
-      "headerName": "Age",
-      "laptop": { "width": "2.4cm" },
-      "mobile": { "width": "1.7cm" }
+      "headerName": "Age Adj",
+      "laptop": { "width": "2.3cm" },
+      "mobile": { "width": "2.2cm" }
     },
     {
       "key": "sex_adj_time",
       "type": "table",
       "name": "col12",
-      "headerName": "Sex",
-      "laptop": { "width": "2.4cm" },
-      "mobile": { "width": "1.7cm" }
+      "headerName": "Sex Adj",
+      "laptop": { "width": "2.3cm" },
+      "mobile": { "width": "2.2cm" }
     },
     {
       "key": "age_event_adj_time",
       "type": "table",
       "name": "col13",
-      "headerName": "Event+Age",
-      "laptop": { "width": "2.4cm" },
-      "mobile": { "width": "1.9cm" }
+      "headerName": "AE Adj",
+      "laptop": { "width": "2.3cm" },
+      "mobile": { "width": "2.2cm" }
     },
     {
       "key": "sex_event_adj_time",
       "type": "table",
       "name": "col14",
-      "headerName": "Event+Sex",
-      "laptop": { "width": "2.4cm" },
-      "mobile": { "width": "1.9cm" }
+      "headerName": "ES Adj",
+      "laptop": { "width": "2.3cm" },
+      "mobile": { "width": "2.2cm" }
     },
     {
       "key": "age_sex_adj_time",
       "type": "table",
       "name": "col15",
-      "headerName": "Age+Sex",
-      "laptop": { "width": "2.4cm" },
-      "mobile": { "width": "1.9cm" }
+      "headerName": "AS Adj",
+      "laptop": { "width": "2.3cm" },
+      "mobile": { "width": "2.2cm" }
     },
     {
       "key": "age_sex_event_adj_time",
       "type": "table",
       "name": "col16",
-      "headerName": "Event+Age+Sex",
-      "laptop": { "width": "3.4cm" },
-      "mobile": { "width": "2.6cm" }
+      "headerName": "AES Adj",
+      "laptop": { "width": "2.3cm" },
+      "mobile": { "width": "2.2cm" }
     }
   ]
 }

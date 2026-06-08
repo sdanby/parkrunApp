@@ -17,7 +17,7 @@ const HomePage: React.FC = () => {
                     <br />
                     It provides deeper analysis about the courses in your local area and ranking to compare yourself to other participants.
                     <br />
-                    For those of you in a club, you can track you club statistics.
+                    For those of you in a club, you can track your club statistics.
                 </p>
                 <h2>What makes this app different?</h2>
                 <p>
@@ -37,8 +37,31 @@ const HomePage: React.FC = () => {
                     <li>User-friendly interface for easy navigation</li>
                 </ul>
                 <p>
-                    Last updated: <span id="last-updated">29-Apr-25</span>
+                    Last updated: <span id="last-updated">June 26</span>
+
+
                 </p>
+                 <h2>Laptop v Mobile</h2>
+                <p>
+                    This app was initially built for the laptop and then adapted for the mobile.
+                    <br />
+                    The same functionality is available on both devices but for serious analysis and usage, the laptop will be more rewarding.
+                    <br />
+                   <br />
+                   For further help and detail click on the links below:
+                </p>
+                <p></p>
+                <div className="home-help-entry">
+                    <button
+                        type="button"
+                        className="home-help-link"
+                        aria-label="Getting started"
+                        onClick={() => requestUnifiedHelp('section-getting-started')}
+                    >
+                        <span className="home-help-icon" aria-hidden="true">🚀</span>
+                        <span>Getting Started</span>
+                    </button>
+                </div>
                 <div className="home-help-entry">
                     <button
                         type="button"

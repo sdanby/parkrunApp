@@ -1,8 +1,14 @@
 import axios from 'axios';
 
-// Use environment variable when available; default to deployed host.
-export const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'https://hello-world-9yb9.onrender.com';
-const API_LOCAL_URL = 'http://localhost:5000/';
+const isLocalHost = typeof window !== 'undefined'
+    && ['localhost', '127.0.0.1'].includes(window.location.hostname);
+
+// Use environment variable when available. In local browser dev, default to local backend.
+export const API_BASE_URL = process.env.REACT_APP_API_BASE_URL
+    || (isLocalHost ? 'http://localhost:5000' : 'https://hello-world-9yb9.onrender.com');
+
+export const WEEKLY_UPLOAD_API_BASE_URL = process.env.REACT_APP_WEEKLY_UPLOAD_API_BASE_URL
+    || API_BASE_URL;
 
 export type AuthUser = {
     id: number;
@@ -66,6 +72,65 @@ export type AdminActivityRecord = {
     referrerPath?: string | null;
     userAgent?: string | null;
     ipAddress?: string | null;
+};
+
+export type WeeklyUploadLogEntry = {
+    at: string;
+    level: 'info' | 'success' | 'warning' | 'error' | string;
+    message: string;
+    eventCode?: string;
+    eventName?: string;
+    athletes?: number | null;
+    volunteers?: number | null;
+};
+
+export type WeeklySqlPipelineOptions = {
+    startDate?: string;
+    rebuild?: boolean;
+    runSqlPipeline?: boolean;
+    buildAthletes?: boolean;
+    skipCoeffUpdates?: boolean;
+    noParkrunPostgres?: boolean;
+    eventCode?: number | null;
+    scraper?: boolean;
+    allAthletes?: boolean;
+    leaveAthletePostgres?: boolean;
+    noVolunteers?: boolean;
+    refreshMaterializedView?: boolean;
+    rebuildHistoricAfterRun?: boolean;
+};
+
+export type WeeklyUploadStatus = {
+    running: boolean;
+    status: string;
+    runMode?: string;
+    startedAt?: string | null;
+    finishedAt?: string | null;
+    totalCourses: number;
+    processedCourses: number;
+    currentCourse?: string;
+    currentCode?: string;
+    loopEvents?: boolean;
+    loadHistory?: boolean;
+    parkrunName?: string;
+    sqlPipelineOptions?: WeeklySqlPipelineOptions;
+    error?: string | null;
+    logs: WeeklyUploadLogEntry[];
+};
+
+export type WeeklyDeleteEventResponse = {
+    ok?: boolean;
+    deleted?: {
+        sqlite?: {
+            eventpositions?: number;
+            parkrunEvents?: number;
+        };
+        postgres?: {
+            eventpositions?: number;
+            parkrunEvents?: number;
+        };
+    };
+    state?: WeeklyUploadStatus;
 };
 
 export type FeedbackRequest = {
@@ -553,6 +618,45 @@ export const fetchAdminActivity = async (token: string, limit = 300, since?: str
         }
     });
     return response.data || { activity: [], limit };
+};
+
+export const fetchAdminWeeklyUploadStatus = async (token: string): Promise<WeeklyUploadStatus> => {
+    const response = await axios.get(`${WEEKLY_UPLOAD_API_BASE_URL}/api/admin/weekly-upload/status`, {
+        headers: {
+            Authorization: `Bearer ${token}`
+        }
+    });
+    return response.data || {
+        running: false,
+        status: 'idle',
+        totalCourses: 0,
+        processedCourses: 0,
+        logs: []
+    };
+};
+
+export const startAdminWeeklyUpload = async (
+    token: string,
+    payload?: { loopEvents?: boolean; loadHistory?: boolean; parkrunName?: string; runMode?: string; sqlPipelineOptions?: WeeklySqlPipelineOptions }
+): Promise<{ ok?: boolean; state?: WeeklyUploadStatus }> => {
+    const response = await axios.post(`${WEEKLY_UPLOAD_API_BASE_URL}/api/admin/weekly-upload/start`, payload || {}, {
+        headers: {
+            Authorization: `Bearer ${token}`
+        }
+    });
+    return response.data || { ok: true };
+};
+
+export const deleteAdminWeeklyUploadEvent = async (
+    token: string,
+    payload: { eventCode: string; eventName?: string; startDate: string }
+): Promise<WeeklyDeleteEventResponse> => {
+    const response = await axios.post(`${WEEKLY_UPLOAD_API_BASE_URL}/api/admin/weekly-upload/delete-event`, payload, {
+        headers: {
+            Authorization: `Bearer ${token}`
+        }
+    });
+    return response.data || { ok: true };
 };
 
 export const fetchFeedbackRequests = async (): Promise<FeedbackRequest[]> => {

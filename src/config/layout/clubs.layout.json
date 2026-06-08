@@ -16,7 +16,285 @@
       "breakpointMax": 768
     }
   },
+  "tableViews": {
+    "members": [
+      "name",
+      "club_runs_total",
+      "club_runs_last_year",
+      "total_runs_all_clubs",
+      "first_club_run_date",
+      "last_club_run_date",
+      "fastest_time",
+      "best_event_adj_time",
+      "best_age_event_adj_time",
+      "best_age_sex_event_adj_time",
+      "best_curve_ranking_current",
+      "best_curve_ranking_current_type",
+      "best_curve_ranking_historic",
+      "latest_age_group",
+      "current_club"
+    ],
+    "current_members": [
+      "name",
+      "club_runs_total",
+      "club_runs_last_year",
+      "total_runs_all_clubs",
+      "first_club_run_date",
+      "last_club_run_date",
+      "fastest_time",
+      "best_event_adj_time",
+      "best_age_event_adj_time",
+      "best_age_sex_event_adj_time",
+      "best_curve_ranking_current",
+      "best_curve_ranking_current_type",
+      "best_curve_ranking_historic",
+      "latest_age_group",
+      "current_club"
+    ],
+    "events": [
+      "event_name",
+      "events_held_all_history",
+      "club_runs_all_history",
+      "athletes_all_history",
+      "rank_all_history",
+      "events_held_last_year",
+      "club_runs_last_year_summary",
+      "athletes_last_year",
+      "rank_last_year"
+    ]
+  },
+  "tableColumns": [
+    {
+      "key": "name",
+      "type": "table",
+      "name": "Participants",
+      "headerName": "Participants",
+      "style": { "textAlign": "left" },
+      "laptop": { "width": "130px" },
+      "mobile": { "width": "130px" }
+    },
+    {
+      "key": "club_runs_total",
+      "type": "table",
+      "name": "Club runs",
+      "headerName": "Club runs",
+      "style": { "textAlign": "center" },
+      "laptop": { "width": "100px" },
+      "mobile": { "width": "100px" }
+    },
+    {
+      "key": "club_runs_last_year",
+      "type": "table",
+      "name": "Club runs 1y",
+      "headerName": "Club runs 1y",
+      "style": { "textAlign": "center" },
+      "laptop": { "width": "105px" },
+      "mobile": { "width": "105px" }
+    },
+    {
+      "key": "total_runs_all_clubs",
+      "type": "table",
+      "name": "All runs",
+      "headerName": "Tot. runs",
+      "style": { "textAlign": "center" },
+      "laptop": { "width": "78px" },
+      "mobile": { "width": "78px" }
+    },
+    {
+      "key": "first_club_run_date",
+      "type": "table",
+      "name": "1st club run",
+      "headerName": "1st club run",
+      "style": { "textAlign": "center" },
+      "laptop": { "width": "100px" },
+      "mobile": { "width": "100px" }
+    },
+    {
+      "key": "last_club_run_date",
+      "type": "table",
+      "name": "Lst club run",
+      "headerName": "Lst club run",
+      "style": { "textAlign": "center" },
+      "laptop": { "width": "100px" },
+      "mobile": { "width": "100px" }
+    },
+    {
+      "key": "fastest_time",
+      "type": "table",
+      "name": "Best time",
+      "headerName": "Best time",
+      "style": { "textAlign": "center" },
+      "laptop": { "width": "85px" },
+      "mobile": { "width": "85px" }
+    },
+    {
+      "key": "best_event_adj_time",
+      "type": "table",
+      "name": "Ev adj",
+      "headerName": "Ev Adj",
+      "style": { "textAlign": "center" },
+      "laptop": { "width": "65px" },
+      "mobile": { "width": "65px" }
+    },
+    {
+      "key": "best_age_event_adj_time",
+      "type": "table",
+      "name": "AE adj",
+      "headerName": "AE Adj",
+      "style": { "textAlign": "center" },
+      "laptop": { "width": "65px" },
+      "mobile": { "width": "65px" }
+    },
+    {
+      "key": "best_age_sex_event_adj_time",
+      "type": "table",
+      "name": "AES adj",
+      "headerName": "AES Adj",
+      "style": { "textAlign": "center" },
+      "laptop": { "width": "75px" },
+      "mobile": { "width": "75px" }
+    },
+    {
+      "key": "best_curve_ranking_current",
+      "type": "table",
+      "name": "Cur rank",
+      "headerName": "Rank",
+      "style": { "textAlign": "center" },
+      "laptop": { "width": "60px" },
+      "mobile": { "width": "60px" }
+    },
+    {
+      "key": "best_curve_ranking_historic",
+      "type": "table",
+      "name": "Hist rank",
+      "headerName": "Hist rank",
+      "style": { "textAlign": "center" },
+      "laptop": { "width": "85px" },
+      "mobile": { "width": "85px" }
+    },
+    {
+      "key": "best_curve_ranking_current_type",
+      "type": "table",
+      "name": "Rank type",
+      "headerName": "Rank type",
+      "style": { "textAlign": "center" },
+      "laptop": { "width": "85px" },
+      "mobile": { "width": "85px" }
+    },
+    {
+      "key": "latest_age_group",
+      "type": "table",
+      "name": "Age grp",
+      "headerName": "Age grp",
+      "style": { "textAlign": "center" },
+      "laptop": { "width": "78px" },
+      "mobile": { "width": "76px" }
+    },
+    {
+      "key": "current_club",
+      "type": "table",
+      "name": "Current club",
+      "headerName": "Current club",
+      "style": { "textAlign": "left" },
+      "laptop": { "width": "150px" },
+      "mobile": { "width": "140px" }
+    },
+    {
+      "key": "event_name",
+      "type": "table",
+      "name": "Course",
+      "headerName": "Course",
+      "style": { "textAlign": "left" },
+      "laptop": { "width": "155px" },
+      "mobile": { "width": "145px" }
+    },
+    {
+      "key": "events_held_all_history",
+      "type": "table",
+      "name": "Events",
+      "headerName": "Event #",
+      "style": { "textAlign": "center" },
+      "laptop": { "width": "75px" },
+      "mobile": { "width": "72px" }
+    },
+    {
+      "key": "club_runs_all_history",
+      "type": "table",
+      "name": "Runs",
+      "headerName": "Freq",
+      "style": { "textAlign": "center" },
+      "laptop": { "width": "75px" },
+      "mobile": { "width": "72px" }
+    },
+    {
+      "key": "athletes_all_history",
+      "type": "table",
+      "name": "Athletes",
+      "headerName": "Members",
+      "style": { "textAlign": "center" },
+      "laptop": { "width": "80px" },
+      "mobile": { "width": "76px" }
+    },
+    {
+      "key": "rank_all_history",
+      "type": "table",
+      "name": "Rank",
+      "headerName": "Order",
+      "style": { "textAlign": "center" },
+      "laptop": { "width": "70px" },
+      "mobile": { "width": "66px" }
+    },
+    {
+      "key": "events_held_last_year",
+      "type": "table",
+      "name": "Event 1y",
+      "headerName": "Event# 1y",
+      "style": { "textAlign": "center" },
+      "laptop": { "width": "85px" },
+      "mobile": { "width": "82px" }
+    },
+    {
+      "key": "club_runs_last_year_summary",
+      "type": "table",
+      "name": "Runs 1y",
+      "headerName": "Freq 1y",
+      "style": { "textAlign": "center" },
+      "laptop": { "width": "80px" },
+      "mobile": { "width": "76px" }
+    },
+    {
+      "key": "athletes_last_year",
+      "type": "table",
+      "name": "Athletes 1y",
+      "headerName": "Members 1y",
+      "style": { "textAlign": "center" },
+      "laptop": { "width": "100px" },
+      "mobile": { "width": "100px" }
+    },
+    {
+      "key": "rank_last_year",
+      "type": "table",
+      "name": "Rank 1y",
+      "headerName": "Order 1y",
+      "style": { "textAlign": "center" },
+      "laptop": { "width": "78px" },
+      "mobile": { "width": "74px" }
+    }
+  ],
   "elements": [
+    {
+      "id": "clubs.clubLabel",
+      "type": "label",
+      "name": "Recent club:",
+      "style": {
+        "fontSize": "0.75rem",
+        "fontWeight": 600,
+        "color": "#111827",
+        "lineHeight": 0.9
+      },
+      "laptop": { "x": "0cm", "y": "0.08cm", "width": "3cm" },
+      "mobile": { "x": "0cm", "y": "0.08cm", "width": "3cm" }
+    },
     {
       "id": "clubs.membersTitle",
       "type": "label",

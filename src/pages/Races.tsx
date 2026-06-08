@@ -7,12 +7,61 @@
 import React, { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { fetchEventPositions, fetchEventInfo, fetchEventByNumber, fetchEventTimeAdjustment } from '../api/backendAPI';
+import { getEventColumnsForView, getEventTableColumnByKey } from '../config/layout/eventsLayoutHelper';
+import { getEventElementById } from '../config/layout/eventsLayoutHelper';
 import { navigateBackWithNavStack, navigateWithNavStack } from '../utils/navigationStack';
 import { requestUnifiedHelp } from './UnifiedHelp';
 import './ResultsTable.css';
 
 type CourseAdjOption = 'none' | 'seasonal' | 'full';
 type OtherAdjOption = 'none' | 'age' | 'sex' | 'age_sex';
+type SelectOptionConfig = {
+    value: string;
+    label: string;
+};
+type LegacyEventViewport = 'laptop' | 'mobile';
+
+const LEGACY_COMPACT_BREAKPOINT_PX = 900;
+const RACES_COL_WIDTHS_STORAGE_KEY = 'races_col_widths_v3';
+
+const widthSpecToPixels = (widthSpec: string | undefined, fallback: number): number => {
+    const raw = String(widthSpec || '').trim().toLowerCase();
+    if (!raw) return fallback;
+
+    const numeric = Number.parseFloat(raw);
+    if (!Number.isFinite(numeric)) return fallback;
+    if (raw.endsWith('cm')) return Math.round(numeric * 37.7952755906);
+    if (raw.endsWith('rem')) return Math.round(numeric * 16);
+    if (raw.endsWith('px')) return Math.round(numeric);
+
+    return Math.round(numeric);
+};
+
+const getLegacyEventViewport = (screenWidth: number): LegacyEventViewport =>
+    screenWidth <= LEGACY_COMPACT_BREAKPOINT_PX ? 'mobile' : 'laptop';
+
+const getConfiguredEventColumnWidthPx = (
+    columnKey: string,
+    viewport: LegacyEventViewport,
+    fallback: number
+): number => widthSpecToPixels(getEventTableColumnByKey(columnKey)?.[viewport]?.width, fallback);
+
+const toLegacyColumnConfig = (columnKey: string) => {
+    const column = getEventTableColumnByKey(columnKey);
+    return {
+        k: columnKey,
+        label: String(column?.headerName || columnKey)
+    };
+};
+
+const buildSelectOptionConfigs = (
+    configuredOptions: string[] | undefined,
+    values: readonly string[],
+    fallbackLabels: readonly string[]
+): SelectOptionConfig[] => values.map((value, index) => ({
+    value,
+    label: String(configuredOptions?.[index] || fallbackLabels[index] || value)
+}));
 
 const adjustmentColumnMatrix: Record<CourseAdjOption, Record<OtherAdjOption, string[]>> = {
     none: {
@@ -51,6 +100,22 @@ const normalizeOtherAdj = (val: string): OtherAdjOption => {
     return 'none';
 };
 
+const sanitizeAdjustmentSelection = (
+    course: CourseAdjOption,
+    other: OtherAdjOption,
+    changed: 'course' | 'other' | 'hydrate'
+): { courseAdj: CourseAdjOption; otherAdj: OtherAdjOption } => {
+    if (course !== 'seasonal' || other === 'none') {
+        return { courseAdj: course, otherAdj: other };
+    }
+
+    if (changed === 'other') {
+        return { courseAdj: 'none', otherAdj: other };
+    }
+
+    return { courseAdj: course, otherAdj: 'none' };
+};
+
 const parseNumeric = (value: any): number | null => {
     const num = Number(value);
     return Number.isFinite(num) ? num : null;
@@ -84,7 +149,16 @@ const parseTimeToSeconds = (value: any): number | null => {
     return null;
 };
 
-const defaultWidthsBase = [60, 240, 57, 57, 57, 57, 57];
+const getDefaultWidthsBase = (viewport: LegacyEventViewport): number[] => [
+    getConfiguredEventColumnWidthPx('position', viewport, 60),
+    getConfiguredEventColumnWidthPx('athlete', viewport, 220),
+    getConfiguredEventColumnWidthPx('time', viewport, viewport === 'mobile' ? 60 : 80),
+    getConfiguredEventColumnWidthPx('age_group', viewport, viewport === 'mobile' ? 70 : 100),
+    getConfiguredEventColumnWidthPx('age_grade', viewport, viewport === 'mobile' ? 70 : 100),
+    getConfiguredEventColumnWidthPx('best_curve_ranking_current', viewport, viewport === 'mobile' ? 60 : 80),
+    getConfiguredEventColumnWidthPx('club', viewport, viewport === 'mobile' ? 130 : 180),
+    getConfiguredEventColumnWidthPx('comment', viewport, viewport === 'mobile' ? 90 : 180)
+];
 
 // Minimal Races page — shows the selected event/date (from query) and attempts to fetch event positions
 const Races: React.FC = () => {
@@ -97,12 +171,12 @@ const Races: React.FC = () => {
     const tableRef = useRef<HTMLTableElement | null>(null);
     // Column widths in pixels for each table column (Pos, Athlete, ...)
     // Start with sensible defaults; we'll expand when switching to Detailed view.
-    const [colWidths, setColWidths] = useState<number[]>(() => {
+    const [colWidths, setColWidths] = useState<Array<number | null>>(() => {
         try {
-            const saved = sessionStorage.getItem('races_col_widths_v1');
+            const saved = sessionStorage.getItem(RACES_COL_WIDTHS_STORAGE_KEY);
             if (saved) return JSON.parse(saved);
         } catch (e) { /* ignore */ }
-        return defaultWidthsBase.slice();
+        return [];
     });
     const [viewMode, setViewMode] = useState<'basic' | 'detailed' | 'allTimeAdjustments'>(() => {
         try {
@@ -115,8 +189,26 @@ const Races: React.FC = () => {
     });
     const [courseAdj, setCourseAdj] = useState<CourseAdjOption>('none');
     const [otherAdj, setOtherAdj] = useState<OtherAdjOption>('none');
+        const courseAdjSelectElement = getEventElementById('event.courseAdjSelect');
+        const otherAdjSelectElement = getEventElementById('event.otherAdjSelect');
     const adjustmentKeys = useMemo(() => getAdjustmentKeys(courseAdj, otherAdj), [courseAdj, otherAdj]);
     const adjustmentsActive = courseAdj !== 'none' || otherAdj !== 'none';
+        const courseAdjOptions = useMemo(
+            () => buildSelectOptionConfigs(
+                Array.isArray((courseAdjSelectElement as any)?.options) ? (courseAdjSelectElement as any).options : undefined,
+                ['none', 'seasonal', 'full'] as const,
+                ['no adjustment', 'seasonal adj.', 'full event adj.'] as const
+            ),
+            [courseAdjSelectElement]
+        );
+        const otherAdjOptions = useMemo(
+            () => buildSelectOptionConfigs(
+                Array.isArray((otherAdjSelectElement as any)?.options) ? (otherAdjSelectElement as any).options : undefined,
+                ['none', 'age', 'sex', 'age_sex'] as const,
+                ['no adjustment', 'age adj.', 'sex adj.', 'age & sex adj.'] as const
+            ),
+            [otherAdjSelectElement]
+        );
     const ensureBasicViewForAdjustments = (nextCourse: CourseAdjOption, nextOther: OtherAdjOption) => {
         if ((nextCourse !== 'none' || nextOther !== 'none') && viewMode !== 'basic') {
             setViewMode('basic');
@@ -130,12 +222,16 @@ const Races: React.FC = () => {
         setViewMode(nextMode);
     };
     const handleCourseAdjChange = (value: CourseAdjOption) => {
-        setCourseAdj(value);
-        ensureBasicViewForAdjustments(value, otherAdj);
+        const nextAdjustments = sanitizeAdjustmentSelection(value, otherAdj, 'course');
+        setCourseAdj(nextAdjustments.courseAdj);
+        setOtherAdj(nextAdjustments.otherAdj);
+        ensureBasicViewForAdjustments(nextAdjustments.courseAdj, nextAdjustments.otherAdj);
     };
     const handleOtherAdjChange = (value: OtherAdjOption) => {
-        setOtherAdj(value);
-        ensureBasicViewForAdjustments(courseAdj, value);
+        const nextAdjustments = sanitizeAdjustmentSelection(courseAdj, value, 'other');
+        setCourseAdj(nextAdjustments.courseAdj);
+        setOtherAdj(nextAdjustments.otherAdj);
+        ensureBasicViewForAdjustments(nextAdjustments.courseAdj, nextAdjustments.otherAdj);
     };
     const handleAthleteNavigate = (row: any) => {
         const athleteCode = row?.athlete_code ?? row?.athleteCode;
@@ -204,12 +300,12 @@ const Races: React.FC = () => {
     const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
     const [isCompactViewport, setIsCompactViewport] = useState<boolean>(() => {
         if (typeof window === 'undefined') return false;
-        return window.innerWidth <= 900;
+        return window.innerWidth <= LEGACY_COMPACT_BREAKPOINT_PX;
     });
 
     useEffect(() => {
         const updateViewportMode = () => {
-            setIsCompactViewport(window.innerWidth <= 900);
+            setIsCompactViewport(window.innerWidth <= LEGACY_COMPACT_BREAKPOINT_PX);
         };
 
         updateViewportMode();
@@ -221,6 +317,9 @@ const Races: React.FC = () => {
             window.removeEventListener('orientationchange', updateViewportMode);
         };
     }, []);
+
+    const layoutViewport: LegacyEventViewport = isCompactViewport ? 'mobile' : 'laptop';
+    const defaultWidthsBase = useMemo(() => getDefaultWidthsBase(layoutViewport), [layoutViewport]);
 
     const snakeToCamel = useCallback((s: string) => s.replace(/_(.)/g, (_m, g1) => g1.toUpperCase()), []);
     const getSortValue = useCallback((row: any, key: string) => {
@@ -310,7 +409,7 @@ const Races: React.FC = () => {
 
     // Persist column widths when they change
     useEffect(() => {
-        try { sessionStorage.setItem('races_col_widths_v1', JSON.stringify(colWidths)); } catch (e) { /* ignore */ }
+        try { sessionStorage.setItem(RACES_COL_WIDTHS_STORAGE_KEY, JSON.stringify(colWidths)); } catch (e) { /* ignore */ }
     }, [colWidths]);
 
     const params = new URLSearchParams(location.search);
@@ -716,17 +815,20 @@ const Races: React.FC = () => {
         );
     };
 
+    const stickyCol1Width = colWidths[0] ?? defaultWidthsBase[0] ?? (isCompactViewport ? 50 : 60);
+    const stickyCol2Width = colWidths[1] ?? defaultWidthsBase[1] ?? (isCompactViewport ? 150 : 220);
+
     // Expose CSS variables for first two column widths so sticky offsets follow user resizing.
     useEffect(() => {
         const el = containerRef.current;
         if (!el) return;
         try {
-            el.style.setProperty('--col1-width', `${isCompactViewport ? 50 : 60}px`);
-            el.style.setProperty('--col2-width', `${isCompactViewport ? 150 : 220}px`);
+            el.style.setProperty('--col1-width', `${stickyCol1Width}px`);
+            el.style.setProperty('--col2-width', `${stickyCol2Width}px`);
         } catch (e) {
             // ignore
         }
-    }, [isCompactViewport]);
+    }, [stickyCol1Width, stickyCol2Width]);
 
     // Ensure header <th> widths match the rendered <col> widths so header and
     // body columns remain aligned even after resizing. Run after layout via
@@ -799,91 +901,53 @@ const Races: React.FC = () => {
         };
     }, [colWidths, rows, viewMode, courseAdj, otherAdj, isCompactViewport]);
 
-    // Column definitions: base (basic) and additional (detailed)
-    const baseColumns = useMemo(() => [
-        { k: 'time', label: 'Time' },
-        { k: 'age_group', label: 'Age group' },
-        { k: 'age_grade', label: 'Age grade' },
-        { k: 'best_curve_ranking_current', label: 'Rank' },
-        { k: 'club', label: 'Club' },
-        { k: 'comment', label: 'Detail' }
-    ], []);
-    const extraColumns = useMemo(() => [
-        { k: 'total_runs', label: 'Total runs' },
-        { k: 'last_event_code_count_long', label: 'Local recent' },
-        { k: 'event_eligible_appearances', label: 'Eligible recent' },
-        { k: 'distinct_courses_long', label: 'Other events' }
-
-    ], []);
-    const adjustmentColumns = useMemo(() => [
-        { k: 'season_adj_time', label: 'Season' },
-        { k: 'event_adj_time', label: 'Event' },
-        { k: 'age_adj_time', label: 'Age' },
-        { k: 'sex_adj_time', label: 'Sex' },
-        { k: 'age_event_adj_time', label: 'Event+Age' },
-        { k: 'sex_event_adj_time', label: 'Event+Sex' },
-        { k: 'age_sex_adj_time', label: 'Age+Sex' },
-        { k: 'age_sex_event_adj_time', label: 'Event+Age+Sex' }
-    ], []);
-    const compactLeadingWidths = {
-        position: 50,
-        athlete: 150
-    };
-    const desktopLeadingWidths = {
-        position: 60,
-        athlete: 220
-    };
-    const fixedLeadingWidths = isCompactViewport ? compactLeadingWidths : desktopLeadingWidths;
-
-    const compactDataColumnWidths: Record<string, number> = {
-        time: 60,
-        age_group: 70,
-        age_grade: 70,
-        best_curve_ranking_current: 60,
-        club: 130,
-        comment: 90,
-        total_runs: 90,
-        last_event_code_count_long: 90,
-        event_eligible_appearances: 90,
-        distinct_courses_long: 90,
-        season_adj_time: 90,
-        event_adj_time: 90,
-        age_adj_time: 90,
-        sex_adj_time: 90,
-        age_event_adj_time: 90,
-        sex_event_adj_time: 90,
-        age_sex_adj_time: 90,
-        age_sex_event_adj_time: 90
-    };
-    const desktopDataColumnWidths: Record<string, number> = {
-        time: 80,
-        age_group: 100,
-        age_grade: 100,
-        best_curve_ranking_current: 80,
-        club: 180,
-        comment: 180,
-        total_runs: 120,
-        last_event_code_count_long: 120,
-        event_eligible_appearances: 130,
-        distinct_courses_long: 120,
-        season_adj_time: 120,
-        event_adj_time: 120,
-        age_adj_time: 120,
-        sex_adj_time: 120,
-        age_event_adj_time: 140,
-        sex_event_adj_time: 140,
-        age_sex_adj_time: 130,
-        age_sex_event_adj_time: 150
-    };
-    const fixedDataColumnWidths = isCompactViewport ? compactDataColumnWidths : desktopDataColumnWidths;
-    const getFixedDataColumnWidth = useCallback(
-        (columnKey: string): number => fixedDataColumnWidths[columnKey] ?? (isCompactViewport ? 90 : 120),
-        [fixedDataColumnWidths, isCompactViewport]
+    // Column definitions come from events.layout.json; the first two sticky columns
+    // are still rendered separately in this legacy page.
+    const nonLeadingColumnKeys = useCallback(
+        (view: 'basic' | 'detailed' | 'allTimeAdjustments') => getEventColumnsForView(view)
+            .map((column) => column.key)
+            .filter((key) => key !== 'position' && key !== 'athlete'),
+        []
+    );
+    const baseColumns = useMemo(
+        () => nonLeadingColumnKeys('basic').map((key) => toLegacyColumnConfig(key)),
+        [nonLeadingColumnKeys]
+    );
+    const detailedColumns = useMemo(
+        () => nonLeadingColumnKeys('detailed').map((key) => toLegacyColumnConfig(key)),
+        [nonLeadingColumnKeys]
+    );
+    const allTimeAdjustmentColumns = useMemo(
+        () => nonLeadingColumnKeys('allTimeAdjustments').map((key) => toLegacyColumnConfig(key)),
+        [nonLeadingColumnKeys]
+    );
+    const adjustmentColumns = useMemo(
+        () => [
+            'season_adj_time',
+            'event_adj_time',
+            'age_adj_time',
+            'sex_adj_time',
+            'age_event_adj_time',
+            'sex_event_adj_time',
+            'age_sex_adj_time',
+            'age_sex_event_adj_time'
+        ].map((key) => toLegacyColumnConfig(key)),
+        []
+    );
+    const configuredLeadingWidths = useMemo(() => ({
+        position: getConfiguredEventColumnWidthPx('position', layoutViewport, isCompactViewport ? 50 : 60),
+        athlete: getConfiguredEventColumnWidthPx('athlete', layoutViewport, isCompactViewport ? 150 : 220)
+    }), [isCompactViewport, layoutViewport]);
+    const positionHeaderLabel = String(getEventTableColumnByKey('position')?.headerName || 'Pos');
+    const athleteHeaderLabel = String(getEventTableColumnByKey('athlete')?.headerName || 'Participant');
+    const getConfiguredDataColumnWidth = useCallback(
+        (columnKey: string): number => getConfiguredEventColumnWidthPx(columnKey, layoutViewport, isCompactViewport ? 90 : 120),
+        [isCompactViewport, layoutViewport]
     );
     // ...after adjustmentColumns definition
     const columns = useMemo(() => {
-        if (viewMode === 'detailed') return [...baseColumns, ...extraColumns];
-        if (viewMode === 'allTimeAdjustments') return [...baseColumns, ...adjustmentColumns];
+        if (viewMode === 'detailed') return detailedColumns;
+        if (viewMode === 'allTimeAdjustments') return allTimeAdjustmentColumns;
 
         const selected = [...baseColumns];
         if (adjustmentKeys.length === 0) return selected;
@@ -902,11 +966,36 @@ const Races: React.FC = () => {
             ...adjustmentCols,
             ...selected.slice(insertAt)
         ];
-    }, [adjustmentColumns, adjustmentKeys, baseColumns, extraColumns, viewMode]);
+    }, [adjustmentColumns, adjustmentKeys, allTimeAdjustmentColumns, baseColumns, detailedColumns, viewMode]);
+    const defaultColWidths = useMemo<number[]>(
+        () => [
+            configuredLeadingWidths.position,
+            configuredLeadingWidths.athlete,
+            ...columns.map((col) => getConfiguredDataColumnWidth(col.k))
+        ],
+        [columns, configuredLeadingWidths.athlete, configuredLeadingWidths.position, getConfiguredDataColumnWidth]
+    );
+    const effectiveColWidths = useMemo<number[]>(
+        () => defaultColWidths.map((defaultWidth, index) => {
+            const currentWidth = colWidths[index];
+            const overrideWidth = typeof currentWidth === 'number' && Number.isFinite(currentWidth)
+                ? currentWidth
+                : null;
+            return overrideWidth ?? defaultWidth;
+        }),
+        [colWidths, defaultColWidths]
+    );
+    const fixedLeadingWidths = useMemo(() => ({
+        position: effectiveColWidths[0] ?? configuredLeadingWidths.position,
+        athlete: effectiveColWidths[1] ?? configuredLeadingWidths.athlete
+    }), [configuredLeadingWidths.athlete, configuredLeadingWidths.position, effectiveColWidths]);
+    const getFixedDataColumnWidth = useCallback(
+        (columnIndex: number, columnKey: string): number => effectiveColWidths[columnIndex + 2] ?? getConfiguredDataColumnWidth(columnKey),
+        [effectiveColWidths, getConfiguredDataColumnWidth]
+    );
     const racesTableWidthPx = useMemo(() => {
-        const dynamicWidth = columns.reduce((sum, col) => sum + getFixedDataColumnWidth(col.k), 0);
-        return fixedLeadingWidths.position + fixedLeadingWidths.athlete + dynamicWidth;
-    }, [columns, fixedLeadingWidths.athlete, fixedLeadingWidths.position, getFixedDataColumnWidth]);
+        return effectiveColWidths.reduce<number>((sum, width) => sum + Number(width ?? 0), 0);
+    }, [effectiveColWidths]);
 
 
     // keep colWidths aligned with the current column count
@@ -914,10 +1003,10 @@ const Races: React.FC = () => {
     const desired = 2 + columns.length;
     setColWidths(prev => {
         const copy = prev.slice(0, desired);
-        while (copy.length < desired) copy.push(90);
+        while (copy.length < desired) copy.push(null);
         return copy;
     });
-    }, [columns]);
+    }, [columns, defaultColWidths]);
 
     // Persist view mode
     useEffect(() => {
@@ -1012,18 +1101,17 @@ const Races: React.FC = () => {
                                         <div className="races-view-control-item">
                                             <label htmlFor="course-adj-select">Course adj:</label>
                                             <select id="course-adj-select" value={courseAdj} onChange={onCourseAdjSelect} aria-label="Course adjustment">
-                                                <option value="none">no adjustment (default)</option>
-                                                <option value="seasonal">seasonal adjustments</option>
-                                                <option value="full">full event adjustments</option>
+                                                {courseAdjOptions.map((option) => (
+                                                    <option key={option.value} value={option.value} disabled={otherAdj !== 'none' && option.value === 'seasonal'}>{option.label}</option>
+                                                ))}
                                             </select>
                                         </div>
                                         <div className="races-view-control-item">
                                             <label htmlFor="other-adj-select">Other adj:</label>
                                             <select id="other-adj-select" value={otherAdj} onChange={onOtherAdjSelect} aria-label="Other adjustment">
-                                                <option value="none">no adjustment (default)</option>
-                                                <option value="age">age adjustments</option>
-                                                <option value="sex">sex adjustments</option>
-                                                <option value="age_sex">age & sex adjustment</option>
+                                                {otherAdjOptions.map((option) => (
+                                                    <option key={option.value} value={option.value} disabled={courseAdj === 'seasonal' && option.value !== 'none'}>{option.label}</option>
+                                                ))}
                                             </select>
                                             <div
                                                 style={{
@@ -1082,7 +1170,7 @@ const Races: React.FC = () => {
                                         ? fixedLeadingWidths.position
                                         : i === 1
                                             ? fixedLeadingWidths.athlete
-                                            : getFixedDataColumnWidth(String(columnKey || ''));
+                                            : getFixedDataColumnWidth(i - 2, String(columnKey || ''));
                                     return <col key={i} style={{ width: `${w}px` }} />;
                                 })}
                                 </colgroup>
@@ -1112,7 +1200,7 @@ const Races: React.FC = () => {
                                     onClick={() => handleSort('position')}
                                     onTouchEnd={(e) => { e.preventDefault(); handleSort('position'); }}
                                 >
-                                    <span className="eventtest-header-label">Pos{sortKey === 'position' ? ' ▲' : ''}{sortKey === 'position' && sortDir === 'desc' ? ' ▼' : ''}</span>
+                                    <span className="eventtest-header-label">{positionHeaderLabel}</span>
                                     <span className="eventtest-sort-indicator">{sortKey === 'position' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</span>
                                     <div
                                         role="separator"
@@ -1142,7 +1230,7 @@ const Races: React.FC = () => {
                                         onClick={() => handleSort('name')}
                                         onTouchEnd={(e) => { e.preventDefault(); handleSort('name'); }}
                                     >
-                                        <span className="eventtest-header-label">Athlete</span>
+                                        <span className="eventtest-header-label">{athleteHeaderLabel}</span>
                                         <span className="eventtest-sort-indicator">{sortKey === 'name' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</span>
                                         <div
                                             role="separator"
@@ -1157,16 +1245,16 @@ const Races: React.FC = () => {
                                         key={col.k}
                                         className={`eventtest-col ${adjustmentColumns.find(ac => ac.k === col.k) ? 'sticky-header adjustment-header' : ''}`}
                                         style={{
-                                            ['--event-col-width' as any]: `${getFixedDataColumnWidth(col.k)}px`,
+                                            ['--event-col-width' as any]: `${getFixedDataColumnWidth(idx, col.k)}px`,
                                             ['--event-col-left' as any]: 'auto',
                                             fontWeight: 700,
                                             position: 'sticky',
                                             top: 0,
                                             zIndex: 200,
                                             cursor: 'pointer',
-                                            width: `${getFixedDataColumnWidth(col.k)}px`,
-                                            minWidth: `${getFixedDataColumnWidth(col.k)}px`,
-                                            maxWidth: `${getFixedDataColumnWidth(col.k)}px`
+                                            width: `${getFixedDataColumnWidth(idx, col.k)}px`,
+                                            minWidth: `${getFixedDataColumnWidth(idx, col.k)}px`,
+                                            maxWidth: `${getFixedDataColumnWidth(idx, col.k)}px`
                                         }}
                                         onClick={() => handleSort(col.k)}
                                         onTouchEnd={(e) => { e.preventDefault(); handleSort(col.k); }}  // add this
@@ -1280,14 +1368,14 @@ const Races: React.FC = () => {
                                             })()
                                         }
                                     {/* Render remaining columns dynamically */}
-                                    {columns.map((col) => {
+                                    {columns.map((col, idx) => {
                                         const rawVal = r[col.k] ?? r[col.k.replace(/_(.)/g, (_m, g1) => g1.toUpperCase())] ?? '';
                                         const textAlign = (typeof rawVal === 'string') ? ((col.k === 'club' || col.k === 'comment') ? 'left' : undefined) : undefined;
                                         const cellStyle: React.CSSProperties = {
                                             textAlign,
-                                            width: `${getFixedDataColumnWidth(col.k)}px`,
-                                            minWidth: `${getFixedDataColumnWidth(col.k)}px`,
-                                            maxWidth: `${getFixedDataColumnWidth(col.k)}px`
+                                            width: `${getFixedDataColumnWidth(idx, col.k)}px`,
+                                            minWidth: `${getFixedDataColumnWidth(idx, col.k)}px`,
+                                            maxWidth: `${getFixedDataColumnWidth(idx, col.k)}px`
                                         };
 
                                         if (col.k === 'club') {

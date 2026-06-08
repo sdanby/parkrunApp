@@ -115,6 +115,9 @@ export type LayoutExpressionAxisConfig = {
 
 export type LayoutTableModelConfig = {
   mode?: 'pivot' | 'flat';
+  header?: {
+    textAlign?: 'left' | 'center' | 'right';
+  };
   sort?: {
     enabled?: boolean;
     showInactiveArrows?: boolean;

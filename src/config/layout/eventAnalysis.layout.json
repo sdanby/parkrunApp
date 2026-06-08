@@ -82,7 +82,7 @@
       "id": "eventAnalysis.filterSelect",
       "type": "select",
       "name": "All Participants",
-      "options": ["Participants", "Event Number", "Seasonal Hardness", "Event Hardness", "Combined Hardness", "Volunteers", "Tourists", "Super Tourists", "First Timers", "Clubbers", "PBs", "Recent Bests", "Regulars", "Returners", "Eligible Times", "Unknowns", "Times", "Age"],
+      "options": ["Participants", "Event Number", "Seasonal Hardness", "Event Hardness", "Combined Hardness", "Volunteers", "Tourists", "Super Tourists", "1st Timers", "Clubbers", "PBs", "Recent Bests", "Regulars", "Returners", "Eligible Times", "Unknowns", "Times", "Age"],
       "laptop": { "x": "2.0cm", "y": "0.0cm", "width": "3.8cm" },
       "mobile": { "x": "2.0cm", "y": "0.0cm", "width": "3.5cm" }
     },
@@ -291,8 +291,8 @@
       "headerExpr": "aggHeader(agg)",
       "valueExpr": "aggregateRow(row, agg, filter, type, timeAdj)",
       "style": { "textAlign": "center" },
-      "laptop": { "width": "1.8cm" },
-      "mobile": { "width": "1.8cm" },
+      "laptop": { "width": "1.9cm" },
+      "mobile": { "width": "1.9cm" },
       "formatExpr": "formatAggregate(value, type, agg)",
       "sortExpr": "value"
     },
