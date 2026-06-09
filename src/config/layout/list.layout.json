@@ -55,8 +55,8 @@
         "color": "#111827",
         "lineHeight": 1.0
       },
-      "laptop": { "x": "0.6cm", "y": "0.2cm" },
-      "mobile": { "x": "0.6cm", "y": "-0.7cm" }
+      "laptop": { "x": "0.7cm", "y": "0.2cm" },
+      "mobile": { "x": "0.7cm", "y": "-0.7cm" }
     },
     {
       "id": "lists.listSelect",
@@ -76,7 +76,7 @@
     {
       "id": "lists.participantFilterLabel",
       "type": "label",
-      "name": "Participants:",
+      "name": "Participants Filter:",
       "helpTarget": "control-participant-filter",
       "helpLabel": true,
       "style": {
@@ -85,8 +85,8 @@
         "color": "#111827",
         "lineHeight": 1.0
       },
-      "laptop": { "x": "0.9cm", "y": "0.9cm" },
-      "mobile": { "x": "0.9cm", "y": "0.0cm" }
+      "laptop": { "x": "-0.0cm", "y": "0.9cm" },
+      "mobile": { "x": "-0.0cm", "y": "0.0cm" }
     },
     {
       "id": "lists.participantFilterSelect",
@@ -115,8 +115,8 @@
         "color": "#111827",
         "lineHeight": 1.0
       },
-      "laptop": { "x": "1.0cm", "y": "1.6cm" },
-      "mobile": { "x": "1.0cm", "y": "0.7cm" }
+      "laptop": { "x": "1.1cm", "y": "1.6cm" },
+      "mobile": { "x": "1.1cm", "y": "0.7cm" }
     },
     {
       "id": "lists.courseAdjSelect",
@@ -142,8 +142,8 @@
         "color": "#111827",
         "lineHeight": 1.0
       },
-      "laptop": { "x": "1.3cm", "y": "2.3cm" },
-      "mobile": { "x": "1.3cm", "y": "1.4cm" }
+      "laptop": { "x": "1.4cm", "y": "2.3cm" },
+      "mobile": { "x": "1.4cm", "y": "1.4cm" }
     },
     {
       "id": "lists.otherAdjSelect",
@@ -170,8 +170,8 @@
         "color": "#111827",
         "lineHeight": 1.0
       },
-      "laptop": { "x": "0.5cm", "y": "3.0cm" },
-      "mobile": { "x": "0.5cm", "y": "2.1cm" }
+      "laptop": { "x": "0.6cm", "y": "3.0cm" },
+      "mobile": { "x": "0.6cm", "y": "2.1cm" }
     },
     {
       "id": "lists.adjustmentFilterCheckbox",

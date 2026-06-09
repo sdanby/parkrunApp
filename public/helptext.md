@@ -70,7 +70,7 @@ The [Event Analysis](#page-event-analysis) page brings together a wide range of 
 - volunteers  
 - tourists  
 - PBs  
-- club runners  
+- club members  
 - course difficulty  
 - and more  
 
@@ -113,10 +113,10 @@ This app introduces several new concepts that help you understand parkrun in a m
 
 - **Course Hardness** — how tough a course was on a specific day  
 - **Seasonality** — how weather and time of year affect results  
-- **Returners** — runners coming back after a break  
+- **Returners** — participants coming back after a break  
 - **Recent Bests** — your strongest performances in the last period  
-- **Super Tourists** — runners who visit many different events  
-- **Participant Rankings** — comparing runners across different planes  
+- **Super Tourists** — participants who visit many different events  
+- **Participant Rankings** — comparing participant across different planes  
 - **Key Course Participants** — who shapes the character of each event  
 - **Club Metrics** — deeper insights into club behaviour  
 
@@ -125,7 +125,7 @@ You do not need to understand the calculations — the app does the hard work.
 
 ---
 
-### 4. A level playing field: comparing runners fairly across different courses  
+### 4. A level playing field: comparing participants fairly across different courses  
 See: [Course Adj](#control-course-adj), [Other Adj](#control-other-adj), [Participant Profile](#section-participant-profile)
 
 Every parkrun course is different. Some are flat and fast. Some are muddy, hilly or twisty. Comparing raw times between courses is unfair.
@@ -134,11 +134,11 @@ This app solves that.
 
 It uses:
 
-- **Course Hardness** (how tough the event was)  
+- **[Course Hardness](#section-course-hardness)** (how tough the event was)  
 - **Course Adjustments** (seasonal and event‑specific)  
 - **Age & Sex Adjustments** (optional)  
 
-…to create a **fair comparison** between runners.
+…to create a **fair comparison** between participants.
 
 This means you can:
 
@@ -153,6 +153,100 @@ The idea is simple:
 **You get a fair, honest picture of your running — not distorted by course difficulty.**
 
 ---
+
+<a id="section-course-hardness"></a>
+### 5. Course Hardness Model
+
+Course Hardness is one of the core ideas behind this app. It provides a way to understand how difficult a course was on a specific day, and how that difficulty compares across different courses and different times of the year. The model has two components:
+
+1. **Seasonal Hardness**  
+2. **Event Hardness**
+
+These are then combined to form **Combined Hardness**, which can be used to adjust participant times fairly.
+
+---
+
+#### Seasonal Hardness
+
+Seasonal Hardness measures how tough a course was **relative to its own recent history**.
+
+The app looks at:
+
+- participants who regularly attend the course  
+- their finish times over a **15‑week window** (a period where participants are generally consistent)  
+- how their times change from event to event  
+
+To keep the comparison fair, the model filters out participants whose time is far outside their normal range (for example, if they were taking it easy that day).
+
+By comparing these consistent participants across recent events, the app can estimate whether the course was:
+
+- faster than usual  
+- slower than usual  
+- or behaving as expected  
+
+Seasonal Hardness typically reflects **weather**, **ground conditions**, **seasonal variation**, and other repeating factors.
+
+---
+
+#### Event Hardness
+
+Event Hardness compares the course to **other courses**, not just itself.
+
+This uses:
+
+- tourists  
+- local participants who have run at other courses  
+- returning participants with comparable history elsewhere  
+
+Again, filtering removes participants who did not perform within their normal range.
+
+Their times are first adjusted by the **Seasonal Hardness** (so we compare like‑for‑like conditions).  
+Then the model looks at how their adjusted times differ across courses.
+
+This produces a **cross‑course differential**, showing how much harder or easier this course was compared to others on the same day.
+
+---
+
+#### Combined Hardness
+
+Combined Hardness is simply:
+
+**Seasonal Hardness + Event Hardness**
+
+This gives a single value representing how difficult the course was **on that specific event**, relative to:
+
+- the easiest courses  
+- in the easiest conditions  
+- at the easiest time of year  
+
+A Combined Hardness of **0.0%** means:
+
+- the course is flat or fast  
+- conditions were ideal  
+- participants performed at their most favourable level  
+
+Higher values indicate tougher conditions or inherently harder courses.
+
+---
+
+#### Event Adjustment (Adjusted Time)
+
+Combined Hardness can be applied directly to a participant’s time to produce an **Event Adjusted Time**.
+
+This adjusted time estimates:
+
+- what the participant might have run  
+- on a neutral, flat course  
+- in ideal conditions  
+
+It allows fairer comparisons between:
+
+- different courses  
+- different dates  
+- different seasonal conditions  
+
+This is the foundation for comparing participants on a **level playing field** across the entire parkrun landscape.
+
 
 <a id="section-feedback"></a>
 
@@ -265,7 +359,8 @@ Marks the first date, and where shown the last date, that a participant is recor
 <a id="term-first-timers"></a>
 ### 1st Timers (First Timers)
 
-Counts runners who are new, either to parkrun overall or to that specific course depending on the page and dataset being viewed. It is often used to show how welcoming or discovery-driven an event is.
+Participants completing the course for the first time — either their first ever parkrun or their first time at this specific course.  
+Selected via the Type control on the [Event Analysis](#page-event-analysis) page.
 
 <a id="term-actual"></a>
 ### Actual
@@ -290,7 +385,10 @@ Short label for age-sex-event adjusted values. It is typically the most adjusted
 <a id="term-age"></a>
 ### Age
 
-Used where the app shows an average or estimated age for participants in a selected slice. On analysis pages it is a metric; on participant pages it provides context.
+Represents the **average estimated age** of participants at the selected event.  
+Age is an **event‑level metric**, not a participant count, and therefore only supports **Calc = Actual** and **Agg = Average**.
+
+Age is selected via the Type control on the [Event Analysis](#page-event-analysis) page.
 
 <a id="term-age-adj"></a>
 ### Age Adj (Age Adj.)
@@ -357,7 +455,7 @@ The compact table view that focuses on the most important columns. Use it when y
 
 The strongest recorded raw finish time in the selected context. On Top 250 or participant-style tables it is usually the athlete's best qualifying time in that slice.
 
-<a id="control-type"></a>
+<a id="control-calc"></a>
 ### Calc
 
 Calc controls the calculation family shown in the analysis. Use it first because it determines how the selected metric is interpreted, for example as an actual value, a percentage or a deviation-style comparison.
@@ -380,7 +478,8 @@ Counts how many times a participant has appeared for a club in the selected hist
 <a id="term-clubbers"></a>
 ### Clubbers
 
-Counts participants linked to a running club in the current event or slice. It is used as a quick measure of club-based participation.
+Participants who are associated with a running club at the event. This shows how many club‑affiliated participants took part.  
+Selected via the Type control on the [Event Analysis](#page-event-analysis) page.
 
 <a id="term-comb-tot"></a>
 ### Comb tot
@@ -388,9 +487,11 @@ Counts participants linked to a running club in the current event or slice. It i
 A compact column label used where space is limited for a combined total. In context it usually represents a total count compiled across multiple qualifying event types or histories.
 
 <a id="term-combined-hardness"></a>
-### Combined Hardness (Hardness)
+### Combined Hardness
 
-Combines seasonal and event-specific difficulty into a single indicator. Use it when you want one summary measure of course toughness rather than separate seasonal and event components.
+Combined Hardness is the sum of Seasonal Hardness and Event Hardness. It provides a single value representing how difficult the course was on that specific event, relative to the easiest courses in the best conditions.  
+For a full explanation, see the [Course Hardness Model](#section-course-hardness).
+
 
 <a id="term-course"></a>
 ### Course
@@ -425,7 +526,9 @@ Counts unique events rather than total runs. It is useful when you want to know 
 <a id="term-eligible-runs"></a>
 ### Eligible runs / Eligible Times
 
-Represents runs or times that meet the app's eligibility rules for a particular comparison. These fields are used when a calculation only makes sense for runners with enough history or a valid baseline.
+Participants whose finish times fall within their normal expected time window based on their recent 15‑week history.  
+Eligible Times are more likely to contribute to the **Course Hardness Model**, because they represent consistent performance.  
+Selected via the Type control on the [Event Analysis](#page-event-analysis) page.
 
 <a id="term-es-adj"></a>
 ### ES Adj
@@ -451,13 +554,22 @@ The specific calendar date for a single event instance. It distinguishes one occ
 <a id="term-event-hardness"></a>
 ### Event Hardness
 
-The event-specific component of difficulty for a single day. It is useful when the course played unusually fast or slow relative to its typical pattern.
+Event Hardness compares the course to other courses by analysing tourists and local participants who have run elsewhere. After adjusting for Seasonal Hardness, it shows how much harder or easier this course was relative to others on the same day.  
+For a full explanation, see the [Course Hardness Model](#section-course-hardness).
+
+
 
 <a id="term-event-number"></a>
 <a id="control-event-number"></a>
 ### Event Number (Event #, Event # 1Y)
 
-The sequential number of an event at a course. The one-year variant usually applies the same concept within a last-year comparison table.
+Event Number is the **sequential count of how many times a course has held an event**. For example, if a course has been operating for several years, its Event Number will be higher than a newly launched course.
+
+It is an **event‑level value**, meaning it describes the event itself rather than the participants. It does not depend on who took part — it simply reflects the position of that event in the course’s history.
+
+The one‑year variant (**Event # 1Y**) applies the same idea but within the last‑year window used on certain tables.
+
+Event Number is selected via the **Type** control on the [Event Analysis](#page-event-analysis) page.
 
 <a id="term-event-total"></a>
 ### Event Total
@@ -562,17 +674,23 @@ Used where the app needs to distinguish the selected course or event from all ot
 <a id="term-participant"></a>
 ### Participant (Participt)
 
-The individual athlete or row subject being analysed. The short form appears in narrow headers where full text would not fit.
+A participant is **any person who takes part in a parkrun event and completes the course**, whether they run, jog or walk. The term is used throughout the app to describe the individuals whose actions, results and event involvement form the basis of most participant‑based metrics.
+
+The short form **Participt** appears in narrow table headers where space is limited.
+
+This metric is selected via the **Type** control on the [Event Analysis](#page-event-analysis) page.
+
 
 <a id="control-participant-filter"></a>
-### Participants
+### Participants Filter
 
-Participants can mean the count of runners in a row, or the minimum-participation threshold control used on Lists pages depending on context. On Lists pages it is used to restrict the leaderboard to runners with broader total or local history before comparing them.
+Participants can mean the count of participants in a row, or the minimum-participation threshold control used on Lists pages depending on context. On Lists pages it is used to restrict the leaderboard to participants with broader total or local history before comparing them.
 
 <a id="term-pbs"></a>
 ### PBs
 
-Counts personal best performances for the selected course or slice. It is commonly used as a quick indicator of how fast or favourable an event felt.
+Participants who achieved their fastest time at this course during the selected event. PBs help indicate how fast or favourable the event conditions were.  
+Selected via the Type control on the [Event Analysis](#page-event-analysis) page.
 
 <a id="control-period"></a>
 ### Period
@@ -607,7 +725,8 @@ Indicates the ranking basis or ranking family being used. It helps explain why t
 <a id="term-recent-bests"></a>
 ### Recent Bests
 
-Counts best performances achieved in the recent lookback window rather than over all history. It helps highlight current form rather than lifetime peak.
+Participants who achieved their best time within the last 15‑week period at this course. This highlights current form rather than lifetime performance.  
+Selected via the Type control on the [Event Analysis](#page-event-analysis) page.
 
 <a id="control-recent-club"></a>
 ### Recent Club
@@ -632,12 +751,14 @@ Short label for a participant's regular or most-associated course. It is used wh
 <a id="term-regulars"></a>
 ### Regulars
 
-Counts participants who attend a course frequently enough to meet the app's threshold. It helps distinguish core local runners from casual or one-off visitors.
+Participants who have attended the course **more than 15 times within the last year**. This identifies the core local community who regularly support the event.  
+Selected via the Type control on the [Event Analysis](#page-event-analysis) page.
 
 <a id="term-returners"></a>
-### Returners (T/F in Participants)
+### Returners
 
-Counts or flags runners who have come back after a gap. In some tables it is a count; in others it is a true/false style classification inside a participant grouping.
+Participants who return to the course after being absent for **more than 15 weeks**. This highlights re‑engagement and returning participation patterns.  
+Selected via the Type control on the [Event Analysis](#page-event-analysis) page.
 
 <a id="term-runs-1y"></a>
 ### Runs 1Y
@@ -652,7 +773,10 @@ Applies the broader seasonal correction to course performance without using the 
 <a id="term-seasonal-hardness"></a>
 ### Seasonal Hardness
 
-The season-driven component of course difficulty. It captures recurring factors such as winter mud or summer conditions rather than one-off event effects.
+Seasonal Hardness measures how tough a course was compared to its own recent history. It is based on consistent participants over a 15‑week window and reflects repeating factors such as weather, ground conditions and seasonal variation.  
+For a full explanation, see the [Course Hardness Model](#section-course-hardness).
+
+
 
 <a id="term-sex-adj"></a>
 ### Sex Adj
@@ -672,7 +796,9 @@ A cell or summary mode that shows one direct value rather than an average or der
 <a id="term-super-tourists"></a>
 ### Super Tourists
 
-Counts runners who visit many different events in a defined period. It is a way to identify unusually mobile participants.
+Participants who have attended **more than 15 different courses within the last year**. This identifies highly mobile participants with broad course experience.  
+Selected via the Type control on the [Event Analysis](#page-event-analysis) page.
+
 
 <a id="control-table-view"></a>
 ### Table View
@@ -687,7 +813,10 @@ Time Adj applies optional adjustments for time-based analysis. Use it when compa
 <a id="term-times"></a>
 ### Times (Time)
 
-Time-based metrics, usually average time or a representative finish-time measure for the selected slice. On participant-style tables it may instead be a best or adjusted time field.
+Represents the **average finish time** of participants at the selected event.  
+Times are an **event‑level metric**, meaning they describe the overall event rather than individual participant counts. Because they are averages, they only support **Calc = Actual** and **Agg = Average**.
+
+Times are selected via the Type control on the [Event Analysis](#page-event-analysis) page.
 
 <a id="term-total"></a>
 ### Total (Tota)
@@ -702,22 +831,102 @@ Total Runs shows the total number of recorded runs for a participant or table ro
 <a id="term-tourists"></a>
 ### Tourists
 
-Counts participants who are visiting a course rather than running their usual one. It helps distinguish local participation from visiting traffic.
+Participants who normally attend a different course to the one selected.  
+The app does not know a participant’s official “home” course, so it infers it from the participant’s **most frequently attended course**. Anyone attending a different course is counted as a Tourist.  
+Selected via the Type control on the [Event Analysis](#page-event-analysis) page.
 
-<a id="control-filter"></a>
-### Type
 
-Type selects the subgroup or metric family being displayed, such as Participants, Volunteers, PBs, Clubbers or Unknowns. It works with Calc to decide what each number means.
+<a id="control-type"></a>
+## Type
+
+Type controls **what metric** is displayed in the main analysis tables on the [Event Analysis](#page-event-analysis) page. It determines the subject of each cell before any calculations, adjustments or aggregations are applied.
+
+The Type menu contains two kinds of options:
+
+1. **Participant‑based metrics** — counts of people and what they did at the event  
+2. **Event‑level metrics** — values describing the event itself (e.g., hardness, average time)
+
+Understanding this distinction helps explain why some Types support all **Calc** options while others only support **Average**.
+
+---
+
+### Participant‑based Types  
+These are based on **individual participants** and their actions at the event.  
+They count how many people fall into each category.
+
+Each item links to its glossary entry:
+
+- [Participants](#term-participant)  
+- [Tourists](#term-other-events)  
+- [Super Tourists](#term-super-tourists)  
+- [1st Timers](#term-first-timers)  
+- [Clubbers](#term-clubbers)  
+- [PBs](#term-pbs)  
+- [Recent Bests](#term-recent-bests)  
+- [Regulars](#term-regulars)  
+- [Returners](#term-returners)  
+- [Eligible Times](#term-eligible-runs)  
+- [Unknowns](#term-unknowns)  
+
+These Types represent **counts of people**, so they work naturally with all **Calc** options such as:
+
+- **Actual**  
+- **Actual%**  
+- **%Total**  
+- **%Deviation**  
+- **#Actual Deviation**
+
+Use these when you want to understand the **composition** of an event — who turned up, who achieved what, and how the mix compares to other events.
+
+- [Volunteers](#term-volunteers) 
+- **Volunteers** counts a *different group* of people (not participants)   
+
+---
+
+### Event‑level Types  
+These describe the **event itself**, not individual participants.
+
+- [Event Number](#term-event-number)  
+- [Seasonal Hardness](#term-seasonal-hardness)  
+- [Event Hardness](#term-event-hardness)  
+- [Combined Hardness](#term-combined-hardness)  
+- [Times](#term-times)  
+- [Age](#term-age)
+
+These values behave differently:
+
+- **Event Number** and the **Hardness** metrics are fixed values for that event  
+- **Times** and **Age** are **average-only** metrics and therefore only support:  
+  - **Calc = Actual**  
+  - **Agg = Average**
+
+They do **not** support percentage or deviation calculations because they are not counts.
+
+Use these Types when you want to understand the **conditions** or **context** of an event rather than the behaviour of participants.
+
+---
+
+### Summary
+
+- **Participant‑based Types** → counts of people → support all Calc options  
+- **Event‑level Types** → fixed event values → limited Calc options  
+- **Times** and **Age** → **Average only**  
+- **Volunteers** → counts helpers, not active participants 
+- **Hardness metrics** → describe course difficulty, not participation  
+
+Type is usually the **first control** to set when exploring an event, because it defines what the numbers in the table actually represent.
 
 <a id="term-unknowns"></a>
 ### Unknowns
 
-Counts participants whose classification cannot be resolved from the available data. It is useful as a data-quality or interpretation caution flag.
+Participants who completed the course but did not register a time (for example, forgot their barcode). These are included in participation counts but excluded from time‑based analysis.  
+Selected via the Type control on the [Event Analysis](#page-event-analysis) page.
 
 <a id="term-volunteers"></a>
-### Volunteers (Volunts)
+### Volunteers
 
-Counts volunteers in the selected event or slice, or shows a volunteer-related participant field where relevant. It is one of the standard participation context measures used across the app.
+Counts the number of people who volunteered at the event. Volunteers are a separate group from participants and are not included in participant‑based metrics.  
+Selected via the Type control on the [Event Analysis](#page-event-analysis) page.
 
 ---
 
@@ -817,7 +1026,7 @@ This page is most commonly opened from [Event Analysis](#page-event-analysis). U
 
 #### Tables, Plots and Previews
 
-- Main participant table: lists runners and key metrics for the selected event.
+- Main participant table: lists participants and key metrics for the selected event.
 - Adjusted-time views: show how rankings or times change under different adjustment settings.
 - Event summary labels: provide quick context on turnout and event identity.
 
@@ -946,7 +1155,7 @@ It is part of the Participant page and should be read together with the particip
 
 #### Purpose Description
 
-Club Page groups and analyses participants through their club affiliation. It is used to understand membership patterns, event activity and the relative profile of a club's runners.
+Club Page groups and analyses participants through their club affiliation. It is used to understand membership patterns, event activity and the relative profile of a club's members.
 
 #### Navigation
 
@@ -966,7 +1175,7 @@ This page is usually opened by clicking a club name from participant, event or l
 
 #### Tables, Plots and Previews
 
-- Member tables: compare runners associated with the club.
+- Member tables: compare members associated with the club.
 - Event tables: show the club's presence across events.
 - Summary labels give quick context before reading the larger tables.
 

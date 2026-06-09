@@ -1723,7 +1723,7 @@ const EventAnalysisTest: React.FC = () => {
               </div>
             ) : null}
 
-            {filterLabelElement ? renderConfigLabel(filterLabelElement, pFilterLabel, 'Filter', 'control-filter') : null}
+            {filterLabelElement ? renderConfigLabel(filterLabelElement, pFilterLabel, 'Filter', 'control-type') : null}
             {renderConfigSelect(
               filterSelectElement,
               pFilterSelect,

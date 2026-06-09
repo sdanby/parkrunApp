@@ -21,7 +21,7 @@
       "id": "eventAnalysis.type",
       "type": "label",
       "name": "Calc:",
-      "helpTarget": "control-type",
+      "helpTarget": "control-calc",
       "style": {
         "fontSize": "0.8rem",
         "fontWeight": 600,
@@ -67,7 +67,7 @@
       "id": "eventAnalysis.filterLabel",
       "type": "label",
       "name": "Type:",
-      "helpTarget": "control-filter",
+      "helpTarget": "control-type",
       "helpLabel": true,
       "style": {
         "fontSize": "0.8rem",

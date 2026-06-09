@@ -36,9 +36,9 @@ export const getPageMarkerForPath = (path: string): string | null => {
 export const getMarkerForControlLabel = (label: string): string => {
     const key = String(label || '').trim().toLowerCase();
     const map: Record<string, string> = {
-        type: 'control-filter',
-        calc: 'control-type',
-        filter: 'control-filter',
+        type: 'control-type',
+        calc: 'control-calc',
+        filter: 'control-type',
         view: 'control-table-view',
         'table view': 'control-table-view',
         'athlete code': 'control-athlete-code',
@@ -344,10 +344,44 @@ export const UnifiedHelpOverlay: React.FC<UnifiedHelpOverlayProps> = ({ open, st
 
     useEffect(() => {
         if (!open) return;
-        fetch('/helptext.md')
-            .then((res) => res.text())
-            .then(setMarkdown)
-            .catch(() => setMarkdown('Help file not found.'));
+
+        const publicUrl = String(process.env.PUBLIC_URL || '').replace(/\/$/, '');
+        const candidates = Array.from(new Set([
+            `${publicUrl}/helptext.md`,
+            './helptext.md',
+            'helptext.md'
+        ].filter((value) => value && value !== '/helptext.md' ? true : value === '/helptext.md')));
+
+        let cancelled = false;
+
+        const loadHelp = async () => {
+            for (const candidate of candidates) {
+                try {
+                    const response = await fetch(candidate);
+                    if (!response.ok) {
+                        continue;
+                    }
+
+                    const text = await response.text();
+                    if (!cancelled) {
+                        setMarkdown(text);
+                    }
+                    return;
+                } catch {
+                    continue;
+                }
+            }
+
+            if (!cancelled) {
+                setMarkdown('Help file not found.');
+            }
+        };
+
+        void loadHelp();
+
+        return () => {
+            cancelled = true;
+        };
     }, [open]);
 
     useEffect(() => {
