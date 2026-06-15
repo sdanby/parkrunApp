@@ -13,6 +13,9 @@ type Props = {
     placeholder?: string;
     inputWidth?: string;
     dropdownWidth?: string;
+    autoFocus?: boolean;
+    onInputBlur?: () => void;
+    onEscape?: () => void;
 };
 
 const EventSearch: React.FC<Props> = ({
@@ -22,14 +25,19 @@ const EventSearch: React.FC<Props> = ({
     inputId = 'event-search-input',
     placeholder = 'Enter Search',
     inputWidth = 'calc(154px + 2cm)',
-    dropdownWidth = 'calc(154px + 2cm + 38px)'
+    dropdownWidth = 'calc(154px + 2cm + 38px)',
+    autoFocus = false,
+    onInputBlur,
+    onEscape
 }) => {
     const [query, setQuery] = useState('');
     const [open, setOpen] = useState(false);
     const [highlight, setHighlight] = useState(-1);
+    const rootRef = useRef<HTMLDivElement | null>(null);
     const prefilledRef = useRef(false);
     const lastAppliedInitialQueryRef = useRef('');
     const userHasEditedRef = useRef(false);
+    const selectingRef = useRef(false);
 
     useEffect(() => {
         if (typeof initialQuery !== 'string') return;
@@ -52,16 +60,48 @@ const EventSearch: React.FC<Props> = ({
     }, [options, query]);
 
     const choose = (opt: EventOption) => {
+        selectingRef.current = true;
         setQuery(opt.eventName);
         setOpen(false);
         setHighlight(-1);
         onSelect(opt.eventCode, opt.eventName);
+        window.setTimeout(() => {
+            selectingRef.current = false;
+        }, 0);
     };
 
+    const commitSelection = (opt: EventOption) => {
+        if (selectingRef.current) {
+            return;
+        }
+        choose(opt);
+    };
+
+    useEffect(() => {
+        const handleDocumentPointerDown = (event: PointerEvent) => {
+            const root = rootRef.current;
+            const target = event.target as Node | null;
+            if (!root || !target || root.contains(target)) {
+                return;
+            }
+
+            setOpen(false);
+            if (!selectingRef.current) {
+                onInputBlur?.();
+            }
+        };
+
+        document.addEventListener('pointerdown', handleDocumentPointerDown);
+        return () => {
+            document.removeEventListener('pointerdown', handleDocumentPointerDown);
+        };
+    }, [onInputBlur]);
+
     return (
-        <div style={{ position: 'relative', maxWidth: 640, zIndex: 10060 }}>
+        <div ref={rootRef} style={{ position: 'relative', maxWidth: 640, zIndex: 10060, pointerEvents: 'auto' }}>
             <input
                 id={inputId}
+                autoFocus={autoFocus}
                 aria-label="Search events"
                 placeholder={placeholder}
                 value={query}
@@ -76,9 +116,6 @@ const EventSearch: React.FC<Props> = ({
                     if (!prefilledRef.current && filtered.length > 0) {
                         setOpen(true);
                     }
-                }}
-                onBlur={() => {
-                    window.setTimeout(() => setOpen(false), 150);
                 }}
                 onKeyDown={(event) => {
                     if (!open) return;
@@ -96,6 +133,7 @@ const EventSearch: React.FC<Props> = ({
                         }
                     } else if (event.key === 'Escape') {
                         setOpen(false);
+                        onEscape?.();
                     }
                 }}
                 style={{
@@ -118,6 +156,7 @@ const EventSearch: React.FC<Props> = ({
                         zIndex: 1500,
                         top: 'calc(100% + 4px)',
                         left: 0,
+                        pointerEvents: 'auto',
                         width: dropdownWidth,
                         background: '#fff',
                         border: '1px solid rgba(0,0,0,0.15)',
@@ -132,8 +171,16 @@ const EventSearch: React.FC<Props> = ({
                             key={`${opt.eventCode}-${idx}`}
                             role="option"
                             aria-selected={highlight === idx}
-                            onMouseDown={(event) => event.preventDefault()}
-                            onClick={() => choose(opt)}
+                            onPointerDown={(event) => {
+                                event.preventDefault();
+                                event.stopPropagation();
+                                commitSelection(opt);
+                            }}
+                            onClick={(event) => {
+                                event.preventDefault();
+                                event.stopPropagation();
+                                commitSelection(opt);
+                            }}
                             onMouseEnter={() => setHighlight(idx)}
                             style={{
                                 padding: '8px 10px',

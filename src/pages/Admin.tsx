@@ -8,13 +8,16 @@ import {
     deleteAdminWeeklyUploadEvent,
     fetchAdminWeeklyUploadStatus,
     fetchEventOptions,
+    resetAdminWeeklyUpload,
     setAdminUserDefaultCourse,
     setAdminUserFlag,
     startAdminWeeklyUpload,
+    stopAdminWeeklyUpload,
     type AdminActivityRecord,
     type AdminUser,
     type EventOption,
     type WeeklyDeleteEventResponse,
+    type WeeklySqlRunSummary,
     type WeeklySqlPipelineOptions,
     type WeeklyUploadStatus
 } from '../api/backendAPI';
@@ -70,6 +73,8 @@ type WeeklySqlPipelineFormState = {
     noVolunteers: boolean;
     refreshMaterializedView: boolean;
     rebuildHistoricAfterRun: boolean;
+    resumeCurveFromAllHistory: boolean;
+    forceFreshStart: boolean;
 };
 
 type WeeklySqlOptionDefinition = {
@@ -209,7 +214,9 @@ const createDefaultWeeklySqlPipelineFormState = (): WeeklySqlPipelineFormState =
     leaveAthletePostgres: false,
     noVolunteers: false,
     refreshMaterializedView: true,
-    rebuildHistoricAfterRun: false
+    rebuildHistoricAfterRun: false,
+    resumeCurveFromAllHistory: false,
+    forceFreshStart: false
 });
 
 const WEEKLY_SQL_OPTION_DEFINITIONS: WeeklySqlOptionDefinition[] = [
@@ -278,6 +285,18 @@ const WEEKLY_SQL_OPTION_DEFINITIONS: WeeklySqlOptionDefinition[] = [
         label: 'Rebuild Historic After Run',
         description: 'Recomputes historic prior-best values once the weekly run has finished.',
         defaultValue: false
+    },
+    {
+        key: 'resumeCurveFromAllHistory',
+        label: 'Resume Curve At All-History',
+        description: 'Skips the earlier SQL pipeline, scraper, athlete copy, and Stage 1-3 curve rebuild, then resumes at Rebuild All-History Time Reference and finishes the downstream Postgres refresh steps.',
+        defaultValue: false
+    },
+    {
+        key: 'forceFreshStart',
+        label: 'Force Fresh Start',
+        description: 'Ignores prior same-date checkpoints and starts from the beginning even when a safe resume checkpoint exists.',
+        defaultValue: false
     }
 ];
 
@@ -297,7 +316,9 @@ const weeklySqlFormFromStatus = (options?: WeeklySqlPipelineOptions | null): Wee
         leaveAthletePostgres: options.leaveAthletePostgres ?? defaults.leaveAthletePostgres,
         noVolunteers: options.noVolunteers ?? defaults.noVolunteers,
         refreshMaterializedView: options.refreshMaterializedView ?? defaults.refreshMaterializedView,
-        rebuildHistoricAfterRun: options.rebuildHistoricAfterRun ?? defaults.rebuildHistoricAfterRun
+        rebuildHistoricAfterRun: options.rebuildHistoricAfterRun ?? defaults.rebuildHistoricAfterRun,
+        resumeCurveFromAllHistory: options.resumeCurveFromAllHistory ?? defaults.resumeCurveFromAllHistory,
+        forceFreshStart: options.forceFreshStart ?? defaults.forceFreshStart
     };
 };
 
@@ -308,7 +329,7 @@ const WEEKLY_SQL_PROGRESS_STAGES: WeeklyPipelineStageDefinition[] = [
         id: 'setup',
         label: 'Queue and SQL Setup',
         description: 'Queues the run, resolves dates, and runs the core SQL rebuild pipeline for the selected week.',
-        target: '0-5 min target',
+        target: '1-2 min target',
         startPatterns: ['weekly sql pipeline queued', 'started weekly sql pipeline run', 'run_simple_sql_loop switches', 'execution plan:'],
         completePatterns: ['[timing] process.full_pipeline.sql_pipeline:']
     },
@@ -316,7 +337,7 @@ const WEEKLY_SQL_PROGRESS_STAGES: WeeklyPipelineStageDefinition[] = [
         id: 'scraper',
         label: 'Scrape Event Results',
         description: 'Runs Athlete_runs across the selected events and updates raw weekly result capture.',
-        target: '3-5 min target',
+        target: '4-6 min target',
         startPatterns: ['running athlete_runs', 'processing [1/', 'loaded 28 events from events_override'],
         completePatterns: ['[timing] process.full_pipeline.scraper:']
     },
@@ -324,7 +345,7 @@ const WEEKLY_SQL_PROGRESS_STAGES: WeeklyPipelineStageDefinition[] = [
         id: 'athletes',
         label: 'Copy Athletes to Postgres',
         description: 'Pushes athlete updates to Postgres and refreshes current_age_estimate.',
-        target: '0-3 min target',
+        target: '0-1 min target',
         startPatterns: ['upserted athletes 1-500', 'completed copying 6039 athletes to postgres', 'updated current_age_estimate in postgres'],
         completePatterns: ['[timing] process.full_pipeline.copy_athletes:']
     },
@@ -332,7 +353,7 @@ const WEEKLY_SQL_PROGRESS_STAGES: WeeklyPipelineStageDefinition[] = [
         id: 'curve-stage-1',
         label: 'Curve Stage 1 Rebuild',
         description: 'Builds the rolling curve_run_metrics_history base across the recent rebuild window.',
-        target: '3-5 min target',
+        target: '2-4 min target',
         startPatterns: ['[curved_ranks] stage 1 rolling rebuild'],
         completePatterns: ['[curved_ranks][timing] pipeline.stage1:']
     },
@@ -340,7 +361,7 @@ const WEEKLY_SQL_PROGRESS_STAGES: WeeklyPipelineStageDefinition[] = [
         id: 'curve-stage-2-build',
         label: 'Curve Stage 2 Build',
         description: 'Builds the snapshot-date curve rank mapping rows for the selected weekly date.',
-        target: '2-4 min target',
+        target: '4-6 min target',
         startPatterns: ['[curved_ranks] stage 2+3 processing dates', '[curved_ranks] processing 1/1:'],
         completePatterns: ['[curved_ranks][timing] stage2.build (']
     },
@@ -348,7 +369,7 @@ const WEEKLY_SQL_PROGRESS_STAGES: WeeklyPipelineStageDefinition[] = [
         id: 'curve-stage-2-reference',
         label: 'Build Date Curve Time Reference',
         description: 'Rebuilds the date-scoped curve_time_ranks_reference used immediately before applying weekly curve ranks.',
-        target: '2-3 min target',
+        target: '6-9 min target',
         startPatterns: ['[curved_ranks] stage 2 rows for', '[curved_ranks] curve_time_ranks_reference build ('],
         completePatterns: ['[curved_ranks] stage 3: updating eventpositions']
     },
@@ -356,7 +377,7 @@ const WEEKLY_SQL_PROGRESS_STAGES: WeeklyPipelineStageDefinition[] = [
         id: 'curve-stage-3-apply',
         label: 'Curve Stage 3 Apply',
         description: 'Updates weekly eventpositions with the freshly calculated current and historic curve ranking values.',
-        target: '4-5 min target',
+        target: '0-2 min target',
         startPatterns: ['[curved_ranks] stage 3: updating eventpositions'],
         completePatterns: ['[curved_ranks][timing] stage3.apply (']
     },
@@ -364,7 +385,7 @@ const WEEKLY_SQL_PROGRESS_STAGES: WeeklyPipelineStageDefinition[] = [
         id: 'curve-all-history-reference',
         label: 'Rebuild All-History Time Reference',
         description: 'Rebuilds the all-history curve_time_ranks_reference used for the later athlete history steps.',
-        target: '0-3 min target',
+        target: '1-2 min target',
         startPatterns: ['[curved_ranks] rebuilding all-history curve_time_ranks_reference before weekly athlete history build', '[curved_ranks] curve_time_ranks_reference build (all) started'],
         completePatterns: ['[curved_ranks][timing] weekly.curve_time_ranks_reference.rebuild_all_history:']
     },
@@ -372,7 +393,7 @@ const WEEKLY_SQL_PROGRESS_STAGES: WeeklyPipelineStageDefinition[] = [
         id: 'curve-athlete-history',
         label: 'Build Athlete Curve History',
         description: 'Builds temporary current-rank tables and writes current and historic athlete best-rank history rows.',
-        target: '5-8 min target',
+        target: '8-10 min target',
         startPatterns: ['[curved_ranks] curve_athlete_best_rank_history build start', '[curved_ranks] tmp_curve_current_ranks build started', '[curved_ranks] curve_athlete_best_rank_history insert started'],
         completePatterns: ['[curved_ranks][timing] curve_athlete_best_rank_history.fast_build']
     },
@@ -380,7 +401,7 @@ const WEEKLY_SQL_PROGRESS_STAGES: WeeklyPipelineStageDefinition[] = [
         id: 'curve-history-sync',
         label: 'Sync Curve History Back to Results',
         description: 'Syncs the 3-week curve history back into eventpositions and copies that weekly backfill to Postgres.',
-        target: '0-3 min target',
+        target: '3-5 min target',
         startPatterns: ['[curved_ranks] prepared sync rows for', '[curved_ranks] updating 2026-', '[curved_ranks] copying 3-week backfill'],
         completePatterns: ['[timing] process.full_pipeline.curve_rank_updates_with_copy:']
     },
@@ -388,7 +409,7 @@ const WEEKLY_SQL_PROGRESS_STAGES: WeeklyPipelineStageDefinition[] = [
         id: 'verify-summary',
         label: 'Verify and Upload Summary',
         description: 'Verifies curve ranks in Postgres and uploads curve rank range summary rows.',
-        target: '0-3 min target',
+        target: '0-1 min target',
         startPatterns: ['[curve][verify]', '[curve_rank_range_summary]', 'curve_rank_range_summary rows uploaded'],
         completePatterns: ['[timing] process.full_pipeline.curve_rank_range_summary_upload:']
     },
@@ -396,7 +417,7 @@ const WEEKLY_SQL_PROGRESS_STAGES: WeeklyPipelineStageDefinition[] = [
         id: 'copy-results',
         label: 'Copy Weekly Results',
         description: 'Copies weekly eventpositions and parkrun_events rows into Postgres for the selected date window.',
-        target: '0-5 min target',
+        target: '0-1 min target',
         startPatterns: ['copy_table_to_postgres: selected', 'upserted rows 1 to 500 of', 'updated existing rows (updateonly) in parkrun_events'],
         completePatterns: ['[timing] process.full_pipeline.copy_parkrun_events:']
     },
@@ -412,7 +433,7 @@ const WEEKLY_SQL_PROGRESS_STAGES: WeeklyPipelineStageDefinition[] = [
         id: 'mv-refresh-foundation',
         label: 'Refresh Foundation Views',
         description: 'Refreshes the base views that support later curve reporting, including latest ranks and participant filters.',
-        target: '1-3 min target',
+        target: '4-6 min target',
         startPatterns: ['refreshing materialized view: mv_extend_runs', 'refreshing materialized view: mv_latest_curve_ranks'],
         completePatterns: ['refreshed mv_participant_run_filters in']
     },
@@ -420,7 +441,7 @@ const WEEKLY_SQL_PROGRESS_STAGES: WeeklyPipelineStageDefinition[] = [
         id: 'mv-refresh-current',
         label: 'Refresh Current Best-Curve Views',
         description: 'Refreshes the current all-time best-curve reporting views across age, event, sex, and overall groupings.',
-        target: '4-6 min target',
+        target: '5-7 min target',
         startPatterns: ['refreshing materialized view: mv_best_age_curve', 'refreshing materialized view: mv_best_age_event_curve'],
         completePatterns: ['refreshed mv_best_curve in']
     },
@@ -428,7 +449,7 @@ const WEEKLY_SQL_PROGRESS_STAGES: WeeklyPipelineStageDefinition[] = [
         id: 'mv-refresh-1y',
         label: 'Refresh 1-Year Best-Curve Views',
         description: 'Refreshes the one-year curve reporting views for the same age, event, sex, and overall rollups.',
-        target: '4-6 min target',
+        target: '1-2 min target',
         startPatterns: ['refreshing materialized view: mv_best_age_1y_curve', 'refreshing materialized view: mv_best_age_event_1y_curve'],
         completePatterns: ['refreshed mv_best_1y_curve in']
     },
@@ -444,7 +465,7 @@ const WEEKLY_SQL_PROGRESS_STAGES: WeeklyPipelineStageDefinition[] = [
         id: 'finish',
         label: 'Finish and Finalise',
         description: 'Writes total timing, marks the job complete, and closes the weekly SQL pipeline run.',
-        target: '0-3 min target',
+        target: '0-1 min target',
         startPatterns: ['[timing] process.total:', 'completed weekly sql pipeline run.'],
         completePatterns: ['completed weekly sql pipeline run.']
     }
@@ -500,6 +521,8 @@ const Admin: React.FC = () => {
     });
     const [weeklyLoading, setWeeklyLoading] = useState(false);
     const [weeklyStarting, setWeeklyStarting] = useState(false);
+    const [weeklyStopping, setWeeklyStopping] = useState(false);
+    const [weeklyResetting, setWeeklyResetting] = useState(false);
     const [weeklyError, setWeeklyError] = useState<string | null>(null);
     const [weeklyOptions, setWeeklyOptions] = useState({
         loopEvents: true,
@@ -593,6 +616,9 @@ const Admin: React.FC = () => {
         running: Boolean(raw?.running),
         status: String(raw?.status || 'idle'),
         runMode: String(raw?.runMode || 'standard'),
+        stopRequested: Boolean(raw?.stopRequested),
+        isStalled: Boolean(raw?.isStalled),
+        currentCourseElapsedSeconds: Number(raw?.currentCourseElapsedSeconds || 0),
         startedAt: raw?.startedAt || null,
         finishedAt: raw?.finishedAt || null,
         totalCourses: Number(raw?.totalCourses || 0),
@@ -603,6 +629,7 @@ const Admin: React.FC = () => {
         loadHistory: Boolean(raw?.loadHistory),
         parkrunName: String(raw?.parkrunName || ''),
         sqlPipelineOptions: raw?.sqlPipelineOptions || undefined,
+        previousSqlRun: (raw?.previousSqlRun || null) as WeeklySqlRunSummary | null,
         error: raw?.error || null,
         logs: Array.isArray(raw?.logs) ? raw.logs : []
     });
@@ -611,7 +638,11 @@ const Admin: React.FC = () => {
         if (!token) return;
         try {
             setWeeklyLoading(true);
-            const response = await fetchAdminWeeklyUploadStatus(token);
+            const eventCodeText = String(weeklySqlOptions.eventCode || '').trim();
+            const response = await fetchAdminWeeklyUploadStatus(token, {
+                startDate: String(weeklySqlOptions.startDate || '').trim() || undefined,
+                eventCode: eventCodeText ? Number(eventCodeText) : null,
+            });
             const normalized = normalizeWeeklyStatus(response);
             setWeeklyStatus(normalized);
             if (normalized.runMode === 'sqlPipeline' && normalized.sqlPipelineOptions) {
@@ -677,7 +708,9 @@ const Admin: React.FC = () => {
                     leaveAthletePostgres: weeklySqlOptions.leaveAthletePostgres,
                     noVolunteers: weeklySqlOptions.noVolunteers,
                     refreshMaterializedView: weeklySqlOptions.refreshMaterializedView,
-                    rebuildHistoricAfterRun: weeklySqlOptions.rebuildHistoricAfterRun
+                    rebuildHistoricAfterRun: weeklySqlOptions.rebuildHistoricAfterRun,
+                    resumeCurveFromAllHistory: weeklySqlOptions.resumeCurveFromAllHistory,
+                    forceFreshStart: weeklySqlOptions.forceFreshStart
                 }
             });
             await loadWeeklyStatus();
@@ -688,12 +721,44 @@ const Admin: React.FC = () => {
         }
     };
 
+    const handleStopWeeklyUpload = async () => {
+        if (!token || weeklyStopping || !weeklyStatus.running || weeklyStatus.runMode !== 'standard') return;
+
+        try {
+            setWeeklyStopping(true);
+            setWeeklyError(null);
+            await stopAdminWeeklyUpload(token);
+            await loadWeeklyStatus();
+        } catch (err: any) {
+            setWeeklyError(err?.response?.data?.error || err?.message || 'Unable to stop weekly upload.');
+        } finally {
+            setWeeklyStopping(false);
+        }
+    };
+
+    const handleResetWeeklyRunState = async () => {
+        if (!token || weeklyResetting || !weeklyStatus.running || weeklyStatus.runMode !== 'sqlPipeline') return;
+
+        try {
+            setWeeklyResetting(true);
+            setWeeklyError(null);
+            await resetAdminWeeklyUpload(token);
+            await loadWeeklyStatus();
+        } catch (err: any) {
+            setWeeklyError(err?.response?.data?.error || err?.message || 'Unable to reset weekly SQL pipeline state.');
+        } finally {
+            setWeeklyResetting(false);
+        }
+    };
+
     const selectedDeleteCourse = useMemo(() => {
         return courseOptions.find((option) => option.eventCode === weeklyDeleteCourseCode) || null;
     }, [courseOptions, weeklyDeleteCourseCode]);
 
     const weeklyPipelineProgress = useMemo(() => {
         const logs = Array.isArray(weeklyStatus.logs) ? weeklyStatus.logs : [];
+        const previousCompletedStageIds = new Set(Array.isArray(weeklyStatus.previousSqlRun?.completedStageIds) ? weeklyStatus.previousSqlRun?.completedStageIds : []);
+        const previousStageCompletedAt = weeklyStatus.previousSqlRun?.stageCompletedAt || {};
         const isSqlPipeline = weeklyStatus.runMode === 'sqlPipeline' || logs.some((entry) => String(entry?.message || '').toLowerCase().includes('weekly sql pipeline'));
         const stages = WEEKLY_SQL_PROGRESS_STAGES.map((stage) => {
             const startedEntry = findWeeklyLogEntry(logs, stage.startPatterns);
@@ -703,7 +768,9 @@ const Admin: React.FC = () => {
                 ...stage,
                 startedEntry,
                 completedEntry,
-                latestEntry
+                latestEntry,
+                previousCompletedAt: String(previousStageCompletedAt[stage.id] || ''),
+                wasPreviouslyComplete: previousCompletedStageIds.has(stage.id)
             };
         });
 
@@ -728,7 +795,7 @@ const Admin: React.FC = () => {
                 isSqlPipeline
             };
         });
-    }, [weeklyStatus.logs, weeklyStatus.runMode, weeklyStatus.running, weeklyStatus.status]);
+    }, [weeklyStatus.logs, weeklyStatus.previousSqlRun, weeklyStatus.runMode, weeklyStatus.running, weeklyStatus.status]);
 
     const openWeeklyDeleteConfirm = () => {
         const startDate = String(weeklySqlOptions.startDate || '').trim();
@@ -899,7 +966,7 @@ const Admin: React.FC = () => {
             window.clearInterval(timer);
         };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [canAccess, section]);
+    }, [canAccess, section, weeklySqlOptions.startDate, weeklySqlOptions.eventCode]);
 
     useEffect(() => {
         if (section !== 'weekly-upload') return;
@@ -1564,10 +1631,48 @@ const Admin: React.FC = () => {
                                                 {weeklyStatus.running ? 'Running...' : (weeklyStarting ? 'Starting...' : 'Run Weekly SQL Pipeline')}
                                             </button>
 
+                                            <button
+                                                type="button"
+                                                className="admin-weekly-stop"
+                                                onClick={handleStopWeeklyUpload}
+                                                disabled={!weeklyStatus.running || weeklyStatus.runMode !== 'standard' || weeklyStopping || Boolean(weeklyStatus.stopRequested)}
+                                            >
+                                                {weeklyStatus.stopRequested ? 'Stopping...' : (weeklyStopping ? 'Stopping...' : 'Stop Weekly Upload')}
+                                            </button>
+
+                                            <button
+                                                type="button"
+                                                className="admin-weekly-reset"
+                                                onClick={handleResetWeeklyRunState}
+                                                disabled={!weeklyStatus.running || weeklyStatus.runMode !== 'sqlPipeline' || weeklyResetting}
+                                            >
+                                                {weeklyResetting ? 'Resetting...' : 'Reset SQL Pipeline State'}
+                                            </button>
+
                                             <button type="button" className="admin-weekly-refresh" onClick={loadWeeklyStatus} disabled={weeklyLoading}>
                                                 {weeklyLoading ? 'Refreshing...' : 'Refresh'}
                                             </button>
                                         </div>
+
+                                        <div className="admin-weekly-manual-note">
+                                            Weekly Upload does not auto-start the SQL pipeline. Review the upload log first, then run the pipeline manually when you are satisfied.
+                                        </div>
+                                        {!weeklyStatus.running && weeklyStatus.previousSqlRun && weeklyStatus.previousSqlRun.startDate === weeklySqlOptions.startDate && (
+                                            <div className="admin-weekly-manual-note admin-weekly-history-note">
+                                                Previous SQL run found for this date{weeklyStatus.previousSqlRun.eventCode != null ? ` and event ${weeklyStatus.previousSqlRun.eventCode}` : ''}. Completed stages are shown in light blue below.
+                                                {weeklyStatus.previousSqlRun.autoResumeMode === 'allHistory' && !weeklySqlOptions.forceFreshStart && ' A safe resume checkpoint is available from Rebuild All-History Time Reference.'}
+                                            </div>
+                                        )}
+                                        {weeklyStatus.running && weeklyStatus.runMode === 'sqlPipeline' && (
+                                            <div className="admin-weekly-manual-note">
+                                                Reset SQL Pipeline State releases the Admin lockout and ignores stale worker logs. It does not kill Python in the middle of an active SQL statement.
+                                            </div>
+                                        )}
+                                        {weeklyStatus.running && weeklyStatus.isStalled && weeklyStatus.runMode === 'sqlPipeline' && (
+                                            <div className="admin-weekly-manual-note admin-weekly-stalled-note">
+                                                Current SQL step has been running for about {Math.max(1, Math.round((weeklyStatus.currentCourseElapsedSeconds || 0) / 60))} minute(s). Use reset only if you are treating this run as hung.
+                                            </div>
+                                        )}
                                     </div>
 
                                     <div className="admin-weekly-danger-panel">
@@ -1690,9 +1795,11 @@ const Admin: React.FC = () => {
                                             <span>Targets are approximate guide windows so progress is easier to read at a glance.</span>
                                         </div>
                                         <div className="admin-weekly-progress-list">
-                                            {weeklyPipelineProgress.map((stage) => (
-                                                <div key={stage.id} className={`admin-weekly-progress-step ${stage.status}`}>
-                                                    <div className={`admin-weekly-progress-light ${stage.status}`} aria-hidden="true" />
+                                            {weeklyPipelineProgress.map((stage) => {
+                                                const progressClass = stage.status === 'pending' && stage.wasPreviouslyComplete ? 'previous' : stage.status;
+                                                return (
+                                                <div key={stage.id} className={`admin-weekly-progress-step ${stage.status} ${stage.wasPreviouslyComplete && stage.status === 'pending' ? 'previous' : ''}`}>
+                                                    <div className={`admin-weekly-progress-light ${progressClass}`} aria-hidden="true" />
                                                     <div className="admin-weekly-progress-body">
                                                         <div className="admin-weekly-progress-title-row">
                                                             <strong>{stage.label}</strong>
@@ -1701,14 +1808,14 @@ const Admin: React.FC = () => {
                                                         <div className="admin-weekly-progress-description">{stage.description}</div>
                                                         <div className="admin-weekly-progress-meta">
                                                             {stage.startedEntry ? <span>Started: {formatTimeWithSeconds(stage.startedEntry.at)}</span> : <span>Started: waiting</span>}
-                                                            {stage.completedEntry ? <span>Done: {formatTimeWithSeconds(stage.completedEntry.at)}</span> : <span>Done: pending</span>}
+                                                            {stage.completedEntry ? <span>Done: {formatTimeWithSeconds(stage.completedEntry.at)}</span> : stage.previousCompletedAt ? <span>Prior Done: {formatTimeWithSeconds(stage.previousCompletedAt)}</span> : <span>Done: pending</span>}
                                                         </div>
                                                         {stage.latestEntry && (
                                                             <div className="admin-weekly-progress-message">{stage.latestEntry.message}</div>
                                                         )}
                                                     </div>
                                                 </div>
-                                            ))}
+                                            )})}
                                         </div>
                                     </div>
 

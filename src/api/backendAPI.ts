@@ -98,12 +98,32 @@ export type WeeklySqlPipelineOptions = {
     noVolunteers?: boolean;
     refreshMaterializedView?: boolean;
     rebuildHistoricAfterRun?: boolean;
+    resumeCurveFromAllHistory?: boolean;
+    forceFreshStart?: boolean;
+};
+
+export type WeeklySqlRunSummary = {
+    scopeKey: string;
+    startDate: string;
+    eventCode?: number | null;
+    status?: string;
+    startedAt?: string | null;
+    finishedAt?: string | null;
+    error?: string | null;
+    updatedAt?: string | null;
+    completedStageIds?: string[];
+    stageCompletedAt?: Record<string, string>;
+    lastMessage?: string;
+    autoResumeMode?: string | null;
 };
 
 export type WeeklyUploadStatus = {
     running: boolean;
     status: string;
     runMode?: string;
+    stopRequested?: boolean;
+    isStalled?: boolean;
+    currentCourseElapsedSeconds?: number;
     startedAt?: string | null;
     finishedAt?: string | null;
     totalCourses: number;
@@ -114,6 +134,7 @@ export type WeeklyUploadStatus = {
     loadHistory?: boolean;
     parkrunName?: string;
     sqlPipelineOptions?: WeeklySqlPipelineOptions;
+    previousSqlRun?: WeeklySqlRunSummary | null;
     error?: string | null;
     logs: WeeklyUploadLogEntry[];
 };
@@ -620,8 +641,19 @@ export const fetchAdminActivity = async (token: string, limit = 300, since?: str
     return response.data || { activity: [], limit };
 };
 
-export const fetchAdminWeeklyUploadStatus = async (token: string): Promise<WeeklyUploadStatus> => {
-    const response = await axios.get(`${WEEKLY_UPLOAD_API_BASE_URL}/api/admin/weekly-upload/status`, {
+export const fetchAdminWeeklyUploadStatus = async (
+    token: string,
+    scope?: { startDate?: string; eventCode?: number | string | null }
+): Promise<WeeklyUploadStatus> => {
+    const params = new URLSearchParams();
+    if (scope?.startDate) {
+        params.set('startDate', String(scope.startDate));
+    }
+    if (scope?.eventCode != null && String(scope.eventCode).trim() !== '') {
+        params.set('eventCode', String(scope.eventCode));
+    }
+    const query = params.toString();
+    const response = await axios.get(`${WEEKLY_UPLOAD_API_BASE_URL}/api/admin/weekly-upload/status${query ? `?${query}` : ''}`, {
         headers: {
             Authorization: `Bearer ${token}`
         }
@@ -640,6 +672,28 @@ export const startAdminWeeklyUpload = async (
     payload?: { loopEvents?: boolean; loadHistory?: boolean; parkrunName?: string; runMode?: string; sqlPipelineOptions?: WeeklySqlPipelineOptions }
 ): Promise<{ ok?: boolean; state?: WeeklyUploadStatus }> => {
     const response = await axios.post(`${WEEKLY_UPLOAD_API_BASE_URL}/api/admin/weekly-upload/start`, payload || {}, {
+        headers: {
+            Authorization: `Bearer ${token}`
+        }
+    });
+    return response.data || { ok: true };
+};
+
+export const stopAdminWeeklyUpload = async (
+    token: string
+): Promise<{ ok?: boolean; state?: WeeklyUploadStatus }> => {
+    const response = await axios.post(`${WEEKLY_UPLOAD_API_BASE_URL}/api/admin/weekly-upload/stop`, {}, {
+        headers: {
+            Authorization: `Bearer ${token}`
+        }
+    });
+    return response.data || { ok: true };
+};
+
+export const resetAdminWeeklyUpload = async (
+    token: string
+): Promise<{ ok?: boolean; state?: WeeklyUploadStatus }> => {
+    const response = await axios.post(`${WEEKLY_UPLOAD_API_BASE_URL}/api/admin/weekly-upload/reset`, {}, {
         headers: {
             Authorization: `Bearer ${token}`
         }

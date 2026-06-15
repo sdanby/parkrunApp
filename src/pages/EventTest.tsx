@@ -1,12 +1,14 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   API_BASE_URL,
   fetchEventByNumber,
   fetchEventInfo,
+  fetchEventOptions,
   fetchEventPositions,
   fetchEventTimeAdjustment
 } from '../api/backendAPI';
+import EventSearch, { type EventOption } from '../components/EventSearch';
 import { requestUnifiedHelp } from './UnifiedHelp';
 import {
   EventLayoutElement,
@@ -181,6 +183,9 @@ const EventTest: React.FC = () => {
   const [eventNumber, setEventNumber] = useState<number | null>(requestedEventNumber ? Number(requestedEventNumber) : null);
   const [eventDate, setEventDate] = useState<string>(requestedDate);
   const [hardnessDisplay, setHardnessDisplay] = useState<string>('--');
+  const [eventOptions, setEventOptions] = useState<EventOption[]>([]);
+  const [courseEditMode, setCourseEditMode] = useState(false);
+  const courseHoverTimerRef = useRef<number | null>(null);
 
   const [viewMode, setViewMode] = useState<EventViewMode>('basic');
   const [courseAdj, setCourseAdj] = useState<CourseAdjOption>('none');
@@ -199,6 +204,25 @@ const EventTest: React.FC = () => {
     : 2000;
   const delayedHeaderHelp = useDelayedUnifiedHelp(tableHeaderHelpEnabled, tableHeaderHelpDelayMs);
   const headerAnchorHeight = '3.0cm';
+
+  const clearCourseHoverTimer = () => {
+    if (courseHoverTimerRef.current !== null) {
+      window.clearTimeout(courseHoverTimerRef.current);
+      courseHoverTimerRef.current = null;
+    }
+  };
+
+  const startCourseHoverTimer = () => {
+    if (courseEditMode || !String(eventName || '').trim()) {
+      return;
+    }
+
+    clearCourseHoverTimer();
+    courseHoverTimerRef.current = window.setTimeout(() => {
+      setCourseEditMode(true);
+      courseHoverTimerRef.current = null;
+    }, 2000);
+  };
 
   useEffect(() => {
     try {
@@ -250,6 +274,29 @@ const EventTest: React.FC = () => {
     } catch (_err) {
     }
   }, [uiStateHydrated, location.search, viewMode, courseAdj, otherAdj, sortKey, sortDir]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadEventOptions = async () => {
+      try {
+        const loaded = await fetchEventOptions();
+        if (!cancelled) {
+          setEventOptions(Array.isArray(loaded) ? loaded : []);
+        }
+      } catch {
+        if (!cancelled) {
+          setEventOptions([]);
+        }
+      }
+    };
+
+    void loadEventOptions();
+    return () => {
+      cancelled = true;
+      clearCourseHoverTimer();
+    };
+  }, []);
 
   const handleCourseAdjChange = (value: CourseAdjOption) => {
     const nextAdjustments = sanitizeAdjustmentSelection(value, otherAdj, 'course');
@@ -462,6 +509,7 @@ const EventTest: React.FC = () => {
     let cancelled = false;
 
     const load = async () => {
+      setNavLoading(false);
       setLoading(true);
       setError(null);
 
@@ -556,7 +604,10 @@ const EventTest: React.FC = () => {
           setError(String(err?.message || 'Failed to load Event_test data'));
         }
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+          setNavLoading(false);
+        }
       }
     };
 
@@ -667,6 +718,92 @@ const EventTest: React.FC = () => {
     }
 
     navigate(to);
+  };
+
+  const handleCourseSelect = async (selectedEventCode: string, selectedEventName: string) => {
+    clearCourseHoverTimer();
+    const currentDisplayedDate = String(eventDate || requestedDate || '').trim();
+
+    if (!selectedEventCode && !selectedEventName) {
+      return;
+    }
+
+    setError(null);
+    setNavLoading(true);
+    setRows([]);
+    setHardnessDisplay('--');
+    setEventNumber(null);
+    setEventDate(currentDisplayedDate);
+    if (selectedEventCode) {
+      setEventCode(selectedEventCode);
+    }
+    if (selectedEventName) {
+      setEventName(selectedEventName);
+    }
+
+    let targetDate = currentDisplayedDate;
+    let targetEventNumber: number | null = null;
+
+    if (selectedEventCode && currentDisplayedDate) {
+      try {
+        const info = await fetchEventInfo(selectedEventCode, currentDisplayedDate);
+        const parsedNumber = Number(info?.event_number || 0);
+        if (Number.isFinite(parsedNumber) && parsedNumber > 0) {
+          targetEventNumber = parsedNumber;
+        }
+      } catch (_err) {
+      }
+    }
+
+    if (selectedEventCode && !targetEventNumber) {
+      const latestDate = await resolveLatestDate(selectedEventCode);
+      if (latestDate) {
+        targetDate = latestDate;
+        try {
+          const latestInfo = await fetchEventInfo(selectedEventCode, latestDate);
+          const parsedLatestNumber = Number(latestInfo?.event_number || 0);
+          if (Number.isFinite(parsedLatestNumber) && parsedLatestNumber > 0) {
+            targetEventNumber = parsedLatestNumber;
+          }
+        } catch (_err) {
+        }
+      }
+    }
+
+    setEventNumber(targetEventNumber);
+    setEventDate(targetDate);
+
+    const params = new URLSearchParams();
+    if (selectedEventCode) {
+      params.set('event_code', selectedEventCode);
+    }
+    if (selectedEventName) {
+      params.set('event_name', selectedEventName);
+    }
+    if (targetDate) {
+      params.set('date', targetDate);
+    }
+    if (targetEventNumber) {
+      params.set('event_number', String(targetEventNumber));
+    }
+
+    navigate(`/races?${params.toString()}`, {
+      replace: true,
+      state: {
+        ...(location.state as Record<string, unknown> | null ?? {}),
+        from: 'races',
+        eventCode: selectedEventCode || undefined,
+        eventName: selectedEventName || undefined,
+        returnTo: {
+          pathname: '/races',
+          search: location.search || ''
+        }
+      }
+    });
+
+    window.setTimeout(() => {
+      setCourseEditMode(false);
+    }, 0);
   };
 
   const handleConfiguredInteraction = (interaction?: ReturnType<typeof getEventElementInteraction>) => {
@@ -1007,20 +1144,37 @@ const EventTest: React.FC = () => {
                 paddingLeft: 0,
                 margin: 0,
                 transform: 'none',
-                fontWeight: 700
+                fontWeight: 700,
+                pointerEvents: 'auto',
+                zIndex: courseEditMode ? 320 : undefined
               }}
             >
               {courseInteraction?.enabled ? (
-                <button
-                  type="button"
-                  className="races-athlete-button"
-                  onClick={handleCourseInteraction}
-                  title={`Open course: ${String(eventName || '').trim() || 'course'}`}
-                  aria-label={`Open course ${String(eventName || '').trim() || ''}`}
-                  style={{ fontSize: 'inherit', fontWeight: 700, padding: 0 }}
-                >
-                  {eventName || <em>none</em>}
-                </button>
+                courseEditMode ? (
+                  <EventSearch
+                    inputId="event-test-course-search-input"
+                    options={eventOptions}
+                    initialQuery={String(eventName || '')}
+                    placeholder="search for course"
+                    onSelect={handleCourseSelect}
+                    autoFocus={true}
+                    onInputBlur={() => setCourseEditMode(false)}
+                    onEscape={() => setCourseEditMode(false)}
+                  />
+                ) : (
+                  <button
+                    type="button"
+                    className="races-athlete-button"
+                    onClick={handleCourseInteraction}
+                    onMouseEnter={startCourseHoverTimer}
+                    onMouseLeave={clearCourseHoverTimer}
+                    title={`Open course: ${String(eventName || '').trim() || 'course'}. Hover for 2 seconds to edit.`}
+                    aria-label={`Open course ${String(eventName || '').trim() || ''}. Hover for 2 seconds to edit.`}
+                    style={{ fontSize: 'inherit', fontWeight: 700, padding: 0 }}
+                  >
+                    {eventName || <em>none</em>}
+                  </button>
+                )
               ) : (
                 eventName || <em>none</em>
               )}

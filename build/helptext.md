@@ -228,7 +228,7 @@ A Combined Hardness of **0.0%** means:
 Higher values indicate tougher conditions or inherently harder courses.
 
 ---
-<a id="section-event-adjustment"></a>
+
 #### Event Adjustment (Adjusted Time)
 
 Combined Hardness can be applied directly to a participant’s time to produce an **Event Adjusted Time**.
@@ -471,60 +471,14 @@ The available aggregation methods are:
 - [Growth](#agg-growth)
 
 <a id="term-all-events"></a>
-<a id="period-all-events"></a>
 ### All Events
 
-Loads the **entire history** of each course.  
-Useful for:
-
-- long‑term averages  
-- historic highs and lows  
-- full‑range trend analysis
+Uses the full recorded history for the selected course or metric. Choose it when you want maximum history rather than a recent-window view.
 
 <a id="term-all-time-adjustments"></a>
 ### All Time Adjustments
 
-All Time Adjustments is a specialised **Table View** that displays multiple adjusted‑time variants side by side.  
-It is mainly used on **Event** and **Participant** pages when you want to compare how each adjustment method affects the resulting time.
-
-This view includes the following columns:
-
-- **Seasonal Adjustment**  
-  [Seas Adj](#term-seasonal-hardness)  
-  Shows the time after applying only the **Seasonal Hardness** correction.
-
-- **Event Adjustment**  
-  [Ev Adj](#term-ev-adj)  
-  Shows the time after applying the **full event‑level hardness** correction.
-
-- **Age Adjustment**  
-  [Age Adj](#term-age-adj)  
-  Shows the time normalised for participant age.
-
-- **Sex Adjustment**  
-  [Sex Adj](#term-sex-adj)  
-  Shows the time normalised for participant sex.
-
-- **Age + Event Adjustment**  
-  [AE Adj](#term-ae-adj)  
-  Applies both **age** and **event hardness** adjustments.
-
-- **Event + Sex Adjustment**  
-  [ES Adj](#term-es-adj)  
-  Applies **sex** and **event hardness** adjustments.
-
-- **Age + Sex Adjustment**  
-  [AS Adj](#term-as-adj)  
-  Applies both **age** and **sex** adjustments.
-
-- **Age + Sex + Event Adjustment**  
-  [AES Adj](#term-aes-adj)  
-  The strongest combined adjustment, applying **age**, **sex**, and **event hardness** together.
-
-These columns allow you to see, at a glance, how each adjustment method changes the underlying time and how different correction factors interact.
-
-All Time Adjustments is selected via the [Table View](#control-table-view) control.
-
+A table view that exposes multiple adjusted-time variants side by side. It is mainly used on event and participant-style pages when you want to inspect how each adjustment changes the result.
 
 <a id="term-annual"></a>
 ### Annual
@@ -584,48 +538,7 @@ The available options are:
 <a id="control-cell-agg"></a>
 ### Cell Agg
 
-Cell Agg controls **how each individual cell** in the [Event Analysis](#page-event-analysis) table is formed when a grouped view contains **multiple underlying events**.  
-It determines how those multiple values are combined into a single displayed number.
-
-Cell Agg works together with:
-
-- [Period](#control-period) — which may group events into years, quarters or months  
-- [Agg](#control-agg) — which summarises across courses or across periods  
-- [Type](#control-type) — which determines the metric being analysed
-
-Use Cell Agg when you want to switch between **single‑value** behaviour and **aggregated** behaviour inside each cell.
-
-**When Cell Agg Applies**
-
-Cell Agg only affects the table when the selected **Period** groups multiple events into a single cell, such as:
-
-- [Annual](#term-annual)  
-- [Qtr Seasonality](#term-quarter-seasonality)  
-- [Mnth Seasonality](#term-month-seasonality)
-
-For non‑grouped periods (e.g., Recent Events, Last 50 Events), each cell already represents a single event, so Cell Agg defaults to **single value**.
-
-**Available Cell Aggregation Methods**
-
-Cell Agg supports the following methods:
-
-- **Single value** (default when only one event is present)  
-- **Average**  
-- **Maximum**  
-- **Minimum**
-
-These methods determine how the underlying events inside each grouped cell are summarised.
-
-**Examples**
-
-**Annual + Average (Cell Agg)**  
-Shows the **average participants per year** for each course.
-
-**Qtr Seasonality + Maximum (Cell Agg)**  
-Shows the **highest PB count** recorded in each quarter.
-
-**Mnth Seasonality + Minimum (Cell Agg)**  
-Shows the **lowest Combined Hardness** recorded in each month.
+Cell Agg controls how each matrix cell value is formed when a grouped view contains multiple underlying events. Use it when you want to switch between single-value and averaged cell behaviour.
 
 <a id="term-club"></a>
 ### Club
@@ -656,26 +569,9 @@ For a full explanation, see the [Course Hardness Model](#section-course-hardness
 
 
 <a id="term-course"></a>
-<a id="control-course"></a>
-### Course (Selection Control)
+### Course
 
 The parkrun location or route, distinct from an individual dated event. Many tables let you drill from a course label into deeper course-level history.
-
-The Course control allows you to select which course is being displayed on the current page.  
-It appears on pages such as the Event page and Event Analysis.
-
-The course label serves two functions:
-
-1. **Navigation to the Course page**  
-   Clicking the course name takes you directly to the [Course](#page-course) page, where you can view full course history, statistics and related links.
-
-2. **Manual course selection**  
-   Holding the cursor over the course name for more than two seconds opens a course‑selection box.  
-   You can type the name of any course, and matching courses will appear in the list.  
-   Selecting a course loads that course **for the same event date currently being displayed**.
-
-A course represents the **physical location** where the event takes place.  
-Courses may change their route or layout during the year, and these changes are reflected in the event data shown throughout the app.
 
 <a id="term-course-number"></a>
 ### Course #
@@ -683,27 +579,9 @@ Courses may change their route or layout during the year, and these changes are 
 Short label used where a course-related event count or appearance count needs to fit in a narrow column. It usually refers to the number of times something happened at that course.
 
 <a id="control-course-adj"></a>
-### Course Adj
+### Course adj
 
-Course Adj controls whether the selected metric is shown using **raw**, **seasonally adjusted**, or **fully event‑adjusted** values.
-
-It determines how much of the **Course Hardness Model** is applied:
-
-- **Raw**  
-  No adjustment. Shows the recorded value exactly as it appears in the results.
-
-- **Seasonal Adjustment**  
-  Applies only the [Seasonal Hardness](#term-seasonal-hardness) correction.  
-  This accounts for typical seasonal effects such as weather and ground conditions.
-
-- **Full Event Adjustment**  
-  Applies the complete [Event Hardness](#term-event-hardness) correction, which includes both seasonal and cross‑course comparisons.  
-  This produces the most accurate estimate of how the event compares to others on the same day.
-
-Use Course Adj when you want to compare events **fairly across different course conditions**, especially when analysing times, PBs, or participant performance.
-
-Course Adj affects the values shown in the table and in the [All Time Adjustments](#term-all-time-adjustments) view.
-
+Course Adj controls whether course-condition factors are applied to the displayed results. Use no adjustment when you want the raw recorded values, seasonal adjustment when you want to allow for broad seasonal effects, and full event adjustment when you want the strongest correction for the exact event conditions on that date.
 
 <a id="term-current-club"></a>
 ### Current Club
@@ -755,50 +633,23 @@ Event Hardness compares the course to other courses by analysing tourists and lo
 For a full explanation, see the [Course Hardness Model](#section-course-hardness).
 
 
+
 <a id="term-event-number"></a>
 <a id="control-event-number"></a>
 ### Event Number (Event #, Event # 1Y)
 
-Event Number is the **sequential count of how many times a course has held an event**.  
-For example, if a course has been operating for several years, its Event Number will be higher than a newly launched course.
+Event Number is the **sequential count of how many times a course has held an event**. For example, if a course has been operating for several years, its Event Number will be higher than a newly launched course.
 
-It is an **event‑level value**, meaning it describes the event itself rather than the participants.  
-It does not depend on who took part — it simply reflects the position of that event in the course’s history.
+It is an **event‑level value**, meaning it describes the event itself rather than the participants. It does not depend on who took part — it simply reflects the position of that event in the course’s history.
 
 The one‑year variant (**Event # 1Y**) applies the same idea but within the last‑year window used on certain tables.
 
 Event Number is selected via the **Type** control on the [Event Analysis](#page-event-analysis) page.
 
-You can move to the **previous or next event** for the same course using the  
-[Event Step Controls](#event-step-controls), which provide quick navigation through the event sequence on the [Event page](#page-single-event)
-
 <a id="term-event-total"></a>
 ### Event Total
 
 The full participant total for a single event or summary row. It is typically used as a headline count that sets the scale for other metrics in the same view.
-
-<a id="section-expand-reduce"></a>
-### Expand and Reduce (Graph Size Controls)
-
-Some charts in the app, including the **Event Statistics Comparison** plot, include two additional controls:
-
-- **Expand**  
-  <img src="/help-images/expandButton.png" alt="Expand Button" height="40" />
-
-- **Reduce**  
-  <img src="/help-images/reduceButton.png" alt="Reduce Button" height="40" />
-
-These buttons control the **display size** of the chart.
-
-**Expand**
-Enlarges the chart to fill more of the screen.  
-This is especially useful on **laptop and desktop** devices where there is more horizontal space and you want to see more detail or compare multiple lines clearly.
-
-**Reduce**
-Shrinks the chart back to its **standard (smallest) size**.  
-Use this when you want to return to the normal layout or when working on smaller screens.
-
-These controls do not change the underlying data — they simply adjust the **visual space** available for the chart.
 
 <a id="control-freq-course"></a>
 ### Freq Course
@@ -830,30 +681,9 @@ Growth is only calculated when the Period contains **multiple events** and is me
 Use this to understand **direction of change** rather than level.
 
 <a id="term-hardness-adj"></a>
-<a id="control-hardness-adj"></a>
-### Hardness Adj
+### Hardness adj
 
-Hardness Adj provides the **hardness‑based adjustment context** for the selected event.  
-It shows the **Combined Hardness** value that applies to that event under the current adjustment settings.
-
-Hardness Adj is **explanatory**, not a standalone metric or leaderboard target.  
-It helps you interpret adjusted times by showing how tough the course was on that day.
-
-The displayed hardness score is derived from the  
-[Combined Hardness](#term-combined-hardness) model, which includes:
-
-- **Seasonal Hardness** — how the course compared to its own recent history  
-- **Event Hardness** — how the course compared to other courses on the same day  
-
-Together, these form the **Combined Hardness** value used in:
-
-- [Course Adj](#control-course-adj)  
-- [Time Adj](#control-time-adj)  
-- [All Time Adjustments](#term-all-time-adjustments)
-
-Use Hardness Adj as context when comparing **event‑adjusted**, **age‑adjusted**, or **age‑sex‑adjusted** times across different courses or dates.  
-It explains *why* an adjusted time is higher or lower, but it does not replace the raw time itself.
-
+Refers to hardness-based adjustment context used when times or comparisons are normalised for course toughness. It is usually explanatory rather than a separate leaderboard target.
 
 <a id="control-hardness-adj"></a>
 ### Hardness Adj
@@ -865,11 +695,10 @@ Hardness Adj shows the combined hardness context for the selected event and adju
 
 Historic ranking for a participant or value in the selected comparison framework. It contrasts with current rank to show how standing changes depending on the reference period.
 
-<a id="period-last-50"></a>
+<a id="term-last-50-events"></a>
 ### Last 50 Events
 
-Loads the last 50 events for each course.  
-Useful when you want a **longer but still modern** view of course behaviour.
+Limits the analysis window to the latest 50 events. Use it when recent form matters more than full history.
 
 <a id="term-last-volunt"></a>
 ### Last Volunt
@@ -929,28 +758,9 @@ Monthly grouping of seasonal patterns. It helps show whether a course behaves di
 Sort order or ranking order label used in compact tables. The one-year form applies the same ordering idea within the last-year window.
 
 <a id="control-other-adj"></a>
-### Other Adj
+### Other adj
 
-Other Adj controls whether **participant‑level adjustments** are applied to the selected metric.  
-These adjustments normalise differences between participants before the values are summarised.
-
-The available options are:
-
-- **No Adjustment**  
-  Shows raw participant values with no normalisation.
-
-- **Age Adjustment**  
-  Applies the [Age Adj](#term-age-adj) correction, normalising performances for age differences.
-
-- **Sex Adjustment**  
-  Applies the [Sex Adj](#term-sex-adj) correction, normalising performances for sex‑based physiological differences.
-
-- **Age‑and‑Sex Adjustment**  
-  Applies both [Age Adj](#term-age-adj) and [Sex Adj](#term-sex-adj) together.  
-  This produces the strongest participant‑level normalisation without applying course‑condition adjustments.
-
-Other Adj is used when you want to compare participants **fairly across age groups and sexes**, or when analysing adjusted times in the [All Time Adjustments](#term-all-time-adjustments) table.
-
+Other Adj controls the participant-level adjustment type applied in the table. Use no adjustment for the baseline view, age adjustment to normalise for age differences, sex adjustment to normalise for sex differences, and age-and-sex adjustment when you want both factors applied together.
 
 <a id="control-list-select"></a>
 ### List Selection
@@ -991,139 +801,7 @@ Selected via the Type control on the [Event Analysis](#page-event-analysis) page
 <a id="control-period"></a>
 ### Period
 
-Period controls **how much data is loaded** into the [Event Analysis](#page-event-analysis) page and **how that data is grouped** for trend analysis.  
-It affects both the values shown in the table and how the [Agg](#control-agg) calculations are applied.
-
-There are **two types** of Period options:
-
-1. **Data‑loading periods** — control how many events are included  
-2. **Trend‑analysis periods** — group all available data into annual, quarterly or monthly summaries
-
-Period interacts with:
-
-- [Type](#control-type) — what metric is being analysed  
-- [Calc](#control-calc) — how the metric is expressed  
-- [Agg](#control-agg) — how values are summarised  
-- [Cell Agg](#control-cell-agg) — how grouped periods are represented
-
----
-
-**1. Data‑Loading Periods** 
-These options determine **how many events** are included in the analysis.  
-More data means richer trends but slower‑moving averages.
-
-The options are:
-
-- [Recent Events](#period-recent-events)  
-- [Last 50 Events](#period-last-50)  
-- [Since Lockdown](#period-since-lockdown)  
-- [All Events](#period-all-events)
-
----
-
-**2. Trend‑Analysis Periods** 
-
-These options use **all available data**, but instead of loading events individually, they **group** them into larger time blocks.
-
-The options are:
-
-- **Annual**  
-- **Qtr Seasonality**  
-- **Mnth Seasonality**
-
-These are used to detect **seasonal patterns**, **year‑on‑year changes**, and **long‑term behaviour**.
-
-Grouping is controlled by:
-
-- [Cell Agg](#control-cell-agg) — how each year/quarter/month is summarised  
-- [Agg](#control-agg) — how grouped values are aggregated across courses or periods
-
-<a id="period-annual"></a>
-<a id="term-annual"></a>
-**Annual**
-
-Groups all events by **calendar year**.
-Annual is a Period option that groups **all event data for a course by calendar year**.  
-Each year is summarised using the selected [Cell Agg](#control-cell-agg) method (for example, Average), so you can compare year‑on‑year behaviour.
-
-Annual is selected via the Period control on the [Event Analysis](#page-event-analysis) page.
-
-Example:  
-If **Cell Agg = Average**, then:
-
-- **Average Participants per Year**  
-- **Average PBs per Year**  
-- **Average Combined Hardness per Year**
-
-This is ideal for **year‑on‑year comparisons**.
-
----
-
-<a id="period-quarterly"></a>
-<a id="term-quarter-seasonality"></a>
-**Qtr Seasonality**
-
-Qtr Seasonality is a Period option that groups **all event data for a course into the four quarters of the year** (Q1, Q2, Q3, Q4).  
-Each quarter is summarised using the selected [Cell Agg](#control-cell-agg) method, allowing you to identify seasonal patterns across the year.
-
-Qtr Seasonality is selected via the Period control on the [Event Analysis](#page-event-analysis) page.
-
-Useful for identifying:
-
-- seasonal weather effects  
-- course behaviour across spring/summer/autumn/winter  
-- quarterly participation patterns
-
----
-
-<a id="period-monthly"></a>
-<a id="term-month-seasonality"></a>
-**Mnth Seasonality**
-
-Groups all events by **month** (Jan–Dec).
-Mnth Seasonality is a Period option that groups **all event data for a course by month** (Jan–Dec).  
-Each month is summarised using the selected [Cell Agg](#control-cell-agg) method, making it easy to spot recurring monthly trends such as winter slowdowns or summer improvements.
-
-Mnth Seasonality is selected via the Period control on the [Event Analysis](#page-event-analysis) page.
-
-Useful for detecting:
-
-- monthly seasonal patterns  
-- recurring course behaviour (e.g., muddy winters, fast summers)  
-- monthly PB cycles
-
-<a id="section-plot-controls"></a>
-### Plot Controls
-
-<img src="/help-images/plotControls.png" alt="Plot Controls" height="50" />
-
-Plot Controls appear on several charts throughout the app, including Event Statistics Comparison, Participant Profile, and Course History.
-
-They allow you to navigate and reshape the chart view without changing the underlying data.
-
-The controls include:
-
-- **Date + / −**  
-  Move the visible date window forward or backward.
-
-- **← / →**  
-  Pan the chart left or right.
-
-- **Time + / −**  
-  Expand or contract the time axis.
-
-- **↑ / ↓**  
-  Adjust the vertical scale of the chart.
-
-- **pan‑out**  
-  Zoom out to show a wider range of events. This is back to the default view. Useful when you want to restart a zoom into an area of the graph/plot
-
-- **cumulative**  
-  Switch between daily values and cumulative totals.
-
-These controls make it easy to explore long‑term trends, zoom into specific periods, or compare multiple metrics on the same chart.
-
-
+Period controls the time window or aggregation period used in the analysis. Changing it can switch between granular events, all-history views and grouped Annual, Monthly or Quarterly comparisons.
 
 <a id="term-pos"></a>
 ### Pos
@@ -1176,15 +854,10 @@ Recent Club shows the latest known club affiliation for the selected participant
 
 Compact label for the recent-event count or identifier used in narrow tables. It gives recency context without using a full phrase.
 
-<a id="period-recent-events"></a>
+<a id="term-recent-events"></a>
 ### Recent Events
 
-Loads a short, recent window of events (typically around 15 weeks).  
-Useful for spotting **current trends**, such as:
-
-- recent increases in participants  
-- seasonal changes  
-- short‑term fluctuations in PBs or 1st Timers
+Uses only the latest portion of the available history. It is the standard short-window view across several pages.
 
 <a id="term-reg-course"></a>
 ### Reg Course
@@ -1227,11 +900,9 @@ For a full explanation, see the [Course Hardness Model](#section-course-hardness
 Shows or applies a sex-based adjustment. It is used when comparing performances after normalising for sex differences.
 
 <a id="term-since-lockdown"></a>
-<a id="period-since-lockdown"></a>
 ### Since Lockdown
 
-Loads all events from the post‑lockdown restart onwards.  
-Useful when comparing **modern course behaviour** without mixing pre‑ and post‑lockdown patterns.
+Uses all events from the post-lockdown restart onward. It is helpful when pre- and post-lockdown data should not be mixed.
 
 <a id="term-single-value"></a>
 ### Single Value
@@ -1248,133 +919,12 @@ Selected via the Type control on the [Event Analysis](#page-event-analysis) page
 <a id="control-table-view"></a>
 ### Table View
 
-Table View controls **which set of columns** is visible on the current page.  
-It allows you to switch between compact, detailed, or specialised layouts depending on how much information you want to see.
-
-**Available Table Views**
-
-The exact options depend on the page, but the most common are:
-
-- **Basic**  
-  See: [Basic](#term-basic)  
-  A compact layout showing the **most important columns**.  
-  Ideal for quick scanning or mobile devices.
-
-- **Detailed**  
-  See: [Detail](#term-detail)  
-  A wider layout showing **all standard event columns**, including additional context such as club counts, hardness metrics, and participant‑based fields.
-
-- **All Time Adjustments**  
-  See: [All Time Adjustments](#term-all-time-adjustments)  
-  A specialised view (where supported) that displays **multiple adjusted‑time variants side by side**, such as event‑adjusted, age‑adjusted, and age‑sex‑adjusted times.
-
-**How Table View Works**
-
-Changing the Table View does **not** change the underlying data — it only changes **which columns are visible**.
-
-For example:
-
-- Switching from **Basic** to **Detailed** reveals additional fields such as  
-  - Combined Hardness  
-  - Clubbers  
-  - Returners  
-  - Recent Bests  
-  - Eligible Times  
-  - and more
-
-- Switching to **[All Time Adjustments](#term-all-time-adjustments)** replaces the standard event columns with a set of **adjusted‑time comparison columns**, useful for performance analysis.
-
-Table View is especially helpful when:
-
-- you want a quick overview (Basic)  
-- you want full analytical detail (Detailed)  
-- you want to compare adjusted times (All Time Adjustments)
-
-**Summary**
-
-Table View determines **how much information** is shown on the page:
-
-- **Basic** → essential columns  
-- **Detailed** → full event detail  
-- **All Time Adjustments** → specialised adjusted‑time comparison  
-
-It works seamlessly with the other Event Analysis controls to give you the right level of detail for your analysis.
-
+Table View controls which column set is visible on the current page. Typical options are Basic for the key columns, Detailed for a wider field set, and specialist views such as All Time Adjustments where the page supports them.
 
 <a id="control-time-adj"></a>
 ### Time Adj
 
-Time Adj controls how the **average time** is adjusted on the [Event Analysis](#page-event-analysis) page.  
-It is normally **greyed out** and unavailable.  
-Time Adj only becomes active when the selected [Type](#control-type) is **Times** (see: [Times](#term-times)).
-
-When enabled, Time Adj offers four adjustment options:
-
-1. **No Adjustment**  
-2. **Hardness Adjusted**  
-3. **Age Adjusted**  
-4. **Hardness and Age Adjusted**
-
-Each adjustment modifies the **average time** by applying the relevant correction factors to each participant’s time before averaging.
-
-**No Adjustment**
-
-Shows the **raw average time** for the event with no corrections applied.
-
-**Hardness Adjusted**
-
-Reduces the average time by applying the event’s **Combined Hardness**  
-(see: [Combined Hardness](#term-combined-hardness)).
-
-This adjustment estimates what the average time would have been on a **neutral, flat course in ideal conditions**.
-
-**Age Adjusted**
-
-Reduces the average time by applying **age‑based normalisation**  
-(see: [Age Adj](#term-age-adj)).
-
-This estimates what the average time would look like if all participants were compared on an **age‑neutral basis**.
-
-**Hardness and Age Adjusted**
-
-Applies **both**:
-
-- the **Combined Hardness** correction  
-- the **Age Adjustment** correction  
-
-This produces the most normalised version of the average time.
-
-It estimates what the average time would have been if:
-
-- the course had neutral difficulty  
-- conditions were ideal  
-- all participants were compared on an age‑neutral basis
-
-This is the strongest adjustment and is useful when comparing events across **different courses**, **different dates**, and **different participant age mixes**.
-
-**How the Adjusted Average Time Is Calculated**
-
-For each participant:
-
-1. Start with their recorded time  
-2. Apply the **hardness correction** (if selected)  
-3. Apply the **age correction** (if selected)  
-4. Combine all adjusted times  
-5. Take the **average**  
-
-This ensures the displayed value reflects the **adjusted performance**, not the raw recorded time.
-
-**Summary**
-
-Time Adj only applies when analysing **Times** and provides four ways to interpret the average time:
-
-- **No Adjustment** → raw average  
-- **Hardness Adjusted** → corrected for course difficulty  
-- **Age Adjusted** → corrected for age differences  
-- **Hardness and Age Adjusted** → corrected for both factors  
-
-These adjustments help you compare average times **fairly** across different courses, conditions and participant groups.
-
+Time Adj applies optional adjustments for time-based analysis. Use it when comparing pace or finish-time style fields across different conditions so that like-for-like comparisons are easier to make.
 
 <a id="term-times"></a>
 ### Times (Time)
@@ -1545,92 +1095,34 @@ This page is usually entered from the main burger menu. From here you can drill 
 - Main matrix/table: arranged by event date and course, with sortable columns and drill-down cells.
 - Grouped analysis views: available when Period changes from individual events to broader time buckets.
 
-#### Event Statistics Comparison (Plot)
-
-The Event Analysis page includes a Plot button:
-
-<img src="/help-images/plotButton.png" alt="Plot Button" height="50" />
-
-Selecting this button opens the **[Event Statistics Comparison](#section-event-stats-comparison)** chart.  
-This chart allows you to visualise up to **five** different metrics at the same time, each shown as a separate legend entry. The lines on the chart update instantly whenever you change:
-
-- the selected **Type**
-- the **Calc** option
-- the **Period**
-- the **Agg** method
-- any adjustment settings (Course Adj, Other Adj, Time Adj)
-
-This makes it easy to compare trends such as participants, PBs, tourists, volunteers, or hardness across the selected events.
 
 <a id="section-event-stats-comparison"></a>
 
 ### Event Statistics Comparison Chart
 
-<img src="/help-images/eventStatsComp.png" alt="Event Status Comp Chart" height="300" />
-
-**Purpose Description**
+#### Purpose Description
 
 This chart gives a visual comparison of the selected Event Analysis metric across dates and courses. It is intended to make trends, spikes and outliers easier to spot than in the main table alone.
 
-The Event Statistics Comparison chart allows you to compare up to **five** different metrics at the same time.  
-You can select any combination of Types (for example: Participants, PBs, Tourists, Volunteers, Combined Hardness), and each selected item appears as a separate **legend entry** on the chart.
-
-The chart updates automatically whenever you change:
-
-- the selected **Type**  
-- the **Calc** option  
-- the **Period**  
-- the **Agg** method  
-- or any of the adjustment controls (such as Course Adj or Time Adj)
-
-This makes it easy to explore how different metrics behave over time and how they relate to each other.
-
-**Navigation**
+#### Navigation
 
 It sits alongside the Event Analysis page and is interpreted together with the same selections. Users typically review the table first and then use the chart to confirm trend direction or highlight unusual events.
 
-**Label and Selection list**
+#### Label and Selection list
 
 - Inherits the current Event Analysis selections, especially `Type`, `Calc`, `Period` and `Agg`.
 - Legend labels identify the displayed series.
 
-**Buttons**
+#### Buttons
 
 - Legend selection shows or hides individual plotted series.
 - Zoom and pan controls, where enabled by the chart component, help focus on a specific time range.
 
-**Tables, Plots and Previews**
+#### Tables, Plots and Previews
 
 - Comparison plot: shows the chosen event statistic across dates.
 - Visual preview of outliers: makes unusually high or low events easier to spot before drilling further.
 
-**Plot Controls**  
-See: [Plot Controls](#section-plot-controls)
-
-
-The chart uses a shared set of plot controls that appear on several pages throughout the app.  
-These controls allow you to:
-
-- move the **date window** forward or backward  
-- zoom **in** or **out**  
-- switch between **daily** and **cumulative** views  
-- adjust the **time axis**  
-- pan the chart horizontally or vertically  
-
-These controls make it easy to explore long histories, zoom into specific periods, or compare trends across multiple courses.
-
-**Switching Between Table and Plot Views**
-
-When the Event Statistics Comparison chart is displayed, an additional button appears:
-
-<img src="/help-images/tableButton.png" alt="Table Button" height="50" />
-
-Selecting this button returns you to the main **Event Analysis table**.  
-This makes it easy to switch back and forth between the numerical table and the visual chart without losing your place or selections
-
-**Expand/reduce chart**
-
-is used on laptop/desktop to make a chart bigger: [Expand](#section-expand-reduce)
 
 <a id="page-single-event"></a>
 
@@ -1646,67 +1138,10 @@ This page is most commonly opened from [Event Analysis](#page-event-analysis). U
 
 #### Label and Selection list
 
-The Event Analysis page includes several selection controls that change how the table and charts behave.  
-Each control affects the interpretation of the selected metric and how the data is displayed.
-
-#### Course Selection
-
-At the top of the Event page, the course name is shown as a clickable label.  
-This label provides two useful behaviours:
-
-1. **Click to open the Course page**  
-   Selecting the course name takes you directly to the [Course](#page-course) page for that event.  
-   This allows quick access to full course history, statistics and related navigation.
-
-2. **Hold to change the course**  
-   If you **hover the cursor over the course name for more than two seconds**, a course‑selection box appears.  
-   You can begin typing the name of any course, and matching courses will appear in the list.  
-   Selecting a course loads that course **for the same event date currently being displayed**.
-
-This makes it easy to switch between courses when comparing events on the same day, or when stepping through events using the Event Step controls.
-
-- **Course Adj**  
-  [Course Adj](#control-course-adj) changes whether **raw**, **seasonal**, or **full event** adjustment is applied to the selected metric.  
-  Use this to compare events fairly across different course conditions.
-
-- **Other Adj**  
-  [Other Adj](#control-other-adj) changes whether **no adjustment**, **age adjustment**, **sex adjustment**, or **age‑and‑sex adjustment** is applied.  
-  This normalises participant‑level differences before summarising the data.
-
-- **Table View**  
-  [Table View](#term-basic) changes which event columns are visible.  
-  Use **Basic** for a compact view or **Detail** for a full expanded table.
-
-- **Event Headline Labels**  
-  Headline labels such as:  
-  - [Event Date (Ev Date)](#control-event-date)  
-  - [Event Number (Event #)](#control-event-number)  
-  - [Hardness](#section-course-hardness)  
-
-  These provide context for the selected day and help interpret the values shown in the table and charts.
-
-<a id="event-step-controls"></a>
-#### Event Step Controls
-
-The Event page includes a step control:
-
-<img src="/help-images/eventStep.png" alt="Event Step Controls" height="50" />
-
-This control allows you to move **backward** or **forward** through the sequence of events for the course currently being displayed.
-
-- The **left arrow** steps to the **previous event**  
-- The **right arrow** steps to the **next event**
-
-This provides a fast and convenient way to navigate through a course’s event history without returning to the main Event Analysis table or Course page.
-
-It is especially useful when reviewing:
-
-- changes in participants over time  
-- how course conditions evolved  
-- PB streaks or seasonal patterns  
-- volunteer or club activity across successive events  
-
-The Event Step control keeps you within the same course context, making it easy to explore events in chronological order.
+- `Course Adj`: changes whether raw, seasonal or full event adjustment is applied.
+- `Other Adj`: changes whether no adjustment, age, sex or age-and-sex adjustment is applied.
+- `Table View`: changes the visible event columns.
+- Event headline labels such as `Event Date`, `Event Number` and `Event Total` provide context for the selected day.
 
 #### Buttons
 

@@ -193,6 +193,42 @@ h1, h2, h3 {
     border-bottom: 1px solid #eadf9d;
 }
 
+.unified-help-head-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    min-width: 0;
+}
+
+.unified-help-back {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    border: 1px solid #3f3f46;
+    border-radius: 0.55rem;
+    background: #ffffff;
+    color: #111827;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    line-height: 1;
+    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.08);
+    transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+
+.unified-help-back:hover:not(:disabled) {
+    background: #f9fafb;
+    border-color: #111827;
+}
+
+.unified-help-back:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
 .unified-help-close {
     border: none;
     background: transparent;
@@ -254,6 +290,42 @@ h1, h2, h3 {
     text-align: right;
     font-size: 0.72rem;
     color: #635a2c;
+}
+
+.unified-help-search-notice {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.6rem;
+    padding: 0.45rem 0.7rem;
+    border-top: 1px solid #f2d28b;
+    border-bottom: 1px solid #f2d28b;
+    background: #fff6db;
+    color: #5f4a12;
+    font-size: 0.78rem;
+}
+
+.unified-help-search-notice-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex-shrink: 0;
+}
+
+.unified-help-search-notice-btn {
+    border: 1px solid #d8c56d;
+    border-radius: 6px;
+    padding: 0.18rem 0.45rem;
+    background: #fffdf0;
+    color: #5f4a12;
+    cursor: pointer;
+    font-size: 0.74rem;
+}
+
+.unified-help-search-notice-btn.primary {
+    background: #1d4ed8;
+    border-color: #1d4ed8;
+    color: #ffffff;
 }
 
 .unified-help-inline-match {

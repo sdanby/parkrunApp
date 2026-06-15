@@ -687,6 +687,15 @@ const CourseTest: React.FC = () => {
     }, [allRows]);
 
     useEffect(() => {
+        if (initialEventCode !== activeEventCode) {
+            setActiveEventCode(initialEventCode);
+        }
+        if (initialEventName !== activeEventName) {
+            setActiveEventName(initialEventName);
+        }
+    }, [initialEventCode, initialEventName, activeEventCode, activeEventName]);
+
+    useEffect(() => {
         if (!activeEventCode && activeEventName) {
             const match = eventOptions.find((opt) => opt.eventName.toLowerCase() === activeEventName.toLowerCase());
             if (match) {

@@ -82,6 +82,11 @@ type PanelRect = {
 
 type ResizeCorner = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
 
+type HelpHistoryEntry = {
+    targetId: string | null;
+    scrollTop: number;
+};
+
 const HELP_PANEL_MARGIN = 12;
 const HELP_PANEL_TOP_MARGIN = 56;
 const HELP_PANEL_MIN_WIDTH = 320;
@@ -115,14 +120,17 @@ export const UnifiedHelpOverlay: React.FC<UnifiedHelpOverlayProps> = ({ open, st
     const [markdown, setMarkdown] = useState<string>('Loading help...');
     const [searchTerm, setSearchTerm] = useState<string>('');
     const [searchMode, setSearchMode] = useState<'headers' | 'text'>('headers');
+    const [searchNotice, setSearchNotice] = useState<string | null>(null);
     const [searchCounter, setSearchCounter] = useState<{ current: number; total: number }>({ current: 0, total: 0 });
     const [lastSearchKey, setLastSearchKey] = useState<string>('');
     const [lastSearchIndex, setLastSearchIndex] = useState<number>(-1);
     const [panelRect, setPanelRect] = useState<PanelRect>(() => getDefaultPanelRect(anchor));
+    const [historyStack, setHistoryStack] = useState<HelpHistoryEntry[]>([]);
     const bodyRef = useRef<HTMLDivElement | null>(null);
     const panelRef = useRef<HTMLDivElement | null>(null);
     const highlightedRef = useRef<HTMLDivElement | null>(null);
     const inlineMatchRef = useRef<HTMLElement | null>(null);
+    const currentTargetIdRef = useRef<string | null>(null);
 
     const scrollBehavior = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
         ? 'auto'
@@ -163,9 +171,74 @@ export const UnifiedHelpOverlay: React.FC<UnifiedHelpOverlayProps> = ({ open, st
         inlineMatchRef.current = null;
     };
 
+    const normalizeSearchValue = (value: string) => String(value || '')
+        .normalize('NFKD')
+        .toLowerCase()
+        .replace(/[\u2010-\u2015\u2212_-]+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+    const findNormalizedMatchRange = (value: string, term: string): { start: number; end: number } | null => {
+        const token = normalizeSearchValue(term);
+        if (!token) return null;
+
+        let normalized = '';
+        const normalizedIndexToRawIndex: number[] = [];
+        let lastWasSpace = false;
+
+        for (let index = 0; index < value.length; index += 1) {
+            const rawChar = value[index];
+            const expanded = rawChar.normalize('NFKD').toLowerCase();
+
+            for (const expandedChar of expanded) {
+                if (/[\u0300-\u036f]/.test(expandedChar)) {
+                    continue;
+                }
+
+                const mappedChar = /[\u2010-\u2015\u2212_\-|\s]/.test(expandedChar)
+                    ? ' '
+                    : expandedChar;
+
+                if (mappedChar === ' ') {
+                    if (!normalized || lastWasSpace) {
+                        continue;
+                    }
+                    normalized += ' ';
+                    normalizedIndexToRawIndex.push(index);
+                    lastWasSpace = true;
+                    continue;
+                }
+
+                normalized += mappedChar;
+                normalizedIndexToRawIndex.push(index);
+                lastWasSpace = false;
+            }
+        }
+
+        if (normalized.endsWith(' ')) {
+            normalized = normalized.slice(0, -1);
+            normalizedIndexToRawIndex.pop();
+        }
+
+        const normalizedStart = normalized.indexOf(token);
+        if (normalizedStart < 0) {
+            return null;
+        }
+
+        const normalizedEnd = normalizedStart + token.length - 1;
+        const rawStart = normalizedIndexToRawIndex[normalizedStart];
+        const rawEnd = normalizedIndexToRawIndex[normalizedEnd];
+
+        if (!Number.isInteger(rawStart) || !Number.isInteger(rawEnd)) {
+            return null;
+        }
+
+        return { start: rawStart, end: rawEnd + 1 };
+    };
+
     const highlightInlineMatch = (container: HTMLElement, term: string) => {
         clearInlineMatch();
-        const token = String(term || '').trim().toLowerCase();
+        const token = normalizeSearchValue(term);
         if (!token) return;
 
         const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
@@ -173,11 +246,11 @@ export const UnifiedHelpOverlay: React.FC<UnifiedHelpOverlayProps> = ({ open, st
         while (current) {
             const textNode = current as Text;
             const value = String(textNode.nodeValue || '');
-            const index = value.toLowerCase().indexOf(token);
-            if (index >= 0) {
+            const matchRange = findNormalizedMatchRange(value, token);
+            if (matchRange) {
                 const range = document.createRange();
-                range.setStart(textNode, index);
-                range.setEnd(textNode, index + token.length);
+                range.setStart(textNode, matchRange.start);
+                range.setEnd(textNode, matchRange.end);
 
                 const mark = document.createElement('mark');
                 mark.className = 'unified-help-inline-match';
@@ -265,14 +338,39 @@ export const UnifiedHelpOverlay: React.FC<UnifiedHelpOverlayProps> = ({ open, st
         highlightedRef.current = highlightWrapper;
     };
 
+    const jumpToTarget = (target: HTMLElement, targetId?: string | null) => {
+        highlightSectionForElement(target);
+        currentTargetIdRef.current = targetId || null;
+    };
+
+    const restoreHistoryEntry = (entry: HelpHistoryEntry) => {
+        if (!bodyRef.current) return;
+
+        clearHighlight();
+        bodyRef.current.scrollTo({ top: Math.max(0, entry.scrollTop), behavior: scrollBehavior });
+        currentTargetIdRef.current = entry.targetId || null;
+    };
+
+    const handleBackNavigation = () => {
+        setHistoryStack((current) => {
+            if (!current.length) {
+                return current;
+            }
+
+            const previous = current[current.length - 1];
+            restoreHistoryEntry(previous);
+            return current.slice(0, -1);
+        });
+    };
+
     const findElementByQuery = (query: string): HTMLElement | null => {
         if (!bodyRef.current) return null;
-        const token = String(query || '').trim().toLowerCase();
+        const token = normalizeSearchValue(query);
         if (!token) return null;
 
         const candidates = bodyRef.current.querySelectorAll<HTMLElement>('h1, h2, h3, h4, h5, h6, p, li');
         for (const candidate of candidates) {
-            const text = String(candidate.textContent || '').trim().toLowerCase();
+            const text = normalizeSearchValue(String(candidate.textContent || ''));
             if (text.includes(token)) {
                 return candidate;
             }
@@ -291,11 +389,11 @@ export const UnifiedHelpOverlay: React.FC<UnifiedHelpOverlayProps> = ({ open, st
     };
 
     const findSearchMatches = (term: string, mode: 'headers' | 'text') => {
-        const token = String(term || '').trim().toLowerCase();
+        const token = normalizeSearchValue(term);
         if (!token) return [] as HTMLElement[];
 
         return getSearchCandidates(mode).filter((candidate) => {
-            const text = String(candidate.textContent || '').trim().toLowerCase();
+            const text = normalizeSearchValue(String(candidate.textContent || ''));
             return text.includes(token);
         });
     };
@@ -307,6 +405,7 @@ export const UnifiedHelpOverlay: React.FC<UnifiedHelpOverlayProps> = ({ open, st
         if (!token) {
             clearHighlight();
             clearInlineMatch();
+            setSearchNotice(null);
             setSearchCounter({ current: 0, total: 0 });
             setLastSearchIndex(-1);
             return;
@@ -320,9 +419,13 @@ export const UnifiedHelpOverlay: React.FC<UnifiedHelpOverlayProps> = ({ open, st
             setSearchCounter({ current: 0, total: 0 });
             setLastSearchKey(key);
             setLastSearchIndex(-1);
+            setSearchNotice(searchMode === 'headers'
+                ? 'Nothing was found in Headers. Switch the search mode from Headers to Text to search deeper within the help content.'
+                : 'Nothing was found in the help text for that search.');
             return;
         }
 
+        setSearchNotice(null);
         const nextIndex = key === lastSearchKey
             ? (lastSearchIndex + 1) % matches.length
             : 0;
@@ -388,9 +491,12 @@ export const UnifiedHelpOverlay: React.FC<UnifiedHelpOverlayProps> = ({ open, st
         if (!open) return;
         setSearchTerm('');
         setSearchMode('headers');
+        setSearchNotice(null);
         setSearchCounter({ current: 0, total: 0 });
         setLastSearchKey('');
         setLastSearchIndex(-1);
+        setHistoryStack([]);
+        currentTargetIdRef.current = null;
         clearInlineMatch();
     }, [open]);
 
@@ -419,6 +525,7 @@ export const UnifiedHelpOverlay: React.FC<UnifiedHelpOverlayProps> = ({ open, st
 
     useEffect(() => {
         clearInlineMatch();
+        setSearchNotice(null);
         setSearchCounter({ current: 0, total: 0 });
         setLastSearchKey('');
         setLastSearchIndex(-1);
@@ -449,10 +556,25 @@ export const UnifiedHelpOverlay: React.FC<UnifiedHelpOverlayProps> = ({ open, st
 
         if (!target) {
             bodyRef.current.scrollTo({ top: 0, behavior: scrollBehavior });
+            currentTargetIdRef.current = null;
             return;
         }
 
-        highlightSectionForElement(target);
+        clearHighlight();
+
+        const highlightTarget = getHighlightTarget(target);
+        const sectionElements = getSectionElements(highlightTarget);
+
+        const highlightWrapper = document.createElement('div');
+        highlightWrapper.className = 'unified-help-target-highlight';
+        sectionElements[0].parentElement?.insertBefore(highlightWrapper, sectionElements[0]);
+        sectionElements.forEach((element) => {
+            highlightWrapper.appendChild(element);
+        });
+
+        highlightWrapper.scrollIntoView({ block: 'start', behavior: scrollBehavior });
+        highlightedRef.current = highlightWrapper;
+        currentTargetIdRef.current = markerId || null;
 
         return () => {
             clearHighlight();
@@ -532,7 +654,19 @@ export const UnifiedHelpOverlay: React.FC<UnifiedHelpOverlayProps> = ({ open, st
         }}>
             <div ref={panelRef} className="unified-help-panel" style={panelStyle} role="dialog" aria-hidden={!open}>
                 <div className="unified-help-head">
-                    <strong>Help Manual</strong>
+                    <div className="unified-help-head-primary">
+                        <button
+                            type="button"
+                            className="unified-help-back"
+                            onClick={handleBackNavigation}
+                            disabled={!historyStack.length}
+                            aria-label="Back to previous help location"
+                            title={historyStack.length ? 'Back to previous help location' : 'No previous help location'}
+                        >
+                            <span aria-hidden="true">←</span>
+                        </button>
+                        <strong>Help Manual</strong>
+                    </div>
                     <div className="unified-help-search-controls">
                         <input
                             type="text"
@@ -566,6 +700,29 @@ export const UnifiedHelpOverlay: React.FC<UnifiedHelpOverlayProps> = ({ open, st
                     </div>
                     <button type="button" className="unified-help-close" onClick={onClose} aria-label="Close help">✕</button>
                 </div>
+                {searchNotice ? (
+                    <div className="unified-help-search-notice" role="alert" aria-live="assertive">
+                        <span>{searchNotice}</span>
+                        <div className="unified-help-search-notice-actions">
+                            {searchMode === 'headers' ? (
+                                <button
+                                    type="button"
+                                    className="unified-help-search-notice-btn primary"
+                                    onClick={() => setSearchMode('text')}
+                                >
+                                    Switch to Text
+                                </button>
+                            ) : null}
+                            <button
+                                type="button"
+                                className="unified-help-search-notice-btn"
+                                onClick={() => setSearchNotice(null)}
+                            >
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                ) : null}
                 <div
                     ref={bodyRef}
                     className="unified-help-body"
@@ -584,7 +741,14 @@ export const UnifiedHelpOverlay: React.FC<UnifiedHelpOverlayProps> = ({ open, st
                         const jumpTarget = bodyRef.current.querySelector<HTMLElement>(`#${CSS.escape(id)}`);
                         if (!jumpTarget) return;
 
-                        highlightSectionForElement(jumpTarget);
+                        setHistoryStack((current) => [
+                            ...current,
+                            {
+                                targetId: currentTargetIdRef.current,
+                                scrollTop: bodyRef.current?.scrollTop || 0
+                            }
+                        ]);
+                        jumpToTarget(jumpTarget, id);
                     }}
                 >
                     <ReactMarkdown rehypePlugins={[rehypeRaw as any]}>{markdown}</ReactMarkdown>

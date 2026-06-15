@@ -6,7 +6,8 @@
 */
 import React, { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { fetchEventPositions, fetchEventInfo, fetchEventByNumber, fetchEventTimeAdjustment } from '../api/backendAPI';
+import { fetchEventPositions, fetchEventInfo, fetchEventByNumber, fetchEventOptions, fetchEventTimeAdjustment } from '../api/backendAPI';
+import EventSearch, { type EventOption } from '../components/EventSearch';
 import { getEventColumnsForView, getEventTableColumnByKey } from '../config/layout/eventsLayoutHelper';
 import { getEventElementById } from '../config/layout/eventsLayoutHelper';
 import { navigateBackWithNavStack, navigateWithNavStack } from '../utils/navigationStack';
@@ -434,10 +435,20 @@ const Races: React.FC = () => {
         coeffEvent?: number;
     } | null>(null);
     const [navLoading, setNavLoading] = useState<boolean>(false);
+    const [eventOptions, setEventOptions] = useState<EventOption[]>([]);
+    const [headerCourseEditMode, setHeaderCourseEditMode] = useState<boolean>(false);
+    const headerCourseHoverTimerRef = useRef<number | null>(null);
     // If the URL doesn't include a `date`, we may resolve it from
     // `event_code` + `event_number` via the backend. Store the resolved
     // display date here (DD/MM/YYYY) so the header can show it.
     const [resolvedDateDisplay, setResolvedDateDisplay] = useState<string | null>(null);
+
+    const clearHeaderCourseHoverTimer = useCallback(() => {
+        if (headerCourseHoverTimerRef.current !== null) {
+            window.clearTimeout(headerCourseHoverTimerRef.current);
+            headerCourseHoverTimerRef.current = null;
+        }
+    }, []);
 
     useEffect(() => {
         if (!highlightAthleteCode) return;
@@ -449,6 +460,29 @@ const Races: React.FC = () => {
         }, 120);
         return () => window.clearTimeout(timer);
     }, [highlightAthleteCode, sortedRows]);
+
+    useEffect(() => {
+        let cancelled = false;
+
+        const loadEventOptions = async () => {
+            try {
+                const loaded = await fetchEventOptions();
+                if (!cancelled) {
+                    setEventOptions(Array.isArray(loaded) ? loaded : []);
+                }
+            } catch {
+                if (!cancelled) {
+                    setEventOptions([]);
+                }
+            }
+        };
+
+        void loadEventOptions();
+        return () => {
+            cancelled = true;
+            clearHeaderCourseHoverTimer();
+        };
+    }, [clearHeaderCourseHoverTimer]);
 
     useEffect(() => {
     if (!rawEventParam && !date) return;
@@ -591,6 +625,19 @@ const Races: React.FC = () => {
             if (!Number.isNaN(n)) eventCodeVal = n;
         }
     }
+
+    const startHeaderCourseHoverTimer = () => {
+        if (headerCourseEditMode || !String(eventName || '').trim()) {
+            return;
+        }
+
+        clearHeaderCourseHoverTimer();
+        headerCourseHoverTimerRef.current = window.setTimeout(() => {
+            setHeaderCourseEditMode(true);
+            headerCourseHoverTimerRef.current = null;
+        }, 2000);
+    };
+
     const displayDate = (() => {
         // Prefer a resolved date (from fetchEventByNumber) if available.
         if (resolvedDateDisplay) return resolvedDateDisplay;
@@ -609,6 +656,35 @@ const Races: React.FC = () => {
                 ? String(eventInfo.event_code)
                 : (eventCodeVal !== null && eventCodeVal !== undefined ? String(eventCodeVal) : ''));
         const selectedEventName = String(eventName || '').trim();
+
+        if (!selectedEventCode && !selectedEventName) {
+            return;
+        }
+
+        const params = new URLSearchParams();
+        if (selectedEventCode) {
+            params.set('event_code', selectedEventCode);
+        }
+        if (selectedEventName) {
+            params.set('event_name', selectedEventName);
+        }
+
+        navigateWithNavStack(navigate, location, `/courses?${params.toString()}`, {
+            state: {
+                eventCode: selectedEventCode || undefined,
+                eventName: selectedEventName || undefined,
+                from: 'races',
+                returnTo: {
+                    pathname: '/races',
+                    search: location.search || ''
+                }
+            }
+        });
+    };
+
+    const handleHeaderCourseSelect = (selectedEventCode: string, selectedEventName: string) => {
+        clearHeaderCourseHoverTimer();
+        setHeaderCourseEditMode(false);
 
         if (!selectedEventCode && !selectedEventName) {
             return;
@@ -1022,16 +1098,31 @@ const Races: React.FC = () => {
                 <div className="races-header-text">
                     <div className="races-header-title">
                         {String(eventName || '').trim() ? (
-                            <button
-                                type="button"
-                                className="races-athlete-button"
-                                onClick={handleHeaderCourseNavigate}
-                                title={`Open course: ${String(eventName)}`}
-                                aria-label={`Open course ${String(eventName)}`}
-                                style={{ fontSize: 'inherit', fontWeight: 700 }}
-                            >
-                                {eventName}
-                            </button>
+                            headerCourseEditMode ? (
+                                <EventSearch
+                                    inputId="races-course-search-input"
+                                    options={eventOptions}
+                                    initialQuery={String(eventName || '')}
+                                    placeholder="search for course"
+                                    onSelect={handleHeaderCourseSelect}
+                                    autoFocus={true}
+                                    onInputBlur={() => setHeaderCourseEditMode(false)}
+                                    onEscape={() => setHeaderCourseEditMode(false)}
+                                />
+                            ) : (
+                                <button
+                                    type="button"
+                                    className="races-athlete-button"
+                                    onClick={handleHeaderCourseNavigate}
+                                    onMouseEnter={startHeaderCourseHoverTimer}
+                                    onMouseLeave={clearHeaderCourseHoverTimer}
+                                    title={`Open course: ${String(eventName)}. Hover for 2 seconds to edit.`}
+                                    aria-label={`Open course ${String(eventName)}. Hover for 2 seconds to edit.`}
+                                    style={{ fontSize: 'inherit', fontWeight: 700 }}
+                                >
+                                    {eventName}
+                                </button>
+                            )
                         ) : (
                             <em>none</em>
                         )}

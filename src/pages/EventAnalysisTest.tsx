@@ -404,7 +404,7 @@ const analysisHeaderLabel = (analysisType: string): string => {
 };
 
 const participantFilters = ['all', 'times', 'age', 'eventNumber', 'coeff', 'coeff_event', 'coeff_combined', 'volunteers', 'tourist', 'sTourist', '1time', 'clubs', 'pb', 'recentBest', 'regs', 'returners', 'eligible_time', 'unknown'];
-const actualPercentFilters = ['volunteers', 'tourist', 'sTourist', '1time', 'clubs', 'pb', 'recentBest', 'regs', 'returners', 'eligible_time', 'unknown'];
+const actualPercentFilters = ['all', 'volunteers', 'tourist', 'sTourist', '1time', 'clubs', 'pb', 'recentBest', 'regs', 'returners', 'eligible_time', 'unknown'];
 const timesFilters = ['all', 'times', 'age', 'tourist', 'regs', 'sTourist', '1time', 'returners', 'clubs', 'unknown'];
 const ageFilters = ['all', 'times', 'age', 'tourist', 'sTourist', '1time', 'clubs', 'pb', 'recentBest', 'regs', 'returners', 'eligible_time', 'unknown'];
 
@@ -871,7 +871,7 @@ const EventAnalysisTest: React.FC = () => {
     const participantValues: Record<string, Record<string, number[]>> = {};
     const coursePeriodHasEvent: Record<string, Record<string, boolean>> = {};
     const courseMeta: Record<string, { event_code: string; event_name: string }> = {};
-    const coursePeriodMeta: Record<string, Record<string, { event_code: string; event_name: string; periodDate: string }>> = {};
+    const coursePeriodMeta: Record<string, Record<string, { event_code: string; event_name: string; event_number: string; periodDate: string }>> = {};
 
     rows.forEach((row) => {
       const course = String(readRowValue(row, 'event_name') || readRowValue(row, 'event_code') || '').trim();
@@ -904,6 +904,7 @@ const EventAnalysisTest: React.FC = () => {
         coursePeriodMeta[course][periodKey] = {
           event_code: String(readRowValue(row, 'event_code') || ''),
           event_name: String(readRowValue(row, 'event_name') || course),
+          event_number: String(readRowValue(row, 'event_number') || ''),
           periodDate: periodMode === 'Annual' || periodMode === 'Qseason' || periodMode === 'Mseason'
             ? ''
             : periodKey
@@ -1622,20 +1623,29 @@ const EventAnalysisTest: React.FC = () => {
     const meta = pivot.coursePeriodMeta[course]?.[periodKey] || {
       event_code: pivot.courseMeta[course]?.event_code || '',
       event_name: pivot.courseMeta[course]?.event_name || course,
+      event_number: '',
       periodDate: periodKey
     };
 
     const params = new URLSearchParams();
     if (meta.periodDate) params.set('date', meta.periodDate);
-    if (meta.event_code) {
-      params.set('event_code', meta.event_code);
-      params.set('event', meta.event_code);
-    }
-    if (meta.event_name) params.set('course', meta.event_name);
+    if (meta.event_code) params.set('event_code', meta.event_code);
+    if (meta.event_name) params.set('event_name', meta.event_name);
+    if (meta.event_number) params.set('event_number', meta.event_number);
     const targetUrl = params.toString() ? `${linkCfg.target}?${params.toString()}` : linkCfg.target;
 
     if (linkCfg.navMode === 'stack') {
-      navigateWithNavStack(navigate, location, targetUrl);
+      navigateWithNavStack(navigate, location, targetUrl, {
+        state: {
+          eventCode: meta.event_code || undefined,
+          eventName: meta.event_name || undefined,
+          from: 'results_test',
+          returnTo: {
+            pathname: location.pathname,
+            search: location.search
+          }
+        }
+      });
       return;
     }
     navigate(targetUrl);
