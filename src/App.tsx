@@ -17,6 +17,7 @@ import NavigationStackOverlay from './components/NavigationStackOverlay';
 import EventHelpManual, { UnifiedHelpOverlay, UNIFIED_HELP_EVENT, getPageMarkerForPath, type UnifiedHelpAnchor, type UnifiedHelpRequestDetail } from './pages/UnifiedHelp';
 import { API_BASE_URL } from './api/backendAPI';
 import { useColumnHeaderMode } from './utils/useColumnHeaderMode';
+import { useDelayedUnifiedHelp } from './utils/useDelayedUnifiedHelp';
 import './styles/main.css';
 
 /*
@@ -85,6 +86,7 @@ const TopBar: React.FC = () => {
     const columnModeTooltip = isColumnHelpMode
         ? 'click column for help - click this icon to change to column sorting when column header clicked'
         : 'click column header for sorting - click this icon to change to column help when column header clicked';
+    const delayedColumnModeHelp = useDelayedUnifiedHelp(showColumnModeToggle, 2000);
 
     useEffect(() => {
         const onHelpRequest = (event: Event) => {
@@ -136,6 +138,18 @@ const TopBar: React.FC = () => {
                             className={`top-bar-column-mode-btn ${isColumnHelpMode ? 'help-mode' : 'sort-mode'}`}
                             aria-label={isColumnHelpMode ? 'Column header help mode' : 'Column header sort mode'}
                             title={columnModeTooltip}
+                            onMouseEnter={(event) => {
+                                delayedColumnModeHelp.schedule({
+                                    event,
+                                    label: 'Column Sort / Help Icon',
+                                    markerId: 'control-column-sort-help',
+                                    query: 'Column Sort / Help Icon',
+                                    delayMs: 2000
+                                });
+                            }}
+                            onMouseLeave={delayedColumnModeHelp.clear}
+                            onMouseDown={delayedColumnModeHelp.clear}
+                            onTouchStart={delayedColumnModeHelp.clear}
                             onClick={toggleColumnHeaderMode}
                         >
                             <span className="top-bar-column-mode-text top-bar-column-mode-text-top">column</span>

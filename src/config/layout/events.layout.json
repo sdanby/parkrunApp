@@ -300,6 +300,7 @@
       "type": "table",
       "name": "col1",
       "headerName": "Pos",
+      "helpTarget": "term-pos",
       "sticky": true,
       "style": {
         "fontSize": "0.8rem",
@@ -314,6 +315,7 @@
       "type": "table",
       "name": "col2",
       "headerName": "Participant",
+      "helpTarget": "term-participant",
       "sticky": true,
       "style": {
         "fontSize": "0.8rem",
@@ -341,6 +343,7 @@
       "type": "table",
       "name": "col3",
       "headerName": "Time",
+      "helpTarget": "term-times",
       "style": { "timeDisplayFormat": "mm:ss" },
       "laptop": { "width": "1.8cm" },
       "mobile": { "width": "1.6cm" }
@@ -350,6 +353,7 @@
       "type": "table",
       "name": "col4",
       "headerName": "Age group",
+      "helpTarget": "term-age-group",
       "laptop": { "width": "2.6cm" },
       "mobile": { "width": "2.3cm" }
     },
@@ -358,6 +362,7 @@
       "type": "table",
       "name": "col5",
       "headerName": "Age grade",
+      "helpTarget": "term-age-grade",
       "laptop": { "width": "2.6cm" },
       "mobile": { "width": "2.3cm" }
     },
@@ -366,6 +371,7 @@
       "type": "table",
       "name": "col6",
       "headerName": "Rank",
+      "helpTarget": "term-rank",
       "style": { "subFontSize": "0.62rem" },
       "laptop": { "width": "1.7cm" },
       "mobile": { "width": "1.5cm" }
@@ -385,6 +391,7 @@
       },
       "style": { "textAlign": "left" },
       "headerName": "Club",
+      "helpTarget": "term-club",
       "laptop": { "width": "4.5cm" },
       "mobile": { "width": "3.5cm" }
     },
@@ -394,6 +401,7 @@
       "name": "col8",
       "style": { "textAlign": "left" },
       "headerName": "Detail",
+      "helpTarget": "term-detail",
       "laptop": { "width": "2.6cm" },
       "mobile": { "width": "2.4cm" }
     },
@@ -402,6 +410,7 @@
       "type": "table",
       "name": "col9",
       "headerName": "Total runs",
+      "helpTarget": "control-total-runs",
       "laptop": { "width": "2.5cm" },
       "mobile": { "width": "2.2cm" }
     },
@@ -410,6 +419,7 @@
       "type": "table",
       "name": "col10",
       "headerName": "Local recent",
+      "helpTarget": "term-local-runs",
       "laptop": { "width": "3.0cm" },
       "mobile": { "width": "2.5m" }
     },
@@ -418,6 +428,7 @@
       "type": "table",
       "name": "col11",
       "headerName": "Eligible recent",
+      "helpTarget": "term-eligible-runs",
       "laptop": { "width": "3.5cm" },
       "mobile": { "width": "3.0cm" }
     },
@@ -426,6 +437,7 @@
       "type": "table",
       "name": "col12",
       "headerName": "Other events",
+      "helpTarget": "term-other-event",
       "laptop": { "width": "3.0cm" },
       "mobile": { "width": "2.5cm" }
     },
@@ -434,6 +446,7 @@
       "type": "table",
       "name": "col9",
       "headerName": "Seas Adj",
+      "helpTarget": "term-seasonal-adj",
       "laptop": { "width": "2.3cm" },
       "mobile": { "width": "2.2cm" }
     },
@@ -442,6 +455,7 @@
       "type": "table",
       "name": "col10",
       "headerName": "Ev Adj",
+      "helpTarget": "term-ev-adj",
       "laptop": { "width": "2.3cm" },
       "mobile": { "width": "2.2cm" }
     },
@@ -450,6 +464,7 @@
       "type": "table",
       "name": "col11",
       "headerName": "Age Adj",
+      "helpTarget": "term-age-adj",
       "laptop": { "width": "2.3cm" },
       "mobile": { "width": "2.2cm" }
     },
@@ -458,6 +473,7 @@
       "type": "table",
       "name": "col12",
       "headerName": "Sex Adj",
+      "helpTarget": "term-sex-adj",
       "laptop": { "width": "2.3cm" },
       "mobile": { "width": "2.2cm" }
     },
@@ -466,6 +482,7 @@
       "type": "table",
       "name": "col13",
       "headerName": "AE Adj",
+      "helpTarget": "term-ae-adj",
       "laptop": { "width": "2.3cm" },
       "mobile": { "width": "2.2cm" }
     },
@@ -474,6 +491,7 @@
       "type": "table",
       "name": "col14",
       "headerName": "ES Adj",
+      "helpTarget": "term-es-adj",
       "laptop": { "width": "2.3cm" },
       "mobile": { "width": "2.2cm" }
     },
@@ -482,6 +500,7 @@
       "type": "table",
       "name": "col15",
       "headerName": "AS Adj",
+      "helpTarget": "term-as-adj",
       "laptop": { "width": "2.3cm" },
       "mobile": { "width": "2.2cm" }
     },

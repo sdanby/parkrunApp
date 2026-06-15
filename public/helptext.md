@@ -408,14 +408,42 @@ Example:
 This shows what proportion of the event was supported by volunteers.
 
 <a id="term-ae-adj"></a>
-### AE Adj
+### AE (Age & Event) Adj
 
-Short label for age-and-event adjusted time or score fields. It indicates that both event conditions and age correction have been applied.
+AE Adj combines:
+
+- the **age adjustment** (see [Age](#term-age))  
+- the **event‑hardness adjustment** (see [Ev Adj](#term-ev-adj))
+
+This produces a time that is normalised for both the participant’s age and  
+the specific difficulty of the event.
+
+AE Adj always **reduces the original Time** and is often one of the most  
+informative adjusted metrics.
+
+Used in ranking calculations (see [Rank](#term-rank)).
+
+see [Time Adjustment comparison within Event Page](#section-time-adj-event-page)
 
 <a id="term-aes-adj"></a>
-### AES Adj
+### AES (Age & Event & Sex) Adj
 
-Short label for age-sex-event adjusted values. It is typically the most adjusted variant shown when comparing performances on a like-for-like basis.
+AES Adj applies **all three major corrections**:
+
+- **Age** adjustment  
+- **Event‑hardness** adjustment  
+- **Sex** adjustment  
+
+(see [Age](#term-age), [Ev Adj](#term-ev-adj), [Sex Adj](#term-sex-adj))
+
+This produces the **most fully normalised** adjusted time in the app.
+
+AES Adj always **reduces the original Time** and is the adjustment most  
+commonly used for high‑quality ranking comparisons.
+
+Used in ranking calculations (see [Rank](#term-rank)).
+
+see [Time Adjustment comparison within Event Page](#section-time-adj-event-page)
 
 <a id="term-age"></a>
 ### Age
@@ -426,9 +454,25 @@ Age is an **event‑level metric**, not a participant count, and therefore only 
 Age is selected via the Type control on the [Event Analysis](#page-event-analysis) page.
 
 <a id="term-age-adj"></a>
-### Age Adj (Age Adj.)
+### Age Adj.
 
-Indicates that an age-based normalisation has been applied. This lets performances or counts be compared more fairly across age groups.
+Age Adj applies the **age‑based correction** to a participant’s  
+[Time](#term-time), using the participant’s **estimated age**  
+(see [Age](#term-age)) and the performance curve implied by  
+[Age grade](#term-age-grade).
+
+This adjustment normalises performance across different ages by  
+estimating what the participant’s time would look like if they were  
+at a standard reference age. It allows fairer comparison between  
+younger and older runners.
+
+Age Adj always **reduces the original Time**, producing an  
+age‑normalised value that can be compared across participants  
+regardless of age.
+
+Used in ranking calculations (see [Rank](#term-rank)).
+
+see [Time Adjustment comparison within Event Page](#section-time-adj-event-page)
 
 <a id="term-age-sex-adj"></a>
 ### Age and Sex Adj.
@@ -436,14 +480,85 @@ Indicates that an age-based normalisation has been applied. This lets performanc
 Indicates that both age and sex adjustments are applied together. It is used when you want the strongest participant-level normalisation without adding course-condition adjustments.
 
 <a id="term-age-grade"></a>
-### Age grade (Age grd)
+### Age grade
 
-An age-grading percentage that compares a performance to the best known standard for that athlete's age and sex. Higher values indicate stronger relative performances.
+Age grade is a **percentage score** that compares a participant’s finish time to the **world record time** for their age group.  
+It provides a way to compare performances **fairly across ages and sexes**.
+
+The calculation is:
+
+   WR Time  
+────────────────      × 100  
+Participant Time
+
+Where:
+
+- **WR Time** is the world‑record performance for the participant’s age group  
+- **Participant Time** is the individual’s recorded finish time (see [Time](#term-time))
+
+**Interpreting Age grade**
+
+Higher percentages indicate stronger performances:
+
+- **80–100%** → typically strong club‑level or county‑level athletes  
+- **60–79%** → strong runners with competitive ability  
+- **30–40%** → typical for walkers, joggers, and newer participants  
+- **Below 30%** → gentle participation or early‑stage fitness
+
+Age grade allows meaningful comparison between:
+
+- younger and older runners  
+- males and females  (compared to female world records)
+- different courses and conditions (when combined with adjustments)
+
+**Enhanced Age grade in this application**
+
+This app improves the standard parkrun age‑grade calculation by:
+
+1. **Estimating the participant’s actual age**  
+   Using their age‑group history and event patterns  
+   (see [Age](#term-age))
+
+2. **Applying the implicit world‑record time**  
+   Derived from historical data for that estimated age
+
+3. **Producing a more precise age‑adjusted time**  
+   Which feeds into metrics such as **Age Adj**, **AS Adj**, and **AES Adj**
+
+This results in a **more accurate and consistent** age‑grade interpretation than the basic parkrun calculation, especially for participants whose age group spans multiple years.
+
+**Summary**
+
+- Age grade = WR Time ÷ Participant Time × 100  
+- Allows fair comparison across ages and sexes  
+- Typical ranges: 30–40% (walkers/joggers), 80–100% (elite/club level)  
+- This app enhances the metric using **estimated age** and **implicit WR times**  
+- Closely linked to [Time](#term-time) and [Age](#term-age)
+
 
 <a id="term-age-group"></a>
 ### Age group (Age grp)
 
-The participant's age category label. It is used for sorting, grouping and interpretation across participant, event and course pages.
+The participant’s **age category label**, used throughout the app for sorting, grouping and interpreting results across participant, event and course pages.
+
+Age groups distinguish between:
+
+- younger participants and older participants  
+- **female** and **male** categories  
+- standard parkrun age‑band classifications (e.g., JM10, SW25–29, VM50–54)
+
+These categories help observers understand the demographic profile of an event and allow meaningful comparisons within and across age‑based groups.
+
+In this app, additional logic is used to **estimate a participant’s age** from their age‑group history.  
+This enables much more precise calculations for:
+
+- **age‑adjusted times**  
+- **age‑adjusted rankings**  
+- combined adjustments such as **Age Adj**, **AS Adj**, and **AES Adj**
+
+For more detail on how estimated ages are used in adjustments, see  
+[Age](#term-age).
+
 
 <a id="control-agg"></a>
 ### Aggregation (Agg)
@@ -531,10 +646,22 @@ All Time Adjustments is selected via the [Table View](#control-table-view) contr
 
 Groups data by year rather than by single event. Use it when you want broad long-run trend comparisons instead of week-by-week movement.
 
-<a id="term-as-adj"></a>
-### AS Adj
+<a id="term-age-sex-adj"></a>
+### AS (Age & Sex) Adj.
 
-Compact label used where space is tight for a combined age and sex adjustment field. It is a shorthand display label rather than a separate concept.
+Age and Sex Adj applies both:
+
+- the **age‑based correction** (see [Age](#term-age))  
+- the **sex‑based correction** (see [Sex Adj](#term-sex-adj))
+
+This produces a time that is normalised for both age and sex simultaneously.
+
+It always **reduces the original Time** and provides a fairer comparison  
+across mixed‑age, mixed‑sex groups.
+
+Used in ranking calculations (see [Rank](#term-rank)).
+
+see [Time Adjustment comparison within Event Page](#section-time-adj-event-page)
 
 <a id="control-athlete-code"></a>
 ### Athlete code
@@ -630,7 +757,19 @@ Shows the **lowest Combined Hardness** recorded in each month.
 <a id="term-club"></a>
 ### Club
 
-The running club associated with a participant or a club-focused grouping used elsewhere in the app. Club links are often clickable and act as a drill-down path into Club pages.
+The running club associated with a participant, or a club‑focused grouping used elsewhere in the app.  
+Club names often appear as clickable links and act as a drill‑down path into the  
+[Club page](#page-club), where the club is explored in much greater depth.
+
+The Club page provides detailed information such as:
+
+- club membership across events  
+- participant performance summaries  
+- club‑level rankings and statistics  
+- historical trends and attendance patterns
+
+Whenever a club name appears in tables or participant profiles, it can be selected to view the full club‑level analysis.
+
 
 <a id="term-club-runs"></a>
 ### Club Runs (Club runs 1y)
@@ -642,6 +781,68 @@ Counts how many times a participant has appeared for a club in the selected hist
 
 Participants who are associated with a running club at the event. This shows how many club‑affiliated participants took part.  
 Selected via the Type control on the [Event Analysis](#page-event-analysis) page.
+
+<a id="control-column-sort-help"></a>
+### Column Sort / Help Icon
+
+Most pages that display tables include a **Column Sort / Help** toggle icon at the top of the page.  
+This icon switches between two modes:
+
+1. **Column Sort mode**  
+2. **Column Help mode**
+
+The current mode is shown by the icon:
+
+- **Column Sort**  
+  <img src="/help-images/columnSort.png" alt="Column Sort Icon" height="60" />
+
+- **Column Help**  
+  <img src="/help-images/columnHelp.png" alt="Column Help Icon" height="60" />
+
+**Column Sort Mode (default)**
+
+When the icon is in **Column Sort** mode, clicking a column header will **sort the table** by that column.
+
+- Clicking once sorts **ascending**  
+- Clicking again sorts **descending**  
+- A small arrow appears in the column header to show the current sort direction
+
+This mode is used when you want to quickly reorder the table by:
+
+- Event Date  
+- Participants  
+- PBs  
+- Hardness  
+- Age‑adjusted times  
+- or any other sortable column
+
+You can still **hover over a column header for more than 2 seconds** to display the help tooltip for that column.
+
+**Column Help Mode**
+
+When the icon is clicked, it switches to **Column Help** mode:
+
+<img src="/help-images/columnHelp.png" alt="Column Help Icon" height="60" />
+
+In this mode, clicking a column header will **show the help for that column**, instead of sorting it.
+
+This is useful when you want to understand:
+
+- what a column means  
+- how it is calculated  
+- how it interacts with [Type](#control-type), [Calc](#control-calc), [Period](#control-period), [Agg](#control-agg), or adjustments  
+- how it relates to other columns in the table
+
+Sorting is **disabled** until you toggle the icon back to **Column Sort** mode.
+
+**Summary**
+
+- **Column Sort mode** → clicking a column sorts the table  
+- **Column Help mode** → clicking a column shows its help entry  
+- Hovering for **2+ seconds** always shows the column help tooltip  
+- The icon toggles between modes and appears on most table‑based pages
+
+This control makes it easy to switch between **sorting** and **learning**, depending on what you need at the moment.
 
 <a id="term-comb-tot"></a>
 ### Comb tot
@@ -704,6 +905,7 @@ Use Course Adj when you want to compare events **fairly across different course 
 
 Course Adj affects the values shown in the table and in the [All Time Adjustments](#term-all-time-adjustments) view.
 
+see [Time Adjustment comparison within Event Page](#section-time-adj-event-page)
 
 <a id="term-current-club"></a>
 ### Current Club
@@ -713,7 +915,24 @@ The latest known club associated with a participant. It gives current affiliatio
 <a id="term-detail"></a>
 ### Detail (Detailed)
 
-The expanded table view that shows more columns than Basic. Use it when you need more explanatory metrics and are happy to scroll horizontally.
+The **expanded table view** that shows more columns than Basic.  
+
+In Detailed view, additional participant‑level information is displayed, including:
+
+- **New PB!** — highlights when the participant achieved a new personal best  
+- **First Timer!** — indicates the participant’s first recorded run at that course  
+- **Current PB** — shows the participant’s existing personal best for that course  
+  (see [PB](#term-pb))
+
+These extra indicators help you understand participant progress, course familiarity, and performance context directly within the table.
+
+Detailed view is especially useful when analysing:
+
+- participant improvement over time  
+- course‑specific performance patterns  
+- how PBs and First Timers contribute to event dynamics  
+- deeper participant‑level metrics that are not shown in Basic view
+
 
 <a id="term-distinct-events"></a>
 ### Distinct events
@@ -723,14 +942,33 @@ Counts unique events rather than total runs. It is useful when you want to know 
 <a id="term-eligible-runs"></a>
 ### Eligible runs / Eligible Times
 
-Participants whose finish times fall within their normal expected time window based on their recent 15‑week history.  
-Eligible Times are more likely to contribute to the **Course Hardness Model**, because they represent consistent performance.  
-Selected via the Type control on the [Event Analysis](#page-event-analysis) page.
+Participants whose finish times fall within their **normal expected time window**, based on their recent **15‑week performance history**.
+
+Eligible Times represent **consistent, reliable performances**, and are therefore more likely to contribute to the  
+**Course Hardness Model**, which depends on stable participant behaviour to estimate event difficulty accurately.
+
+Eligible Times are selected via the **Type** control on the  
+[Event Analysis](#page-event-analysis) page.
+
+They are also used on the  
+[Event Page](#page-event),  
+where they help identify which participants contributed meaningful data to the event’s hardness calculation and which performances fall outside their expected range.
 
 <a id="term-es-adj"></a>
-### ES Adj
+### ES (Event & Sex) Adj
 
-Compact label for a sex-and-event adjusted value where table space is limited. It indicates a more adjusted comparison than raw or single-factor fields.
+ES Adj applies:
+
+- the **event‑hardness correction** (see [Ev Adj](#term-ev-adj))  
+- the **sex‑based correction** (see [Sex Adj](#term-sex-adj))
+
+This produces a time that is normalised for both event difficulty and sex.
+
+ES Adj always **reduces the original Time**.
+
+Used in ranking calculations (see [Rank](#term-rank)).
+
+see [Time Adjustment comparison within Event Page](#section-time-adj-event-page)
 
 <a id="control-estimated-age"></a>
 ### Estimated Age
@@ -738,9 +976,20 @@ Compact label for a sex-and-event adjusted value where table space is limited. I
 Estimated Age shows the participant's current age estimate used for context in performance interpretation and age-based calculations. It is supporting information rather than a standalone performance metric.
 
 <a id="term-ev-adj"></a>
-### Ev adj
+### Ev (Event) Adj
 
-Short label for an event-adjusted value, most often an event-adjusted time. It applies the event-specific hardness correction without adding other participant-level adjustments.
+Event Adj applies the **full combined hardness correction** for the specific event  
+(see [Combined Hardness](#term-combined-hardness)).
+
+It adjusts the participant’s [Time](#term-time) based on the actual conditions of that  
+event — weather, ground conditions, attendance mix, and other event‑level factors.
+
+Event Adj produces a more precise correction than Seasonal Adj and always  
+**reduces the original Time**.
+
+Used in ranking calculations (see [Rank](#term-rank)).
+
+see [Time Adjustment comparison within Event Page](#section-time-adj-event-page)
 
 <a id="term-event-date"></a>
 <a id="control-event-date"></a>
@@ -831,12 +1080,12 @@ Use this to understand **direction of change** rather than level.
 
 <a id="term-hardness-adj"></a>
 <a id="control-hardness-adj"></a>
-### Hardness Adj
+### Hardness
 
-Hardness Adj provides the **hardness‑based adjustment context** for the selected event.  
+Hardness provides the **hardness‑based adjustment context** for the selected event.  
 It shows the **Combined Hardness** value that applies to that event under the current adjustment settings.
 
-Hardness Adj is **explanatory**, not a standalone metric or leaderboard target.  
+Hardness is **explanatory**, not a standalone metric or leaderboard target.  
 It helps you interpret adjusted times by showing how tough the course was on that day.
 
 The displayed hardness score is derived from the  
@@ -879,7 +1128,20 @@ Shows the last recorded volunteering date in the selected context. It gives rece
 <a id="term-local-runs"></a>
 ### Local Runs
 
-Counts runs at a defined local set of courses or the selected local course context. It is often used in lists and participant summaries to distinguish local engagement from overall participation.
+Counts how many times a participant has run at the **defined local course** (or set of local courses) within the **previous one‑year period**.  
+It is often used in lists and participant summaries to distinguish **local engagement** from overall participation.
+
+A value of **1** means the participant has run at the selected local course **once** in the last year.  
+Higher values indicate stronger local presence and more frequent participation at that course.
+
+Local Runs helps identify:
+
+- regular attendees at the selected course  
+- occasional visitors versus consistent locals  
+- patterns of course loyalty and local running behaviour  
+- context for interpreting PBs, Regulars, Returners, and Other events
+
+This metric is used across participant‑focused pages to provide a clearer picture of how active a participant is **locally**, independent of their broader parkrun activity.
 
 <a id="term-maximum"></a>
 <a id="agg-maximum"></a>
@@ -951,6 +1213,7 @@ The available options are:
 
 Other Adj is used when you want to compare participants **fairly across age groups and sexes**, or when analysing adjusted times in the [All Time Adjustments](#term-all-time-adjustments) table.
 
+see [Time Adjustment comparison within Event Page](#section-time-adj-event-page)
 
 <a id="control-list-select"></a>
 ### List Selection
@@ -965,7 +1228,22 @@ Filtered By Adjustments controls whether Course Adj and Other Adj also change wh
 <a id="term-other-events"></a>
 ### Other events
 
-Used where the app needs to distinguish the selected course or event from all other appearances elsewhere. It provides off-course or outside-slice context.
+Used where the app needs to distinguish the **selected course or event** from all other appearances elsewhere.  
+It provides **off‑course** or **outside‑slice** context when analysing a participant’s running history.
+
+Other events represents the **number of different courses** a participant has run at within the **previous one‑year window**.
+
+- A value of **1** means the participant has run at **only one course** during this period.  
+- Higher values indicate a broader running footprint across multiple courses.
+
+This metric helps identify:
+
+- single‑course regulars  
+- occasional tourists  
+- highly travelled runners who appear across many courses  
+- context for interpreting PBs, First Timers, Regulars, and Returners
+
+It is used on participant‑focused pages to provide a clearer picture of how varied a participant’s running activity has been outside the currently selected course.
 
 <a id="term-participant"></a>
 ### Participant (Participt)
@@ -1124,11 +1402,18 @@ The controls include:
 These controls make it easy to explore long‑term trends, zoom into specific periods, or compare multiple metrics on the same chart.
 
 
-
 <a id="term-pos"></a>
 ### Pos
 
-Short label for finishing or ranking position. It appears in compact event-style tables where space is limited.
+Short label for **finishing position** in the event.  
+Pos shows the participant’s **rank for that specific event day**, based solely on their recorded finish time.
+
+Only participants who have an officially recorded time appear in the table.  
+Participants who took part but **did not record a time** are not shown in the results table and are counted as  
+[Unknowns](#term-unknowns).
+
+Pos appears in compact event‑style tables where space is limited, and is used when reviewing individual participant results or event‑level summaries.
+d.
 
 <a id="term-quarter-seasonality"></a>
 ### Qtr seasonality
@@ -1153,12 +1438,114 @@ Use this to understand **variability** and how spread out the values are.
 <a id="term-rank"></a>
 ### Rank
 
-An ordering position within the current comparison set. It is used across participants, clubs and courses where the app needs an explicit ranking.
+Rank is an **ordering position** that compares a participant’s performance within a defined comparison set.  
+It is used across participants, clubs and courses whenever the app needs an explicit, normalised ranking.
+
+Rank is based on several factors:
+
+- the participant’s **Time** (see [Time](#term-time))  
+- the **event** where the time was recorded (see [Event](#page-event))  
+- the participant’s **age** at the time of the performance (see [Age](#term-age))  
+- the participant’s **sex** (see [Sex](#term-sex))  
+
+For each category, the Rank column uses the participant’s **best time within the last 1 year**.  
+This “best recent time” is then compared against the appropriate  
+[Ranked Time Reference](#term-ranked-time-reference)  
+to produce a **rank score**.
+
+Because rank scores are maintained over time, the app can show:
+
+- how a participant is **trending** (see *Time by Date* plot)  
+- how they compare within their age group, sex group, or adjustment category  
+- their standing on the [Participant Profile](#page-participant-profile)
+
+**Rank Score Tile (as shown on Event and Participant pages)**
+
+On Event and Participant pages, Rank is displayed using a **Rank Score tile** (e.g *<img src="/help-images/rankScore.png" alt="Rank Score Tile" width="60" />*).  
+This tile contains three key elements:
+
+1. **Large number (centre)**  
+   This is the participant’s **current rank score**, calculated using their best recent performance and the relevant Ranked Time Reference.
+
+2. **Top‑right code**  
+   This shows the **type of rank** being displayed.  
+   For example:  
+   - '*'  -> Original Time (see [Time](#term-times))
+   - **AE** → Age + Event adjusted (see [AE Adj](#term-ae-adj))  
+   - **AES** → Age + Event + Sex adjusted (see [AES Adj](#term-aes-adj))  
+   - **ES** → Event + Sex adjusted (see [ES Adj](#term-es-adj))  
+
+   The code indicates which adjustment category produced the participant’s **best ranking**.
+
+3. **Bottom value (e.g., +9)**  
+   This shows how the **current rank compares to the participant’s best historical rank** (see [Hist Rank](#term-hist-rank)).  
+   - A **positive value** (e.g., +9) means the participant has achieved an **exceptional run**, improving their rank by that amount compared to their previous all‑time best.  
+   - A **negative value** would indicate a drop relative to their historical peak.
+
+This tile provides a quick visual summary of **current performance**, **adjustment category**, and **historical improvement**.
+
+**AES Rank (Age–Event–Sex Rank)**
+
+The **AES Rank** (see [AES Adj](#term-aes-adj)) shows how a participant performs after applying:
+
+- age adjustment  
+- event‑hardness adjustment  
+- sex adjustment  
+
+AES Rank is particularly useful for understanding how an athlete maintains their competitive standing **even as their raw event time changes with age**.
+
+**Hist Rank**
+
+[Hist Rank](#term-hist-rank) compares the participant’s **current rank** against their **best historical rank** across all categories.  
+It allows participants to see whether they are improving, maintaining, or declining relative to their personal peak.
 
 <a id="term-rank-type"></a>
 ### Rank type
 
 Indicates the ranking basis or ranking family being used. It helps explain why two rank columns may differ for the same row.
+
+<a id="term-ranked-time-reference"></a>
+### Ranked Time Reference
+
+Ranked Time Reference is a set of reference tables used to convert a participant’s best recent time into a **rank score**.
+
+The reference is built by analysing **every recorded time** in the entire database.  
+All times are ordered from fastest to slowest and assigned a score from **100 (best)** to **0 (slowest)**.
+
+A curved ranking formula is applied so that:
+
+- very few performances receive scores near **100**  
+- many more performances fall into the lower ranges  
+- the distribution reflects realistic performance density
+
+These reference curves act as the **baseline** for all ranking calculations.
+
+**Types of Ranked Time References**
+
+Five separate ranking references are maintained, one for each adjusted‑time category:
+
+- **Time** reference  
+  Based on raw finish times (see [Time](#term-time))
+
+- **Event‑adjusted time** reference  
+  Based on [Ev Adj](#term-ev-adj)
+
+- **Age‑event adjusted time** reference  
+  Based on [AE Adj](#term-ae-adj)
+
+- **Event‑sex adjusted time** reference  
+  Based on [ES Adj](#term-es-adj)
+
+- **Age‑event‑sex adjusted time** reference  
+  Based on [AES Adj](#term-aes-adj)
+
+Each participant’s best recent performance is compared against the appropriate reference curve to produce their **rank score**, which is then used in:
+
+- **Rank**  
+- **AES Rank**  
+- **Hist Rank**  
+- participant trend charts  
+- Participant Profile summaries
 
 <a id="term-recent-bests"></a>
 ### Recent Bests
@@ -1211,7 +1598,16 @@ Run count limited to the most recent one-year window. Use it when recent activit
 <a id="term-seasonal-adj"></a>
 ### Seasonal Adj. (Seas Adj.)
 
-Applies the broader seasonal correction to course performance without using the full event-specific adjustment. It is useful when you want a lighter-touch course-condition correction.
+Seasonal Adj applies the **seasonal hardness correction** to a participant’s  
+[Time](#term-time), based on the long‑term seasonal pattern of the course  
+(see [Seasonal Hardness](#term-seasonal-hardness)).
+
+It provides a **lighter‑touch correction** than full event adjustment, accounting for  
+broad seasonal effects (e.g., winter mud, summer speed) without using event‑specific data.
+
+Seasonal Adj always **reduces the original Time**, producing a season‑normalised value.
+
+Used in ranking calculations (see [Rank](#term-rank)).
 
 <a id="term-seasonal-hardness"></a>
 ### Seasonal Hardness
@@ -1219,12 +1615,23 @@ Applies the broader seasonal correction to course performance without using the 
 Seasonal Hardness measures how tough a course was compared to its own recent history. It is based on consistent participants over a 15‑week window and reflects repeating factors such as weather, ground conditions and seasonal variation.  
 For a full explanation, see the [Course Hardness Model](#section-course-hardness).
 
-
+see [Time Adjustment comparison within Event Page](#section-time-adj-event-page)
 
 <a id="term-sex-adj"></a>
 ### Sex Adj
 
-Shows or applies a sex-based adjustment. It is used when comparing performances after normalising for sex differences.
+Sex Adj adjusts a participant’s [Time](#term-time) based on their **sex**, using  
+the sex‑based performance differential derived from age‑grading data  
+(see [Age grade](#term-age-grade)).
+
+Female participants receive a correction that normalises performance relative  
+to male world‑record standards.
+
+Sex Adj always **reduces the original Time**.
+
+Used in ranking calculations (see [Rank](#term-rank)).
+
+see [Time Adjustment comparison within Event Page](#section-time-adj-event-page)
 
 <a id="term-since-lockdown"></a>
 <a id="period-since-lockdown"></a>
@@ -1379,10 +1786,84 @@ These adjustments help you compare average times **fairly** across different cou
 <a id="term-times"></a>
 ### Times (Time)
 
-Represents the **average finish time** of participants at the selected event.  
-Times are an **event‑level metric**, meaning they describe the overall event rather than individual participant counts. Because they are averages, they only support **Calc = Actual** and **Agg = Average**.
+Times represents the **average finish time** of participants at the selected event.  
+It is an **event‑level metric**, meaning it describes the overall event rather than individual participant results.
 
-Times are selected via the Type control on the [Event Analysis](#page-event-analysis) page.
+Because Times is an average, it only supports:
+
+- **Calc = Actual**  
+- **Agg = Average**
+
+Times is selected via the **Type** control on the  
+[Event Analysis](#page-event-analysis) page.
+
+**Distinguishing Times from the participant **Time** column**
+
+To avoid confusion, note that **Times** (event‑level) is different from the **Time** column shown in participant‑level tables.
+
+- **Time (participant)**  
+  This is the **individual finish time** recorded for each participant at that event.  
+  It is the official **gun time** published on the parkrun website.
+
+- **Times (event average)**  
+  This is the **average** of all valid participant finish times for that event.
+
+**Handling invalid or corrupted times (e.g., 59:59)**
+
+Occasionally, parkrun events experience technical failures where **all times are null or corrupted**.  
+In these rare cases, parkrun assigns a placeholder time of **59:59** to all participants.
+
+The app **automatically ignores** these placeholder values because:
+
+- they do not represent real performance  
+- they would distort the event average  
+- they are not meaningful for comparisons or adjustments
+
+Only **valid recorded times** are included when calculating the event‑level **Times** metric.
+
+**Summary**
+
+- **Times** → event‑level average finish time  
+- **Time** → individual participant finish time  
+- 59:59 placeholder times → **ignored**  
+- Times only supports **Actual** and **Average**  
+- Selected via **Type** on Event Analysis
+
+<a id="section-time-adj-event-page"></a>
+### Time Adjustment comparison with Event Page
+
+When **Course Adj** (see [Course Adj](#control-course-adj)) and/or  
+**Other Adj** (see [Other Adj](#control-other-adj)) are selected,  
+the Event Page displays an **additional column** next to the  
+[Time](#term-time) column.
+
+This column shows the **adjusted time**, based on the combination of  
+the selected Course Adj and Other Adj settings.  
+It appears visually as shown in *adjustmentColumn.png*.
+
+The adjustment applied is determined by the following matrix:
+
+| **Course Adj ↓**      | **No Other Adj** | **Age Adj** | **Sex Adj** | **Age & Sex Adj** |
+|-----------------------|------------------|--------------|-------------|--------------------|
+| **No adjustment**     | — (no column)    | Age          | Sex         | AS                 |
+| **Seasonal Adj**      | Seasonal         | —            | —           | —                  |
+| **Event Adj**         | Ev               | AE           | ES          | AES                |
+
+**Interpretation:**
+
+- If **no adjustment** is selected for both controls, **no extra column** is shown.  
+- If only **Course Adj** is selected, the column shows the course‑based adjustment  
+  (Seasonal or Event).  
+- If only **Other Adj** is selected, the column shows the participant‑based  
+  adjustment (Age, Sex, or AS).  
+- If **both** are selected, the app applies the **combined adjustment**, such as  
+  **AE**, **ES**, or **AES**.
+
+Each adjustment reduces the original Time according to the factors involved  
+(seasonal hardness, event hardness, age, sex).  
+These adjusted times are also used in ranking  
+(see [Rank](#term-rank)).
+
 
 <a id="term-total"></a>
 <a id="agg-total"></a>
@@ -1401,7 +1882,26 @@ Use this when you want to understand **scale** rather than averages.
 <a id="control-total-runs"></a>
 ### Total runs (Tot. runs)
 
-Total Runs shows the total number of recorded runs for a participant or table row. Use it as quick context for how large the underlying history is before interpreting trends, ranks or adjusted bests.
+Total Runs shows the **total number of recorded parkrun events** completed by a participant across their entire running history.
+
+This value reflects the participant’s **full parkrun journey**, not just the events included within this app’s selected local‑course set.  
+As a result:
+
+- Some, or even many, of the participant’s total runs may fall **outside** the courses tracked by this app  
+  (see *This App’s course selection*).  
+  For these runs, no additional event‑level data or statistics are available.
+
+- In other cases, a participant’s total runs may fall **entirely within** the local courses, meaning all runs can be fully analysed.
+
+A value of **1** indicates the participant’s **very first recorded parkrun**, which also corresponds to  
+[First Timer](#term-first-timer) status.
+
+Total Runs is used throughout participant summaries and profile pages to provide context on:
+
+- overall experience level  
+- long‑term participation  
+- how much of their running history is represented within the app’s local dataset  
+- comparison between local engagement and total parkrun activity
 
 <a id="term-tourists"></a>
 ### Tourists
@@ -1684,6 +2184,8 @@ This makes it easy to switch between courses when comparing events on the same d
   - [Hardness](#section-course-hardness)  
 
   These provide context for the selected day and help interpret the values shown in the table and charts.
+
+  see [Time Adjustment comparison within Event Page](#section-time-adj-event-page)
 
 <a id="event-step-controls"></a>
 #### Event Step Controls
