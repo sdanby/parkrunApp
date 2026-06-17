@@ -380,8 +380,16 @@ Marks the first date, and where shown the last date, that a participant is recor
 <a id="term-first-timers"></a>
 ### 1st Timers (First Timers)
 
-Participants completing the course for the first time — either their first ever parkrun or their first time at this specific course.  
-Selected via the Type control on the [Event Analysis](#page-event-analysis) page.
+Participants completing the course for the **first time** — either their **first ever parkrun** or their **first appearance at this specific course**.
+
+Selected via the **Type** control on the  
+[Event Analysis](#page-event-analysis) page.
+
+A **1st Timers** column also appears on the  
+[Course Page](#page-course),  
+showing how many participants were first‑timers at each event in the course’s history.  
+This provides useful context when reviewing course trends, event composition, and participant flow over time.
+
 
 <a id="calc-actual"></a>
 <a id="term-actual"></a>
@@ -755,7 +763,7 @@ Shows the **highest PB count** recorded in each quarter.
 Shows the **lowest Combined Hardness** recorded in each month.
 
 <a id="term-club"></a>
-### Club
+### Club (Clubs)
 
 The running club associated with a participant, or a club‑focused grouping used elsewhere in the app.  
 Club names often appear as clickable links and act as a drill‑down path into the  
@@ -770,6 +778,10 @@ The Club page provides detailed information such as:
 
 Whenever a club name appears in tables or participant profiles, it can be selected to view the full club‑level analysis.
 
+A **Clubs** column also appears on the  
+[Course Page](#page-course),  
+showing the **number of participants who were members of a club** at each event in the course’s history.  
+This provides useful context on event composition, visitor patterns, and the presence of club‑affiliated runners over time.
 
 <a id="term-club-runs"></a>
 ### Club Runs (Club runs 1y)
@@ -912,6 +924,29 @@ see [Time Adjustment comparison within Event Page](#section-time-adj-event-page)
 
 The latest known club associated with a participant. It gives current affiliation context and is often used as a navigation link into club analysis.
 
+<a id="term-date"></a>
+### Date
+
+Date is the **calendar date of the event**.  
+For almost all parkrun events this is a **Saturday**, with the only regular exceptions being the **Christmas Day** and **New Year’s Day** special events.
+
+A **course + date** combination defines a **unique event**.  
+Even if two courses share the same date, each event is treated independently.
+
+Date is used throughout the app to:
+
+- identify the specific event being analysed  
+- link to the [Event Page](#page-event) for that date  
+- determine the participant’s age on the day (see [Age](#term-age))  
+- support one‑year views and rolling‑window metrics such as  
+  - Eligible Times  
+  - Local Runs  
+  - Other events  
+  - Recent Bests
+
+Date is one of the core identifiers for all event‑level calculations.
+
+
 <a id="term-detail"></a>
 ### Detail (Detailed)
 
@@ -942,17 +977,26 @@ Counts unique events rather than total runs. It is useful when you want to know 
 <a id="term-eligible-runs"></a>
 ### Eligible runs / Eligible Times
 
-Participants whose finish times fall within their **normal expected time window**, based on their recent **15‑week performance history**.
+Participants whose finish times fall within their **normal expected time window**,  
+based on their recent **15‑week performance history**.
 
-Eligible Times represent **consistent, reliable performances**, and are therefore more likely to contribute to the  
-**Course Hardness Model**, which depends on stable participant behaviour to estimate event difficulty accurately.
+Eligible Times represent **consistent, reliable performances**, and are therefore  
+more likely to contribute to the **Course Hardness Model**, which depends on  
+stable participant behaviour to estimate event difficulty accurately.
 
 Eligible Times are selected via the **Type** control on the  
 [Event Analysis](#page-event-analysis) page.
 
 They are also used on the  
 [Event Page](#page-event),  
-where they help identify which participants contributed meaningful data to the event’s hardness calculation and which performances fall outside their expected range.
+where they help identify which participants contributed meaningful data to the  
+event’s hardness calculation and which performances fall outside their expected range.
+
+A count of **Eligible Times** also appears on the  
+[Course Page](#page-course),  
+showing how many participants met the eligibility criteria at each event in the  
+course’s history. This provides useful context when reviewing course trends,  
+data quality, and the stability of participant performance over time.
 
 <a id="term-es-adj"></a>
 ### ES (Event & Sex) Adj
@@ -1248,12 +1292,21 @@ It is used on participant‑focused pages to provide a clearer picture of how va
 <a id="term-participant"></a>
 ### Participant (Participt)
 
-A participant is **any person who takes part in a parkrun event and completes the course**, whether they run, jog or walk. The term is used throughout the app to describe the individuals whose actions, results and event involvement form the basis of most participant‑based metrics.
+A participant is **any person who takes part in a parkrun event and completes the course**,  
+whether they run, jog or walk. The term is used throughout the app to describe the  
+individuals whose actions, results and event involvement form the basis of most  
+participant‑based metrics.
 
 The short form **Participt** appears in narrow table headers where space is limited.
 
-This metric is selected via the **Type** control on the [Event Analysis](#page-event-analysis) page.
+This metric is selected via the **Type** control on the  
+[Event Analysis](#page-event-analysis) page.
 
+A **Participants** column also appears on the  
+[Course Page](#page-course),  
+showing the **number of participants per event** across the course’s history.  
+This provides essential context when reviewing event size, attendance trends,  
+and long‑term participation patterns.
 
 <a id="control-participant-filter"></a>
 ### Participants Filter
@@ -1263,8 +1316,16 @@ Participants can mean the count of participants in a row, or the minimum-partici
 <a id="term-pbs"></a>
 ### PBs
 
-Participants who achieved their fastest time at this course during the selected event. PBs help indicate how fast or favourable the event conditions were.  
-Selected via the Type control on the [Event Analysis](#page-event-analysis) page.
+Participants who achieved their **fastest time at this course** during the selected event.  
+PBs help indicate how **fast**, **favourable**, or **competitive** the event conditions were.
+
+Selected via the **Type** control on the  
+[Event Analysis](#page-event-analysis) page.
+
+A **PBs** column also appears on the  
+[Course Page](#page-course),  
+showing how many participants achieved a course PB at each event in the course’s history.  
+This provides useful context when reviewing course trends, seasonal effects, and event‑level performance patterns.
 
 <a id="control-period"></a>
 ### Period
@@ -1550,8 +1611,16 @@ Each participant’s best recent performance is compared against the appropriate
 <a id="term-recent-bests"></a>
 ### Recent Bests
 
-Participants who achieved their best time within the last 15‑week period at this course. This highlights current form rather than lifetime performance.  
-Selected via the Type control on the [Event Analysis](#page-event-analysis) page.
+Participants who achieved their **best time within the last 15‑week period** at this course.  
+This highlights **current form**, short‑term improvement, and how well participants are performing relative to their recent history rather than their lifetime PB.
+
+Selected via the **Type** control on the  
+[Event Analysis](#page-event-analysis) page.
+
+A **Recent Bests** column also appears on the  
+[Course Page](#page-course),  
+showing how many participants achieved a recent‑form improvement at each event in the course’s history.  
+This provides useful context when reviewing course trends, seasonal effects, and how favourable or fast an event was relative to recent conditions.
 
 <a id="control-recent-club"></a>
 ### Recent Club
@@ -1581,14 +1650,31 @@ Short label for a participant's regular or most-associated course. It is used wh
 <a id="term-regulars"></a>
 ### Regulars
 
-Participants who have attended the course **more than 15 times within the last year**. This identifies the core local community who regularly support the event.  
-Selected via the Type control on the [Event Analysis](#page-event-analysis) page.
+Participants who have attended the course **more than 15 times within the last year**.  
+This identifies the core local community who consistently support and return to the event.
+
+Selected via the **Type** control on the  
+[Event Analysis](#page-event-analysis) page.
+
+A **Regulars** column also appears on the  
+[Course Page](#page-course),  
+showing how many participants met the Regulars threshold at each event in the course’s history.  
+This helps highlight long‑term engagement, local loyalty, and the stability of the event’s core community over time.
 
 <a id="term-returners"></a>
 ### Returners
 
-Participants who return to the course after being absent for **more than 15 weeks**. This highlights re‑engagement and returning participation patterns.  
-Selected via the Type control on the [Event Analysis](#page-event-analysis) page.
+Participants who return to the course after being absent for **more than 15 weeks**.  
+This highlights re‑engagement, renewed participation, and longer‑term attendance patterns.
+
+Selected via the **Type** control on the  
+[Event Analysis](#page-event-analysis) page.
+
+A **Returners** column also appears on the  
+[Course Page](#page-course),  
+showing how many participants met the Returners threshold at each event in the course’s history.  
+This provides useful context when reviewing course trends, community re‑engagement, and how participation ebbs and flows over time.
+
 
 <a id="term-runs-1y"></a>
 ### Runs 1Y
@@ -1648,8 +1734,16 @@ A cell or summary mode that shows one direct value rather than an average or der
 <a id="term-super-tourists"></a>
 ### Super Tourists
 
-Participants who have attended **more than 15 different courses within the last year**. This identifies highly mobile participants with broad course experience.  
-Selected via the Type control on the [Event Analysis](#page-event-analysis) page.
+Participants who have attended **more than 15 different courses within the last year**.  
+This identifies highly mobile runners with broad course experience and a strong touring profile.
+
+Selected via the **Type** control on the  
+[Event Analysis](#page-event-analysis) page.
+
+A **Super Tourists** count also appears on the  
+[Course Page](#page-course),  
+showing how many such participants attended each event in the course’s history.  
+This provides useful context when reviewing event composition, visitor patterns, and how widely travelled the field was on a given date.
 
 
 <a id="control-table-view"></a>
@@ -1675,13 +1769,25 @@ The exact options depend on the page, but the most common are:
   See: [All Time Adjustments](#term-all-time-adjustments)  
   A specialised view (where supported) that displays **multiple adjusted‑time variants side by side**, such as event‑adjusted, age‑adjusted, and age‑sex‑adjusted times.
 
+**Table View on the Course Page**
+
+The **Course Page** also includes the Table View control, but with a **reduced set of options**:
+
+- **Basic**  
+- **Detailed**
+
+The **Detailed** layout on the Course Page is **different** from the Event Page version.  
+It shows **course‑level metrics** (e.g., seasonal hardness, event counts, course‑specific aggregates) rather than participant‑level detail.
+
+The **All Time Adjustments** view is **not available** on the Course Page.
+
 **How Table View Works**
 
 Changing the Table View does **not** change the underlying data — it only changes **which columns are visible**.
 
 For example:
 
-- Switching from **Basic** to **Detailed** reveals additional fields such as  
+- Switching from **Basic** to **Detailed** on the Event Page reveals additional fields such as:  
   - Combined Hardness  
   - Clubbers  
   - Returners  
@@ -1691,22 +1797,15 @@ For example:
 
 - Switching to **[All Time Adjustments](#term-all-time-adjustments)** replaces the standard event columns with a set of **adjusted‑time comparison columns**, useful for performance analysis.
 
-Table View is especially helpful when:
-
-- you want a quick overview (Basic)  
-- you want full analytical detail (Detailed)  
-- you want to compare adjusted times (All Time Adjustments)
-
 **Summary**
 
 Table View determines **how much information** is shown on the page:
 
 - **Basic** → essential columns  
-- **Detailed** → full event detail  
-- **All Time Adjustments** → specialised adjusted‑time comparison  
+- **Detailed** → full event or course detail  
+- **All Time Adjustments** → specialised adjusted‑time comparison (Event Page only)
 
 It works seamlessly with the other Event Analysis controls to give you the right level of detail for your analysis.
-
 
 <a id="control-time-adj"></a>
 ### Time Adj
@@ -1994,14 +2093,33 @@ Type is usually the **first control** to set when exploring an event, because it
 <a id="term-unknowns"></a>
 ### Unknowns
 
-Participants who completed the course but did not register a time (for example, forgot their barcode). These are included in participation counts but excluded from time‑based analysis.  
-Selected via the Type control on the [Event Analysis](#page-event-analysis) page.
+Participants who completed the course but did **not** register a time  
+(for example, forgot their barcode or were unscannable).  
+Unknowns are included in **participation counts** but excluded from all  
+**time‑based analysis**.
+
+Selected via the **Type** control on the  
+[Event Analysis](#page-event-analysis) page.
+
+A count of **Unknowns** also appears on the  
+[Course Page](#page-course),  
+showing how many unregistered or unscannable finishers were present at  
+each event in the course’s history.  
+This provides useful context when reviewing event composition,  
+operational issues, and data completeness.
 
 <a id="term-volunteers"></a>
-### Volunteers
+### Volunteers (Volunts)
 
-Counts the number of people who volunteered at the event. Volunteers are a separate group from participants and are not included in participant‑based metrics.  
+Counts the number of people who volunteered at the event.  
+Volunteers are a separate group from participants and are not included in participant‑based metrics.  
 Selected via the Type control on the [Event Analysis](#page-event-analysis) page.
+
+A **Volunteers** column also appears on the  
+[Course Page](#page-course),  
+showing the **number of volunteers for each event** held at that course.  
+This provides useful context when reviewing course history, event conditions, and operational patterns over time.
+
 
 ---
 
@@ -2222,37 +2340,139 @@ The Event Step control keeps you within the same course context, making it easy 
 - Adjusted-time views: show how rankings or times change under different adjustment settings.
 - Event summary labels: provide quick context on turnout and event identity.
 
-
 <a id="page-course"></a>
 
 ### Course Page
 
 #### Purpose Description
 
-Course Page brings together the history and characteristics of a single parkrun course. It is used to understand how that location behaves over time and how participants perform on it.
+Course Page brings together the history and characteristics of a single parkrun course.  
+It is used to understand how that location behaves over time and how participants  
+perform on it.
 
 #### Navigation
 
-This page is normally reached from Event Analysis, Event Page, Participant Page or club/list drill-down links. From here you can move into specific events or participants connected with the course.
+This page is normally reached from Event Analysis, Event Page, Participant Page or  
+club/list drill‑down links. From here you can move into specific events or  
+participants connected with the course.
 
 #### Label and Selection list
 
-- `Table View`: switches between compact and more detailed course tables.
-- Course-specific labels identify the course and its summary metrics.
+- `Table View`: switches between compact and more detailed course tables.  
+- Course‑specific labels identify the course and its summary metrics.  
 - Top 250 and similar sections may use headings driven by the course layout config.
 
 #### Buttons
 
-- Sortable table headers reorder course-level summaries and Top 250 lists.
-- Linked rows or names navigate to event or participant detail.
-- Back navigation returns to the prior context.
+- Sortable table headers reorder course‑level summaries and Top 250 lists.  
+- Linked rows or names navigate to event or participant detail.  
+- Back navigation returns to the prior context.  
+- Additional buttons (such as **Top250**, **Plot Parts**, **Plot Hardness**,  
+  and **Plot Groups**) provide deeper drill‑downs into course‑level statistics  
+  and long‑term behaviour.
 
 #### Tables, Plots and Previews
 
-- Course summary tables: show key metrics for the selected course.
-- Top participant tables: highlight leading or most notable performances on that course.
-- Any supporting visuals on the page give quick context before deeper drill-down.
+- Course summary tables: show key metrics for the selected course.  
+- Top participant tables: highlight leading or most notable performances on that course.  
+- Any supporting visuals on the page give quick context before deeper drill‑down.
 
+#### Top250
+
+The **Top250** button displays a table of the **Top 250 participants** in the  
+course’s history.  
+Participants are initially ranked by their **combined total** of:
+
+- **Total runs** at the course  
+- **Total volunteer roles** at the course
+
+This table provides a rich set of participant‑level columns, including:
+
+- **Last run date** on the course  
+- **Last volunteer date** on the course  
+- **Club** (with link to the [Club Page](#page-club))  
+- **Rank** (linked to the participant’s ranking profile)  
+- **Best time** at the course  
+- **Adjusted times**, where applicable (e.g., event‑adjusted, age‑adjusted, age‑sex‑adjusted)
+
+The Top250 view is designed to surface the most engaged, most experienced,  
+and most notable participants associated with the course, giving a deeper  
+understanding of the course community and its long‑term patterns.
+
+#### Expand
+
+Throughout the plotting experience, the [Expand Button](#section-expand-reduce) can be used to  
+view charts in a larger, more detailed format. 
+
+<a id="plotCourseStatsComp"></a>
+### Plot Parts
+
+The **Plot Parts** button displays the **Course Statistics Comparison** chart.  
+This visual shows:
+
+- the **monthly aggregate participation** for the selected course  
+- compared against the **aggregate participation across the entire local course universe**  
+- alongside the **previous year’s monthly participation**  
+- with **maximum** and **minimum** values across the universe for additional context
+
+This chart helps illustrate how the course’s attendance trends compare to  
+local norms and how participation evolves seasonally and year‑to‑year.
+
+*Example:*  
+<img src="/help-images/courseStatsComp.png" alt="Course Stats Comparison" height="250" />
+
+<a id="plotCourseStatsCompHard"></a>
+### Plot Hardness
+
+The **Plot Hardness** button provides a visual breakdown of the course’s  
+**hardness profile**, showing:
+
+- **historic hardness by month**  
+- **last year’s hardness by month**  
+- the contribution from **seasonality**  
+- the contribution from **event difficulty**
+
+This plot helps explain how the course’s difficulty changes over time and  
+how the **Event Hardness Model** interprets the underlying conditions.
+
+More detail on hardness can be found in the  
+[Course Hardness Model](#section-course-hardness).
+
+*Example:*  
+<img src="/help-images/courseStatsCompHard.png" alt="Course Stats Hardness" height="250" />
+
+<a id="plotCourseStatsCompGroups"></a>
+### Plot Groups
+
+The **Plot Groups** button generates a detailed monthly breakdown of  
+participant composition.  
+This plot may take up to **30 seconds** to produce; it can be skipped by  
+clicking through the button sequence if needed.
+
+For each month, two **bar stacks** are shown:
+
+1. **Participant Type Stack**  
+   - 1st Timers  
+   - Tourists  
+   - Returners  
+   - Regulars  
+   - and other participant‑type categories
+
+2. **Demographic Stack**  
+   - Female / Male split  
+   - Age‑group distribution
+
+Additional controls:
+
+- **Index**: toggles between absolute counts and **100% ratio mode**  
+- **Type Group**: isolates individual bar stacks for focused analysis
+
+This plot provides a rich view of how the course’s participant mix changes  
+over time.
+
+*Example:*  
+<img src="/help-images/courseStatsCompGroup.png" alt="Course Stats Group" height="250" />
+ 
 
 <a id="page-participant"></a>
 

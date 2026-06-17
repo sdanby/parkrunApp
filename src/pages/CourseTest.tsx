@@ -1240,7 +1240,7 @@ const CourseTest: React.FC = () => {
         : nextPanelMode === 'profile'
             ? 'Plot Parts'
             : nextPanelMode === 'harness'
-                ? 'Plot Harness'
+                ? 'Plot Hardness'
             : nextPanelMode === 'groups'
                 ? 'Plot Groups'
             : 'Table';
@@ -2309,8 +2309,23 @@ const CourseTest: React.FC = () => {
                                 }}
                             >
                                 {/* grey header */}
-                                <div style={{ background: '#e5e7eb', borderBottom: '1px solid #d1d5db', padding: '0.45rem 0.8rem', textAlign: 'center', fontSize: '1rem', fontWeight: 700 }}>
-                                    Event statistics comparison
+                                <div style={{ background: '#e5e7eb', borderBottom: '1px solid #d1d5db', padding: '0.45rem 0.8rem', textAlign: 'center', fontSize: '1rem', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}>
+                                    <span>Course statistics comparison</span>
+                                    <button
+                                        type="button"
+                                        className="top-bar-help-btn"
+                                        aria-label="Course statistics comparison help"
+                                        title="Course statistics comparison help"
+                                        onClick={(event) => {
+                                            const rect = (event.currentTarget as HTMLButtonElement).getBoundingClientRect();
+                                            requestUnifiedHelp('plotCourseStatsComp', {
+                                                x: rect.left,
+                                                y: rect.bottom
+                                            });
+                                        }}
+                                    >
+                                        📖
+                                    </button>
                                 </div>
 
                                 {/* chart */}
@@ -2463,8 +2478,23 @@ const CourseTest: React.FC = () => {
                                     minHeight: groupsWindowHeight
                                 }}
                             >
-                                <div style={{ background: '#e5e7eb', borderBottom: '1px solid #d1d5db', padding: '0.45rem 0.8rem', textAlign: 'center', fontSize: '1rem', fontWeight: 700 }}>
-                                    Event statistics comparison (Hardness)
+                                <div style={{ background: '#e5e7eb', borderBottom: '1px solid #d1d5db', padding: '0.45rem 0.8rem', textAlign: 'center', fontSize: '1rem', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}>
+                                    <span>Course statistics comparison (Hardness)</span>
+                                    <button
+                                        type="button"
+                                        className="top-bar-help-btn"
+                                        aria-label="Course statistics comparison hardness help"
+                                        title="Course statistics comparison hardness help"
+                                        onClick={(event) => {
+                                            const rect = (event.currentTarget as HTMLButtonElement).getBoundingClientRect();
+                                            requestUnifiedHelp('plotCourseStatsCompHard', {
+                                                x: rect.left,
+                                                y: rect.bottom
+                                            });
+                                        }}
+                                    >
+                                        📖
+                                    </button>
                                 </div>
 
                                 <div style={{ padding: '0.3rem 0.2rem 0.35rem 0.2rem', overflowX: 'hidden' }}>
@@ -2585,8 +2615,23 @@ const CourseTest: React.FC = () => {
                                     minHeight: groupsWindowHeight
                                 }}
                             >
-                                <div style={{ background: '#e5e7eb', borderBottom: '1px solid #d1d5db', padding: '0.45rem 0.8rem', textAlign: 'center', fontSize: '1rem', fontWeight: 700 }}>
-                                    Event statistics comparison (Groups)
+                                <div style={{ background: '#e5e7eb', borderBottom: '1px solid #d1d5db', padding: '0.45rem 0.8rem', textAlign: 'center', fontSize: '1rem', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}>
+                                    <span>Course statistics comparison (Groups)</span>
+                                    <button
+                                        type="button"
+                                        className="top-bar-help-btn"
+                                        aria-label="Course statistics comparison groups help"
+                                        title="Course statistics comparison groups help"
+                                        onClick={(event) => {
+                                            const rect = (event.currentTarget as HTMLButtonElement).getBoundingClientRect();
+                                            requestUnifiedHelp('plotCourseStatsCompGroups', {
+                                                x: rect.left,
+                                                y: rect.bottom
+                                            });
+                                        }}
+                                    >
+                                        📖
+                                    </button>
                                 </div>
 
                                 {monthlyCascadeLoading ? (
@@ -2897,6 +2942,47 @@ const CourseTest: React.FC = () => {
                                                                     ) : (
                                                                         value
                                                                     )}
+                                                                </td>
+                                                            );
+                                                        }
+
+                                                        if (col.key === 'best_curve_ranking_current') {
+                                                            const currentRankRaw = row?.best_curve_ranking_current ?? row?.bestCurveRankingCurrent ?? row?.rank;
+                                                            const historicRankRaw = row?.best_curve_ranking_historic ?? row?.bestCurveRankingHistoric;
+                                                            const rankTypeRaw = pickField(row, ['best_curve_ranking_current_type', 'bestCurveRankingCurrentType']);
+                                                            const rankSubFontSize = '0.62rem';
+
+                                                            const toOptionalRankNumber = (value: unknown): number | null => {
+                                                                if (value === null || value === undefined) return null;
+                                                                const text = String(value).trim();
+                                                                if (!text) return null;
+                                                                const numeric = Number(text);
+                                                                return Number.isFinite(numeric) ? numeric : null;
+                                                            };
+
+                                                            const currentRank = toOptionalRankNumber(currentRankRaw);
+                                                            const historicRank = toOptionalRankNumber(historicRankRaw);
+                                                            const hasCurrent = currentRank !== null;
+                                                            const hasHistoric = historicRank !== null;
+                                                            const rankType = hasCurrent ? (String(rankTypeRaw || '').trim() || '*') : '';
+                                                            const currentRankInt = hasCurrent ? Math.round(currentRank as number) : null;
+                                                            const historicRankInt = hasHistoric ? Math.round(historicRank as number) : null;
+                                                            const delta = currentRankInt !== null && historicRankInt !== null
+                                                                ? currentRankInt - historicRankInt
+                                                                : null;
+                                                            const deltaText = delta === null ? '' : `${delta >= 0 ? '+' : ''}${delta}`;
+
+                                                            return (
+                                                                <td key={col.key} style={{ ...alignmentStyle, textAlign: 'center' }}>
+                                                                    <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+                                                                        <span>{currentRankInt !== null ? String(currentRankInt) : ''}</span>
+                                                                        {(rankType || deltaText) ? (
+                                                                            <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', lineHeight: 1.02 }}>
+                                                                                <span style={{ fontSize: rankSubFontSize, opacity: 0.9 }}>{rankType}</span>
+                                                                                <span style={{ fontSize: rankSubFontSize, opacity: 0.9 }}>{deltaText}</span>
+                                                                            </span>
+                                                                        ) : null}
+                                                                    </div>
                                                                 </td>
                                                             );
                                                         }
