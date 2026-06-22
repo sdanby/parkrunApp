@@ -509,6 +509,7 @@
       "type": "table",
       "name": "col16",
       "headerName": "AES Adj",
+      "helpTarget": "term-aes-adj",
       "laptop": { "width": "2.3cm" },
       "mobile": { "width": "2.2cm" }
     }

@@ -66,6 +66,11 @@ export type LayoutTableColumn = {
   name: string;
   headerName: string;
   sticky?: boolean;
+  helpTarget?: string;
+  helpTip?: boolean | {
+    enabled?: boolean;
+    delayMs?: number;
+  };
   interaction?: LayoutInteractionConfig;
   style?: LayoutElementStyleConfig;
   laptop: LayoutPositionSpec;

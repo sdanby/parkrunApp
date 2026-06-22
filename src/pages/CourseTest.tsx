@@ -395,6 +395,13 @@ const top250Columns: ColumnDef[] = getCourseColumnsForView('top250').map((column
     key: column.key,
     label: column.headerName || column.key,
     align: column.style?.textAlign,
+    helpTarget: (column as any)?.helpTarget,
+    helpTipEnabled: typeof (column as any)?.helpTip === 'object'
+        ? (column as any).helpTip.enabled !== false
+        : (column as any)?.helpTip !== false,
+    helpTipDelayMs: typeof (column as any)?.helpTip === 'object' && Number((column as any).helpTip.delayMs) > 0
+        ? Number((column as any).helpTip.delayMs)
+        : undefined,
     desktopWidth: widthToPx(column.laptop?.width),
     mobileWidth: widthToPx(column.mobile?.width)
 }));

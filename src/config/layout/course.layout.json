@@ -304,21 +304,22 @@
     { "key": "recentbest_count", "type": "table", "name": "recentbest_count", "helpTarget": "term-recent-bests", "headerName": "Recent Best", "style": { "textAlign": "center" }, "laptop": { "width": "110px" }, "mobile": { "width": "110px" } },
     { "key": "eligible_time_count", "type": "table", "name": "eligible_time_count", "helpTarget": "term-eligible-runs", "headerName": "Eligible", "style": { "textAlign": "center" }, "laptop": { "width": "100px" }, "mobile": { "width": "100px" } },
 
+
     { "key": "name", "type": "table", "name": "name", "headerName": "Participants", "style": { "textAlign": "left" }, "laptop": { "width": "150px" }, "mobile": { "width": "140px" } },
     { "key": "total_count", "type": "table", "name": "total_count", "headerName": "Comb tot", "style": { "textAlign": "center" }, "laptop": { "width": "95px" }, "mobile": { "width": "95px" } },
-    { "key": "appearances", "type": "table", "name": "appearances", "headerName": "Course #", "style": { "textAlign": "center" }, "laptop": { "width": "90px" }, "mobile": { "width": "90px" } },
-    { "key": "volunteer_count", "type": "table", "name": "volunteer_count", "headerName": "Volunts", "style": { "textAlign": "center" }, "laptop": { "width": "85px" }, "mobile": { "width": "85px" } },
+    { "key": "appearances", "type": "table", "name": "appearances", "headerName": "Course #", "helpTarget": "term-course-number", "style": { "textAlign": "center" }, "laptop": { "width": "90px" }, "mobile": { "width": "90px" } },
+    { "key": "volunteer_count", "type": "table", "name": "volunteer_count", "helpTarget": "term-volunteers","headerName": "Volunts", "style": { "textAlign": "center" }, "laptop": { "width": "85px" }, "mobile": { "width": "85px" } },
     { "key": "age_group", "type": "table", "name": "age_group", "headerName": "Age grp", "style": { "textAlign": "center" }, "laptop": { "width": "86px" }, "mobile": { "width": "86px" } },
-    { "key": "club", "type": "table", "name": "club", "headerName": "Club", "style": { "textAlign": "left" }, "laptop": { "width": "150px" }, "mobile": { "width": "150px" } },
-    { "key": "best_curve_ranking_current", "type": "table", "name": "best_curve_ranking_current", "headerName": "Rank", "style": { "textAlign": "center", "subFontSize": "0.62rem" }, "laptop": { "width": "78px" }, "mobile": { "width": "78px" } },
+    { "key": "club", "type": "table", "name": "club", "headerName": "Club", "helpTarget": "term-club", "style": { "textAlign": "left" }, "laptop": { "width": "150px" }, "mobile": { "width": "150px" } },
+    { "key": "best_curve_ranking_current", "type": "table", "name": "best_curve_ranking_current", "helpTarget": "term-rank","headerName": "Rank", "style": { "textAlign": "center", "subFontSize": "0.62rem" }, "laptop": { "width": "78px" }, "mobile": { "width": "78px" } },
     { "key": "best_curve_ranking_historic", "type": "table", "name": "best_curve_ranking_historic", "headerName": "Hist Rank", "style": { "textAlign": "center" }, "laptop": { "width": "95px" }, "mobile": { "width": "95px" } },
     { "key": "best_curve_ranking_current_type", "type": "table", "name": "best_curve_ranking_current_type", "headerName": "Rank type", "style": { "textAlign": "center" }, "laptop": { "width": "100px" }, "mobile": { "width": "100px" } },
     { "key": "min_time_mmss", "type": "table", "name": "min_time_mmss", "headerName": "Best Time", "style": { "textAlign": "center" }, "laptop": { "width": "95px" }, "mobile": { "width": "95px" } },
-    { "key": "min_event_adj_mmss", "type": "table", "name": "min_event_adj_mmss", "headerName": "Ev Adj", "style": { "textAlign": "center" }, "laptop": { "width": "80px" }, "mobile": { "width": "80px" } },
-    { "key": "min_age_event_adj_mmss", "type": "table", "name": "min_age_event_adj_mmss", "headerName": "AE adj", "style": { "textAlign": "center" }, "laptop": { "width": "80px" }, "mobile": { "width": "80px" } },
-    { "key": "min_age_sex_event_adj_mmss", "type": "table", "name": "min_age_sex_event_adj_mmss", "headerName": "AES adj", "style": { "textAlign": "center" }, "laptop": { "width": "85px" }, "mobile": { "width": "85px" } },
-    { "key": "last_run_date", "type": "table", "name": "last_run_date", "headerName": "Last Event", "style": { "textAlign": "center" }, "laptop": { "width": "110px" }, "mobile": { "width": "110px" } },
-    { "key": "last_volunteer_date", "type": "table", "name": "last_volunteer_date", "headerName": "Last Volunt", "style": { "textAlign": "center" }, "laptop": { "width": "110px" }, "mobile": { "width": "110px" } }
+    { "key": "min_event_adj_mmss", "type": "table", "name": "min_event_adj_mmss", "helpTarget":"term-ev-adj","headerName": "Ev Adj", "style": { "textAlign": "center" }, "laptop": { "width": "80px" }, "mobile": { "width": "80px" } },
+    { "key": "min_age_event_adj_mmss", "type": "table", "name": "min_age_event_adj_mmss", "helpTarget":"term-ae-adj","headerName": "AE adj", "style": { "textAlign": "center" }, "laptop": { "width": "80px" }, "mobile": { "width": "80px" } },
+    { "key": "min_age_sex_event_adj_mmss", "type": "table", "name": "min_age_sex_event_adj_mmss","helpTarget":"term-aes-adj", "headerName": "AES adj", "style": { "textAlign": "center" }, "laptop": { "width": "85px" }, "mobile": { "width": "85px" } },
+    { "key": "last_run_date", "type": "table", "name": "last_run_date", "helpTarget": "term-last-event", "headerName": "Last Event", "style": { "textAlign": "center" }, "laptop": { "width": "110px" }, "mobile": { "width": "110px" } },
+    { "key": "last_volunteer_date", "type": "table", "name": "last_volunteer_date", "helpTarget": "term-last-volunt", "headerName": "Last Volunt", "style": { "textAlign": "center" }, "laptop": { "width": "110px" }, "mobile": { "width": "110px" } }
   ],
   "tableWidthMode": {
     "notes": "Configures table container widths for different view modes",

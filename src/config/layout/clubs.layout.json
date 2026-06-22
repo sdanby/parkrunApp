@@ -286,6 +286,7 @@
       "id": "clubs.clubLabel",
       "type": "label",
       "name": "Recent club:",
+      "helpTarget": "control-recent-club",
       "style": {
         "fontSize": "0.75rem",
         "fontWeight": 600,

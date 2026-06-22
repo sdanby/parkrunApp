@@ -282,7 +282,8 @@ const Clubs: React.FC = () => {
     const onHeaderActivate = (
         eventTarget: EventTarget | null,
         label: string,
-        onSort: () => void
+        onSort: () => void,
+        helpTarget?: string
     ) => {
         if (!isHelpMode) {
             onSort();
@@ -291,12 +292,12 @@ const Clubs: React.FC = () => {
 
         const element = eventTarget as HTMLElement | null;
         if (!element) {
-            requestUnifiedHelp('top', null, label);
+            requestUnifiedHelp(helpTarget || 'top', null, label);
             return;
         }
 
         const rect = element.getBoundingClientRect();
-        requestUnifiedHelp('top', { x: rect.left, y: rect.bottom }, label);
+        requestUnifiedHelp(helpTarget || 'top', { x: rect.left, y: rect.bottom }, label);
     };
     const initialClubFromUrl = (searchParams.get('club') || '').trim();
     const [userClub, setUserClub] = useState<string | null>(null);
@@ -403,6 +404,7 @@ const Clubs: React.FC = () => {
     }, []);
 
     const clubLabelElement = getClubsElementById('clubs.clubLabel');
+    const clubLabelHelpTarget = clubLabelElement?.helpTarget || 'control-recent-club';
     const membersTitleElement = getClubsElementById('clubs.membersTitle');
     const currentMembersTitleElement = getClubsElementById('clubs.currentMembersTitle');
     const eventsTitleElement = getClubsElementById('clubs.eventsTitle');
@@ -838,19 +840,30 @@ const Clubs: React.FC = () => {
                 </div>
                 <div className="clubs-header-main">
                     <div className="clubs-search-stack">
-                        <label
-                            htmlFor="clubs-search-input"
-                            className="clubs-search-label"
-                            style={{
-                                fontSize: clubLabelElement?.style?.fontSize ?? '0.75rem',
-                                fontWeight: clubLabelElement?.style?.fontWeight ?? 600,
-                                color: clubLabelElement?.style?.color ?? '#111827',
-                                lineHeight: Number(clubLabelElement?.style?.lineHeight ?? 0.9),
-                                marginTop: pClubLabel?.y ?? clubLabelElement?.[layoutViewport]?.y ?? undefined
-                            }}
-                        >
-                            {clubLabelElement?.name || 'Recent club:'}
-                        </label>
+                        <span className="help-tooltip" style={{ display: 'inline-flex' }}>
+                            <button
+                                type="button"
+                                className="help-trigger help-trigger-label clubs-search-label"
+                                onClick={(event) => {
+                                    const rect = (event.currentTarget as HTMLButtonElement).getBoundingClientRect();
+                                    requestUnifiedHelp(clubLabelHelpTarget, {
+                                        x: rect.left,
+                                        y: rect.bottom
+                                    });
+                                }}
+                                title={`${clubLabelElement?.name || 'Recent club'} help`}
+                                aria-label={`${clubLabelElement?.name || 'Recent club'} help`}
+                                style={{
+                                    fontSize: clubLabelElement?.style?.fontSize ?? '0.75rem',
+                                    fontWeight: clubLabelElement?.style?.fontWeight ?? 600,
+                                    color: clubLabelElement?.style?.color ?? '#111827',
+                                    lineHeight: Number(clubLabelElement?.style?.lineHeight ?? 0.9),
+                                    marginTop: pClubLabel?.y ?? clubLabelElement?.[layoutViewport]?.y ?? undefined
+                                }}
+                            >
+                                <span className="help-trigger-text">{clubLabelElement?.name || 'Recent club:'}</span>
+                            </button>
+                        </span>
                         <div className="clubs-search-wrap" ref={containerRef}>
                             <input
                                 ref={inputRef}
@@ -1014,11 +1027,12 @@ const Clubs: React.FC = () => {
                                                 key={String(column.key)}
                                                 className={headerClasses.join(' ')}
                                                 style={alignStyle}
-                                                onClick={(event) => onHeaderActivate(event.currentTarget, headerLabel, () => onSortColumn(column.key as keyof ClubMember))}
+                                                onClick={(event) => onHeaderActivate(event.currentTarget, headerLabel, () => onSortColumn(column.key as keyof ClubMember), (column as any)?.helpTarget)}
                                                 onMouseEnter={(event) => {
                                                     delayedHeaderHelp.schedule({
                                                         event,
-                                                        label: headerLabel
+                                                        label: headerLabel,
+                                                        markerId: (column as any)?.helpTarget
                                                     });
                                                 }}
                                                 onMouseLeave={delayedHeaderHelp.clear}
@@ -1029,7 +1043,7 @@ const Clubs: React.FC = () => {
                                                 onKeyDown={(event) => {
                                                     if (event.key === 'Enter' || event.key === ' ') {
                                                         event.preventDefault();
-                                                        onHeaderActivate(event.currentTarget, headerLabel, () => onSortColumn(column.key as keyof ClubMember));
+                                                        onHeaderActivate(event.currentTarget, headerLabel, () => onSortColumn(column.key as keyof ClubMember), (column as any)?.helpTarget);
                                                     }
                                                 }}
                                                 aria-sort={isSorted ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}
@@ -1132,11 +1146,12 @@ const Clubs: React.FC = () => {
                                                 key={String(column.key)}
                                                 className={headerClasses.join(' ')}
                                                 style={alignStyle}
-                                                onClick={(event) => onHeaderActivate(event.currentTarget, headerLabel, () => onSortCourseSummaryColumn(sortKey))}
+                                                onClick={(event) => onHeaderActivate(event.currentTarget, headerLabel, () => onSortCourseSummaryColumn(sortKey), (column as any)?.helpTarget)}
                                                 onMouseEnter={(event) => {
                                                     delayedHeaderHelp.schedule({
                                                         event,
-                                                        label: headerLabel
+                                                        label: headerLabel,
+                                                        markerId: (column as any)?.helpTarget
                                                     });
                                                 }}
                                                 onMouseLeave={delayedHeaderHelp.clear}
@@ -1147,7 +1162,7 @@ const Clubs: React.FC = () => {
                                                 onKeyDown={(event) => {
                                                     if (event.key === 'Enter' || event.key === ' ') {
                                                         event.preventDefault();
-                                                        onHeaderActivate(event.currentTarget, headerLabel, () => onSortCourseSummaryColumn(sortKey));
+                                                        onHeaderActivate(event.currentTarget, headerLabel, () => onSortCourseSummaryColumn(sortKey), (column as any)?.helpTarget);
                                                     }
                                                 }}
                                                 aria-sort={isSorted ? (courseSummarySortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}

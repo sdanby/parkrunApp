@@ -3818,7 +3818,7 @@ const Athletes: React.FC = () => {
                                             title="Time by Date help"
                                             onClick={(event) => {
                                                 const rect = (event.currentTarget as HTMLButtonElement).getBoundingClientRect();
-                                                requestUnifiedHelp('section-participant-time-by-date', {
+                                                requestUnifiedHelp('section-time-by-date', {
                                                     x: rect.left,
                                                     y: rect.bottom
                                                 });
