@@ -11,7 +11,18 @@ const HomePage: React.FC = () => {
     return (
         <div className="home-page home-page-welcome">
             <div className="home-top-region home-top-region-welcome">
-                <h2>Welcome to the Parkrun App</h2>
+                <h2>
+                    Welcome to{' '}
+                    <span className="home-brand-presto">
+                        <img
+                            src={`${process.env.PUBLIC_URL}/favicon.svg`}
+                            alt=""
+                            aria-hidden="true"
+                            className="home-brand-presto-logo"
+                        />
+                        <span>PRESTO</span>
+                    </span>
+                </h2>
                 <p>
                     This application allows you to track your parkrun events, view event results, and analyze your performance over time.
                     <br />
@@ -49,6 +60,14 @@ const HomePage: React.FC = () => {
                     <br />
                    <br />
                    For further help and detail click on the links below:
+                </p>
+                <h2>Parkruns Courses included in this app</h2>
+                <p>
+                    This app has been built with local parkrun to Essex only. This was a prototype app, and the amount of web scrapping and processes required us to keep it small enough and cheap enough for this purpose was necessary.
+                    <br />
+                    This can be fully expanded to analyse all parkrun but that will need a wider commitment.
+                    <br />
+                    As such, a number of Tourists will have very limited information on them and local participants will have no infomation on parkruns outside of the local parkruns in scope.
                 </p>
                 <p></p>
                 <div className="home-help-entry">

@@ -24,6 +24,19 @@
   padding-bottom: 0.75rem;
 }
 
+.home-brand-presto {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: #2f8f2f;
+}
+
+.home-brand-presto-logo {
+  width: 1.05em;
+  height: 1.05em;
+  flex: 0 0 auto;
+}
+
 .home-top-region,
 .home-bottom-region {
   overflow-y: auto;

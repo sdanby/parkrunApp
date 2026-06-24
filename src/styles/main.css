@@ -31,6 +31,8 @@ h1, h2, h3 {
     display: flex;
     align-items: center;
     position: relative;
+    flex: 1 1 auto;
+    min-width: 0;
 }
 
 .top-bar-page-help {
@@ -54,15 +56,16 @@ h1, h2, h3 {
 }
 
 .top-bar-column-mode-wrap {
-    position: relative;
-    margin-left: 10cm;
-    margin-top: 0.42cm;
+    position: absolute;
+    right: 35.6cm;
+    top: 0.42cm;
     z-index: 2147483647;
 }
 
 @media (max-width: 640px) {
     .top-bar-column-mode-wrap {
-        margin-left: 12.85rem;
+        right: 0.7cm;
+        top: 0.42cm;
     }
 }
 
@@ -241,6 +244,23 @@ h1, h2, h3 {
     display: inline-flex;
     align-items: center;
     gap: 0.35rem;
+}
+
+@media (max-width: 640px) {
+    .unified-help-search-controls {
+        gap: 0.25rem;
+        transform: translateX(1.35cm);
+    }
+
+    .unified-help-search-input {
+        width: calc(12rem - 1mm);
+        max-width: calc(32vw - 1mm);
+    }
+
+    .unified-help-search-mode,
+    .unified-help-search-go {
+        padding: 0.2rem calc(0.4rem - 1mm);
+    }
 }
 
 .unified-help-search-input {

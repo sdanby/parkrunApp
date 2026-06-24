@@ -1876,7 +1876,19 @@ const EventAnalysisTest: React.FC = () => {
                   gap: '0.35rem'
                 }}
               >
-                <span>Event statistics comparison</span>
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    lineHeight: 1.15
+                  }}
+                >
+                  <span>Event statistics comparison</span>
+                  <span style={{ fontSize: '0.68rem', fontWeight: 500 }}>
+                    Legend courses can be selected to highlight
+                  </span>
+                </div>
                 <button
                   type="button"
                   className="top-bar-help-btn"

@@ -1016,7 +1016,7 @@ can be seen by reviewing their
 which shows club affiliation at each event.
 
 <a id="term-date"></a>
-### Date
+### Date (Ev Date)
 
 Date is the **calendar date** of the event.  
 For almost all parkrun events this is a **Saturday**, with the only regular  
@@ -1318,7 +1318,15 @@ Hardness Adj shows the combined hardness context for the selected event and adju
 <a id="term-hist-rank"></a>
 ### Hist Rank
 
-Historic ranking for a participant or value in the selected comparison framework. It contrasts with current rank to show how standing changes depending on the reference period.
+Hist Rank is the **highest rank a participant has ever achieved** within the
+selected comparison framework (see [Rank](#term-rank)).
+
+A participant receives a **weekly rank score**, calculated from their relative
+performance based on parkrun time or adjusted‑time measures  
+(e.g., Event‑adjusted, Age‑adjusted, Age‑Sex‑adjusted).
+
+Hist Rank records the **best of all these weekly ranks**, providing a clear view
+of the participant’s strongest position across their entire history.
 
 <a id="period-last-50"></a>
 ### Last 50 Events
@@ -1904,7 +1912,7 @@ showing how many participants met the Returners threshold at each event in the c
 This provides useful context when reviewing course trends, community re‑engagement, and how participation ebbs and flows over time.
 
 <a id="term-runs-1y"></a>
-### Runs 1Y
+### Runs 1Y (Runs in 1Y)
 
 Run count limited to the **most recent one‑year window**.  
 Use it when **recent activity** matters more than total career volume.
@@ -2083,6 +2091,8 @@ Table View determines **how much information** is shown on the page:
 It works seamlessly with the other controls to give you the right level of  
 detail for your analysis.
 
+---
+
 <a id="control-time-adj"></a>
 ### Time Adj
 
@@ -2157,6 +2167,7 @@ Time Adj only applies when analysing **Times** and provides four ways to interpr
 
 These adjustments help you compare average times **fairly** across different courses, conditions and participant groups.
 
+---
 
 <a id="term-times"></a>
 ### Times (Time) (Best Time)
@@ -2259,6 +2270,8 @@ Total PBs across all courses on a given day, or total volunteers across the sele
 
 Use this when you want to understand **scale** rather than averages.
 
+---
+
 <a id="control-total-runs"></a>
 ### Total runs (Tot. runs)
 
@@ -2294,6 +2307,7 @@ Participants who normally attend a different course to the one selected.
 The app does not know a participant’s official “home” course, so it infers it from the participant’s **most frequently attended course**. Anyone attending a different course is counted as a Tourist.  
 Selected via the Type control on the [Event Analysis](#page-event-analysis) page.
 
+---
 
 <a id="control-type"></a>
 ## Type
@@ -2363,9 +2377,7 @@ They do **not** support percentage or deviation calculations because they are no
 
 Use these Types when you want to understand the **conditions** or **context** of an event rather than the behaviour of participants.
 
----
-
-### Summary
+#### Summary
 
 - **Participant‑based Types** → counts of people → support all Calc options  
 - **Event‑level Types** → fixed event values → limited Calc options  
@@ -2374,6 +2386,8 @@ Use these Types when you want to understand the **conditions** or **context** of
 - **Hardness metrics** → describe course difficulty, not participation  
 
 Type is usually the **first control** to set when exploring an event, because it defines what the numbers in the table actually represent.
+
+---
 
 <a id="term-unknowns"></a>
 ### Unknowns
@@ -3097,30 +3111,129 @@ viewing the other tables.
 
 #### Purpose Description
 
-Lists Page provides predefined top-style leaderboards and filtered collections of athletes. It is used when you want quick access to ranked results without building a custom analysis first.
+The Lists Page provides **predefined leaderboards** of up to **1000 participants**,
+ranked according to criteria chosen by the user.  
+It is the quickest way to view the **fastest athletes**, the **most active
+parkrunners**, or other high‑level summaries without building a custom analysis.
+
+Lists can focus on:
+
+- **speed** (fastest athletes)
+- **participation volume** (most runs, most local runs)
+- **recent performance** (1‑year windows)
+- **other categories** as they are added over time
+
+Each list is dynamically generated based on the user’s selections and can be
+further refined using filters and adjustment settings.
 
 #### Navigation
 
-This page is usually entered directly from the main navigation. From the loaded leaderboard you can drill into participant, course, club or event detail depending on which columns are clicked.
+The Lists Page is normally accessed directly from the main navigation.  
+From any leaderboard, you can drill into:
 
-#### Label and Selection list
+- **Participant Pages**
+- **Course Pages**
+- **Club Pages**
+- **Event Pages**
 
-- `List Selection`: chooses which leaderboard family is loaded.
-- `Filtered By Adjustments`: controls whether adjustment settings change the underlying leaderboard source.
-- `Participants`: applies minimum-history thresholds.
-- `Course Adj` and `Other Adj`: alter the adjustment context used for the list.
+by clicking the linked values in the table.
+
+Back navigation returns you to the previous page if the list was reached via
+drill‑down.
+
+#### Label and Selection List
+
+The Lists Page includes several key selectors that define what the leaderboard
+shows:
+
+**List Selection**
+Determines the **type of leaderboard** to load.  
+Examples include:
+
+- Fastest Athletes – All Time  
+- Fastest Athletes – Over Last 1 Year  
+- Highest Total Runs  
+- Highest Local Runs  
+- Highest Local Runs – Over Last 1 Year  
+
+This selection automatically sorts the table by the column relevant to the
+chosen list.
+
+**Participants Filter**
+Applies **minimum‑history thresholds** to refine the list.  
+Examples include:
+
+- All participants  
+- Participants with >50 total runs  
+- Participants with >50 local runs  
+- Participants with >10 local runs in the last year  
+
+These filters help focus on **local athletes**, **experienced runners**, or
+participants with meaningful history, rather than tourists or occasional visitors.
+
+**Course Adj** and **Other Adj**
+These settings apply the same adjustment logic used throughout the app:
+
+- **Event adjustment**  
+- **Age adjustment**  
+- **Sex adjustment**  
+- **Combinations of the above**
+
+This allows you to view lists such as:
+
+- Fastest athletes **adjusted for event difficulty**  
+- Fastest athletes **adjusted for age and sex**  
+- Fastest athletes **fully adjusted** (event + age + sex)
+
+This makes the Lists Page a powerful tool for **fair comparison** across
+participants with different ages, sexes, and course histories.
+
+**Use adj. filters**
+Controls whether the adjustment settings affect the **source list** or only the
+**displayed columns**.
 
 #### Buttons
 
-- Header clicks re-sort the loaded list client-side.
-- Linked participant, club, course or event values open the related detail page.
-- Back navigation returns to the previously viewed page if the list was reached via drill-down.
+- Clicking any **column header** re‑sorts the list client‑side.  
+  This works within the **top 1000** participants who met the selection criteria.
+- Clicking a **participant**, **course**, **club**, or **event** value opens the
+  corresponding detail page.
+- Back navigation returns to the previous context.
 
 #### Tables, Plots and Previews
 
-- Main leaderboard table: shows the selected top 1000 or filtered list.
-- Representative performance columns: give a quick preview of why each athlete appears in the chosen list.
+The Lists Page displays a single main table:
 
+**Main Leaderboard Table**
+Shows the top 1000 participants matching the selected criteria.  
+For each participant, the table provides a **rich set of performance data**, such
+as:
+
+- best time  
+- date of best time  
+- finishing position  
+- ranking under different adjustment methods  
+- age group and age grade at the time  
+- course and club at the time  
+- recent run history  
+- one‑year run totals  
+- all‑time adjusted metrics for the identified event  
+
+This gives a deep, contextual view of **why** each participant appears in the
+list.
+
+#### Summary
+
+The Lists Page is the place to:
+
+- view **top‑1000 leaderboards**  
+- compare athletes by **speed**, **participation**, or **adjusted performance**  
+- filter participants by **experience**, **locality**, or **recent activity**  
+- apply **course**, **age**, and **sex** adjustments  
+- drill into detailed participant, course, club, or event pages  
+
+It provides a fast, flexible way to explore the parkrun universe from multiple
+angles, without needing to build custom queries elsewhere in the app.
 
 <a id="page-feedback-log"></a>
 
