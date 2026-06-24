@@ -1110,6 +1110,41 @@ const Clubs: React.FC = () => {
                                                         </td>
                                                     );
                                                 }
+
+                                                if (column.key === 'best_curve_ranking_current') {
+                                                    const currentRankRaw = member.best_curve_ranking_current;
+                                                    const historicRankRaw = member.best_curve_ranking_historic;
+                                                    const rankTypeRaw = member.best_curve_ranking_current_type;
+                                                    const rankSubFontSize = String((column as any)?.style?.subFontSize || '0.62rem');
+
+                                                    const currentRank = Number(currentRankRaw);
+                                                    const historicRank = Number(historicRankRaw);
+                                                    const hasCurrent = Number.isFinite(currentRank);
+                                                    const hasHistoric = Number.isFinite(historicRank);
+
+                                                    const rankType = hasCurrent ? (String(rankTypeRaw ?? '').trim() || '*') : '';
+                                                    const currentRankInt = hasCurrent ? Math.round(currentRank) : null;
+                                                    const historicRankInt = hasHistoric ? Math.round(historicRank) : null;
+                                                    const delta = currentRankInt !== null && historicRankInt !== null
+                                                        ? currentRankInt - historicRankInt
+                                                        : null;
+                                                    const deltaText = delta === null ? '' : `${delta >= 0 ? '+' : ''}${delta}`;
+
+                                                    return (
+                                                        <td key={String(column.key)} style={{ ...alignmentStyle, textAlign: 'center' }}>
+                                                            <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+                                                                <span>{currentRankInt !== null ? String(currentRankInt) : ''}</span>
+                                                                {(rankType || deltaText) ? (
+                                                                    <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', lineHeight: 1.02 }}>
+                                                                        <span style={{ fontSize: rankSubFontSize, opacity: 0.9 }}>{rankType}</span>
+                                                                        <span style={{ fontSize: rankSubFontSize, opacity: 0.9 }}>{deltaText}</span>
+                                                                    </span>
+                                                                ) : null}
+                                                            </div>
+                                                        </td>
+                                                    );
+                                                }
+
                                                 return (
                                                     <td key={String(column.key)} style={alignmentStyle}>
                                                         {formatDisplayValue(key, value)}

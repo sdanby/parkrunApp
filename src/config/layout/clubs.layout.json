@@ -29,8 +29,6 @@
       "best_age_event_adj_time",
       "best_age_sex_event_adj_time",
       "best_curve_ranking_current",
-      "best_curve_ranking_current_type",
-      "best_curve_ranking_historic",
       "latest_age_group",
       "current_club"
     ],
@@ -46,8 +44,6 @@
       "best_age_event_adj_time",
       "best_age_sex_event_adj_time",
       "best_curve_ranking_current",
-      "best_curve_ranking_current_type",
-      "best_curve_ranking_historic",
       "latest_age_group",
       "current_club"
     ],
@@ -69,6 +65,7 @@
       "type": "table",
       "name": "Participants",
       "headerName": "Participants",
+      "helpTarget": "term-participant",
       "style": { "textAlign": "left" },
       "laptop": { "width": "130px" },
       "mobile": { "width": "130px" }
@@ -78,6 +75,7 @@
       "type": "table",
       "name": "Club runs",
       "headerName": "Club runs",
+      "helpTarget": "term-club-runs",
       "style": { "textAlign": "center" },
       "laptop": { "width": "100px" },
       "mobile": { "width": "100px" }
@@ -87,6 +85,7 @@
       "type": "table",
       "name": "Club runs 1y",
       "headerName": "Club runs 1y",
+      "helpTarget": "term-club-runs",
       "style": { "textAlign": "center" },
       "laptop": { "width": "105px" },
       "mobile": { "width": "105px" }
@@ -96,6 +95,7 @@
       "type": "table",
       "name": "All runs",
       "headerName": "Tot. runs",
+      "helpTarget": "control-total-runs",
       "style": { "textAlign": "center" },
       "laptop": { "width": "78px" },
       "mobile": { "width": "78px" }
@@ -105,6 +105,7 @@
       "type": "table",
       "name": "1st club run",
       "headerName": "1st club run",
+      "helpTarget": "term-first-club-run",
       "style": { "textAlign": "center" },
       "laptop": { "width": "100px" },
       "mobile": { "width": "100px" }
@@ -123,6 +124,7 @@
       "type": "table",
       "name": "Best time",
       "headerName": "Best time",
+      "helpTarget": "term-times",
       "style": { "textAlign": "center" },
       "laptop": { "width": "85px" },
       "mobile": { "width": "85px" }
@@ -132,6 +134,7 @@
       "type": "table",
       "name": "Ev adj",
       "headerName": "Ev Adj",
+      "helpTarget": "term-ev-adj",
       "style": { "textAlign": "center" },
       "laptop": { "width": "65px" },
       "mobile": { "width": "65px" }
@@ -141,6 +144,7 @@
       "type": "table",
       "name": "AE adj",
       "headerName": "AE Adj",
+      "helpTarget": "term-ae-adj",
       "style": { "textAlign": "center" },
       "laptop": { "width": "65px" },
       "mobile": { "width": "65px" }
@@ -150,6 +154,7 @@
       "type": "table",
       "name": "AES adj",
       "headerName": "AES Adj",
+      "helpTarget": "term-aes-adj",
       "style": { "textAlign": "center" },
       "laptop": { "width": "75px" },
       "mobile": { "width": "75px" }
@@ -159,9 +164,10 @@
       "type": "table",
       "name": "Cur rank",
       "headerName": "Rank",
-      "style": { "textAlign": "center" },
-      "laptop": { "width": "60px" },
-      "mobile": { "width": "60px" }
+      "helpTarget": "term-rank",
+      "style": { "textAlign": "center", "subFontSize": "0.62rem" },
+      "laptop": { "width": "78px" },
+      "mobile": { "width": "78px" }
     },
     {
       "key": "best_curve_ranking_historic",
@@ -186,6 +192,7 @@
       "type": "table",
       "name": "Age grp",
       "headerName": "Age grp",
+      "helpTarget": "term-age-group",
       "style": { "textAlign": "center" },
       "laptop": { "width": "78px" },
       "mobile": { "width": "76px" }
@@ -195,6 +202,7 @@
       "type": "table",
       "name": "Current club",
       "headerName": "Current club",
+      "helpTarget": "term-current-club",
       "style": { "textAlign": "left" },
       "laptop": { "width": "150px" },
       "mobile": { "width": "140px" }
@@ -204,6 +212,7 @@
       "type": "table",
       "name": "Course",
       "headerName": "Course",
+      "helpTarget": "control-course",
       "style": { "textAlign": "left" },
       "laptop": { "width": "155px" },
       "mobile": { "width": "145px" }
@@ -212,16 +221,18 @@
       "key": "events_held_all_history",
       "type": "table",
       "name": "Events",
-      "headerName": "Event #",
+      "headerName": "Event cnt",
+      "helpTarget": "term-event-count",
       "style": { "textAlign": "center" },
-      "laptop": { "width": "75px" },
-      "mobile": { "width": "72px" }
+      "laptop": { "width": "85px" },
+      "mobile": { "width": "85px" }
     },
     {
       "key": "club_runs_all_history",
       "type": "table",
       "name": "Runs",
       "headerName": "Freq",
+      "helpTarget": "control-freq-course",
       "style": { "textAlign": "center" },
       "laptop": { "width": "75px" },
       "mobile": { "width": "72px" }
@@ -231,6 +242,7 @@
       "type": "table",
       "name": "Athletes",
       "headerName": "Members",
+      "helpTarget": "term-members",
       "style": { "textAlign": "center" },
       "laptop": { "width": "80px" },
       "mobile": { "width": "76px" }
@@ -240,6 +252,7 @@
       "type": "table",
       "name": "Rank",
       "headerName": "Order",
+      "helpTarget": "term-order",
       "style": { "textAlign": "center" },
       "laptop": { "width": "70px" },
       "mobile": { "width": "66px" }
@@ -248,16 +261,18 @@
       "key": "events_held_last_year",
       "type": "table",
       "name": "Event 1y",
-      "headerName": "Event# 1y",
+      "headerName": "Event cnt 1y",
+      "helpTarget": "term-event-count",
       "style": { "textAlign": "center" },
-      "laptop": { "width": "85px" },
-      "mobile": { "width": "82px" }
+      "laptop": { "width": "100px" },
+      "mobile": { "width": "100px" }
     },
     {
       "key": "club_runs_last_year_summary",
       "type": "table",
       "name": "Runs 1y",
       "headerName": "Freq 1y",
+      "helpTarget": "control-freq-course",
       "style": { "textAlign": "center" },
       "laptop": { "width": "80px" },
       "mobile": { "width": "76px" }
@@ -267,6 +282,7 @@
       "type": "table",
       "name": "Athletes 1y",
       "headerName": "Members 1y",
+      "helpTarget": "term-members",
       "style": { "textAlign": "center" },
       "laptop": { "width": "100px" },
       "mobile": { "width": "100px" }
@@ -276,6 +292,7 @@
       "type": "table",
       "name": "Rank 1y",
       "headerName": "Order 1y",
+      "helpTarget": "term-order",
       "style": { "textAlign": "center" },
       "laptop": { "width": "78px" },
       "mobile": { "width": "74px" }

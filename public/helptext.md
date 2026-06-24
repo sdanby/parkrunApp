@@ -377,6 +377,11 @@ Shows a selected type as a share of the total population for that row, period or
 
 Marks the first date, and where shown the last date, that a participant is recorded for a club-specific history. These fields help show the span of an athlete's relationship with that club.
 
+The **first date** on which the participant completed a parkrun **while
+representing this club**.  
+This helps identify long‑standing club members and the length of their club
+association.
+
 <a id="term-first-timers"></a>
 ### 1st Timers (First Timers)
 
@@ -433,6 +438,10 @@ Used in ranking calculations (see [Rank](#term-rank)).
 
 see [Time Adjustment comparison within Event Page](#section-time-adj-event-page)
 
+The participant’s best **Age & Event‑adjusted** time.  
+This adjusts for both **course difficulty** and **participant age**, providing a
+more comparable performance measure across age groups.
+
 <a id="term-aes-adj"></a>
 ### AES (Age & Event & Sex) Adj
 
@@ -452,6 +461,13 @@ commonly used for high‑quality ranking comparisons.
 Used in ranking calculations (see [Rank](#term-rank)).
 
 see [Time Adjustment comparison within Event Page](#section-time-adj-event-page)
+
+The participant’s best **Age, Event & Sex‑adjusted** time.  
+This is the most fully normalised performance metric, adjusting for:
+- event difficulty  
+- participant age  
+- participant sex  
+It enables the fairest comparison across all participants.
 
 <a id="term-age"></a>
 ### Age
@@ -567,6 +583,9 @@ This enables much more precise calculations for:
 For more detail on how estimated ages are used in adjustments, see  
 [Age](#term-age).
 
+The participant’s **current age group**, as defined by parkrun (e.g., VM45‑49,
+SW30‑34).  
+This is used for age‑based comparisons and adjusted‑time calculations.
 
 <a id="control-agg"></a>
 ### Aggregation (Agg)
@@ -786,7 +805,17 @@ This provides useful context on event composition, visitor patterns, and the pre
 <a id="term-club-runs"></a>
 ### Club Runs (Club runs 1y)
 
-Counts how many times a participant has appeared for a club in the selected history window. The `1y` variant limits that count to the last year.
+The **total number of times** the participant has run **while representing this
+club** across their entire parkrun history.  
+This counts all events where the participant’s recorded club matches the club
+shown on the page.
+
+<a id="term-club-runs-1y"></a>
+### Club runs 1Y
+The number of times the participant has run **for this club** within the **most
+recent one‑year window**.  
+Useful for understanding **current engagement** with the club rather than
+historical totals.
 
 <a id="term-clubbers"></a>
 ### Clubbers
@@ -923,6 +952,12 @@ In this context it acts as a **hotlink** to the underlying
 [Course Page](#page-course), allowing quick navigation from event‑,
 participant‑, or list‑based tables directly into the course’s full history.
 
+The course associated with the club’s participation.  
+On the Club Page, this column lists the **courses most regularly attended by
+members of the club**.  
+Clicking a course name takes you to the [Course Page](#page-course) for full
+history and statistics.
+
 <a id="term-course-number"></a>
 ### Course '#'
 
@@ -973,6 +1008,12 @@ see [Time Adjustment comparison within Event Page](#section-time-adj-event-page)
 ### Current Club
 
 The latest known club associated with a participant. It gives current affiliation context and is often used as a navigation link into club analysis.
+
+The participant’s **current registered club**.  
+Some participants change clubs over time; their historical club representation
+can be seen by reviewing their  
+[Participant Page](#page-participant),  
+which shows club affiliation at each event.
 
 <a id="term-date"></a>
 ### Date
@@ -1127,6 +1168,24 @@ Used in ranking calculations (see [Rank](#term-rank)).
 
 see [Time Adjustment comparison within Event Page](#section-time-adj-event-page)
 
+The participant’s **best event‑adjusted time**, which normalises performance for
+course difficulty and event conditions.  
+This allows fairer comparison between participants who run different courses.
+
+<a id="term-event-count"></a>
+### Event cnt
+The number of **event days** on which **at least one member of the club**
+participated at this course.  
+Even if multiple club members ran on the same date, the event counts **once**.
+
+This measures **how often the club has appeared at the course**, not how many
+total runs were made.
+
+<a id="term-event-count-1y"></a>
+### Event cnt 1Y
+The same as **Event cnt**, but limited to the **most recent one‑year window**.  
+Shows how frequently the club has attended the course **recently**.
+
 <a id="term-event-date"></a>
 <a id="control-event-date"></a>
 ### Event Date (Ev Date)
@@ -1186,14 +1245,25 @@ Use this when you want to return to the normal layout or when working on smaller
 These controls do not change the underlying data — they simply adjust the **visual space** available for the chart.
 
 <a id="control-freq-course"></a>
+<a id="control-freq-course-1y"></a>
 ### Freq Course
 
 Freq Course shows the participant's most frequent course over the last year. It is derived from the course with the highest event count in that window, and if multiple courses tie the most recent one is used.
 
+The **total number of runs** completed at the course **by all members of the
+club**, across all time.  
+Unlike Event cnt, this counts **every run**, not just event days.
+
+**Freq 1Y**
+The same as **Freq**, but limited to the **last one year**.  
+Shows how many runs club members have completed at the course **recently**.
+
 <a id="term-freq"></a>
+
 ### Freq (Freq 1y)
 
 Compact label for frequency or count-in-window metrics. The `1y` form limits the count to the most recent year.
+
 
 <a id="term-full-event-adj"></a>
 ### Full event Adj
@@ -1315,9 +1385,19 @@ The course with the highest number of 1st Timers on a given day.
 Use this to spot **peaks** or standout events.
 
 <a id="term-members"></a>
+<a id="term-members-1y"></a>
 ### Members (Members 1y)
 
 Counts club members or current members in club-focused tables. The `1y` version restricts the count to recent one-year activity.
+
+The number of **distinct participants** from the club who have run at this
+course across all time.  
+This shows how widely the club’s membership has engaged with the course.
+
+**Members 1Y**
+The number of **distinct club participants** who have run at the course in the
+**last year**.  
+Useful for understanding current club engagement.
 
 <a id="term-minimum"></a>
 <a id="agg-minimum"></a>
@@ -1341,9 +1421,18 @@ Use this to spot **dips** or unusually low activity.
 Monthly grouping of seasonal patterns. It helps show whether a course behaves differently in different months of the year.
 
 <a id="term-order"></a>
+<a id="term-order-1y"></a>
 ### Order (Order 1y, Ord)
 
 Sort order or ranking order label used in compact tables. The one-year form applies the same ordering idea within the last-year window.
+
+The **ranking** of the course based on **Event cnt**.  
+This provides a popularity ordering of courses for the club, with **1** being
+the course most frequently attended (by event days).
+
+**Order 1Y**
+The same as **Order**, but based on **Event cnt 1Y**.  
+Shows the club’s **recent** course‑attendance popularity.
 
 <a id="control-other-adj"></a>
 ### Other Adj
@@ -1418,6 +1507,12 @@ A **Participants** column also appears on the
 showing the **number of participants per event** across the course’s history.  
 This provides essential context when reviewing event size, attendance trends,  
 and long‑term participation patterns.
+
+The participant (runner) associated with the club.  
+Participants shown on the Club Page are those who have **represented the club at
+parkrun events over time**.  
+Clicking the participant name takes you to their  
+[Participant Page](#page-participant) for full history and performance detail.
 
 <a id="control-participant-filter"></a>
 ### Participants Filter
@@ -1670,6 +1765,11 @@ AES Rank is particularly useful for understanding how an athlete maintains their
 
 [Hist Rank](#term-hist-rank) compares the participant’s **current rank** against their **best historical rank** across all categories.  
 It allows participants to see whether they are improving, maintaining, or declining relative to their personal peak.
+
+The participant’s **best ranking** under the selected adjustment method  
+(e.g., Actual, Event‑adjusted, Age‑adjusted).  
+Rank values are **clickable** and take you directly to the underlying event in
+the participant’s run‑history table.
 
 <a id="term-rank-type"></a>
 ### Rank type
@@ -2059,7 +2159,7 @@ These adjustments help you compare average times **fairly** across different cou
 
 
 <a id="term-times"></a>
-### Times (Time)
+### Times (Time) (Best Time)
 
 Times represents the **average finish time** of participants at the selected event.  
 It is an **event‑level metric**, meaning it describes the overall event rather than individual participant results.
@@ -2095,6 +2195,11 @@ The app **automatically ignores** these placeholder values because:
 - they are not meaningful for comparisons or adjustments
 
 Only **valid recorded times** are included when calculating the event‑level **Times** metric.
+
+**Best Time**
+The **fastest time** the participant has ever achieved on **any course**.  
+This is a personal‑best indicator and is included in the Club Page to provide
+context on the participant’s performance capability.
 
 **Summary**
 
@@ -2177,6 +2282,10 @@ Total Runs is used throughout participant summaries and profile pages to provide
 - long‑term participation  
 - how much of their running history is represented within the app’s local dataset  
 - comparison between local engagement and total parkrun activity
+
+The total number of parkruns the participant has completed in the **last year**,
+across **all courses and all clubs**.  
+This provides a measure of the participant’s **recent running volume**.
 
 <a id="term-tourists"></a>
 ### Tourists
@@ -2355,6 +2464,7 @@ This chart allows you to visualise up to **five** different metrics at the same 
 - any adjustment settings (Course Adj, Other Adj, Time Adj)
 
 This makes it easy to compare trends such as participants, PBs, tourists, volunteers, or hardness across the selected events.
+
 
 <a id="section-event-stats-comparison"></a>
 
@@ -2945,6 +3055,41 @@ This page is usually opened by clicking a club name from participant, event or l
 - Event tables: show the club's presence across events.
 - Summary labels give quick context before reading the larger tables.
 
+#### Table Buttons
+
+The Club Page contains several tables, and the **table buttons** control which
+table is currently displayed.  
+These buttons allow you to switch between **historic membership**, **current
+membership**, and **course‑popularity** views.
+
+The available buttons are:
+
+-> **Current & Historic Membership** (default)
+Shows the **full membership history** for the club, including all participants
+who have ever represented the club at parkrun.  
+This is the starting table when the Club Page loads.
+
+-> **Current members**
+Displays the **Current Membership** table.  
+This table shows only those participants who are **currently registered** as
+members of the club.
+
+-> **Event**
+Displays the **Club Popularity** table.  
+This table summarises how often the club attends each course, using metrics such
+as:
+- Event cnt  
+- Freq  
+- Members  
+- Order  
+(and their 1‑year variants)
+
+This view helps identify the **most popular courses** for the club.
+
+**Members**
+Returns the user to the **Current & Historic Membership** table.  
+This acts as a quick way to navigate back to the full membership list after
+viewing the other tables.
 
 <a id="page-lists"></a>
 
