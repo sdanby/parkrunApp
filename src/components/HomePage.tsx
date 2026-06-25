@@ -15,7 +15,7 @@ const HomePage: React.FC = () => {
                     Welcome to{' '}
                     <span className="home-brand-presto">
                         <img
-                            src={`${process.env.PUBLIC_URL}/favicon.svg`}
+                            src={`${process.env.PUBLIC_URL}/apple-touch-icon.png`}
                             alt=""
                             aria-hidden="true"
                             className="home-brand-presto-logo"
