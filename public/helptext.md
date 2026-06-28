@@ -1769,6 +1769,71 @@ The **AES Rank** (see [AES Adj](#term-aes-adj)) shows how a participant performs
 
 AES Rank is particularly useful for understanding how an athlete maintains their competitive standing **even as their raw event time changes with age**.
 
+<a id="term-time-rank"></a>
+### Time Rank
+
+Time Rank shows the participant's placing when the event field is ordered by
+their recorded **raw time** for that day.
+
+It is the most direct comparison column in the **Event Ranks** table view and
+answers the question: *where did this run place before any adjustment was applied?*
+
+It is also tied to the [Ranked Time Reference](#term-ranked-time-reference),
+which explains how best times are converted into the rank-score framework used
+across the app.
+
+Use it on the [Event Page](#page-single-event) or [Participant Page](#page-participant)
+when you want to compare raw finishing quality against the adjusted rank columns.
+
+<a id="term-ev-rank"></a>
+### Ev Rank
+
+Ev Rank shows the participant's placing after applying
+[Event Adj](#term-ev-adj).
+
+This rank adjusts for event hardness, so it is useful when the raw field was
+shaped by unusually fast or slow conditions on the day.
+
+See [Ranked Time Reference](#term-ranked-time-reference) for how the adjusted
+time distribution is converted into rank scores.
+
+<a id="term-es-rank"></a>
+### ES Rank
+
+ES Rank shows the participant's placing after applying the combined
+[Event Adj](#term-ev-adj) and [Sex Adj](#term-sex-adj).
+
+Use this when you want the event comparison to reflect both course conditions
+and the sex-based adjustment.
+
+See [Ranked Time Reference](#term-ranked-time-reference) for the reference
+curves that underpin this ranking basis.
+
+<a id="term-ae-rank"></a>
+### AE Rank
+
+AE Rank shows the participant's placing after applying the combined
+[Age Adjustment](#term-age-adj) and [Event Adj](#term-ev-adj).
+
+This is useful for comparing performances across age groups while still
+normalising the difficulty of the specific event.
+
+See [Ranked Time Reference](#term-ranked-time-reference) for how these adjusted
+best times are mapped into rank groups.
+
+<a id="term-aes-rank"></a>
+### AES Rank
+
+AES Rank shows the participant's placing after applying
+[Age Adjustment](#term-age-adj), [Event Adj](#term-ev-adj), and
+[Sex Adj](#term-sex-adj).
+
+It is the most fully normalised event-ranking column and is often the best
+choice when you want the fairest like-for-like comparison within the field.
+
+See [Ranked Time Reference](#term-ranked-time-reference) for the full
+time-to-rank conversion method used behind this column.
+
 **Hist Rank**
 
 [Hist Rank](#term-hist-rank) compares the participant’s **current rank** against their **best historical rank** across all categories.  
@@ -1787,45 +1852,126 @@ Indicates the ranking basis or ranking family being used. It helps explain why t
 <a id="term-ranked-time-reference"></a>
 ### Ranked Time Reference
 
-Ranked Time Reference is a set of reference tables used to convert a participant’s best recent time into a **rank score**.
+The **Ranked Time Reference** is the mathematical framework used to convert an
+athlete’s **best time** into a **rank score** between **100** and **0**.
 
-The reference is built by analysing **every recorded time** in the entire database.  
-All times are ordered from fastest to slowest and assigned a score from **100 (best)** to **0 (slowest)**.
+It is built from the full distribution of best performances across all tracked
+parkrun athletes, and it underpins the ranking logic used in [Rank](#term-rank),
+[Time Rank](#term-time-rank), [Ev Rank](#term-ev-rank),
+[ES Rank](#term-es-rank), [AE Rank](#term-ae-rank), and
+[AES Rank](#term-aes-rank).
 
-A curved ranking formula is applied so that:
+**1. Start with Best Time**
 
-- very few performances receive scores near **100**  
-- many more performances fall into the lower ranges  
-- the distribution reflects realistic performance density
+For each athlete, the system takes their **best recorded time** in the relevant
+ranking basis.
 
-These reference curves act as the **baseline** for all ranking calculations.
+That may be:
+
+- raw **Time**
+- best **Event-adjusted** time
+- best **Event + Sex** adjusted time
+- best **Age + Event** adjusted time
+- best **Age + Event + Sex** adjusted time
+
+Let:
+
+- `Ti` = best time in seconds for athlete `i`
+
+All athletes are then sorted from fastest to slowest.
+
+**2. Total Athlete Count**
+
+Let:
+
+- `N` = total number of athletes with a valid best time in that ranking basis
+
+For a large live ranking table this may be on the order of hundreds of
+thousands of athletes.
+
+**3. Rank Groups**
+
+The ordered athlete list is divided into **101 rank groups**, corresponding to
+rank scores:
+
+`100, 99, 98, ... , 0`
+
+Rank **100** is the fastest group and rank **0** is the slowest.
+
+**4. Block Size Calculation**
+
+<img src="/help-images/rankReference.png" alt="Rank Reference" height="300" />
+
+**5. Group Sizes**
+
+Rank groups are then assigned using multiples of `ab`.
+
+For rank score `R`, where:
+
+- `R = 101 - k`
+
+the group size is:
+
+- `GroupSize(R) = k * ab`
+
+So:
+
+- Rank `100` contains `1 * ab` athletes
+- Rank `99` contains `2 * ab` athletes
+- Rank `98` contains `3 * ab` athletes
+- ...
+- Rank `0` contains `101 * ab` athletes
+
+This creates a **curve-shaped distribution** in which very few athletes reach
+rank 100 and many more fall into the lower bands.
+
+**6. Time Boundaries for Each Rank**
+
+For each rank group, the system records:
+
+- the **fastest time** in that group
+- the **slowest time** in that group
+
+These become the time boundaries for that rank band:
+
+- `LowerBound(R)` = fastest time in the group
+- `UpperBound(R)` = slowest time in the group
+
+Together, these boundaries define the **Ranked Time Reference** table used by
+the app.
+
+**7. Applying Rank to Future Athletes**
+
+When a new best time `T` is evaluated:
+
+- the system finds the rank group whose time range contains `T`
+- it assigns the corresponding rank score
+
+This allows the app to apply a consistent ranking framework across raw and
+adjusted performance types.
+
+**Summary**
+
+- sort all athletes by best time
+- compute `ab = N / 5151`
+- create 101 groups where group `k` contains `k * ab` athletes
+- assign rank score `101 - k`
+- store the minimum and maximum time for each group
+- use those time ranges to convert future performances into rank scores
 
 **Types of Ranked Time References**
 
-Five separate ranking references are maintained, one for each adjusted‑time category:
+Separate reference curves are maintained for the main ranking bases:
 
-- **Time** reference  
-  Based on raw finish times (see [Time](#term-time))
+- **Time** reference, based on raw finish times
+- **Event** reference, based on [Ev Adj](#term-ev-adj)
+- **ES** reference, based on [ES Adj](#term-es-adj)
+- **AE** reference, based on [AE Adj](#term-ae-adj)
+- **AES** reference, based on [AES Adj](#term-aes-adj)
 
-- **Event‑adjusted time** reference  
-  Based on [Ev Adj](#term-ev-adj)
-
-- **Age‑event adjusted time** reference  
-  Based on [AE Adj](#term-ae-adj)
-
-- **Event‑sex adjusted time** reference  
-  Based on [ES Adj](#term-es-adj)
-
-- **Age‑event‑sex adjusted time** reference  
-  Based on [AES Adj](#term-aes-adj)
-
-Each participant’s best recent performance is compared against the appropriate reference curve to produce their **rank score**, which is then used in:
-
-- **Rank**  
-- **AES Rank**  
-- **Hist Rank**  
-- participant trend charts  
-- Participant Profile summaries
+Each participant’s best recent performance is compared against the appropriate
+reference curve to produce the rank score used in ranking tiles, Event Rank
+columns, history comparisons, and participant-profile summaries.
 
 <a id="term-recent-bests"></a>
 ### Recent Bests
@@ -2026,6 +2172,19 @@ See: [All Time Adjustments](#term-all-time-adjustments)
 A specialised view (where supported) that displays **multiple adjusted‑time  
 variants side by side**, such as event‑adjusted, age‑adjusted, and  
 age‑sex‑adjusted times.
+
+**Event Ranks**
+See: [Time Rank](#term-time-rank), [Ev Rank](#term-ev-rank),
+[ES Rank](#term-es-rank), [AE Rank](#term-ae-rank), [AES Rank](#term-aes-rank),
+[Ranked Time Reference](#term-ranked-time-reference)
+
+A specialised view on the [Event Page](#page-single-event) and
+[Participant Page](#page-participant) that keeps the core event columns visible
+and adds five **event-specific rank columns** side by side.
+
+Use this view when you want to compare how a run ranks under raw,
+event-adjusted, sex-adjusted, age-adjusted, and fully adjusted frameworks
+without switching between multiple adjustment controls.
 
 **Table View on the Course Page**
 
@@ -2593,7 +2752,9 @@ This makes it easy to switch between courses when comparing events on the same d
 
 - **Table View**  
   [Table View](#term-basic) changes which event columns are visible.  
-  Use **Basic** for a compact view or **Detail** for a full expanded table.
+  Use **Basic** for a compact view, **Detailed** for the wider standard table,
+  **All Time Adjustments** for adjusted times, or **Event Ranks** to compare
+  raw and adjusted event placing side by side.
 
 - **Event Headline Labels**  
   Headline labels such as:  
@@ -2789,7 +2950,8 @@ This page is usually reached from event, course, club or list tables by clicking
 
 - `Course Adj`: changes the course-condition adjustment applied to displayed results.
 - `Other Adj`: changes the participant-level adjustment, such as age, sex or age-and-sex.
-- `Table View`: changes the visible participant-history columns.
+- `Table View`: changes the visible participant-history columns and includes
+  `Basic`, `Detailed`, `All Time Adjustments`, and `Event Ranks`.
 - Supporting labels include `Athlete Code`, `Estimated Age`, `Total Runs`, `Recent Club` and `Freq Course`.
 
 #### Buttons

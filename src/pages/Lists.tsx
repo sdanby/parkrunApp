@@ -55,6 +55,8 @@ type ParticipantFilter =
     | 'gt_10_local_runs_1y';
 
 const LISTS_RETURN_SCROLL_KEY = 'lists:return_scroll_v1';
+const INITIAL_VISIBLE_RUNS = 250;
+const VISIBLE_RUNS_INCREMENT = 250;
 
 const getDefaultSortForList = (listKey: string): { key: string; dir: 'asc' | 'desc' } | null => {
     if (listKey === 'fastest_runs' || listKey === 'fastest_runs_last_year') {
@@ -331,6 +333,7 @@ const Lists: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [sortKey, setSortKey] = useState<string>(initialSortKey);
     const [sortDir, setSortDir] = useState<'asc' | 'desc'>(initialSortDir);
+    const [visibleRunCount, setVisibleRunCount] = useState<number>(INITIAL_VISIBLE_RUNS);
     const [courseAdj, setCourseAdj] = useState<'1' | '2' | '3'>(initialCourse);
     const [otherAdj, setOtherAdj] = useState<'1' | '2' | '3' | '4'>(initialOther);
     const [participantFilter, setParticipantFilter] = useState<ParticipantFilter>(initialParticipantFilter);
@@ -438,6 +441,10 @@ const Lists: React.FC = () => {
         return () => {
             abortController.abort();
         };
+    }, [selectedList, courseAdj, otherAdj, participantFilter, filteredByAdjustments]);
+
+    useEffect(() => {
+        setVisibleRunCount(INITIAL_VISIBLE_RUNS);
     }, [selectedList, courseAdj, otherAdj, participantFilter, filteredByAdjustments]);
 
     const handleListSelect = (event: React.ChangeEvent<HTMLSelectElement>) => {
@@ -710,6 +717,12 @@ const Lists: React.FC = () => {
             .map(({ run }) => run);
     }, [runs, sortKey, sortDir]);
 
+    const visibleRuns = React.useMemo(() => {
+        return sortedRuns.slice(0, Math.min(visibleRunCount, sortedRuns.length));
+    }, [sortedRuns, visibleRunCount]);
+
+    const hasHiddenRuns = visibleRuns.length < sortedRuns.length;
+
     // The active header should always reflect the current display sort.
     const getActiveHeaderKey = (): string => {
         return sortKey;
@@ -911,6 +924,11 @@ const Lists: React.FC = () => {
     // Performs the actual scroll + highlight once both the key and data are available.
     useEffect(() => {
         if (!pendingScrollKey || !runs.length) return;
+        const targetIndex = sortedRuns.findIndex((run) => makeRunKey(run) === pendingScrollKey);
+        if (targetIndex >= 0 && targetIndex >= visibleRunCount) {
+            setVisibleRunCount((prev) => Math.max(prev, targetIndex + VISIBLE_RUNS_INCREMENT));
+            return;
+        }
         const targetKey = pendingScrollKey;
         pendingScrollKeyRef.current = null;
         const scrollTimeout = window.setTimeout(() => {
@@ -935,7 +953,7 @@ const Lists: React.FC = () => {
         return () => {
             window.clearTimeout(scrollTimeout);
         };
-    }, [pendingScrollKey, runs]);
+    }, [pendingScrollKey, runs, sortedRuns, visibleRunCount]);
 
     const bodyColumnClassNameByKey: Record<string, string> = {
         Rank: 'sticky-col',
@@ -1461,95 +1479,131 @@ const Lists: React.FC = () => {
                     {loading && <p>{processingMessage}</p>}
                     {error && <p style={{ color: 'red' }}>Error: {error}</p>}
                     {!loading && !error && (
-                        <table className="athlete-runs-table lists-table">
-                            <colgroup>
-                                {columns.map((col) => {
-                                    const colWidth = getColumnWidth(col.key);
-                                    return (
-                                        <col
-                                            key={`col-${col.key}`}
-                                            style={{
-                                                width: colWidth,
-                                                minWidth: colWidth,
-                                                maxWidth: colWidth
-                                            }}
-                                        />
-                                    );
-                                })}
-                            </colgroup>
-                            <thead>
-                                <tr>
-                                    {columns.map(col => {
-                                        const isSorted = sortKey === col.key;
-                                        const sortIndicator = isSorted ? (sortDir === 'asc' ? '▲' : '▼') : '';
-                                        const activeKey = getActiveHeaderKey();
-                                        const extraClass = (col.key === activeKey) ? ' active-selected-header' : '';
+                        <>
+                            <div className="lists-table-toolbar">
+                                <div className="lists-table-summary">
+                                    Showing {visibleRuns.length.toLocaleString()} of {sortedRuns.length.toLocaleString()} rows.
+                                </div>
+                                <div className="lists-table-actions">
+                                    {hasHiddenRuns && (
+                                        <button
+                                            type="button"
+                                            className="lists-table-action"
+                                            onClick={() => setVisibleRunCount((prev) => Math.min(sortedRuns.length, prev + VISIBLE_RUNS_INCREMENT))}
+                                        >
+                                            Show {Math.min(VISIBLE_RUNS_INCREMENT, sortedRuns.length - visibleRuns.length).toLocaleString()} more
+                                        </button>
+                                    )}
+                                    {hasHiddenRuns && (
+                                        <button
+                                            type="button"
+                                            className="lists-table-action secondary"
+                                            onClick={() => setVisibleRunCount(sortedRuns.length)}
+                                        >
+                                            Show all
+                                        </button>
+                                    )}
+                                    {visibleRunCount > INITIAL_VISIBLE_RUNS && sortedRuns.length > INITIAL_VISIBLE_RUNS && (
+                                        <button
+                                            type="button"
+                                            className="lists-table-action secondary"
+                                            onClick={() => setVisibleRunCount(INITIAL_VISIBLE_RUNS)}
+                                        >
+                                            Show less
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                            <table className="athlete-runs-table lists-table">
+                                <colgroup>
+                                    {columns.map((col) => {
                                         const colWidth = getColumnWidth(col.key);
                                         return (
-                                            <th
-                                                key={col.key}
-                                                className={col.className + extraClass}
-                                                onClick={(event) => onHeaderActivate(event.currentTarget, col.key, col.label, col.helpTarget)}
-                                                onMouseEnter={(event) => {
-                                                    if (col.helpTipEnabled === false) {
-                                                        return;
-                                                    }
-                                                    delayedHeaderHelp.schedule({
-                                                        event,
-                                                        label: col.label,
-                                                        markerId: col.helpTarget,
-                                                        delayMs: col.helpTipDelayMs
-                                                    });
-                                                }}
-                                                onMouseLeave={delayedHeaderHelp.clear}
-                                                onMouseDown={delayedHeaderHelp.clear}
-                                                onTouchStart={delayedHeaderHelp.clear}
+                                            <col
+                                                key={`col-${col.key}`}
                                                 style={{
-                                                    cursor: 'pointer',
-                                                    userSelect: 'none',
                                                     width: colWidth,
                                                     minWidth: colWidth,
                                                     maxWidth: colWidth
                                                 }}
-                                                tabIndex={0}
-                                                aria-sort={isSorted ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
-                                            >
-                                                <span>{col.label}</span>
-                                                <span style={{ marginLeft: 4 }}>{sortIndicator}</span>
-                                            </th>
+                                            />
                                         );
                                     })}
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {sortedRuns.map((run, index) => {
-                                    const runKey = makeRunKey(run);
-                                    const isReturnTarget = returnScrollHighlightKey === runKey;
-                                    return (
-                                    <tr
-                                        key={runKey}
-                                        data-run-key={runKey}
-                                        onClick={() => handleRowClick(run)}
-                                        style={{
-                                            cursor: 'pointer',
-                                            ...(isReturnTarget ? {
-                                                outline: '2px solid #3b82f6',
-                                                outlineOffset: '-2px',
-                                                backgroundColor: '#dbeafe'
-                                            } : {})
-                                        }}
-                                        title="Click to view this event"
-                                    >
-                                        {columns.map((col) => (
-                                            <React.Fragment key={`${runKey}-${col.key}`}>
-                                                {renderTableCell(run, index, col.key)}
-                                            </React.Fragment>
-                                        ))}
+                                </colgroup>
+                                <thead>
+                                    <tr>
+                                        {columns.map(col => {
+                                            const isSorted = sortKey === col.key;
+                                            const sortIndicator = isSorted ? (sortDir === 'asc' ? '▲' : '▼') : '';
+                                            const activeKey = getActiveHeaderKey();
+                                            const extraClass = (col.key === activeKey) ? ' active-selected-header' : '';
+                                            const colWidth = getColumnWidth(col.key);
+                                            return (
+                                                <th
+                                                    key={col.key}
+                                                    className={col.className + extraClass}
+                                                    onClick={(event) => onHeaderActivate(event.currentTarget, col.key, col.label, col.helpTarget)}
+                                                    onMouseEnter={(event) => {
+                                                        if (col.helpTipEnabled === false) {
+                                                            return;
+                                                        }
+                                                        delayedHeaderHelp.schedule({
+                                                            event,
+                                                            label: col.label,
+                                                            markerId: col.helpTarget,
+                                                            delayMs: col.helpTipDelayMs
+                                                        });
+                                                    }}
+                                                    onMouseLeave={delayedHeaderHelp.clear}
+                                                    onMouseDown={delayedHeaderHelp.clear}
+                                                    onTouchStart={delayedHeaderHelp.clear}
+                                                    style={{
+                                                        cursor: 'pointer',
+                                                        userSelect: 'none',
+                                                        width: colWidth,
+                                                        minWidth: colWidth,
+                                                        maxWidth: colWidth
+                                                    }}
+                                                    tabIndex={0}
+                                                    aria-sort={isSorted ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
+                                                >
+                                                    <span>{col.label}</span>
+                                                    <span style={{ marginLeft: 4 }}>{sortIndicator}</span>
+                                                </th>
+                                            );
+                                        })}
                                     </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody>
+                                    {visibleRuns.map((run, index) => {
+                                        const runKey = makeRunKey(run);
+                                        const isReturnTarget = returnScrollHighlightKey === runKey;
+                                        return (
+                                        <tr
+                                            key={runKey}
+                                            data-run-key={runKey}
+                                            onClick={() => handleRowClick(run)}
+                                            style={{
+                                                cursor: 'pointer',
+                                                ...(isReturnTarget ? {
+                                                    outline: '2px solid #3b82f6',
+                                                    outlineOffset: '-2px',
+                                                    backgroundColor: '#dbeafe'
+                                                } : {})
+                                            }}
+                                            title="Click to view this event"
+                                        >
+                                            {columns.map((col) => (
+                                                <React.Fragment key={`${runKey}-${col.key}`}>
+                                                    {renderTableCell(run, index, col.key)}
+                                                </React.Fragment>
+                                            ))}
+                                        </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </>
                     )}
                 </div>
             </section>

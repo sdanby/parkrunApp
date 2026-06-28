@@ -103,6 +103,11 @@
   background-color: #add8e6 !important; /* light blue */
 }
 
+.results-table th.event-rank-header,
+.athlete-runs-table th.event-rank-header {
+  background-color: #d9f99d !important;
+}
+
 /* apply to both headers and cells for column 1/2 */
 .results-table th:first-child,
 .results-table td:first-child {

@@ -74,6 +74,8 @@ const getAdjustmentKeys = (course: CourseAdjOption, other: OtherAdjOption): stri
   return courseMap[other] ?? [];
 };
 
+const eventRankColumnKeys = new Set(['event_rank_b', 'event_rank_e', 'event_rank_es', 'event_rank_ae', 'event_rank_aes']);
+
 const normalizeCourseAdj = (value: string): CourseAdjOption => {
   if (value === 'seasonal' || value === 'full') return value;
   return 'none';
@@ -233,7 +235,7 @@ const EventTest: React.FC = () => {
       if (String(parsed.search || '') !== String(location.search || '')) return;
 
       const parsedView = String(parsed.viewMode || '').trim();
-      if (parsedView === 'basic' || parsedView === 'detailed' || parsedView === 'allTimeAdjustments') {
+      if (parsedView === 'basic' || parsedView === 'detailed' || parsedView === 'allTimeAdjustments' || parsedView === 'eventRanks') {
         setViewMode(parsedView);
       }
 
@@ -340,6 +342,10 @@ const EventTest: React.FC = () => {
 
     if (viewMode === 'allTimeAdjustments') {
       return insertSelectedAdjustmentsAfterTime(getEventColumnsForView('allTimeAdjustments'));
+    }
+
+    if (viewMode === 'eventRanks') {
+      return getEventColumnsForView('eventRanks');
     }
 
     return insertSelectedAdjustmentsAfterTime(getEventColumnsForView('basic'));
@@ -1260,13 +1266,20 @@ const EventTest: React.FC = () => {
               value={viewMode}
               onChange={(e) => {
                 const v = e.target.value;
-                const next: EventViewMode = v === 'detailed' ? 'detailed' : v === 'allTimeAdjustments' ? 'allTimeAdjustments' : 'basic';
+                const next: EventViewMode = v === 'detailed'
+                  ? 'detailed'
+                  : v === 'allTimeAdjustments'
+                    ? 'allTimeAdjustments'
+                    : v === 'eventRanks'
+                      ? 'eventRanks'
+                      : 'basic';
                 setViewMode(next);
               }}
             >
               <option value="basic">Basic</option>
               <option value="detailed">Detailed</option>
               <option value="allTimeAdjustments">All Time Adjustments</option>
+              <option value="eventRanks">Event Ranks</option>
             </select>
 
             {renderConfigLabel(courseAdjLabelElement, pCourseAdjLabel, 'Course adj:', 'control-course-adj')}
@@ -1375,7 +1388,7 @@ const EventTest: React.FC = () => {
                   return (
                     <th
                       key={`${column.key}-${columnIndex}`}
-                      className={`eventtest-col ${column.sticky ? 'eventtest-sticky-col' : ''} ${adjustmentColumnKeys.has(column.key) ? 'sticky-header adjustment-header' : ''}`.trim()}
+                      className={`eventtest-col ${column.sticky ? 'eventtest-sticky-col' : ''} ${adjustmentColumnKeys.has(column.key) ? 'sticky-header adjustment-header' : ''} ${eventRankColumnKeys.has(column.key) ? 'event-rank-header' : ''}`.trim()}
                       onClick={(event) => onHeaderActivate(event.currentTarget, column.key, String(column.headerName || column.key), (column as any)?.helpTarget)}
                       onTouchEnd={(event) => {
                         event.preventDefault();
@@ -1411,6 +1424,7 @@ const EventTest: React.FC = () => {
                         maxWidth: configuredWidth,
                         position: tableRow1Sticky ? 'sticky' : undefined,
                         cursor: 'pointer',
+                        backgroundColor: eventRankColumnKeys.has(column.key) ? '#d9f99d' : undefined,
                         ...headerTopStyle,
                         ...getColumnStyle(column.key, column.style)
                       }}

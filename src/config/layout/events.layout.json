@@ -75,7 +75,7 @@
       "id": "event.viewSelect",
       "type": "select",
       "name": "Basic",
-      "options": ["Basic", "Detailed", "All Time Adjustments"],
+      "options": ["Basic", "Detailed", "All Time Adjustments", "Event Ranks"],
       "laptop": { "x": "8.7cm", "y": "0.5cm", "width": "4.3cm" },
       "mobile": { "x": "7.7cm", "y": "0.5cm", "width": "3.6cm" }
     },
@@ -292,6 +292,21 @@
       "sex_event_adj_time",
       "age_sex_adj_time",
       "age_sex_event_adj_time"
+    ],
+    "eventRanks": [
+      "position",
+      "athlete",
+      "time",
+      "age_group",
+      "age_grade",
+      "best_curve_ranking_current",
+      "club",
+      "comment",
+      "event_rank_b",
+      "event_rank_e",
+      "event_rank_es",
+      "event_rank_ae",
+      "event_rank_aes"
     ]
   },
   "tableColumns": [
@@ -512,6 +527,51 @@
       "helpTarget": "term-aes-adj",
       "laptop": { "width": "2.3cm" },
       "mobile": { "width": "2.2cm" }
+    },
+    {
+      "key": "event_rank_b",
+      "type": "table",
+      "name": "col17",
+      "headerName": "Time rank",
+      "helpTarget": "term-time-rank",
+      "laptop": { "width": "2.5cm" },
+      "mobile": { "width": "2.5cm" }
+    },
+    {
+      "key": "event_rank_e",
+      "type": "table",
+      "name": "col18",
+      "headerName": "Ev rank",
+      "helpTarget": "term-ev-rank",
+      "laptop": { "width": "2.3cm" },
+      "mobile": { "width": "2.2cm" }
+    },
+    {
+      "key": "event_rank_es",
+      "type": "table",
+      "name": "col19",
+      "headerName": "ES Rank",
+      "helpTarget": "term-es-rank",
+      "laptop": { "width": "2.3cm" },
+      "mobile": { "width": "2.2cm" }
+    },
+    {
+      "key": "event_rank_ae",
+      "type": "table",
+      "name": "col20",
+      "headerName": "AE Rank",
+      "helpTarget": "term-ae-rank",
+      "laptop": { "width": "2.3cm" },
+      "mobile": { "width": "2.2cm" }
+    },
+    {
+      "key": "event_rank_aes",
+      "type": "table",
+      "name": "col21",
+      "headerName": "AES Rank",
+      "helpTarget": "term-aes-rank",
+      "laptop": { "width": "2.5cm" },
+      "mobile": { "width": "2.5cm" }
     }
   ]
 }

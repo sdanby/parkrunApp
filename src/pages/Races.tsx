@@ -179,10 +179,10 @@ const Races: React.FC = () => {
         } catch (e) { /* ignore */ }
         return [];
     });
-    const [viewMode, setViewMode] = useState<'basic' | 'detailed' | 'allTimeAdjustments'>(() => {
+    const [viewMode, setViewMode] = useState<'basic' | 'detailed' | 'allTimeAdjustments' | 'eventRanks'>(() => {
         try {
             const stored = sessionStorage.getItem('races_view_mode');
-            if (stored === 'detailed' || stored === 'allTimeAdjustments') return stored;
+            if (stored === 'detailed' || stored === 'allTimeAdjustments' || stored === 'eventRanks') return stored;
             return 'basic';
         } catch (_err) {
             return 'basic';
@@ -215,7 +215,7 @@ const Races: React.FC = () => {
             setViewMode('basic');
         }
     };
-    const handleViewModeChange = (nextMode: 'basic' | 'detailed' | 'allTimeAdjustments') => {
+    const handleViewModeChange = (nextMode: 'basic' | 'detailed' | 'allTimeAdjustments' | 'eventRanks') => {
         if (nextMode !== 'basic') {
             if (courseAdj !== 'none') setCourseAdj('none');
             if (otherAdj !== 'none') setOtherAdj('none');
@@ -980,7 +980,7 @@ const Races: React.FC = () => {
     // Column definitions come from events.layout.json; the first two sticky columns
     // are still rendered separately in this legacy page.
     const nonLeadingColumnKeys = useCallback(
-        (view: 'basic' | 'detailed' | 'allTimeAdjustments') => getEventColumnsForView(view)
+        (view: 'basic' | 'detailed' | 'allTimeAdjustments' | 'eventRanks') => getEventColumnsForView(view)
             .map((column) => column.key)
             .filter((key) => key !== 'position' && key !== 'athlete'),
         []
@@ -995,6 +995,10 @@ const Races: React.FC = () => {
     );
     const allTimeAdjustmentColumns = useMemo(
         () => nonLeadingColumnKeys('allTimeAdjustments').map((key) => toLegacyColumnConfig(key)),
+        [nonLeadingColumnKeys]
+    );
+    const eventRankColumns = useMemo(
+        () => nonLeadingColumnKeys('eventRanks').map((key) => toLegacyColumnConfig(key)),
         [nonLeadingColumnKeys]
     );
     const adjustmentColumns = useMemo(
@@ -1024,6 +1028,7 @@ const Races: React.FC = () => {
     const columns = useMemo(() => {
         if (viewMode === 'detailed') return detailedColumns;
         if (viewMode === 'allTimeAdjustments') return allTimeAdjustmentColumns;
+        if (viewMode === 'eventRanks') return eventRankColumns;
 
         const selected = [...baseColumns];
         if (adjustmentKeys.length === 0) return selected;
@@ -1042,7 +1047,7 @@ const Races: React.FC = () => {
             ...adjustmentCols,
             ...selected.slice(insertAt)
         ];
-    }, [adjustmentColumns, adjustmentKeys, allTimeAdjustmentColumns, baseColumns, detailedColumns, viewMode]);
+    }, [adjustmentColumns, adjustmentKeys, allTimeAdjustmentColumns, baseColumns, detailedColumns, eventRankColumns, viewMode]);
     const defaultColWidths = useMemo<number[]>(
         () => [
             configuredLeadingWidths.position,
@@ -1178,7 +1183,13 @@ const Races: React.FC = () => {
                                                 style={{ marginLeft: '-1.0cm' }}
                                                 onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
                                                     const v = e.target.value;
-                                                    const next = v === 'detailed' ? 'detailed' : v === 'allTimeAdjustments' ? 'allTimeAdjustments' : 'basic';
+                                                    const next = v === 'detailed'
+                                                        ? 'detailed'
+                                                        : v === 'allTimeAdjustments'
+                                                            ? 'allTimeAdjustments'
+                                                            : v === 'eventRanks'
+                                                                ? 'eventRanks'
+                                                                : 'basic';
                                                     handleViewModeChange(next);
                                                 }}
                                                 aria-label="Races view mode"
@@ -1186,6 +1197,7 @@ const Races: React.FC = () => {
                                                 <option value="basic">Basic</option>
                                                 <option value="detailed">Detailed</option>
                                                 <option value="allTimeAdjustments">All Time Adjustments</option>
+                                                <option value="eventRanks">Event Ranks</option>
                                             </select>
                                          </div>
 
@@ -1334,7 +1346,7 @@ const Races: React.FC = () => {
                                     {columns.map((col, idx) => (
                                     <th
                                         key={col.k}
-                                        className={`eventtest-col ${adjustmentColumns.find(ac => ac.k === col.k) ? 'sticky-header adjustment-header' : ''}`}
+                                        className={`eventtest-col ${adjustmentColumns.find(ac => ac.k === col.k) ? 'sticky-header adjustment-header' : ''} ${col.k.startsWith('event_rank_') ? 'event-rank-header' : ''}`}
                                         style={{
                                             ['--event-col-width' as any]: `${getFixedDataColumnWidth(idx, col.k)}px`,
                                             ['--event-col-left' as any]: 'auto',
@@ -1343,6 +1355,7 @@ const Races: React.FC = () => {
                                             top: 0,
                                             zIndex: 200,
                                             cursor: 'pointer',
+                                            backgroundColor: col.k.startsWith('event_rank_') ? '#d9f99d' : undefined,
                                             width: `${getFixedDataColumnWidth(idx, col.k)}px`,
                                             minWidth: `${getFixedDataColumnWidth(idx, col.k)}px`,
                                             maxWidth: `${getFixedDataColumnWidth(idx, col.k)}px`

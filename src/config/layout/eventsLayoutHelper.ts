@@ -14,7 +14,7 @@ import {
 } from './layoutHelperFactory';
 
 export type EventViewport = LayoutViewport;
-export type EventViewMode = 'basic' | 'detailed' | 'allTimeAdjustments';
+export type EventViewMode = 'basic' | 'detailed' | 'allTimeAdjustments' | 'eventRanks';
 export type EventElementType = LayoutElementType;
 export type EventInteractionAction = LayoutInteractionAction;
 export type EventInteractionNavMode = LayoutInteractionNavMode;
@@ -31,7 +31,7 @@ export type EventTableColumn = LayoutTableColumn;
 
 export type EventLayoutConfig = LayoutConfig<'Event', EventViewMode>;
 
-const config = rawConfig as EventLayoutConfig;
+const config = rawConfig as unknown as EventLayoutConfig;
 const helpers = createLayoutHelpers<'Event', EventViewMode>(config);
 
 export const getEventLayoutConfig = (): EventLayoutConfig => helpers.getLayoutConfig();

@@ -10,6 +10,59 @@ export const API_BASE_URL = process.env.REACT_APP_API_BASE_URL
 export const WEEKLY_UPLOAD_API_BASE_URL = process.env.REACT_APP_WEEKLY_UPLOAD_API_BASE_URL
     || API_BASE_URL;
 
+const WEEKLY_UPLOAD_API_TIMEOUT_MS = 4000;
+
+const getWeeklyUploadApiBaseUrls = (): string[] => {
+    const configuredBaseUrl = String(WEEKLY_UPLOAD_API_BASE_URL || '').trim();
+    const candidates: string[] = [];
+    if (isLocalHost) {
+        candidates.push('http://127.0.0.1:5001');
+    }
+    candidates.push(configuredBaseUrl);
+
+    const seen = new Set<string>();
+    return candidates.filter((value) => {
+        if (!value || seen.has(value)) return false;
+        seen.add(value);
+        return true;
+    });
+};
+
+const requestWeeklyUploadApi = async <T>(
+    method: 'get' | 'post',
+    path: string,
+    token: string,
+    payload?: unknown,
+): Promise<T> => {
+    const headers = {
+        Authorization: `Bearer ${token}`
+    };
+    const candidates = getWeeklyUploadApiBaseUrls();
+    let lastError: unknown = null;
+
+    for (const baseUrl of candidates) {
+        try {
+            if (method === 'get') {
+                const response = await axios.get(`${baseUrl}${path}`, {
+                    headers,
+                    timeout: WEEKLY_UPLOAD_API_TIMEOUT_MS,
+                });
+                return response.data as T;
+            }
+
+            const response = await axios.post(`${baseUrl}${path}`, payload ?? {}, {
+                headers,
+                timeout: WEEKLY_UPLOAD_API_TIMEOUT_MS,
+            });
+            return response.data as T;
+        } catch (error) {
+            lastError = error;
+        }
+    }
+
+    throw lastError;
+};
+
 export type AuthUser = {
     id: number;
     email: string;
@@ -98,6 +151,7 @@ export type WeeklySqlPipelineOptions = {
     noVolunteers?: boolean;
     refreshMaterializedView?: boolean;
     rebuildHistoricAfterRun?: boolean;
+    resumeCurveFromStage2?: boolean;
     resumeCurveFromAllHistory?: boolean;
     forceFreshStart?: boolean;
 };
@@ -653,12 +707,12 @@ export const fetchAdminWeeklyUploadStatus = async (
         params.set('eventCode', String(scope.eventCode));
     }
     const query = params.toString();
-    const response = await axios.get(`${WEEKLY_UPLOAD_API_BASE_URL}/api/admin/weekly-upload/status${query ? `?${query}` : ''}`, {
-        headers: {
-            Authorization: `Bearer ${token}`
-        }
-    });
-    return response.data || {
+    const response = await requestWeeklyUploadApi<WeeklyUploadStatus>(
+        'get',
+        `/api/admin/weekly-upload/status${query ? `?${query}` : ''}`,
+        token,
+    );
+    return response || {
         running: false,
         status: 'idle',
         totalCourses: 0,
@@ -671,46 +725,46 @@ export const startAdminWeeklyUpload = async (
     token: string,
     payload?: { loopEvents?: boolean; loadHistory?: boolean; parkrunName?: string; runMode?: string; sqlPipelineOptions?: WeeklySqlPipelineOptions }
 ): Promise<{ ok?: boolean; state?: WeeklyUploadStatus }> => {
-    const response = await axios.post(`${WEEKLY_UPLOAD_API_BASE_URL}/api/admin/weekly-upload/start`, payload || {}, {
-        headers: {
-            Authorization: `Bearer ${token}`
-        }
-    });
-    return response.data || { ok: true };
+    return (await requestWeeklyUploadApi<{ ok?: boolean; state?: WeeklyUploadStatus }>(
+        'post',
+        '/api/admin/weekly-upload/start',
+        token,
+        payload || {},
+    )) || { ok: true };
 };
 
 export const stopAdminWeeklyUpload = async (
     token: string
 ): Promise<{ ok?: boolean; state?: WeeklyUploadStatus }> => {
-    const response = await axios.post(`${WEEKLY_UPLOAD_API_BASE_URL}/api/admin/weekly-upload/stop`, {}, {
-        headers: {
-            Authorization: `Bearer ${token}`
-        }
-    });
-    return response.data || { ok: true };
+    return (await requestWeeklyUploadApi<{ ok?: boolean; state?: WeeklyUploadStatus }>(
+        'post',
+        '/api/admin/weekly-upload/stop',
+        token,
+        {},
+    )) || { ok: true };
 };
 
 export const resetAdminWeeklyUpload = async (
     token: string
 ): Promise<{ ok?: boolean; state?: WeeklyUploadStatus }> => {
-    const response = await axios.post(`${WEEKLY_UPLOAD_API_BASE_URL}/api/admin/weekly-upload/reset`, {}, {
-        headers: {
-            Authorization: `Bearer ${token}`
-        }
-    });
-    return response.data || { ok: true };
+    return (await requestWeeklyUploadApi<{ ok?: boolean; state?: WeeklyUploadStatus }>(
+        'post',
+        '/api/admin/weekly-upload/reset',
+        token,
+        {},
+    )) || { ok: true };
 };
 
 export const deleteAdminWeeklyUploadEvent = async (
     token: string,
     payload: { eventCode: string; eventName?: string; startDate: string }
 ): Promise<WeeklyDeleteEventResponse> => {
-    const response = await axios.post(`${WEEKLY_UPLOAD_API_BASE_URL}/api/admin/weekly-upload/delete-event`, payload, {
-        headers: {
-            Authorization: `Bearer ${token}`
-        }
-    });
-    return response.data || { ok: true };
+    return (await requestWeeklyUploadApi<WeeklyDeleteEventResponse>(
+        'post',
+        '/api/admin/weekly-upload/delete-event',
+        token,
+        payload,
+    )) || { ok: true };
 };
 
 export const fetchFeedbackRequests = async (): Promise<FeedbackRequest[]> => {

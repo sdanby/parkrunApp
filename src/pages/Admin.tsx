@@ -73,6 +73,7 @@ type WeeklySqlPipelineFormState = {
     noVolunteers: boolean;
     refreshMaterializedView: boolean;
     rebuildHistoricAfterRun: boolean;
+    resumeCurveFromStage2: boolean;
     resumeCurveFromAllHistory: boolean;
     forceFreshStart: boolean;
 };
@@ -215,6 +216,7 @@ const createDefaultWeeklySqlPipelineFormState = (): WeeklySqlPipelineFormState =
     noVolunteers: false,
     refreshMaterializedView: true,
     rebuildHistoricAfterRun: false,
+    resumeCurveFromStage2: false,
     resumeCurveFromAllHistory: false,
     forceFreshStart: false
 });
@@ -287,6 +289,12 @@ const WEEKLY_SQL_OPTION_DEFINITIONS: WeeklySqlOptionDefinition[] = [
         defaultValue: false
     },
     {
+        key: 'resumeCurveFromStage2',
+        label: 'Resume Curve At Stage 2',
+        description: 'Skips the earlier SQL pipeline, scraper, and athlete copy, then resumes at Curve Stage 2 Current Snapshot and continues the weekly curve and Postgres update steps.',
+        defaultValue: false
+    },
+    {
         key: 'resumeCurveFromAllHistory',
         label: 'Resume Curve At All-History',
         description: 'Skips the earlier SQL pipeline, scraper, athlete copy, and Stage 1-3 curve rebuild, then resumes at Rebuild All-History Time Reference and finishes the downstream Postgres refresh steps.',
@@ -317,6 +325,7 @@ const weeklySqlFormFromStatus = (options?: WeeklySqlPipelineOptions | null): Wee
         noVolunteers: options.noVolunteers ?? defaults.noVolunteers,
         refreshMaterializedView: options.refreshMaterializedView ?? defaults.refreshMaterializedView,
         rebuildHistoricAfterRun: options.rebuildHistoricAfterRun ?? defaults.rebuildHistoricAfterRun,
+        resumeCurveFromStage2: options.resumeCurveFromStage2 ?? defaults.resumeCurveFromStage2,
         resumeCurveFromAllHistory: options.resumeCurveFromAllHistory ?? defaults.resumeCurveFromAllHistory,
         forceFreshStart: options.forceFreshStart ?? defaults.forceFreshStart
     };
@@ -355,39 +364,23 @@ const WEEKLY_SQL_PROGRESS_STAGES: WeeklyPipelineStageDefinition[] = [
         description: 'Builds the rolling curve_run_metrics_history base across the recent rebuild window.',
         target: '2-4 min target',
         startPatterns: ['[curved_ranks] stage 1 rolling rebuild'],
-        completePatterns: ['[curved_ranks][timing] pipeline.stage1:']
+        completePatterns: ['[curved_ranks][timing] weekly.stage1:', '[curved_ranks][timing] pipeline.stage1:']
     },
     {
         id: 'curve-stage-2-build',
-        label: 'Curve Stage 2 Build',
-        description: 'Builds the snapshot-date curve rank mapping rows for the selected weekly date.',
-        target: '4-6 min target',
-        startPatterns: ['[curved_ranks] stage 2+3 processing dates', '[curved_ranks] processing 1/1:'],
-        completePatterns: ['[curved_ranks][timing] stage2.build (']
-    },
-    {
-        id: 'curve-stage-2-reference',
-        label: 'Build Date Curve Time Reference',
-        description: 'Rebuilds the date-scoped curve_time_ranks_reference used immediately before applying weekly curve ranks.',
-        target: '6-9 min target',
-        startPatterns: ['[curved_ranks] stage 2 rows for', '[curved_ranks] curve_time_ranks_reference build ('],
-        completePatterns: ['[curved_ranks] stage 3: updating eventpositions']
-    },
-    {
-        id: 'curve-stage-3-apply',
-        label: 'Curve Stage 3 Apply',
-        description: 'Updates weekly eventpositions with the freshly calculated current and historic curve ranking values.',
-        target: '0-2 min target',
-        startPatterns: ['[curved_ranks] stage 3: updating eventpositions'],
-        completePatterns: ['[curved_ranks][timing] stage3.apply (']
+        label: 'Curve Stage 2 Current Snapshot',
+        description: 'Builds the snapshot-date curve rank mapping rows for the selected weekly date, used by the weekly summary upload.',
+        target: '1-3 min target',
+        startPatterns: ['[curved_ranks] weekly stage 2 current snapshot started for', '[curved_ranks] stage 2 rows for'],
+        completePatterns: ['[curved_ranks][timing] weekly.stage2.current_snapshot:', '[curved_ranks][timing] stage2.build (']
     },
     {
         id: 'curve-all-history-reference',
-        label: 'Rebuild All-History Time Reference',
-        description: 'Rebuilds the all-history curve_time_ranks_reference used for the later athlete history steps.',
-        target: '1-2 min target',
-        startPatterns: ['[curved_ranks] rebuilding all-history curve_time_ranks_reference before weekly athlete history build', '[curved_ranks] curve_time_ranks_reference build (all) started'],
-        completePatterns: ['[curved_ranks][timing] weekly.curve_time_ranks_reference.rebuild_all_history:']
+        label: 'Use Active Time Reference',
+        description: 'Uses the active all-history curve_time_ranks_reference for athlete history, rebuilding it only for explicit all-history resume runs or when the table is empty.',
+        target: '0-2 min target',
+        startPatterns: ['[curved_ranks] rebuilding all-history curve_time_ranks_reference before weekly athlete history build', '[curved_ranks] reusing existing all-history curve_time_ranks_reference for weekly athlete history build', '[curved_ranks] curve_time_ranks_reference build (all) started'],
+        completePatterns: ['[curved_ranks][timing] weekly.curve_time_ranks_reference.rebuild_all_history:', '[curved_ranks] reusing existing all-history curve_time_ranks_reference for weekly athlete history build']
     },
     {
         id: 'curve-athlete-history',
@@ -530,6 +523,7 @@ const Admin: React.FC = () => {
         parkrunName: 'brentwood'
     });
     const [weeklySqlOptions, setWeeklySqlOptions] = useState<WeeklySqlPipelineFormState>(() => createDefaultWeeklySqlPipelineFormState());
+    const [showWeeklySqlOptions, setShowWeeklySqlOptions] = useState(true);
     const [weeklyDeleteCourseCode, setWeeklyDeleteCourseCode] = useState('');
     const [weeklyDeletePending, setWeeklyDeletePending] = useState(false);
     const [weeklyDeleteConfirm, setWeeklyDeleteConfirm] = useState<WeeklyDeleteTarget | null>(null);
@@ -709,6 +703,7 @@ const Admin: React.FC = () => {
                     noVolunteers: weeklySqlOptions.noVolunteers,
                     refreshMaterializedView: weeklySqlOptions.refreshMaterializedView,
                     rebuildHistoricAfterRun: weeklySqlOptions.rebuildHistoricAfterRun,
+                    resumeCurveFromStage2: weeklySqlOptions.resumeCurveFromStage2,
                     resumeCurveFromAllHistory: weeklySqlOptions.resumeCurveFromAllHistory,
                     forceFreshStart: weeklySqlOptions.forceFreshStart
                 }
@@ -760,7 +755,20 @@ const Admin: React.FC = () => {
         const previousCompletedStageIds = new Set(Array.isArray(weeklyStatus.previousSqlRun?.completedStageIds) ? weeklyStatus.previousSqlRun?.completedStageIds : []);
         const previousStageCompletedAt = weeklyStatus.previousSqlRun?.stageCompletedAt || {};
         const isSqlPipeline = weeklyStatus.runMode === 'sqlPipeline' || logs.some((entry) => String(entry?.message || '').toLowerCase().includes('weekly sql pipeline'));
-        const stages = WEEKLY_SQL_PROGRESS_STAGES.map((stage) => {
+        const resumeFromStage2 = Boolean(weeklyStatus.sqlPipelineOptions?.resumeCurveFromStage2)
+            || logs.some((entry) => String(entry?.message || '').toLowerCase().includes('mode curve_resume_stage2:'));
+        const resumeFromAllHistory = Boolean(weeklyStatus.sqlPipelineOptions?.resumeCurveFromAllHistory)
+            || logs.some((entry) => String(entry?.message || '').toLowerCase().includes('resume mode: skipping stage 1-3 pipeline and starting at all-history rebuild'));
+        const visibleStages = WEEKLY_SQL_PROGRESS_STAGES.filter((stage) => {
+            if (resumeFromAllHistory) {
+                return !['setup', 'scraper', 'athletes', 'curve-stage-1', 'curve-stage-2-build'].includes(stage.id);
+            }
+            if (resumeFromStage2) {
+                return !['setup', 'scraper', 'athletes', 'curve-stage-1'].includes(stage.id);
+            }
+            return true;
+        });
+        const stages = visibleStages.map((stage) => {
             const startedEntry = findWeeklyLogEntry(logs, stage.startPatterns);
             const completedEntry = findWeeklyLogEntry(logs, stage.completePatterns, true);
             const latestEntry = findWeeklyLogEntry(logs, [...stage.completePatterns, ...stage.startPatterns], true);
@@ -796,6 +804,26 @@ const Admin: React.FC = () => {
             };
         });
     }, [weeklyStatus.logs, weeklyStatus.previousSqlRun, weeklyStatus.runMode, weeklyStatus.running, weeklyStatus.status]);
+
+    const weeklyRunStatusNotice = useMemo(() => {
+        if (weeklyStatus.runMode !== 'standard') return null;
+
+        if (weeklyStatus.running && (weeklyStatus.stopRequested || weeklyStatus.status === 'stopping')) {
+            return {
+                tone: 'warning' as const,
+                message: 'Stop requested. The backend is finishing the current course. Please wait until the process has fully finished.'
+            };
+        }
+
+        if (!weeklyStatus.running && weeklyStatus.status === 'stopped' && weeklyStatus.finishedAt) {
+            return {
+                tone: 'success' as const,
+                message: `Weekly upload stopped. The backend process finished at ${formatTimeWithSeconds(weeklyStatus.finishedAt)}.`
+            };
+        }
+
+        return null;
+    }, [weeklyStatus]);
 
     const openWeeklyDeleteConfirm = () => {
         const startDate = String(weeklySqlOptions.startDate || '').trim();
@@ -973,6 +1001,12 @@ const Admin: React.FC = () => {
         if (!weeklyLogRef.current) return;
         weeklyLogRef.current.scrollTop = weeklyLogRef.current.scrollHeight;
     }, [section, weeklyStatus.logs.length]);
+
+    useEffect(() => {
+        if (weeklyStatus.running) {
+            setShowWeeklySqlOptions(false);
+        }
+    }, [weeklyStatus.running]);
 
     const onUserFilterChange = (field: keyof UserFilters, value: string) => {
         setUserFilters((prev) => ({ ...prev, [field]: value }));
@@ -1660,6 +1694,7 @@ const Admin: React.FC = () => {
                                         {!weeklyStatus.running && weeklyStatus.previousSqlRun && weeklyStatus.previousSqlRun.startDate === weeklySqlOptions.startDate && (
                                             <div className="admin-weekly-manual-note admin-weekly-history-note">
                                                 Previous SQL run found for this date{weeklyStatus.previousSqlRun.eventCode != null ? ` and event ${weeklyStatus.previousSqlRun.eventCode}` : ''}. Completed stages are shown in light blue below.
+                                                {weeklyStatus.previousSqlRun.autoResumeMode === 'stage2' && !weeklySqlOptions.forceFreshStart && ' A safe resume checkpoint is available from Curve Stage 2 Current Snapshot.'}
                                                 {weeklyStatus.previousSqlRun.autoResumeMode === 'allHistory' && !weeklySqlOptions.forceFreshStart && ' A safe resume checkpoint is available from Rebuild All-History Time Reference.'}
                                             </div>
                                         )}
@@ -1724,55 +1759,74 @@ const Admin: React.FC = () => {
 
                                 <div className="admin-weekly-sql-panel">
                                     <div className="admin-weekly-sql-head">
-                                        <strong>Weekly SQL Pipeline Options</strong>
-                                        <span>Defaults follow the current run_simple_sql_loop setup, with the date prefilled to the current Saturday.</span>
+                                        <div className="admin-weekly-sql-head-copy">
+                                            <strong>Weekly SQL Pipeline Options</strong>
+                                            <span>Defaults follow the current run_simple_sql_loop setup, with the date prefilled to the current Saturday.</span>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            className="admin-weekly-sql-toggle"
+                                            onClick={() => setShowWeeklySqlOptions((prev) => !prev)}
+                                        >
+                                            {showWeeklySqlOptions ? 'Hide Options' : 'Show Options'}
+                                        </button>
                                     </div>
 
-                                    <div className="admin-weekly-sql-grid">
-                                        <label className="admin-weekly-sql-field">
-                                            <span>Start date</span>
-                                            <input
-                                                type="date"
-                                                className="admin-filter-input"
-                                                value={weeklySqlOptions.startDate}
-                                                onChange={(event) => setWeeklySqlOptions((prev) => ({ ...prev, startDate: event.target.value }))}
-                                                disabled={weeklyStatus.running || weeklyStarting}
-                                            />
-                                            <small>Default: current Saturday. Change this if you need to run the pipeline retrospectively.</small>
-                                        </label>
+                                    {!showWeeklySqlOptions && weeklyStatus.running && (
+                                        <div className="admin-weekly-sql-collapsed-note">
+                                            SQL options are hidden while the run is active so the stage tracker and output remain visible. Use Show Options if you need to review the current settings.
+                                        </div>
+                                    )}
 
-                                        <label className="admin-weekly-sql-field">
-                                            <span>Event code</span>
-                                            <input
-                                                type="text"
-                                                inputMode="numeric"
-                                                className="admin-filter-input"
-                                                value={weeklySqlOptions.eventCode}
-                                                onChange={(event) => setWeeklySqlOptions((prev) => ({ ...prev, eventCode: event.target.value.replace(/[^0-9]/g, '') }))}
-                                                disabled={weeklyStatus.running || weeklyStarting}
-                                                placeholder="All events"
-                                            />
-                                            <small>Optional filter to restrict the scraper and SQL processing to one event.</small>
-                                        </label>
-                                    </div>
+                                    {showWeeklySqlOptions && (
+                                        <>
+                                            <div className="admin-weekly-sql-grid">
+                                                <label className="admin-weekly-sql-field">
+                                                    <span>Start date</span>
+                                                    <input
+                                                        type="date"
+                                                        className="admin-filter-input"
+                                                        value={weeklySqlOptions.startDate}
+                                                        onChange={(event) => setWeeklySqlOptions((prev) => ({ ...prev, startDate: event.target.value }))}
+                                                        disabled={weeklyStatus.running || weeklyStarting}
+                                                    />
+                                                    <small>Default: current Saturday. Change this if you need to run the pipeline retrospectively.</small>
+                                                </label>
 
-                                    <div className="admin-weekly-sql-options">
-                                        {WEEKLY_SQL_OPTION_DEFINITIONS.map((option) => (
-                                            <label key={option.key} className="admin-weekly-sql-option">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={weeklySqlOptions[option.key]}
-                                                    onChange={(event) => setWeeklySqlOptions((prev) => ({ ...prev, [option.key]: event.target.checked }))}
-                                                    disabled={weeklyStatus.running || weeklyStarting}
-                                                />
-                                                <div>
-                                                    <div className="admin-weekly-sql-option-title">{option.label}</div>
-                                                    <div className="admin-weekly-sql-option-description">{option.description}</div>
-                                                    <div className="admin-weekly-sql-option-default">Default: {weeklySqlDefaultLabel(option.defaultValue)}</div>
-                                                </div>
-                                            </label>
-                                        ))}
-                                    </div>
+                                                <label className="admin-weekly-sql-field">
+                                                    <span>Event code</span>
+                                                    <input
+                                                        type="text"
+                                                        inputMode="numeric"
+                                                        className="admin-filter-input"
+                                                        value={weeklySqlOptions.eventCode}
+                                                        onChange={(event) => setWeeklySqlOptions((prev) => ({ ...prev, eventCode: event.target.value.replace(/[^0-9]/g, '') }))}
+                                                        disabled={weeklyStatus.running || weeklyStarting}
+                                                        placeholder="All events"
+                                                    />
+                                                    <small>Optional filter to restrict the scraper and SQL processing to one event.</small>
+                                                </label>
+                                            </div>
+
+                                            <div className="admin-weekly-sql-options">
+                                                {WEEKLY_SQL_OPTION_DEFINITIONS.map((option) => (
+                                                    <label key={option.key} className="admin-weekly-sql-option">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={weeklySqlOptions[option.key]}
+                                                            onChange={(event) => setWeeklySqlOptions((prev) => ({ ...prev, [option.key]: event.target.checked }))}
+                                                            disabled={weeklyStatus.running || weeklyStarting}
+                                                        />
+                                                        <div>
+                                                            <div className="admin-weekly-sql-option-title">{option.label}</div>
+                                                            <div className="admin-weekly-sql-option-description">{option.description}</div>
+                                                            <div className="admin-weekly-sql-option-default">Default: {weeklySqlDefaultLabel(option.defaultValue)}</div>
+                                                        </div>
+                                                    </label>
+                                                ))}
+                                            </div>
+                                        </>
+                                    )}
                                 </div>
 
                                 <div className="admin-weekly-run-meta">
@@ -1783,6 +1837,12 @@ const Admin: React.FC = () => {
                                         <span>SQL Start Date: {weeklyStatus.sqlPipelineOptions.startDate}</span>
                                     )}
                                 </div>
+
+                                {weeklyRunStatusNotice && (
+                                    <div className={`admin-weekly-status-note ${weeklyRunStatusNotice.tone}`}>
+                                        {weeklyRunStatusNotice.message}
+                                    </div>
+                                )}
 
                                 {(weeklyError || weeklyStatus.error) && <div className="admin-error">{weeklyError || weeklyStatus.error}</div>}
                             </div>

@@ -363,7 +363,7 @@ const useMediaQuery = (query: string): boolean => {
     return matches;
 };
 
-type AthleteViewMode = 'basic' | 'detailed' | 'all_time_adjustments';
+type AthleteViewMode = 'basic' | 'detailed' | 'all_time_adjustments' | 'event_ranks';
 type CourseAdjOption = 'none' | 'seasonal' | 'full';
 type OtherAdjOption = 'none' | 'age' | 'sex' | 'age_sex';
 type SelectOptionConfig = {
@@ -398,7 +398,7 @@ const getAdjustmentKeys = (course: CourseAdjOption, other: OtherAdjOption): stri
 };
 
 const normalizeViewMode = (value: string): AthleteViewMode => {
-    if (value === 'detailed' || value === 'all_time_adjustments') return value;
+    if (value === 'detailed' || value === 'all_time_adjustments' || value === 'event_ranks') return value;
     return 'basic';
 };
 
@@ -455,6 +455,11 @@ type ColumnKey =
     | 'event_sex_adj_time'
     | 'event_age_sex_adj_time'
     | 'age_sex_adj_time'
+    | 'event_rank_b'
+    | 'event_rank_e'
+    | 'event_rank_es'
+    | 'event_rank_ae'
+    | 'event_rank_aes'
     | 'last_position'
     | 'event_number'
     | 'total_runs_long'
@@ -480,6 +485,8 @@ type ColumnDef = {
 const baseAthleteColumnKeys: ColumnKey[] = ['date', 'event_display', 'position', 'time', 'age_group', 'age_grade', 'best_curve_ranking_current', 'comment'];
 
 const adjustmentColumnKeys: ColumnKey[] = ['season_adj_time', 'event_adj_time', 'age_adj_time', 'sex_adj_time', 'event_age_adj_time', 'event_sex_adj_time', 'event_age_sex_adj_time', 'age_sex_adj_time'];
+
+const eventRankColumnKeys: ColumnKey[] = ['event_rank_b', 'event_rank_e', 'event_rank_es', 'event_rank_ae', 'event_rank_aes'];
 
 const detailedColumnKeys: ColumnKey[] = ['club', 'last_position', 'event_number', 'total_runs_long', 'event_eligible_appearances', 'last_event_code_count_long', 'distinct_courses_long', 'tourist_flag', 'super_tourist', 'returner'];
 
@@ -684,6 +691,16 @@ const resolveColumnSortValue = (row: AthleteRecord, column: ColumnKey): number |
         case 'event_age_sex_adj_time':
         case 'age_sex_adj_time':
             return getAdjustmentSeconds(row, column);
+        case 'event_rank_b':
+            return parseNumericSortValue(pickField(row, ['event_rank_b', 'eventRankB']));
+        case 'event_rank_e':
+            return parseNumericSortValue(pickField(row, ['event_rank_e', 'eventRankE']));
+        case 'event_rank_es':
+            return parseNumericSortValue(pickField(row, ['event_rank_es', 'eventRankEs']));
+        case 'event_rank_ae':
+            return parseNumericSortValue(pickField(row, ['event_rank_ae', 'eventRankAe']));
+        case 'event_rank_aes':
+            return parseNumericSortValue(pickField(row, ['event_rank_aes', 'eventRankAes']));
         case 'last_position':
             return parseNumericSortValue(pickField(row, ['last_position', 'lastPosition']));
         case 'event_number':
@@ -764,7 +781,7 @@ const Athletes: React.FC = () => {
             if ((parsed as any).sortDir === 'asc' || (parsed as any).sortDir === 'desc') {
                 next.sortDir = (parsed as any).sortDir;
             }
-            if ((parsed as any).viewMode === 'basic' || (parsed as any).viewMode === 'detailed' || (parsed as any).viewMode === 'all_time_adjustments') {
+            if ((parsed as any).viewMode === 'basic' || (parsed as any).viewMode === 'detailed' || (parsed as any).viewMode === 'all_time_adjustments' || (parsed as any).viewMode === 'event_ranks') {
                 next.viewMode = (parsed as any).viewMode;
             }
             if ((parsed as any).courseAdj === 'none' || (parsed as any).courseAdj === 'seasonal' || (parsed as any).courseAdj === 'full') {
@@ -1235,8 +1252,8 @@ const Athletes: React.FC = () => {
         const newViewMode = normalizeViewMode(event.target.value);
         setViewMode(newViewMode);
         
-        // If 'All Time Adjustments' is selected, reset the course and other adj dropdowns
-        if (newViewMode === 'all_time_adjustments') {
+        // Specialised table views replace the dynamic adjustment columns.
+        if (newViewMode === 'all_time_adjustments' || newViewMode === 'event_ranks') {
             setCourseAdj('none');
             setOtherAdj('none');
         }
@@ -1723,6 +1740,16 @@ const Athletes: React.FC = () => {
                 const seconds = getAdjustmentSeconds(row, key);
                 return renderCell(formatTimeValue(seconds));
             }
+            case 'event_rank_b':
+                return renderCell(pickField(row, ['event_rank_b', 'eventRankB']));
+            case 'event_rank_e':
+                return renderCell(pickField(row, ['event_rank_e', 'eventRankE']));
+            case 'event_rank_es':
+                return renderCell(pickField(row, ['event_rank_es', 'eventRankEs']));
+            case 'event_rank_ae':
+                return renderCell(pickField(row, ['event_rank_ae', 'eventRankAe']));
+            case 'event_rank_aes':
+                return renderCell(pickField(row, ['event_rank_aes', 'eventRankAes']));
             case 'last_position':
                 return renderCell(pickField(row, ['last_position', 'lastPosition']));
             case 'event_number':
@@ -1850,6 +1877,11 @@ const Athletes: React.FC = () => {
         [getConfiguredColumnDef]
     );
 
+    const eventRankColumns = useMemo(
+        () => eventRankColumnKeys.map(getConfiguredColumnDef),
+        [getConfiguredColumnDef]
+    );
+
     const tableColumns = useMemo(() => {
         // If 'All Time Adjustments' view is selected, show all adjustment columns at the end
         if (viewMode === 'all_time_adjustments') {
@@ -1858,6 +1890,10 @@ const Athletes: React.FC = () => {
                 ...adjustmentColumns.filter((col) => col.key === 'event_age_sex_adj_time')
             ];
             return [...baseAthleteColumns, ...allTimeAdjustmentColumns];
+        }
+
+        if (viewMode === 'event_ranks') {
+            return [...baseAthleteColumns, ...eventRankColumns];
         }
         
         // If 'Detailed' view is selected, show detailed columns at the end
@@ -1881,7 +1917,7 @@ const Athletes: React.FC = () => {
             ...selectedAdjColumns,
             ...baseAthleteColumns.slice(insertAt)
         ];
-    }, [viewMode, adjustmentKeys, adjustmentColumns, baseAthleteColumns, detailedColumns]);
+    }, [viewMode, adjustmentKeys, adjustmentColumns, baseAthleteColumns, detailedColumns, eventRankColumns]);
 
     const onHeaderActivate = (
         eventTarget: EventTarget | null,
@@ -3598,6 +3634,7 @@ const Athletes: React.FC = () => {
                                         <option value="basic">Basic</option>
                                         <option value="detailed">Detailed</option>
                                         <option value="all_time_adjustments">All Time Adjustments</option>
+                                        <option value="event_ranks">Event Ranks</option>
                                     </select>
 
                                     {renderConfigControlLabel(
@@ -4314,6 +4351,10 @@ const Athletes: React.FC = () => {
                                                 const isAdjustmentColumn = col.key.includes('_adj_time');
                                                 if (isAdjustmentColumn) {
                                                     headerClasses.push('sticky-header', 'adjustment-header');
+                                                }
+
+                                                if (eventRankColumnKeys.includes(col.key)) {
+                                                    headerClasses.push('event-rank-header');
                                                 }
                                                 
                                                 const sortIndicator = isSorted ? (sortDir === 'asc' ? '▲' : '▼') : '';

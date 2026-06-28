@@ -14,7 +14,7 @@ import {
 } from './layoutHelperFactory';
 
 export type ParticipantViewport = LayoutViewport;
-export type ParticipantViewMode = 'basic' | 'detailed' | 'all_time_adjustments';
+export type ParticipantViewMode = 'basic' | 'detailed' | 'all_time_adjustments' | 'event_ranks';
 export type ParticipantElementType = LayoutElementType;
 export type ParticipantInteractionAction = LayoutInteractionAction;
 export type ParticipantInteractionNavMode = LayoutInteractionNavMode;
@@ -26,7 +26,7 @@ export type ParticipantLayoutElement = LayoutElement;
 export type ParticipantTableColumn = LayoutTableColumn;
 export type ParticipantLayoutConfig = LayoutConfig<'Participant', ParticipantViewMode>;
 
-const config = rawConfig as ParticipantLayoutConfig;
+const config = rawConfig as unknown as ParticipantLayoutConfig;
 const helpers = createLayoutHelpers<'Participant', ParticipantViewMode>(config);
 
 export const getParticipantLayoutConfig = (): ParticipantLayoutConfig => helpers.getLayoutConfig();
