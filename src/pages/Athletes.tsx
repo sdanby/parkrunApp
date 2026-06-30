@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { fetchAthleteBestSummary, fetchAthleteRuns } from '../api/backendAPI';
+import { fetchAthleteBestSummary, fetchAthleteRuns, fetchCurveRankReference, type CurveRankReferenceRow } from '../api/backendAPI';
 import './ResultsTable.css';
 import AthleteSearch from '../components/AthleteSearch';
 import ReactECharts from 'echarts-for-react';
@@ -94,6 +94,16 @@ type AthleteBestSummaryRow = {
     rank?: number | string;
     time?: string | number;
 };
+
+type CurveRankReferenceType = 'B' | 'E' | 'ES' | 'AE' | 'AES';
+
+const curveRankReferenceTypeOptions: Array<{ value: CurveRankReferenceType; label: string }> = [
+    { value: 'B', label: 'Best Time' },
+    { value: 'E', label: 'Event Adj (E)' },
+    { value: 'ES', label: 'Event & Sex Adj (ES)' },
+    { value: 'AE', label: 'Age & Event Adj (AE)' },
+    { value: 'AES', label: 'Age & Event & Sex Adj (AES)' }
+];
 
 const ATHLETES_STATE_KEY = 'athletes_state_v1';
 const ATHLETES_PREFERENCES_KEY = 'athletes_preferences_v1';
@@ -841,6 +851,14 @@ const Athletes: React.FC = () => {
     const [profileLoading, setProfileLoading] = useState<boolean>(false);
     useGlobalWaitCursor(loading);
     const [profileError, setProfileError] = useState<string | null>(null);
+    const [curveRankReferenceOpen, setCurveRankReferenceOpen] = useState<boolean>(false);
+    const [curveRankReferenceLoading, setCurveRankReferenceLoading] = useState<boolean>(false);
+    const [curveRankReferenceError, setCurveRankReferenceError] = useState<string | null>(null);
+    const [curveRankReferenceRows, setCurveRankReferenceRows] = useState<CurveRankReferenceRow[]>([]);
+    const [curveRankReferenceType, setCurveRankReferenceType] = useState<CurveRankReferenceType>('B');
+    const [curveRankReferenceVersion, setCurveRankReferenceVersion] = useState<string>('');
+    const [curveRankReferenceLatestVersion, setCurveRankReferenceLatestVersion] = useState<string>('');
+    const [curveRankReferenceVersions, setCurveRankReferenceVersions] = useState<string[]>([]);
     const [profileJumpDate, setProfileJumpDate] = useState<string | null>(null);
     const [profileJumpRequest, setProfileJumpRequest] = useState<{ date: string; stamp: number } | null>(null);
     const [returnScrollHighlightDate, setReturnScrollHighlightDate] = useState<string | null>(null);
@@ -1973,6 +1991,7 @@ const Athletes: React.FC = () => {
     const profileButtonElement = getParticipantElementById('participant.profileButton');
     const resetButtonElement = getParticipantElementById('participant.resetButton');
     const plotContainerElement = getParticipantElementById('participant.plotContainer');
+    const curveRankReferenceContainerElement = getParticipantElementById('participant.curveRankReferenceContainer');
     const profileContainerElement = getParticipantElementById('participant.profileContainer');
     const eventsAllPieElement = getParticipantElementById('participant.eventsAllPie');
     const tableContainerElement = getParticipantElementById('participant.tableContainer');
@@ -2088,6 +2107,10 @@ const Athletes: React.FC = () => {
     const plotContainerBasePlacement = useMemo(
         () => plotContainerElement?.[isMobile ? 'mobile' : 'laptop'],
         [isMobile, plotContainerElement]
+    );
+    const curveRankReferenceContainerPlacement = useMemo(
+        () => curveRankReferenceContainerElement?.[isMobile ? 'mobile' : 'laptop'],
+        [curveRankReferenceContainerElement, isMobile]
     );
     const profileContainerPlacement = useMemo(
         () => profileContainerElement?.[isMobile ? 'mobile' : 'laptop'],
@@ -2370,28 +2393,44 @@ const Athletes: React.FC = () => {
         pointerEvents: 'auto'
     }), [resetButtonElement?.style?.fontSize, resetButtonElement?.style?.fontWeight, resetButtonElement?.style?.height, resetButtonElement?.style?.lineHeight, resetButtonElement?.style?.width, resetButtonPlacement]);
 
-    const tableContainerStyle = useMemo<React.CSSProperties>(() => {
+    const buildPanelContainerStyle = useCallback((
+        placement: { x?: string; y?: string; width?: string; height?: string } | undefined,
+        fallbackHeight?: string,
+        fallbackWidth?: string
+    ): React.CSSProperties => {
         if (isMobile) {
             return {
                 position: 'relative',
                 left: 'auto',
                 top: 'auto',
                 width: '100%',
-                height: tableContainerPlacement?.height,
-                marginLeft: tableContainerPlacement?.x ?? '0cm',
-                marginTop: tableContainerPlacement?.y ?? '0cm'
+                height: placement?.height ?? fallbackHeight,
+                marginLeft: placement?.x ?? '0cm',
+                marginTop: `calc(${placement?.y ?? '0cm'} - 0.5cm)`
             };
         }
 
         return {
             position: 'absolute',
-            left: tableContainerPlacement?.x ?? '0cm',
-            top: tableContainerPlacement?.y ?? '3.5cm',
-            width: tableContainerPlacement?.width ?? '100%',
-            height: tableContainerPlacement?.height,
+            left: placement?.x ?? '0cm',
+            top: `calc(${placement?.y ?? '3.5cm'} - 0.5cm)`,
+            width: placement?.width ?? fallbackWidth ?? '100%',
+            height: placement?.height ?? fallbackHeight,
             marginTop: 0
         };
-    }, [isMobile, tableContainerPlacement]);
+    }, [isMobile]);
+
+    const tableContainerStyle = useMemo<React.CSSProperties>(() => {
+        return buildPanelContainerStyle(tableContainerPlacement, tableContainerPlacement?.height, tableContainerPlacement?.width ?? '100%');
+    }, [buildPanelContainerStyle, tableContainerPlacement]);
+
+    const plotContainerStyle = useMemo<React.CSSProperties>(() => {
+        return buildPanelContainerStyle(plotContainerPlacement, plotContainerPlacement?.height, plotContainerPlacement?.width ?? '100%');
+    }, [buildPanelContainerStyle, plotContainerPlacement]);
+
+    const curveRankReferenceContainerStyle = useMemo<React.CSSProperties>(() => {
+        return buildPanelContainerStyle(curveRankReferenceContainerPlacement, curveRankReferenceContainerPlacement?.height, curveRankReferenceContainerPlacement?.width ?? '100%');
+    }, [buildPanelContainerStyle, curveRankReferenceContainerPlacement]);
 
     const tableWrapperSizeStyle = useMemo<React.CSSProperties>(() => ({
         width: tableContainerPlacement?.width,
@@ -2408,6 +2447,12 @@ const Athletes: React.FC = () => {
     }), [profileContainerPlacement, tableWrapperSizeStyle.height, tableWrapperSizeStyle.maxHeight, tableWrapperSizeStyle.maxWidth, tableWrapperSizeStyle.width]);
 
     const activePanelContainerStyle = useMemo<React.CSSProperties>(() => {
+        if (curveRankReferenceOpen) {
+            return curveRankReferenceContainerStyle;
+        }
+        if (showPlot) {
+            return plotContainerStyle;
+        }
         if (!showProfile) {
             return tableContainerStyle;
         }
@@ -2416,7 +2461,10 @@ const Athletes: React.FC = () => {
             width: profileContainerPlacement?.width ?? tableContainerStyle.width,
             height: profileContainerPlacement?.height ?? tableContainerStyle.height
         };
-    }, [profileContainerPlacement?.height, profileContainerPlacement?.width, showProfile, tableContainerStyle]);
+    }, [curveRankReferenceContainerStyle, curveRankReferenceOpen, plotContainerStyle, profileContainerPlacement?.height, profileContainerPlacement?.width, showPlot, showProfile, tableContainerStyle]);
+
+    const nonPlotPanelTopOffset = useMemo(() => (isMobile ? '0cm' : 'calc(0.3cm + 0.2rem)'), [isMobile]);
+    const plotControlsTopOffset = useMemo(() => (isMobile ? '0cm' : '0.7cm'), [isMobile]);
 
     const tableViewLabelTextStyle = useMemo<React.CSSProperties>(() => {
         const style = tableViewLabelElement?.style;
@@ -2767,6 +2815,11 @@ const Athletes: React.FC = () => {
     const plotChartMinWidth = isMobile ? (configuredPlotWidth ?? '10cm') : isPlotExpanded ? '18cm' : '100%';
     const plotCaptionGapReduction = '0.2cm';
     const plotChartHeight = `calc(${plotPanelHeight} - ${isMobile ? '5.8cm' : '4.9cm'})`;
+    const curveRankReferencePanelWidth = curveRankReferenceContainerPlacement?.width ?? plotPanelMaxWidth;
+    const curveRankReferencePanelHeight = curveRankReferenceContainerPlacement?.height ?? (isMobile ? plotPanelHeight : `calc(${plotPanelHeight} + 1cm)`);
+    const plotPanelTopOffset = '0cm';
+    const curveRankReferencePanelTopOffset = '0cm';
+    const curveRankReferencePanelLeftOffset = '0cm';
 
     const hasTimeRatioForPlot = (row: AthleteRecord): boolean => {
         const timeRatio = pickField(row, ['time_ratio', 'timeRatio']);
@@ -3054,26 +3107,108 @@ const Athletes: React.FC = () => {
         setIsPlotExpanded((prev) => !prev);
     };
 
-    const getPlotControlOffset = React.useCallback((value?: string, base?: string): string | undefined => {
+    useEffect(() => {
+        if (!curveRankReferenceOpen) {
+            return;
+        }
+
+        let cancelled = false;
+
+        const loadCurveRankReference = async () => {
+            try {
+                setCurveRankReferenceLoading(true);
+                setCurveRankReferenceError(null);
+                const payload = await fetchCurveRankReference(curveRankReferenceType, curveRankReferenceVersion || undefined);
+                if (cancelled) {
+                    return;
+                }
+                const versions = Array.isArray(payload?.available_curve_rank_reference_versions)
+                    ? payload.available_curve_rank_reference_versions.filter((value): value is string => typeof value === 'string' && value.trim() !== '')
+                    : [];
+                const latestVersion = typeof payload?.latest_curve_rank_reference_version === 'string'
+                    ? payload.latest_curve_rank_reference_version
+                    : '';
+                const selectedVersion = typeof payload?.curve_rank_reference_version === 'string'
+                    ? payload.curve_rank_reference_version
+                    : latestVersion;
+                setCurveRankReferenceRows(Array.isArray(payload?.rows) ? payload.rows : []);
+                setCurveRankReferenceVersions(versions);
+                setCurveRankReferenceLatestVersion(latestVersion);
+                if (selectedVersion && selectedVersion !== curveRankReferenceVersion) {
+                    setCurveRankReferenceVersion(selectedVersion);
+                }
+            } catch (_error) {
+                if (cancelled) {
+                    return;
+                }
+                setCurveRankReferenceRows([]);
+                setCurveRankReferenceError('Unable to load curved time rank reference right now.');
+            } finally {
+                if (!cancelled) {
+                    setCurveRankReferenceLoading(false);
+                }
+            }
+        };
+
+        loadCurveRankReference();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [curveRankReferenceOpen, curveRankReferenceType, curveRankReferenceVersion]);
+
+    const handleCurveRankReferenceHelp = (event?: React.MouseEvent<HTMLElement>) => {
+        if (event?.currentTarget) {
+            const rect = event.currentTarget.getBoundingClientRect();
+            requestUnifiedHelp('section-curved-rank-time-reference', {
+                x: rect.left,
+                y: rect.bottom
+            }, 'Curved Rank Time Reference');
+            return;
+        }
+        requestUnifiedHelp('section-curved-rank-time-reference', null, 'Curved Rank Time Reference');
+    };
+
+    const curveRankReferenceVersionOptions = useMemo(() => {
+        const values = curveRankReferenceVersions.slice();
+        if (curveRankReferenceLatestVersion && !values.includes(curveRankReferenceLatestVersion)) {
+            values.unshift(curveRankReferenceLatestVersion);
+        }
+        return values;
+    }, [curveRankReferenceLatestVersion, curveRankReferenceVersions]);
+
+    const curveRankReferenceSelectedVersion = curveRankReferenceVersion || curveRankReferenceLatestVersion || curveRankReferenceVersionOptions[0] || '';
+
+    const formatCurveRankReferenceScore = (value: unknown): string => {
+        const numeric = Number(value);
+        if (!Number.isFinite(numeric)) {
+            return '--';
+        }
+        return Number.isInteger(numeric) ? `${numeric}` : numeric.toFixed(1);
+    };
+
+    const getPlotControlOffset = React.useCallback((value?: string, base?: string, extraOffset?: string): string | undefined => {
         if (!value) {
             return undefined;
         }
         if (!base) {
-            return value;
+            return extraOffset && extraOffset !== '0cm' ? `calc(${value} + ${extraOffset})` : value;
         }
-        return `calc(${value} - ${base})`;
+        return extraOffset && extraOffset !== '0cm'
+            ? `calc(${value} - ${base} + ${extraOffset})`
+            : `calc(${value} - ${base})`;
     }, []);
 
     const plotShowLabelStyle = useMemo<React.CSSProperties>(() => ({
         position: 'absolute',
         left: getPlotControlOffset(plotShowLabelPlacement?.x, tableContainerPlacement?.x),
-        top: getPlotControlOffset(plotShowLabelPlacement?.y, tableContainerPlacement?.y),
+        top: getPlotControlOffset(plotShowLabelPlacement?.y, tableContainerPlacement?.y, plotControlsTopOffset),
         fontSize: plotShowLabelElement?.style?.fontSize ?? '0.78rem',
         fontWeight: plotShowLabelElement?.style?.fontWeight ?? 700,
         color: plotShowLabelElement?.style?.color ?? '#111827',
         lineHeight: plotShowLabelElement?.style?.lineHeight ?? 1.0,
         pointerEvents: 'auto'
-    }), [getPlotControlOffset, plotShowLabelElement?.style?.color, plotShowLabelElement?.style?.fontSize, plotShowLabelElement?.style?.fontWeight, plotShowLabelElement?.style?.lineHeight, plotShowLabelPlacement?.x, plotShowLabelPlacement?.y, tableContainerPlacement?.x, tableContainerPlacement?.y]);
+    }), [getPlotControlOffset, plotControlsTopOffset, plotShowLabelElement?.style?.color, plotShowLabelElement?.style?.fontSize, plotShowLabelElement?.style?.fontWeight, plotShowLabelElement?.style?.lineHeight, plotShowLabelPlacement?.x, plotShowLabelPlacement?.y, tableContainerPlacement?.x, tableContainerPlacement?.y]);
 
     const buildPlotButtonStyle = React.useCallback((
         placement?: { x?: string; y?: string; width?: string; height?: string },
@@ -3081,7 +3216,7 @@ const Athletes: React.FC = () => {
     ): React.CSSProperties => ({
         position: 'absolute',
         left: getPlotControlOffset(placement?.x, tableContainerPlacement?.x),
-        top: getPlotControlOffset(placement?.y, tableContainerPlacement?.y),
+        top: getPlotControlOffset(placement?.y, tableContainerPlacement?.y, plotControlsTopOffset),
         width: placement?.width,
         height: placement?.height ?? '1.9rem',
         border: element?.style?.border ?? '1px solid #9ca3af',
@@ -3093,7 +3228,7 @@ const Athletes: React.FC = () => {
         cursor: 'pointer',
         padding: element?.style?.padding ?? '0 0.65rem',
         pointerEvents: 'auto'
-    }), [getPlotControlOffset, tableContainerPlacement?.x, tableContainerPlacement?.y]);
+    }), [getPlotControlOffset, plotControlsTopOffset, tableContainerPlacement?.x, tableContainerPlacement?.y]);
 
     const plotBestButtonStyle = useMemo(
         () => buildPlotButtonStyle(plotBestButtonPlacement, plotBestButtonElement as any),
@@ -3446,21 +3581,37 @@ const Athletes: React.FC = () => {
         };
     }, [showProfile, profileJumpRequest, rowsToRender]);
 
-    const currentPanelMode: 'table' | 'profile' | 'plot' = showProfile ? 'profile' : (showPlot ? 'plot' : 'table');
-    const nextPanelMode: 'table' | 'profile' | 'plot' =
-        currentPanelMode === 'table' ? 'profile' : (currentPanelMode === 'profile' ? 'plot' : 'table');
-    const panelToggleLabel = nextPanelMode === 'table' ? 'Table' : (nextPanelMode === 'profile' ? 'Profile' : 'Plot');
+    const currentPanelMode: 'table' | 'profile' | 'plot' | 'rank' = curveRankReferenceOpen ? 'rank' : (showProfile ? 'profile' : (showPlot ? 'plot' : 'table'));
+    const nextPanelMode: 'table' | 'profile' | 'plot' | 'rank' =
+        currentPanelMode === 'table'
+            ? 'profile'
+            : currentPanelMode === 'profile'
+                ? 'plot'
+                : currentPanelMode === 'plot'
+                    ? 'rank'
+                    : 'table';
+    const panelToggleLabel = nextPanelMode === 'table' ? 'Table' : (nextPanelMode === 'profile' ? 'Profile' : (nextPanelMode === 'plot' ? 'Plot' : 'Rank'));
     const handlePanelCycle = () => {
-        if (!showProfile && !showPlot) {
+        if (!showProfile && !showPlot && !curveRankReferenceOpen) {
             setShowProfile(true);
             setShowPlot(false);
+            setCurveRankReferenceOpen(false);
             return;
         }
         if (showProfile) {
             setShowProfile(false);
             setShowPlot(true);
+            setCurveRankReferenceOpen(false);
             return;
         }
+        if (showPlot) {
+            setShowProfile(false);
+            setShowPlot(false);
+            setCurveRankReferenceError(null);
+            setCurveRankReferenceOpen(true);
+            return;
+        }
+        setCurveRankReferenceOpen(false);
         setShowPlot(false);
         setShowProfile(false);
     };
@@ -3756,6 +3907,7 @@ const Athletes: React.FC = () => {
                                             {resetButtonElement?.name || 'Reset'}
                                         </button>
                                     )}
+
                                 </>
                             )}
                         </div>
@@ -3766,7 +3918,148 @@ const Athletes: React.FC = () => {
             {!loading && !error && activeSelectedCode && (
                 <>
                     <section className="athlete-runs-section" style={activePanelContainerStyle}>
-                        {showPlot ? (
+                        {curveRankReferenceOpen ? (
+                            <div
+                                className="athlete-runs-table-wrapper athlete-runs-table-wrapper--plot"
+                                style={{
+                                    position: 'absolute',
+                                    top: curveRankReferencePanelTopOffset,
+                                    left: curveRankReferencePanelLeftOffset,
+                                    marginTop: curveRankReferencePanelTopOffset,
+                                    marginLeft: curveRankReferencePanelLeftOffset,
+                                    background: 'transparent',
+                                    boxShadow: 'none',
+                                    border: 'none',
+                                    padding: 0,
+                                    display: 'block',
+                                    width: curveRankReferencePanelWidth,
+                                    maxWidth: curveRankReferencePanelWidth,
+                                    overflow: 'visible',
+                                    height: curveRankReferencePanelHeight,
+                                    maxHeight: curveRankReferencePanelHeight,
+                                    transform: 'none'
+                                }}
+                            >
+                                <div
+                                    role="dialog"
+                                    aria-label="Curved Time Ranks Reference"
+                                    style={{
+                                        border: '2px solid #9ca3af',
+                                        borderRadius: '12px',
+                                        background: '#fff',
+                                        marginLeft: '0.3cm',
+                                        marginRight: '0.3cm',
+                                        overflow: 'hidden',
+                                        boxShadow: '0 10px 18px rgba(15, 23, 42, 0.08)',
+                                        height: '100%',
+                                        boxSizing: 'border-box',
+                                        display: 'flex',
+                                        flexDirection: 'column'
+                                    }}
+                                >
+                                    <div
+                                        style={{
+                                            background: '#e5e7eb',
+                                            borderBottom: '1px solid #d1d5db',
+                                            padding: '0.55rem 0.8rem',
+                                            fontSize: '1.02rem',
+                                            fontWeight: 700,
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            gap: '0.35rem'
+                                        }}
+                                    >
+                                        <span>Curved Time Ranks Reference</span>
+                                        <button
+                                            type="button"
+                                            className="top-bar-help-btn"
+                                            aria-label="Curved Rank Time Reference help"
+                                            title="Curved Rank Time Reference help"
+                                            onClick={handleCurveRankReferenceHelp}
+                                            style={{ flexShrink: 0 }}
+                                        >
+                                            📖
+                                        </button>
+                                    </div>
+                                    <div style={{ padding: '0.45rem 0.7rem 0.55rem 0.7rem', display: 'flex', flexDirection: 'column', gap: '0.45rem', flex: 1, minHeight: 0 }}>
+                                        {curveRankReferenceError ? (
+                                            <div style={{ color: '#b91c1c', fontSize: '0.92rem' }}>{curveRankReferenceError}</div>
+                                        ) : null}
+                                        <div style={{ overflowY: 'auto', overflowX: 'hidden', border: '1px solid #d1d5db', borderRadius: '10px', flex: 1, minHeight: 0 }}>
+                                            <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', fontSize: isMobile ? '0.67rem' : '0.74rem' }}>
+                                                <thead>
+                                                    <tr style={{ background: '#f0fdf4' }}>
+                                                        <th style={{ width: '12%', textAlign: 'left', padding: '0.42rem 0.42rem', borderBottom: '1px solid #d1d5db', whiteSpace: 'normal', wordBreak: 'break-word', lineHeight: 1.15 }}>Rank</th>
+                                                        <th style={{ width: '18%', textAlign: 'left', padding: '0.42rem 0.42rem', borderBottom: '1px solid #d1d5db', whiteSpace: 'normal', wordBreak: 'break-word', lineHeight: 1.15 }}>Min<br />time</th>
+                                                        <th style={{ width: '18%', textAlign: 'left', padding: '0.42rem 0.42rem', borderBottom: '1px solid #d1d5db', whiteSpace: 'normal', wordBreak: 'break-word', lineHeight: 1.15 }}>Max<br />time</th>
+                                                        <th style={{ width: '18%', textAlign: 'left', padding: '0.42rem 0.42rem', borderBottom: '1px solid #d1d5db', whiteSpace: 'normal', wordBreak: 'break-word', lineHeight: 1.15 }}>Low<br />bound</th>
+                                                        <th style={{ width: '18%', textAlign: 'left', padding: '0.42rem 0.42rem', borderBottom: '1px solid #d1d5db', whiteSpace: 'normal', wordBreak: 'break-word', lineHeight: 1.15 }}>High<br />bound</th>
+                                                        <th style={{ width: '16%', textAlign: 'left', padding: '0.42rem 0.42rem', borderBottom: '1px solid #d1d5db', whiteSpace: 'normal', wordBreak: 'break-word', lineHeight: 1.15 }}>Rank<br />cnt</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {curveRankReferenceLoading ? (
+                                                        <tr>
+                                                            <td colSpan={6} style={{ padding: '0.7rem 0.42rem', color: '#6b7280' }}>Loading reference rows…</td>
+                                                        </tr>
+                                                    ) : curveRankReferenceRows.length === 0 ? (
+                                                        <tr>
+                                                            <td colSpan={6} style={{ padding: '0.7rem 0.42rem', color: '#6b7280' }}>No curved rank reference rows available.</td>
+                                                        </tr>
+                                                    ) : curveRankReferenceRows.map((row) => (
+                                                        <tr key={`${row.curve_rank_reference_version || 'latest'}-${row.curved_rank_group}`}>
+                                                            <td style={{ padding: '0.42rem 0.42rem', borderBottom: '1px solid #e5e7eb', fontWeight: 600, whiteSpace: 'nowrap' }}>{row.curved_rank_group ?? '--'}</td>
+                                                            <td style={{ padding: '0.42rem 0.42rem', borderBottom: '1px solid #e5e7eb', whiteSpace: 'nowrap' }}>{row.min_time || formatTimeValue(row.min_seconds) || '--'}</td>
+                                                            <td style={{ padding: '0.42rem 0.42rem', borderBottom: '1px solid #e5e7eb', whiteSpace: 'nowrap' }}>{row.max_time || formatTimeValue(row.max_seconds) || '--'}</td>
+                                                            <td style={{ padding: '0.42rem 0.42rem', borderBottom: '1px solid #e5e7eb', whiteSpace: 'nowrap' }}>{formatCurveRankReferenceScore(row.score_lower)}</td>
+                                                            <td style={{ padding: '0.42rem 0.42rem', borderBottom: '1px solid #e5e7eb', whiteSpace: 'nowrap' }}>{formatCurveRankReferenceScore(row.score_upper)}</td>
+                                                            <td style={{ padding: '0.42rem 0.42rem', borderBottom: '1px solid #e5e7eb', whiteSpace: 'nowrap' }}>{row.actual_group_cnt ?? '--'}</td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                    <div
+                                        style={{
+                                            display: 'flex',
+                                            flexWrap: 'wrap',
+                                            alignItems: 'center',
+                                            gap: '0.9rem',
+                                            padding: '0.75rem 0.9rem 0.85rem 0.9rem',
+                                            borderTop: '1px solid #d1d5db',
+                                            background: '#f9fafb'
+                                        }}
+                                    >
+                                        <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.88rem', color: '#111827', fontWeight: 600 }}>
+                                            <span>Rank type</span>
+                                            <select
+                                                value={curveRankReferenceType}
+                                                onChange={(event) => setCurveRankReferenceType(event.target.value as CurveRankReferenceType)}
+                                                style={{ minWidth: '12rem' }}
+                                            >
+                                                {curveRankReferenceTypeOptions.map((option) => (
+                                                    <option key={option.value} value={option.value}>{option.label}</option>
+                                                ))}
+                                            </select>
+                                        </label>
+                                        <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.88rem', color: '#111827', fontWeight: 600 }}>
+                                            <span>Date Snap</span>
+                                            <select
+                                                value={curveRankReferenceSelectedVersion}
+                                                onChange={(event) => setCurveRankReferenceVersion(event.target.value)}
+                                                style={{ minWidth: '10rem' }}
+                                            >
+                                                {curveRankReferenceVersionOptions.map((version) => (
+                                                    <option key={version} value={version}>{version}</option>
+                                                ))}
+                                            </select>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        ) : showPlot ? (
                             <>
                             <div
                                 style={{
@@ -3776,7 +4069,7 @@ const Athletes: React.FC = () => {
                                     zIndex: isMobile ? 10 : 1400,
                                     marginBottom: '0.2rem',
                                     overflow: 'visible',
-                                    minHeight: '0.8cm'
+                                    minHeight: `calc(0.8cm + ${plotControlsTopOffset})`
                                 }}
                             >
                                 <span style={plotShowLabelStyle}>
@@ -3809,7 +4102,10 @@ const Athletes: React.FC = () => {
                             <div
                                 className="athlete-runs-table-wrapper athlete-runs-table-wrapper--plot"
                                 style={{
-                                    marginTop: isMobile ? '-0.5cm' : 0,
+                                    position: 'absolute',
+                                    top: plotPanelTopOffset,
+                                    left: 0,
+                                    marginTop: 0,
                                     background: 'transparent',
                                     boxShadow: 'none',
                                     border: 'none',
@@ -3820,7 +4116,7 @@ const Athletes: React.FC = () => {
                                     overflow: 'hidden',
                                     height: plotPanelHeight,
                                     maxHeight: plotPanelHeight,
-                                    transform: isMobile ? 'translateY(-0.2cm)' : 'none'
+                                    transform: 'none'
                                 }}
                             >
                                 <div
@@ -4075,15 +4371,15 @@ const Athletes: React.FC = () => {
                             <div
                                 className="athlete-runs-table-wrapper"
                                 style={{
-                                    marginTop: 0,
+                                    marginTop: nonPlotPanelTopOffset,
                                     background: 'transparent',
                                     boxShadow: 'none',
                                     border: 'none',
                                     padding: 0,
                                     width: profileWrapperSizeStyle.width,
                                     maxWidth: profileWrapperSizeStyle.maxWidth,
-                                    height: profileWrapperSizeStyle.height,
-                                    maxHeight: profileWrapperSizeStyle.maxHeight,
+                                    height: profileWrapperSizeStyle.height ? `calc(${profileWrapperSizeStyle.height} - ${nonPlotPanelTopOffset})` : profileWrapperSizeStyle.height,
+                                    maxHeight: profileWrapperSizeStyle.maxHeight ? `calc(${profileWrapperSizeStyle.maxHeight} - ${nonPlotPanelTopOffset})` : profileWrapperSizeStyle.maxHeight,
                                     overflow: 'hidden'
                                 }}
                             >
@@ -4331,11 +4627,14 @@ const Athletes: React.FC = () => {
                                 className="athlete-runs-table-wrapper"
                                 ref={runsTableWrapperRef}
                                 style={{
-                                    marginTop: 0,
+                                    marginTop: nonPlotPanelTopOffset,
+                                    ['--athletes-table-mobile-height' as any]: isMobile && tableWrapperSizeStyle.height
+                                        ? `calc(${tableWrapperSizeStyle.height} - ${nonPlotPanelTopOffset})`
+                                        : undefined,
                                     width: 'max-content',
                                     maxWidth: isMobile ? '100%' : tableWrapperSizeStyle.maxWidth,
-                                    height: tableWrapperSizeStyle.height,
-                                    maxHeight: tableWrapperSizeStyle.maxHeight
+                                    height: tableWrapperSizeStyle.height ? `calc(${tableWrapperSizeStyle.height} - ${nonPlotPanelTopOffset})` : tableWrapperSizeStyle.height,
+                                    maxHeight: tableWrapperSizeStyle.maxHeight ? `calc(${tableWrapperSizeStyle.maxHeight} - ${nonPlotPanelTopOffset})` : tableWrapperSizeStyle.maxHeight
                                 }}
                             >
                                 {runs.length > 0 ? (

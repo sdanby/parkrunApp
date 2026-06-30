@@ -2,19 +2,24 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     API_BASE_URL,
+    fetchAdminCurveReferenceStatus,
     fetchAdminActivity,
     fetchAdminStatus,
     fetchAdminUsers,
     deleteAdminWeeklyUploadEvent,
     fetchAdminWeeklyUploadStatus,
     fetchEventOptions,
+    resetAdminCurveReferencePublish,
     resetAdminWeeklyUpload,
+    startAdminCurveReferencePublish,
     setAdminUserDefaultCourse,
     setAdminUserFlag,
     startAdminWeeklyUpload,
     stopAdminWeeklyUpload,
+    WEEKLY_UPLOAD_API_BASE_URL,
     type AdminActivityRecord,
     type AdminUser,
+    type CurveReferenceStatus,
     type EventOption,
     type WeeklyDeleteEventResponse,
     type WeeklySqlRunSummary,
@@ -26,7 +31,7 @@ import './Admin.css';
 const AUTH_TOKEN_KEY = 'auth_token_v1';
 const AUTH_USER_KEY = 'auth_user_v1';
 
-type AdminPanelSection = 'admin-setup' | 'activity' | 'weekly-upload';
+type AdminPanelSection = 'admin-setup' | 'activity' | 'weekly-upload' | 'curve-reference';
 
 type UserFilters = {
     email: string;
@@ -400,11 +405,18 @@ const WEEKLY_SQL_PROGRESS_STAGES: WeeklyPipelineStageDefinition[] = [
     },
     {
         id: 'verify-summary',
-        label: 'Verify and Upload Summary',
-        description: 'Verifies curve ranks in Postgres and uploads curve rank range summary rows.',
+        label: 'Verify Curve Summary',
+        description: 'Verifies curve ranks in Postgres and, when explicitly enabled, uploads curve rank range summary rows.',
         target: '0-1 min target',
         startPatterns: ['[curve][verify]', '[curve_rank_range_summary]', 'curve_rank_range_summary rows uploaded'],
-        completePatterns: ['[timing] process.full_pipeline.curve_rank_range_summary_upload:']
+        completePatterns: [
+            '[timing] process.full_pipeline.verify_curve_rankings_in_postgres:',
+            '[timing] process.resume_curve.verify_curve_rankings_in_postgres:',
+            '[timing] process.resume_curve_stage2.verify_curve_rankings_in_postgres:',
+            '[timing] process.full_pipeline.curve_rank_range_summary_upload:',
+            '[timing] process.resume_curve.curve_rank_range_summary_upload:',
+            '[timing] process.resume_curve_stage2.curve_rank_range_summary_upload:'
+        ]
     },
     {
         id: 'copy-results',
@@ -517,6 +529,20 @@ const Admin: React.FC = () => {
     const [weeklyStopping, setWeeklyStopping] = useState(false);
     const [weeklyResetting, setWeeklyResetting] = useState(false);
     const [weeklyError, setWeeklyError] = useState<string | null>(null);
+    const [curveStatus, setCurveStatus] = useState<CurveReferenceStatus>({
+        running: false,
+        status: 'idle',
+        referenceDate: '',
+        startedAt: null,
+        finishedAt: null,
+        error: null,
+        logs: []
+    });
+    const [curveLoading, setCurveLoading] = useState(false);
+    const [curveStarting, setCurveStarting] = useState(false);
+    const [curveResetting, setCurveResetting] = useState(false);
+    const [curveError, setCurveError] = useState<string | null>(null);
+    const [curveReferenceDate, setCurveReferenceDate] = useState(getCurrentSaturdayIso());
     const [weeklyOptions, setWeeklyOptions] = useState({
         loopEvents: true,
         loadHistory: false,
@@ -537,6 +563,7 @@ const Admin: React.FC = () => {
         message: ''
     });
     const weeklyLogRef = useRef<HTMLDivElement | null>(null);
+    const curveLogRef = useRef<HTMLDivElement | null>(null);
     const oneMonthStartIso = useMemo(() => {
         const now = new Date();
         const start = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0, 0, 0);
@@ -628,6 +655,32 @@ const Admin: React.FC = () => {
         logs: Array.isArray(raw?.logs) ? raw.logs : []
     });
 
+    const normalizeCurveReferenceStatus = (raw: any): CurveReferenceStatus => ({
+        running: Boolean(raw?.running),
+        status: String(raw?.status || 'idle'),
+        referenceDate: String(raw?.referenceDate || ''),
+        startedAt: raw?.startedAt || null,
+        finishedAt: raw?.finishedAt || null,
+        error: raw?.error || null,
+        logs: Array.isArray(raw?.logs) ? raw.logs : []
+    });
+
+    const buildPendingCurveReferenceStatus = (startDate: string): CurveReferenceStatus => ({
+        running: true,
+        status: 'starting',
+        referenceDate: startDate,
+        startedAt: new Date().toISOString(),
+        finishedAt: null,
+        error: null,
+        logs: [
+            {
+                at: new Date().toISOString(),
+                level: 'info',
+                message: `Queueing curve_time_ranks_reference publish for ${startDate}.`
+            }
+        ]
+    });
+
     const loadWeeklyStatus = async () => {
         if (!token) return;
         try {
@@ -647,6 +700,20 @@ const Admin: React.FC = () => {
             setWeeklyError(err?.response?.data?.error || 'Unable to load weekly upload status.');
         } finally {
             setWeeklyLoading(false);
+        }
+    };
+
+    const loadCurveReferenceStatus = async () => {
+        if (!token) return;
+        try {
+            setCurveLoading(true);
+            const response = await fetchAdminCurveReferenceStatus(token);
+            setCurveStatus(normalizeCurveReferenceStatus(response));
+            setCurveError(null);
+        } catch (err: any) {
+            setCurveError(err?.response?.data?.error || 'Unable to load curve reference status.');
+        } finally {
+            setCurveLoading(false);
         }
     };
 
@@ -716,6 +783,61 @@ const Admin: React.FC = () => {
         }
     };
 
+    const handlePublishCurveReference = async () => {
+        if (!token || curveStarting || curveStatus.running) return;
+
+        const startDate = String(curveReferenceDate || '').trim() || getCurrentSaturdayIso();
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate)) {
+            setCurveError('Reference date must use YYYY-MM-DD.');
+            return;
+        }
+
+        try {
+            setCurveStarting(true);
+            setCurveError(null);
+            setCurveStatus(buildPendingCurveReferenceStatus(startDate));
+            const response = await startAdminCurveReferencePublish(token, {
+                sqlPipelineOptions: {
+                    startDate,
+                }
+            });
+            if (response?.state) {
+                setCurveStatus(normalizeCurveReferenceStatus(response.state));
+            } else {
+                await loadCurveReferenceStatus();
+            }
+        } catch (err: any) {
+            await loadCurveReferenceStatus();
+            if (err?.response?.status === 404) {
+                setCurveError('Curve reference publish is not available on the connected backend yet.');
+            } else {
+                setCurveError(err?.response?.data?.error || err?.message || 'Unable to publish curve time ranks reference.');
+            }
+        } finally {
+            setCurveStarting(false);
+        }
+    };
+
+    const handleResetCurveReferenceState = async () => {
+        const canReset = curveStatus.running || curveStatus.status !== 'idle' || curveStatus.logs.length > 0 || Boolean(curveStatus.error);
+        if (!token || curveResetting || !canReset) return;
+
+        try {
+            setCurveResetting(true);
+            setCurveError(null);
+            await resetAdminCurveReferencePublish(token);
+            await loadCurveReferenceStatus();
+        } catch (err: any) {
+            if (err?.code === 'ECONNABORTED') {
+                setCurveError('Reset timed out waiting for the curve reference backend. If it is waking up, retry once in a few seconds.');
+            } else {
+                setCurveError(err?.response?.data?.error || err?.message || 'Unable to reset curve reference task state.');
+            }
+        } finally {
+            setCurveResetting(false);
+        }
+    };
+
     const handleStopWeeklyUpload = async () => {
         if (!token || weeklyStopping || !weeklyStatus.running || weeklyStatus.runMode !== 'standard') return;
 
@@ -732,7 +854,9 @@ const Admin: React.FC = () => {
     };
 
     const handleResetWeeklyRunState = async () => {
-        if (!token || weeklyResetting || !weeklyStatus.running || weeklyStatus.runMode !== 'sqlPipeline') return;
+        const canReset = weeklyStatus.runMode !== 'standard'
+            && (weeklyStatus.running || weeklyStatus.status !== 'idle' || weeklyStatus.logs.length > 0 || Boolean(weeklyStatus.error));
+        if (!token || weeklyResetting || !canReset) return;
 
         try {
             setWeeklyResetting(true);
@@ -740,7 +864,11 @@ const Admin: React.FC = () => {
             await resetAdminWeeklyUpload(token);
             await loadWeeklyStatus();
         } catch (err: any) {
-            setWeeklyError(err?.response?.data?.error || err?.message || 'Unable to reset weekly SQL pipeline state.');
+            if (err?.code === 'ECONNABORTED') {
+                setWeeklyError('Reset timed out waiting for the weekly backend. If it is waking up, retry once in a few seconds.');
+            } else {
+                setWeeklyError(err?.response?.data?.error || err?.message || 'Unable to reset admin task state.');
+            }
         } finally {
             setWeeklyResetting(false);
         }
@@ -803,7 +931,49 @@ const Admin: React.FC = () => {
                 isSqlPipeline
             };
         });
-    }, [weeklyStatus.logs, weeklyStatus.previousSqlRun, weeklyStatus.runMode, weeklyStatus.running, weeklyStatus.status]);
+    }, [
+        weeklyStatus.logs,
+        weeklyStatus.previousSqlRun,
+        weeklyStatus.runMode,
+        weeklyStatus.running,
+        weeklyStatus.status,
+        weeklyStatus.sqlPipelineOptions?.resumeCurveFromStage2,
+        weeklyStatus.sqlPipelineOptions?.resumeCurveFromAllHistory,
+    ]);
+
+    const curveReferenceProgress = useMemo(() => {
+        const logs = Array.isArray(curveStatus.logs) ? curveStatus.logs : [];
+        const messages = logs.map((entry) => String(entry?.message || '').toLowerCase());
+        const hasStarted = messages.some((message) => message.includes('started curve_time_ranks_reference publish run'));
+        const sqliteBuilt = messages.some((message) => message.includes('sqlite one-off build complete'));
+        const postgresUploaded = messages.some((message) => message.includes('postgres upload complete'));
+        const failed = curveStatus.status === 'failed';
+
+        return [
+            {
+                id: 'curve-ref-build',
+                label: 'Rebuild local SQLite curve reference',
+                description: 'Replaces the local curve_time_ranks_reference rows for the selected snapshot date.',
+                status: failed ? (sqliteBuilt ? 'complete' : 'failed') : (sqliteBuilt ? 'complete' : (hasStarted ? 'running' : 'pending')),
+                message: logs.find((entry) => String(entry?.message || '').toLowerCase().includes('sqlite one-off build complete'))?.message
+                    || logs.find((entry) => String(entry?.message || '').toLowerCase().includes('started curve_time_ranks_reference publish run'))?.message
+                    || 'Waiting to start SQLite rebuild.'
+            },
+            {
+                id: 'curve-ref-upload',
+                label: 'Publish rebuilt version to Postgres',
+                description: 'Uploads the rebuilt reference snapshot so the Participant rank cut-off dialog can use it.',
+                status: failed
+                    ? (postgresUploaded ? 'complete' : (sqliteBuilt ? 'failed' : 'pending'))
+                    : (postgresUploaded ? 'complete' : (sqliteBuilt ? 'running' : 'pending')),
+                message: logs.find((entry) => String(entry?.message || '').toLowerCase().includes('postgres upload complete'))?.message
+                    || 'Waiting for Postgres publish.'
+            }
+        ];
+    }, [curveStatus.logs, curveStatus.status]);
+
+    const displayedWeeklyError = weeklyError || weeklyStatus.error || null;
+    const displayedCurveError = curveError || curveStatus.error || null;
 
     const weeklyRunStatusNotice = useMemo(() => {
         if (weeklyStatus.runMode !== 'standard') return null;
@@ -891,7 +1061,13 @@ const Admin: React.FC = () => {
             await fetchAdminWeeklyUploadStatus(token);
             setSystemChecks((prev) => ({ ...prev, weeklyApi: 'ok', message: 'Weekly upload API reachable.' }));
         } catch (err: any) {
-            setSystemChecks((prev) => ({ ...prev, weeklyApi: 'error', message: `Weekly upload API failed: ${err?.response?.data?.error || err?.message || 'unknown error'}` }));
+            const configuredWeeklyApiBase = String(WEEKLY_UPLOAD_API_BASE_URL || '').trim();
+            const configuredWeeklyApiIsLocal = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(configuredWeeklyApiBase);
+            const baseMessage = err?.response?.data?.error || err?.message || 'unknown error';
+            const message = configuredWeeklyApiIsLocal && /timeout/i.test(baseMessage)
+                ? `Weekly upload API failed: ${baseMessage}. Local weekly backend is configured at ${configuredWeeklyApiBase} but is not responding.`
+                : `Weekly upload API failed: ${baseMessage}`;
+            setSystemChecks((prev) => ({ ...prev, weeklyApi: 'error', message }));
         }
     };
 
@@ -997,10 +1173,32 @@ const Admin: React.FC = () => {
     }, [canAccess, section, weeklySqlOptions.startDate, weeklySqlOptions.eventCode]);
 
     useEffect(() => {
+        if (!canAccess || section !== 'curve-reference') {
+            return;
+        }
+
+        loadCurveReferenceStatus();
+        const timer = window.setInterval(() => {
+            loadCurveReferenceStatus();
+        }, 2000);
+
+        return () => {
+            window.clearInterval(timer);
+        };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [canAccess, section]);
+
+    useEffect(() => {
         if (section !== 'weekly-upload') return;
         if (!weeklyLogRef.current) return;
         weeklyLogRef.current.scrollTop = weeklyLogRef.current.scrollHeight;
     }, [section, weeklyStatus.logs.length]);
+
+    useEffect(() => {
+        if (section !== 'curve-reference') return;
+        if (!curveLogRef.current) return;
+        curveLogRef.current.scrollTop = curveLogRef.current.scrollHeight;
+    }, [section, curveStatus.logs.length]);
 
     useEffect(() => {
         if (weeklyStatus.running) {
@@ -1266,6 +1464,13 @@ const Admin: React.FC = () => {
                         onClick={() => setSection('weekly-upload')}
                     >
                         Weekly Upload
+                    </button>
+                    <button
+                        type="button"
+                        className={section === 'curve-reference' ? 'admin-nav-btn active' : 'admin-nav-btn'}
+                        onClick={() => setSection('curve-reference')}
+                    >
+                        Curve Reference
                     </button>
                 </aside>
 
@@ -1587,6 +1792,98 @@ const Admin: React.FC = () => {
                                 </div>
                             )}
                         </>
+                    ) : section === 'curve-reference' ? (
+                        <div className="admin-weekly-layout">
+                            <div className="admin-weekly-top">
+                                <h2>Curve Reference Publish</h2>
+                                <div className="admin-meta">
+                                    <span>Status: {curveStatus.status || 'idle'}</span>
+                                    <span>Reference date: {curveStatus.referenceDate || curveReferenceDate || '—'}</span>
+                                </div>
+
+                                <div className="admin-weekly-controls admin-weekly-controls-inline">
+                                    <label className="admin-weekly-sql-field">
+                                        <span>Reference date</span>
+                                        <input
+                                            type="date"
+                                            className="admin-filter-input"
+                                            value={curveReferenceDate}
+                                            onChange={(event) => setCurveReferenceDate(event.target.value)}
+                                            disabled={curveStatus.running || curveStarting}
+                                        />
+                                    </label>
+
+                                    <button
+                                        type="button"
+                                        className="admin-weekly-start"
+                                        onClick={handlePublishCurveReference}
+                                        disabled={curveStatus.running || curveStarting}
+                                    >
+                                        {curveStatus.running ? 'Running...' : (curveStarting ? 'Starting...' : 'Build and Publish Curve Ref')}
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        className="admin-weekly-reset"
+                                        onClick={handleResetCurveReferenceState}
+                                        disabled={curveResetting || (!curveStatus.running && curveStatus.status === 'idle' && curveStatus.logs.length === 0 && !curveStatus.error)}
+                                    >
+                                        {curveResetting ? 'Resetting...' : 'Reset Curve Ref State'}
+                                    </button>
+
+                                    <button type="button" className="admin-weekly-refresh" onClick={loadCurveReferenceStatus} disabled={curveLoading}>
+                                        {curveLoading ? 'Refreshing...' : 'Refresh'}
+                                    </button>
+                                </div>
+
+                                <div className="admin-weekly-manual-note">
+                                    Rebuilds and replaces the local SQLite curve reference for the selected date, then publishes that version to Postgres.
+                                </div>
+
+                                <div className="admin-weekly-run-meta">
+                                    <span>Started: {formatTimeWithSeconds(curveStatus.startedAt)}</span>
+                                    <span>Finished: {formatTimeWithSeconds(curveStatus.finishedAt)}</span>
+                                </div>
+
+                                {displayedCurveError && <div className="admin-error">{displayedCurveError}</div>}
+                            </div>
+
+                            <div className="admin-weekly-log-wrap">
+                                <div className="admin-weekly-log-split">
+                                    <div className="admin-weekly-progress">
+                                        <div className="admin-weekly-progress-head">
+                                            <strong>Curve Ref Steps</strong>
+                                            <span>This task only rebuilds the local curve reference, then publishes that snapshot to Postgres.</span>
+                                        </div>
+                                        <div className="admin-weekly-progress-list">
+                                            {curveReferenceProgress.map((stage) => (
+                                                <div key={stage.id} className={`admin-weekly-progress-step ${stage.status}`}>
+                                                    <div className={`admin-weekly-progress-light ${stage.status}`} aria-hidden="true" />
+                                                    <div className="admin-weekly-progress-body">
+                                                        <div className="admin-weekly-progress-title-row">
+                                                            <strong>{stage.label}</strong>
+                                                        </div>
+                                                        <div className="admin-weekly-progress-description">{stage.description}</div>
+                                                        <div className="admin-weekly-progress-message">{stage.message}</div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <div className="admin-weekly-log" ref={curveLogRef}>
+                                        {curveStatus.logs.length === 0 ? (
+                                            <div className="admin-weekly-log-empty">No output yet.</div>
+                                        ) : curveStatus.logs.map((entry, idx) => (
+                                            <div key={`${entry.at}-${idx}`} className={`admin-weekly-log-row ${String(entry.level || 'info')}`}>
+                                                <span className="admin-weekly-log-time">{formatTimeWithSeconds(entry.at)}</span>
+                                                <span className="admin-weekly-log-message">{entry.message}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     ) : (
                         <div className="admin-weekly-layout">
                             <div className="admin-weekly-top">
@@ -1678,9 +1975,9 @@ const Admin: React.FC = () => {
                                                 type="button"
                                                 className="admin-weekly-reset"
                                                 onClick={handleResetWeeklyRunState}
-                                                disabled={!weeklyStatus.running || weeklyStatus.runMode !== 'sqlPipeline' || weeklyResetting}
+                                                disabled={weeklyStatus.runMode === 'standard' || weeklyResetting || (!weeklyStatus.running && weeklyStatus.status === 'idle' && weeklyStatus.logs.length === 0 && !weeklyStatus.error)}
                                             >
-                                                {weeklyResetting ? 'Resetting...' : 'Reset SQL Pipeline State'}
+                                                {weeklyResetting ? 'Resetting...' : 'Reset Admin Task State'}
                                             </button>
 
                                             <button type="button" className="admin-weekly-refresh" onClick={loadWeeklyStatus} disabled={weeklyLoading}>
@@ -1698,14 +1995,14 @@ const Admin: React.FC = () => {
                                                 {weeklyStatus.previousSqlRun.autoResumeMode === 'allHistory' && !weeklySqlOptions.forceFreshStart && ' A safe resume checkpoint is available from Rebuild All-History Time Reference.'}
                                             </div>
                                         )}
-                                        {weeklyStatus.running && weeklyStatus.runMode === 'sqlPipeline' && (
+                                        {weeklyStatus.running && weeklyStatus.runMode !== 'standard' && (
                                             <div className="admin-weekly-manual-note">
-                                                Reset SQL Pipeline State releases the Admin lockout and ignores stale worker logs. It does not kill Python in the middle of an active SQL statement.
+                                                Reset Admin Task State releases the Admin lockout and ignores stale worker logs. It does not kill Python in the middle of an active SQL statement.
                                             </div>
                                         )}
-                                        {weeklyStatus.running && weeklyStatus.isStalled && weeklyStatus.runMode === 'sqlPipeline' && (
+                                        {weeklyStatus.running && weeklyStatus.isStalled && weeklyStatus.runMode !== 'standard' && (
                                             <div className="admin-weekly-manual-note admin-weekly-stalled-note">
-                                                Current SQL step has been running for about {Math.max(1, Math.round((weeklyStatus.currentCourseElapsedSeconds || 0) / 60))} minute(s). Use reset only if you are treating this run as hung.
+                                                Current admin task step has been running for about {Math.max(1, Math.round((weeklyStatus.currentCourseElapsedSeconds || 0) / 60))} minute(s). Use reset only if you are treating this run as hung.
                                             </div>
                                         )}
                                     </div>
@@ -1844,7 +2141,7 @@ const Admin: React.FC = () => {
                                     </div>
                                 )}
 
-                                {(weeklyError || weeklyStatus.error) && <div className="admin-error">{weeklyError || weeklyStatus.error}</div>}
+                                {displayedWeeklyError && <div className="admin-error">{displayedWeeklyError}</div>}
                             </div>
 
                             <div className="admin-weekly-log-wrap">
@@ -1858,24 +2155,25 @@ const Admin: React.FC = () => {
                                             {weeklyPipelineProgress.map((stage) => {
                                                 const progressClass = stage.status === 'pending' && stage.wasPreviouslyComplete ? 'previous' : stage.status;
                                                 return (
-                                                <div key={stage.id} className={`admin-weekly-progress-step ${stage.status} ${stage.wasPreviouslyComplete && stage.status === 'pending' ? 'previous' : ''}`}>
-                                                    <div className={`admin-weekly-progress-light ${progressClass}`} aria-hidden="true" />
-                                                    <div className="admin-weekly-progress-body">
-                                                        <div className="admin-weekly-progress-title-row">
-                                                            <strong>{stage.label}</strong>
-                                                            <span className="admin-weekly-progress-target">{stage.target}</span>
+                                                    <div key={stage.id} className={`admin-weekly-progress-step ${stage.status} ${stage.wasPreviouslyComplete && stage.status === 'pending' ? 'previous' : ''}`}>
+                                                        <div className={`admin-weekly-progress-light ${progressClass}`} aria-hidden="true" />
+                                                        <div className="admin-weekly-progress-body">
+                                                            <div className="admin-weekly-progress-title-row">
+                                                                <strong>{stage.label}</strong>
+                                                                <span className="admin-weekly-progress-target">{stage.target}</span>
+                                                            </div>
+                                                            <div className="admin-weekly-progress-description">{stage.description}</div>
+                                                            <div className="admin-weekly-progress-meta">
+                                                                {stage.startedEntry ? <span>Started: {formatTimeWithSeconds(stage.startedEntry.at)}</span> : <span>Started: waiting</span>}
+                                                                {stage.completedEntry ? <span>Done: {formatTimeWithSeconds(stage.completedEntry.at)}</span> : stage.previousCompletedAt ? <span>Prior Done: {formatTimeWithSeconds(stage.previousCompletedAt)}</span> : <span>Done: pending</span>}
+                                                            </div>
+                                                            {stage.latestEntry && (
+                                                                <div className="admin-weekly-progress-message">{stage.latestEntry.message}</div>
+                                                            )}
                                                         </div>
-                                                        <div className="admin-weekly-progress-description">{stage.description}</div>
-                                                        <div className="admin-weekly-progress-meta">
-                                                            {stage.startedEntry ? <span>Started: {formatTimeWithSeconds(stage.startedEntry.at)}</span> : <span>Started: waiting</span>}
-                                                            {stage.completedEntry ? <span>Done: {formatTimeWithSeconds(stage.completedEntry.at)}</span> : stage.previousCompletedAt ? <span>Prior Done: {formatTimeWithSeconds(stage.previousCompletedAt)}</span> : <span>Done: pending</span>}
-                                                        </div>
-                                                        {stage.latestEntry && (
-                                                            <div className="admin-weekly-progress-message">{stage.latestEntry.message}</div>
-                                                        )}
                                                     </div>
-                                                </div>
-                                            )})}
+                                                );
+                                            })}
                                         </div>
                                     </div>
 

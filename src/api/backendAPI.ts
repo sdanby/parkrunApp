@@ -10,15 +10,18 @@ export const API_BASE_URL = process.env.REACT_APP_API_BASE_URL
 export const WEEKLY_UPLOAD_API_BASE_URL = process.env.REACT_APP_WEEKLY_UPLOAD_API_BASE_URL
     || API_BASE_URL;
 
-const WEEKLY_UPLOAD_API_TIMEOUT_MS = 4000;
+const WEEKLY_UPLOAD_API_GET_TIMEOUT_MS = 20000;
+const WEEKLY_UPLOAD_API_POST_TIMEOUT_MS = 20000;
 
 const getWeeklyUploadApiBaseUrls = (): string[] => {
     const configuredBaseUrl = String(WEEKLY_UPLOAD_API_BASE_URL || '').trim();
     const candidates: string[] = [];
-    if (isLocalHost) {
+    if (configuredBaseUrl) {
+        candidates.push(configuredBaseUrl);
+    }
+    if (isLocalHost && !configuredBaseUrl) {
         candidates.push('http://127.0.0.1:5001');
     }
-    candidates.push(configuredBaseUrl);
 
     const seen = new Set<string>();
     return candidates.filter((value) => {
@@ -45,14 +48,14 @@ const requestWeeklyUploadApi = async <T>(
             if (method === 'get') {
                 const response = await axios.get(`${baseUrl}${path}`, {
                     headers,
-                    timeout: WEEKLY_UPLOAD_API_TIMEOUT_MS,
+                    timeout: WEEKLY_UPLOAD_API_GET_TIMEOUT_MS,
                 });
                 return response.data as T;
             }
 
             const response = await axios.post(`${baseUrl}${path}`, payload ?? {}, {
                 headers,
-                timeout: WEEKLY_UPLOAD_API_TIMEOUT_MS,
+                timeout: WEEKLY_UPLOAD_API_POST_TIMEOUT_MS,
             });
             return response.data as T;
         } catch (error) {
@@ -206,6 +209,16 @@ export type WeeklyDeleteEventResponse = {
         };
     };
     state?: WeeklyUploadStatus;
+};
+
+export type CurveReferenceStatus = {
+    running: boolean;
+    status: string;
+    referenceDate?: string;
+    startedAt?: string | null;
+    finishedAt?: string | null;
+    error?: string | null;
+    logs: WeeklyUploadLogEntry[];
 };
 
 export type FeedbackRequest = {
@@ -564,6 +577,44 @@ export const fetchAthleteBestSummary = async (athleteCode: string) => {
     }
 };
 
+export type CurveRankReferenceRow = {
+    curved_rank_group: number;
+    curve_rank_reference_version: string | null;
+    min_seconds?: number | null;
+    max_seconds?: number | null;
+    min_time?: string | null;
+    max_time?: string | null;
+    score_lower?: number | null;
+    score_upper?: number | null;
+    actual_group_cnt?: number | null;
+};
+
+export type CurveRankReferenceResponse = {
+    rank_type: 'B' | 'E' | 'ES' | 'AE' | 'AES';
+    curve_rank_reference_version: string | null;
+    latest_curve_rank_reference_version: string | null;
+    available_curve_rank_reference_versions: string[];
+    rows: CurveRankReferenceRow[];
+};
+
+export const fetchCurveRankReference = async (
+    rankType: 'B' | 'E' | 'ES' | 'AE' | 'AES',
+    referenceVersion?: string | null,
+) => {
+    const params = new URLSearchParams({ rank_type: rankType });
+    if (referenceVersion) {
+        params.set('reference_version', referenceVersion);
+    }
+    try {
+        const url = `${API_BASE_URL}/api/curve-rank-reference?${params.toString()}`;
+        const response = await axios.get(url);
+        return response.data as CurveRankReferenceResponse;
+    } catch (error) {
+        console.error('Error fetching curve rank reference:', error);
+        throw error;
+    }
+};
+
 export const registerWithEmail = async (email: string, password: string, displayName?: string): Promise<AuthResponse> => {
     const response = await axios.post(`${API_BASE_URL}/api/auth/register`, {
         email,
@@ -730,6 +781,44 @@ export const startAdminWeeklyUpload = async (
         '/api/admin/weekly-upload/start',
         token,
         payload || {},
+    )) || { ok: true };
+};
+
+export const startAdminCurveReferencePublish = async (
+    token: string,
+    payload?: { sqlPipelineOptions?: WeeklySqlPipelineOptions }
+): Promise<{ ok?: boolean; state?: CurveReferenceStatus }> => {
+    return (await requestWeeklyUploadApi<{ ok?: boolean; state?: CurveReferenceStatus }>(
+        'post',
+        '/api/admin/curve-reference/publish',
+        token,
+        payload || {},
+    )) || { ok: true };
+};
+
+export const fetchAdminCurveReferenceStatus = async (
+    token: string,
+): Promise<CurveReferenceStatus> => {
+    const response = await requestWeeklyUploadApi<CurveReferenceStatus>(
+        'get',
+        '/api/admin/curve-reference/status',
+        token,
+    );
+    return response || {
+        running: false,
+        status: 'idle',
+        logs: []
+    };
+};
+
+export const resetAdminCurveReferencePublish = async (
+    token: string
+): Promise<{ ok?: boolean; state?: CurveReferenceStatus }> => {
+    return (await requestWeeklyUploadApi<{ ok?: boolean; state?: CurveReferenceStatus }>(
+        'post',
+        '/api/admin/curve-reference/reset',
+        token,
+        {},
     )) || { ok: true };
 };
 

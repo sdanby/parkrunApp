@@ -111,14 +111,14 @@
         "lineHeight": 0.9
       },
       "laptop": { "x": "1.3cm", "y": "2.7cm" },
-      "mobile": { "x": "1.3cm", "y": "2.7cm" }
+      "mobile": { "x": "1.0cm", "y": "2.7cm" }
     },
     {
       "id": "participant.recentClub",
       "type": "field",
       "name": "Recent club",
       "laptop": { "x": "3.6cm", "y": "2.7cm", "width": "6.0cm" },
-      "mobile": { "x": "3.6cm", "y": "2.7cm", "width": "4.4cm" }
+      "mobile": { "x": "3.3cm", "y": "2.7cm", "width": "4.4cm" }
     },
     {
       "id": "participant.statusMessage",
@@ -214,14 +214,16 @@
         "lineHeight": 0.9
       },
       "laptop": { "x": "8.7cm", "y": "2.7cm" },
-      "mobile": { "x": "9.1cm", "y": "2.7cm" }
+      "mobile": { "x": "1.95cm", "y": "3.85cm" }
     },
     {
       "id": "participant.estRankValue",
       "type": "field",
       "name": "Est. Rank value",
       "laptop": { "x": "10.5cm", "y": "2.8cm" },
-      "mobile": { "x": "8.8cm", "y": "3.6cm" }
+      "mobile": { "x": "3.5cm", "y": "3.9cm" },"style": {
+        "fontSize": "0.9rem"
+      }
     },
     {
       "id": "participant.freqCourseLabel",
@@ -236,14 +238,14 @@
         "lineHeight": 0.7
       },
       "laptop": { "x": "1.3cm", "y": "3.4cm" },
-      "mobile": { "x": "1.3cm", "y": "3.3cm" }
+      "mobile": { "x": "1.0cm", "y": "3.3cm" }
     },
     {
       "id": "participant.freqCourse",
       "type": "field",
       "name": "Freq Course",
       "laptop": { "x": "3.8cm", "y": "3.4cm", "width": "4.4cm" },
-      "mobile": { "x": "3.9cm", "y": "3.2cm", "width": "4.4cm" }
+      "mobile": { "x": "3.6cm", "y": "3.2cm", "width": "4.4cm" }
     },
     {
       "id": "participant.profileButton",
@@ -260,13 +262,27 @@
       "mobile": { "x": "-0.2cm", "y": "1.1cm", "width": "0.9cm", "height": "0.9cm" }
     },
     {
+      "id": "participant.curveRankReferenceButton",
+      "type": "button",
+      "name": "Ranks",
+      "laptop": { "x": "-0.2cm", "y": "3.8cm", "width": "1.0cm", "height": "1.0cm" },
+      "mobile": { "x": "8.9cm", "y": "3.2cm", "width": "1.1cm", "height": "0.9cm" }
+    },
+    {
       "id": "participant.plotContainer",
       "type": "plot",
       "name": "plotContainer",
-      "laptop": { "width": "16cm", "height": "14cm" },
-      "mobile": { "width": "11.5cm", "height": "12.5cm" },
+      "laptop": { "width": "16cm", "height": "14cm" , "x": "0cm", "y": "5.0cm"},
+      "mobile": { "width": "11.5cm", "height": "12.5cm" , "x": "0cm", "y": "4.3cm"},
       "laptopExpanded": { "width": "30cm", "height": "16cm" },
       "mobileExpanded": { "width": "13.5cm", "height": "13cm" }
+    },
+    {
+      "id": "participant.curveRankReferenceContainer",
+      "type": "table",
+      "name": "curveRankReferenceContainer",
+      "laptop": { "width": "16cm", "height": "15cm", "x": "0cm", "y": "4.8cm" },
+      "mobile": { "width": "11.5cm", "height": "12.5cm", "x": "0cm", "y": "5.2cm" }
     },
     {
       "id": "participant.profileContainer",
@@ -290,8 +306,8 @@
       "id": "participant.tableContainer",
       "type": "table",
       "name": "tableContainer",
-      "laptop": { "x": "0cm", "y": "4.0cm", "width": "50cm", "height": "17cm" },
-      "mobile": { "x": "0cm", "y": "4.0cm", "width": "30cm", "height": "12.4cm" }
+      "laptop": { "x": "0cm", "y": "4.5cm", "width": "50cm", "height": "16.5cm" },
+      "mobile": { "x": "0cm", "y": "5.2cm", "width": "30cm", "height": "14.5cm" }
     },
     {
       "id": "participant.plotShowLabel",
@@ -303,8 +319,8 @@
         "color": "#111827",
         "lineHeight": 1.0
       },
-      "laptop": { "x": "8.8cm", "y": "3.5cm" },
-      "mobile": { "x": "6.8cm", "y": "3.5cm" }
+      "laptop": { "x": "8.8cm", "y": "3.0cm" },
+      "mobile": { "x": "6.0cm", "y": "5.2cm" }
     },
     {
       "id": "participant.plotBestButton",
@@ -319,8 +335,8 @@
         "borderRadius": "6px",
         "padding": "0 0.65rem"
       },
-      "laptop": { "x": "10.0cm", "y": "3.3cm", "width": "1.8cm", "height": "1.7rem" },
-      "mobile": { "x": "8.0cm", "y": "3.3cm", "width": "1.6cm", "height": "1.7rem" }
+      "laptop": { "x": "10.0cm", "y": "2.8cm", "width": "1.8cm", "height": "1.7rem" },
+      "mobile": { "x": "7.2cm", "y": "5.0cm", "width": "1.6cm", "height": "1.7rem" }
     },
     {
       "id": "participant.plotRankOnlyButton",
@@ -335,8 +351,8 @@
         "borderRadius": "6px",
         "padding": "0 0.65rem"
       },
-      "laptop": { "x": "11.9cm", "y": "3.3cm", "width": "1.8cm", "height": "1.7rem" },
-      "mobile": { "x": "9.7cm", "y": "3.3cm", "width": "1.6cm", "height": "1.7rem" }
+      "laptop": { "x": "11.9cm", "y": "2.8cm", "width": "1.8cm", "height": "1.7rem" },
+      "mobile": { "x": "9.0cm", "y": "5.0cm", "width": "1.6cm", "height": "1.7rem" }
     },
     {
       "id": "participant.plotExpandButton",
@@ -351,8 +367,8 @@
         "borderRadius": "6px",
         "padding": "0 0.65rem"
       },
-      "laptop": { "x": "13.8cm", "y": "3.3cm", "width": "1.8cm", "height": "1.7rem" },
-      "mobile": { "x": "13.8cm", "y": "3.3cm", "width": "1.8cm", "height": "1.7rem" }
+      "laptop": { "x": "13.8cm", "y": "2.8cm", "width": "1.8cm", "height": "1.7rem" },
+      "mobile": { "x": "13.8cm", "y": "5.0cm", "width": "1.8cm", "height": "1.7rem" }
     }
   ],
   "tableViews": {

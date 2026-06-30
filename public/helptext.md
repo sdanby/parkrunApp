@@ -2957,6 +2957,7 @@ This page is usually reached from event, course, club or list tables by clicking
 #### Buttons
 
 - Sortable headers reorder run-history and summary tables.
+- `Ranks` opens the **Curved Rank Time Reference** dialog showing rank cut-offs for the selected rank type and snapshot date.
 - Linked course, club and event values open the next level of detail.
 - Back navigation returns to the prior page state.
 
@@ -2965,6 +2966,38 @@ This page is usually reached from event, course, club or list tables by clicking
 - Participant history table: shows the athlete's runs and key fields over time.
 - Profile summary areas: give quick access to best performances and rankings.
 - Time progression visuals help show changes in form across dates.
+
+<a id="section-curved-rank-time-reference"></a>
+
+### Curved Rank Time Reference
+
+See: [Ranked Time Reference](#term-ranked-time-reference)
+
+The **Curved Rank Time Reference** dialog is opened from the **Ranks** button on the
+[Participant Page](#page-participant).
+
+It shows the **rank cut-off table** used to map raw or adjusted times into curved
+rank scores for a selected reference snapshot.
+
+**What the table shows**
+
+- `Rank`: the curved rank group, shown from highest to lowest.
+- `Min time`: the fastest time inside that rank group.
+- `Max time`: the slowest time still inside that rank group.
+- `Low bound`: the lower score boundary for that group.
+- `High bound`: the upper score boundary for that group.
+- `Rank cnt`: the number of source rows assigned to the group in that snapshot.
+
+**Selectors**
+
+- `Rank type` switches between **Best Time**, **Event Adj (E)**,
+  **Event & Sex Adj (ES)**, **Age & Event Adj (AE)**, and
+  **Age & Event & Sex Adj (AES)**.
+- `Date Snap` switches between the available discrete
+  `curve_rank_reference_version` snapshots, shown most recent first.
+
+Use this dialog when you want to inspect the cut-off bands behind the curved rank
+scores shown on participant history, profile, and event-rank views.
 
 ---
 
