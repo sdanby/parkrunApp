@@ -498,6 +498,58 @@ const adjustmentColumnKeys: ColumnKey[] = ['season_adj_time', 'event_adj_time', 
 
 const eventRankColumnKeys: ColumnKey[] = ['event_rank_b', 'event_rank_e', 'event_rank_es', 'event_rank_ae', 'event_rank_aes'];
 
+const toRoundedRankNumber = (value: unknown): number | null => {
+    if (value === null || value === undefined) return null;
+    const text = String(value).trim();
+    if (!text) return null;
+    const numeric = Number(text);
+    return Number.isFinite(numeric) ? Math.round(numeric) : null;
+};
+
+const getRankDifferenceBackground = (rankValue: unknown, comparisonValue: unknown): string | undefined => {
+    const rank = toRoundedRankNumber(rankValue);
+    const comparison = toRoundedRankNumber(comparisonValue);
+    if (rank === null || comparison === null) {
+        return undefined;
+    }
+
+    const diff = Math.abs(comparison - rank);
+    if (diff === 0) return '#dbeafe';
+    if (diff <= 2) return '#dcfce7';
+    if (diff <= 5) return '#e5e7eb';
+    if (diff <= 10) return '#fed7aa';
+    return '#fee2e2';
+};
+
+const getLargestEventRankCellBackground = (row: AthleteRecord, columnKey: ColumnKey): string | undefined => {
+    if (!eventRankColumnKeys.includes(columnKey)) {
+        return undefined;
+    }
+
+    let largestKey: ColumnKey | null = null;
+    let largestValue: number | null = null;
+
+    for (const key of eventRankColumnKeys) {
+        const value = toRoundedRankNumber(pickField(row, [key, key.replace(/_([a-z])/g, (_match, letter) => letter.toUpperCase())]));
+        if (value === null) {
+            continue;
+        }
+        if (largestValue === null || value > largestValue) {
+            largestValue = value;
+            largestKey = key;
+        }
+    }
+
+    if (largestKey !== columnKey || largestValue === null) {
+        return undefined;
+    }
+
+    return getRankDifferenceBackground(
+        pickField(row, ['best_curve_ranking_current', 'bestCurveRankingCurrent', 'rank']),
+        largestValue
+    );
+};
+
 const detailedColumnKeys: ColumnKey[] = ['club', 'last_position', 'event_number', 'total_runs_long', 'event_eligible_appearances', 'last_event_code_count_long', 'distinct_courses_long', 'tourist_flag', 'super_tourist', 'returner'];
 
 const parseDateSortValue = (value: unknown): number | null => {
@@ -4808,6 +4860,8 @@ const Athletes: React.FC = () => {
                                                             alignmentStyle.backgroundColor = '#fff7d6';
                                                         } else if (isReturnScrollTarget) {
                                                             alignmentStyle.backgroundColor = '#dbeafe';
+                                                        } else if (eventRankColumnKeys.includes(col.key)) {
+                                                            alignmentStyle.backgroundColor = getLargestEventRankCellBackground(row, col.key);
                                                         }
                                                         if (col.key === 'date') {
                                                             const value = getCellDisplayValue(row, col.key);

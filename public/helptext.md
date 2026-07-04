@@ -1772,6 +1772,8 @@ AES Rank is particularly useful for understanding how an athlete maintains their
 <a id="term-time-rank"></a>
 ### Time Rank
 
+[Event Rank Colouring](#term-event-rank-colouring)
+
 Time Rank shows the participant's placing when the event field is ordered by
 their recorded **raw time** for that day.
 
@@ -1788,6 +1790,8 @@ when you want to compare raw finishing quality against the adjusted rank columns
 <a id="term-ev-rank"></a>
 ### Ev Rank
 
+[Event Rank Colouring](#term-event-rank-colouring)
+
 Ev Rank shows the participant's placing after applying
 [Event Adj](#term-ev-adj).
 
@@ -1799,6 +1803,8 @@ time distribution is converted into rank scores.
 
 <a id="term-es-rank"></a>
 ### ES Rank
+
+[Event Rank Colouring](#term-event-rank-colouring)
 
 ES Rank shows the participant's placing after applying the combined
 [Event Adj](#term-ev-adj) and [Sex Adj](#term-sex-adj).
@@ -1812,6 +1818,8 @@ curves that underpin this ranking basis.
 <a id="term-ae-rank"></a>
 ### AE Rank
 
+[Event Rank Colouring](#term-event-rank-colouring)
+
 AE Rank shows the participant's placing after applying the combined
 [Age Adjustment](#term-age-adj) and [Event Adj](#term-ev-adj).
 
@@ -1824,6 +1832,8 @@ best times are mapped into rank groups.
 <a id="term-aes-rank"></a>
 ### AES Rank
 
+[Event Rank Colouring](#term-event-rank-colouring)
+
 AES Rank shows the participant's placing after applying
 [Age Adjustment](#term-age-adj), [Event Adj](#term-ev-adj), and
 [Sex Adj](#term-sex-adj).
@@ -1833,6 +1843,34 @@ choice when you want the fairest like-for-like comparison within the field.
 
 See [Ranked Time Reference](#term-ranked-time-reference) for the full
 time-to-rank conversion method used behind this column.
+
+<a id="term-event-rank-colouring"></a>
+### Event Rank Colouring
+
+On the Event Page and in the Participant Page Event Ranks view, only **one** of
+the five event-rank cells is coloured for each row.
+
+The coloured cell is always the **largest** of these five values:
+
+- [Time Rank](#term-time-rank)
+- [Ev Rank](#term-ev-rank)
+- [ES Rank](#term-es-rank)
+- [AE Rank](#term-ae-rank)
+- [AES Rank](#term-aes-rank)
+
+That largest event-rank value is then compared with the row's main
+[Rank](#term-rank), using **rounded whole-number values** for both.
+
+The background colour shows how close the largest event rank is to the main rank:
+
+- same rounded rank: light blue
+- within 2: light green
+- within 5: light grey
+- within 10: light orange
+- more than 10 away: light red
+
+Example: if the five event-rank values are `69.5`, `82.2`, `79.2`, `96.8`, and
+`95.5`, only `96.8` is coloured because it is the largest value in that row.
 
 **Hist Rank**
 

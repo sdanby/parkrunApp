@@ -76,6 +76,58 @@ const getAdjustmentKeys = (course: CourseAdjOption, other: OtherAdjOption): stri
 
 const eventRankColumnKeys = new Set(['event_rank_b', 'event_rank_e', 'event_rank_es', 'event_rank_ae', 'event_rank_aes']);
 
+const toRoundedRankNumber = (value: unknown): number | null => {
+  if (value === null || value === undefined) return null;
+  const text = String(value).trim();
+  if (!text) return null;
+  const numeric = Number(text);
+  return Number.isFinite(numeric) ? Math.round(numeric) : null;
+};
+
+const getRankDifferenceBackground = (rankValue: unknown, comparisonValue: unknown): string | undefined => {
+  const rank = toRoundedRankNumber(rankValue);
+  const comparison = toRoundedRankNumber(comparisonValue);
+  if (rank === null || comparison === null) {
+    return undefined;
+  }
+
+  const diff = Math.abs(comparison - rank);
+  if (diff === 0) return '#dbeafe';
+  if (diff <= 2) return '#dcfce7';
+  if (diff <= 5) return '#e5e7eb';
+  if (diff <= 10) return '#fed7aa';
+  return '#fee2e2';
+};
+
+const getLargestEventRankCellBackground = (row: any, columnKey: string): string | undefined => {
+  if (!eventRankColumnKeys.has(columnKey)) {
+    return undefined;
+  }
+
+  let largestKey: string | null = null;
+  let largestValue: number | null = null;
+
+  for (const key of eventRankColumnKeys) {
+    const value = toRoundedRankNumber(readRowValue(row, key));
+    if (value === null) {
+      continue;
+    }
+    if (largestValue === null || value > largestValue) {
+      largestValue = value;
+      largestKey = key;
+    }
+  }
+
+  if (largestKey !== columnKey || largestValue === null) {
+    return undefined;
+  }
+
+  return getRankDifferenceBackground(
+    row?.best_curve_ranking_current ?? row?.bestCurveRankingCurrent ?? row?.rank,
+    largestValue
+  );
+};
+
 const normalizeCourseAdj = (value: string): CourseAdjOption => {
   if (value === 'seasonal' || value === 'full') return value;
   return 'none';
@@ -1460,6 +1512,9 @@ const EventTest: React.FC = () => {
                         zIndex: 120
                       }
                     : {};
+                  const eventRankCellBackground = eventRankColumnKeys.has(key)
+                    ? getLargestEventRankCellBackground(row, key)
+                    : undefined;
                   const getCellHighlightToken = (columnKey: string, sourceRow: any): string => {
                     if (columnKey === 'athlete') {
                       return String(readRowValue(sourceRow, 'athlete_code') || '').trim();
@@ -1569,7 +1624,7 @@ const EventTest: React.FC = () => {
                   if (key === 'time') {
                     const rawTime = readRowValue(row, key);
                     return (
-                      <td key={cellKey} className={cellClassName} data-highlight-cell={isHighlightedCell ? 'true' : undefined} style={{ ...cellWidthStyle, ...stickyCellStyle, ...resolvedColumnStyle, ...highlightedCellStyle }}>
+                      <td key={cellKey} className={cellClassName} data-highlight-cell={isHighlightedCell ? 'true' : undefined} style={{ ...cellWidthStyle, ...stickyCellStyle, ...resolvedColumnStyle, backgroundColor: eventRankCellBackground, ...highlightedCellStyle }}>
                         {formatTimeValueForDisplay(rawTime, column.style)}
                       </td>
                     );
@@ -1645,7 +1700,7 @@ const EventTest: React.FC = () => {
                     return <td key={cellKey} className={cellClassName} data-highlight-cell={isHighlightedCell ? 'true' : undefined} style={{ ...commentStyle, ...stickyCellStyle, ...highlightedCellStyle }}>{commentRaw}</td>;
                   }
 
-                  return <td key={cellKey} className={cellClassName} data-highlight-cell={isHighlightedCell ? 'true' : undefined} style={{ ...cellWidthStyle, ...stickyCellStyle, ...resolvedColumnStyle, ...highlightedCellStyle }}>{String(readRowValue(row, key) ?? '')}</td>;
+                  return <td key={cellKey} className={cellClassName} data-highlight-cell={isHighlightedCell ? 'true' : undefined} style={{ ...cellWidthStyle, ...stickyCellStyle, ...resolvedColumnStyle, backgroundColor: eventRankCellBackground, ...highlightedCellStyle }}>{String(readRowValue(row, key) ?? '')}</td>;
                 })}
               </tr>
             ))}
