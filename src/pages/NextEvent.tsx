@@ -180,7 +180,7 @@ const getRowTimeSeconds = (row: GenericRecord): number | null => {
 };
 
 const getEventAdjustedSeconds = (row: GenericRecord): number | null => {
-    const direct = parseTimeSortValue(pickField(row, ['event_adj_time_seconds', 'adj_time_seconds', 'event_adj_time', 'adj_time']));
+    const direct = parseTimeSortValue(pickField(row, ['event_adj_time_seconds', 'event_adj_seconds', 'event_adj_time']));
     if (direct !== null) {
         return direct;
     }
@@ -192,6 +192,68 @@ const getEventAdjustedSeconds = (row: GenericRecord): number | null => {
         return rawSeconds;
     }
     return rawSeconds / coeffProduct;
+};
+
+const getNextEventAdjustmentSeconds = (row: GenericRecord, key: 'event_adj_time' | 'event_age_adj_time' | 'event_sex_adj_time' | 'event_age_sex_adj_time'): number | null => {
+    const aliasCandidates: Record<string, string[]> = {
+        event_adj_time: ['event_adj_time_seconds', 'event_adj_seconds', 'event_adj_time'],
+        event_age_adj_time: [
+            'event_age_adj_time_seconds',
+            'age_event_adj_time_seconds',
+            'event_age_adj_seconds',
+            'age_event_adj_seconds',
+            'event_age_adj_time',
+            'age_event_adj_time'
+        ],
+        event_sex_adj_time: [
+            'event_sex_adj_time_seconds',
+            'sex_event_adj_time_seconds',
+            'event_sex_adj_seconds',
+            'sex_event_adj_seconds',
+            'event_sex_adj_time',
+            'sex_event_adj_time'
+        ],
+        event_age_sex_adj_time: [
+            'event_age_sex_adj_time_seconds',
+            'age_sex_event_adj_time_seconds',
+            'event_age_sex_adj_seconds',
+            'age_sex_event_adj_seconds',
+            'event_age_sex_adj_time',
+            'age_sex_event_adj_time'
+        ]
+    };
+
+    const direct = parseTimeSortValue(pickField(row, aliasCandidates[key]));
+    if (direct !== null) {
+        return direct;
+    }
+
+    const timeSeconds = getRowTimeSeconds(row);
+    if (timeSeconds === null) return null;
+    const coeff = coerceNumber(pickField(row, ['coeff']));
+    const coeffEvent = coerceNumber(pickField(row, ['coeff_event', 'coeffEvent']));
+    const ageRatioMale = coerceNumber(pickField(row, ['age_ratio_male', 'ageRatioMale']));
+    const ageRatioSex = coerceNumber(pickField(row, ['age_ratio_sex', 'ageRatioSex']));
+    const sexRatio = ageRatioMale && ageRatioSex ? ageRatioSex / ageRatioMale : null;
+    const coeffProduct = coeff && coeffEvent ? coeff + coeffEvent - 1 : null;
+
+    const safeDivide = (numerator: number, denominator: number | null): number | null => {
+        if (!denominator) return null;
+        return numerator / denominator;
+    };
+
+    switch (key) {
+        case 'event_adj_time':
+            return safeDivide(timeSeconds, coeffProduct);
+        case 'event_age_adj_time':
+            return safeDivide(timeSeconds, coeffProduct && ageRatioMale ? coeffProduct * ageRatioMale : null);
+        case 'event_sex_adj_time':
+            return safeDivide(timeSeconds, coeffProduct && sexRatio ? coeffProduct * sexRatio : null);
+        case 'event_age_sex_adj_time':
+            return safeDivide(timeSeconds, coeffProduct && ageRatioSex ? coeffProduct * ageRatioSex : null);
+        default:
+            return null;
+    }
 };
 
 const getHardnessValue = (row: GenericRecord): number | null => {
@@ -225,7 +287,7 @@ const getCurrentBestRankValue = (row: GenericRecord, mode: ModeKey): number | nu
 };
 
 const getModeTimeSeconds = (row: GenericRecord, mode: ModeKey): number | null => {
-    return mode === 'next_ext' ? getEventAdjustedSeconds(row) : getRowTimeSeconds(row);
+    return mode === 'next_ext' ? getNextEventAdjustmentSeconds(row, 'event_age_adj_time') : getRowTimeSeconds(row);
 };
 
 const rankMetricDefinitions: Array<{ metric: RankMetricKey; label: string; order: number; keys: string[] }> = [
@@ -298,14 +360,16 @@ const getMetricAdjustedSeconds = (row: GenericRecord, metric: RankMetricKey): nu
     if (rawSeconds === null) return null;
     if (metric === 'B') return rawSeconds;
     if (metric === 'E') {
-        return hardness ? rawSeconds / hardness : null;
+        return getNextEventAdjustmentSeconds(row, 'event_adj_time');
     }
     if (metric === 'AE') {
-        return getEventAdjustedSeconds(row);
+        return getNextEventAdjustmentSeconds(row, 'event_age_adj_time');
     }
-    if (metric === 'ES' || metric === 'AES') {
-        const ageRatioSex = coerceNumber(pickField(row, ['age_ratio_sex', 'ageRatioSex']));
-        return hardness && ageRatioSex ? rawSeconds / (hardness * ageRatioSex) : null;
+    if (metric === 'ES') {
+        return getNextEventAdjustmentSeconds(row, 'event_sex_adj_time');
+    }
+    if (metric === 'AES') {
+        return getNextEventAdjustmentSeconds(row, 'event_age_sex_adj_time');
     }
     return null;
 };
