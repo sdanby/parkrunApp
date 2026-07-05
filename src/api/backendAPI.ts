@@ -615,6 +615,31 @@ export const fetchCurveRankReference = async (
     }
 };
 
+export type ParkrunEventRow = {
+    event_code: number | string;
+    event_date: string;
+    event_number?: number | null;
+    coeff?: number | null;
+    coeff_event?: number | null;
+    last_position?: number | null;
+    volunteers?: number | null;
+};
+
+export const fetchParkrunEvents = async (eventCode: string | number): Promise<ParkrunEventRow[]> => {
+    if (eventCode === undefined || eventCode === null || String(eventCode).trim() === '') {
+        return [];
+    }
+    try {
+        const params = new URLSearchParams({ event_code: String(eventCode) });
+        const url = `${API_BASE_URL}/api/parkrun_events?${params.toString()}`;
+        const response = await axios.get(url);
+        return Array.isArray(response.data) ? response.data : [];
+    } catch (error) {
+        console.error('Error fetching parkrun events:', error);
+        throw error;
+    }
+};
+
 export const registerWithEmail = async (email: string, password: string, displayName?: string): Promise<AuthResponse> => {
     const response = await axios.post(`${API_BASE_URL}/api/auth/register`, {
         email,

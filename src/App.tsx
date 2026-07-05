@@ -10,6 +10,7 @@ import Courses from './pages/Courses';
 import CourseTest from './pages/CourseTest';
 import Clubs from './pages/Clubs';
 import Athletes from './pages/Athletes';
+import NextEvent from './pages/NextEvent';
 import Lists from './pages/Lists';
 import Feedback from './pages/Feedback';
 import Admin from './pages/Admin';
@@ -41,6 +42,7 @@ const headings: { [key: string]: string } = {
     '/courses_test': 'Course',
     '/clubs': 'Club',
     '/athletes': 'Participant',
+    '/next-event': 'Next Event',
     '/lists': 'Lists',
     '/feedback': 'Error / Suggestion Log',
     '/admin': 'Admin',
@@ -51,6 +53,7 @@ const supportsColumnHeaderMode = (path: string): boolean => {
     return path === '/races'
         || path === '/event_test'
         || path === '/athletes'
+        || path === '/next-event'
         || path === '/courses_test'
         || path === '/clubs'
         || path === '/lists';
@@ -298,6 +301,7 @@ const router = createBrowserRouter([
             { path: 'courses_test', element: <CourseTest /> },
             { path: 'clubs', element: <Clubs /> },
             { path: 'athletes', element: <Athletes /> },
+            { path: 'next-event', element: <NextEvent /> },
             { path: 'lists', element: <Lists /> },
             { path: 'feedback', element: <Feedback /> },
             { path: 'admin', element: <Admin /> },

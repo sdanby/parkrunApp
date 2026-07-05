@@ -124,6 +124,11 @@ const normalizeBoolParam = (value: string | null): boolean | null => {
     return null;
 };
 
+const formatDisplayedRank = (value: unknown): string => {
+    const numeric = value === undefined || value === null || value === '' ? NaN : Number(value);
+    return Number.isFinite(numeric) ? String(Math.floor(numeric)) : '--';
+};
+
 type SummaryField = 'athlete_code' | 'athlete_name' | 'club' | 'current_age_estimate' | 'sex' | 'total_runs';
 
 type AthleteRunsNormalized = {
@@ -506,6 +511,14 @@ const toRoundedRankNumber = (value: unknown): number | null => {
     return Number.isFinite(numeric) ? Math.round(numeric) : null;
 };
 
+const toRankNumber = (value: unknown): number | null => {
+    if (value === null || value === undefined) return null;
+    const text = String(value).trim();
+    if (!text) return null;
+    const numeric = Number(text);
+    return Number.isFinite(numeric) ? numeric : null;
+};
+
 const getRankDifferenceBackground = (rankValue: unknown, comparisonValue: unknown): string | undefined => {
     const rank = toRoundedRankNumber(rankValue);
     const comparison = toRoundedRankNumber(comparisonValue);
@@ -530,7 +543,7 @@ const getLargestEventRankCellBackground = (row: AthleteRecord, columnKey: Column
     let largestValue: number | null = null;
 
     for (const key of eventRankColumnKeys) {
-        const value = toRoundedRankNumber(pickField(row, [key, key.replace(/_([a-z])/g, (_match, letter) => letter.toUpperCase())]));
+        const value = toRankNumber(pickField(row, [key, key.replace(/_([a-z])/g, (_match, letter) => letter.toUpperCase())]));
         if (value === null) {
             continue;
         }
@@ -1576,6 +1589,50 @@ const Athletes: React.FC = () => {
     // Display name (CSS handles width/padding on mobile)
     const displayName = detailTitle;
 
+    useEffect(() => {
+        if (!activeSelectedCode) {
+            return;
+        }
+
+        const nextAthleteName = headerName ? String(headerName).trim() : '';
+        const params = new URLSearchParams(location.search || '');
+        const currentAthleteCode = String(params.get('athlete_code') || '').trim();
+        const currentAthleteName = String(params.get('athlete_name') || '').trim();
+        const stateObj = (location.state && typeof location.state === 'object')
+            ? location.state as Record<string, unknown>
+            : {};
+        const stateAthleteCode = String(stateObj.athleteCode || '').trim();
+        const stateAthleteName = String(stateObj.athleteName || '').trim();
+
+        params.set('athlete_code', String(activeSelectedCode));
+        if (nextAthleteName) {
+            params.set('athlete_name', nextAthleteName);
+        } else {
+            params.delete('athlete_name');
+        }
+
+        const nextSearch = params.toString() ? `?${params.toString()}` : '';
+        const currentSearch = location.search.startsWith('?') ? location.search : (location.search ? `?${location.search}` : '');
+        const needsSearchUpdate = nextSearch !== currentSearch;
+        const needsStateUpdate = stateAthleteCode !== String(activeSelectedCode) || stateAthleteName !== nextAthleteName;
+
+        if (!needsSearchUpdate && !needsStateUpdate && currentAthleteCode === String(activeSelectedCode) && currentAthleteName === nextAthleteName) {
+            return;
+        }
+
+        navigate(
+            { pathname: location.pathname, search: nextSearch },
+            {
+                replace: true,
+                state: {
+                    ...stateObj,
+                    athleteCode: String(activeSelectedCode),
+                    athleteName: nextAthleteName || undefined
+                }
+            }
+        );
+    }, [activeSelectedCode, headerName, location.pathname, location.search, location.state, navigate]);
+
     const showHeader = Boolean(activeSelectedCode);
     const headerCode = pickField(latestRun, ['athlete_code', 'athleteCode', 'runner_code', 'code']) || summary?.athlete_code || activeSelectedCode || '';
     const headerClubRaw = pickField(latestRun, ['club']) || summary?.club;
@@ -1631,6 +1688,26 @@ const Athletes: React.FC = () => {
         headerFavoriteCourse !== '--'
     );
 
+    const handleNextEventNavigate = useCallback(() => {
+        if (!activeSelectedCode) {
+            return;
+        }
+
+        const params = new URLSearchParams();
+        params.set('athlete_code', String(activeSelectedCode));
+        if (headerName) {
+            params.set('athlete_name', String(headerName));
+        }
+
+        navigate(`/next-event?${params.toString()}`, {
+            state: {
+                athleteCode: String(activeSelectedCode),
+                athleteName: headerName ? String(headerName) : undefined,
+                from: 'participant'
+            }
+        });
+    }, [activeSelectedCode, headerName, navigate]);
+
     const renderCell = (value: unknown): string => {
         if (value === undefined || value === null) return '--';
         const str = String(value);
@@ -1646,7 +1723,7 @@ const Athletes: React.FC = () => {
         return map;
     }, [profileRows]);
 
-    const estimatedRankSummary = useMemo(() => {
+    const currentRankSummary = useMemo(() => {
         const oneYearTypeToMetric: Record<string, { metric: string; order: number }> = {
             best_1y: { metric: 'B', order: 1 },
             event_1y: { metric: 'E', order: 2 },
@@ -1672,7 +1749,7 @@ const Athletes: React.FC = () => {
 
         if (candidates.length === 0) {
             return {
-                label: 'Est. Rank',
+                label: 'Rank',
                 value: '--',
                 hasValue: false
             };
@@ -1686,8 +1763,8 @@ const Athletes: React.FC = () => {
         const best = candidates[0];
         const displayMetric = best.metric === 'B' ? '*' : best.metric;
         return {
-            label: 'Est. Rank',
-            value: `${Math.round(best.rank)} ${displayMetric}`,
+            label: 'Rank',
+            value: `${formatDisplayedRank(best.rank)} ${displayMetric}`,
             hasValue: true
         };
     }, [profileRows]);
@@ -2041,6 +2118,7 @@ const Athletes: React.FC = () => {
     const estRankLabelElement = getParticipantElementById('participant.estRankLabel');
     const estRankValueElement = getParticipantElementById('participant.estRankValue');
     const profileButtonElement = getParticipantElementById('participant.profileButton');
+    const nextEventButtonElement = getParticipantElementById('participant.nextEventButton');
     const resetButtonElement = getParticipantElementById('participant.resetButton');
     const plotContainerElement = getParticipantElementById('participant.plotContainer');
     const curveRankReferenceContainerElement = getParticipantElementById('participant.curveRankReferenceContainer');
@@ -2138,6 +2216,10 @@ const Athletes: React.FC = () => {
     const profileButtonPlacement = useMemo(
         () => profileButtonElement?.[isMobile ? 'mobile' : 'laptop'],
         [isMobile, profileButtonElement]
+    );
+    const nextEventButtonPlacement = useMemo(
+        () => nextEventButtonElement?.[isMobile ? 'mobile' : 'laptop'],
+        [isMobile, nextEventButtonElement]
     );
     const resetButtonPlacement = useMemo(
         () => resetButtonElement?.[isMobile ? 'mobile' : 'laptop'],
@@ -2408,8 +2490,8 @@ const Athletes: React.FC = () => {
         padding: '0 0.08cm',
         pointerEvents: 'none',
         whiteSpace: 'nowrap',
-        opacity: estimatedRankSummary.hasValue ? 1 : 0.45
-    }), [estRankLabelPlacement?.x, estRankLabelPlacement?.y, estRankValuePlacement, estimatedRankSummary.hasValue, otherAdjSelectPlacement?.x, otherAdjSelectPlacement?.y]);
+        opacity: currentRankSummary.hasValue ? 1 : 0.45
+    }), [currentRankSummary.hasValue, estRankLabelPlacement?.x, estRankLabelPlacement?.y, estRankValuePlacement, otherAdjSelectPlacement?.x, otherAdjSelectPlacement?.y]);
 
     const profileButtonStyle = useMemo<React.CSSProperties>(() => ({
         position: 'absolute',
@@ -2427,6 +2509,23 @@ const Athletes: React.FC = () => {
         padding: 0,
         pointerEvents: 'auto'
     }), [profileButtonElement?.style?.fontSize, profileButtonElement?.style?.fontWeight, profileButtonElement?.style?.height, profileButtonElement?.style?.lineHeight, profileButtonElement?.style?.width, profileButtonPlacement]);
+
+    const nextEventButtonStyle = useMemo<React.CSSProperties>(() => ({
+        position: 'absolute',
+        left: nextEventButtonPlacement?.x ?? profileButtonPlacement?.x ?? '-0.2cm',
+        top: nextEventButtonPlacement?.y ?? '3.4cm',
+        width: nextEventButtonPlacement?.width ?? nextEventButtonElement?.style?.width ?? profileButtonPlacement?.width ?? '1cm',
+        height: nextEventButtonPlacement?.height ?? nextEventButtonElement?.style?.height ?? profileButtonElement?.style?.height ?? '1cm',
+        border: '1px solid #777',
+        borderRadius: '6px',
+        background: '#fff',
+        cursor: 'pointer',
+        fontSize: nextEventButtonElement?.style?.fontSize ?? profileButtonElement?.style?.fontSize ?? '0.5rem',
+        fontWeight: nextEventButtonElement?.style?.fontWeight ?? profileButtonElement?.style?.fontWeight ?? 700,
+        lineHeight: Number(nextEventButtonElement?.style?.lineHeight ?? profileButtonElement?.style?.lineHeight ?? 1),
+        padding: 0,
+        pointerEvents: 'auto'
+    }), [nextEventButtonElement?.style?.fontSize, nextEventButtonElement?.style?.fontWeight, nextEventButtonElement?.style?.height, nextEventButtonElement?.style?.lineHeight, nextEventButtonElement?.style?.width, nextEventButtonPlacement, profileButtonElement?.style?.fontSize, profileButtonElement?.style?.fontWeight, profileButtonElement?.style?.height, profileButtonElement?.style?.lineHeight, profileButtonPlacement]);
 
     const resetButtonStyle = useMemo<React.CSSProperties>(() => ({
         position: 'absolute',
@@ -2669,14 +2768,14 @@ const Athletes: React.FC = () => {
         return {
             fontSize: style?.fontSize ?? (isMobile ? '0.72rem' : '0.76rem'),
             fontWeight: style?.fontWeight ?? 700,
-            color: style?.color ?? (estimatedRankSummary.hasValue ? '#111827' : '#6b7280'),
+            color: style?.color ?? (currentRankSummary.hasValue ? '#111827' : '#6b7280'),
             lineHeight: style?.lineHeight ?? 1.2,
             fontStyle: style?.fontStyle,
             textAlign: style?.textAlign,
             width: estRankValuePlacement?.width ?? style?.width,
             height: estRankValuePlacement?.height ?? style?.height
         };
-    }, [estRankValueElement, estRankValuePlacement, estimatedRankSummary.hasValue, isMobile]);
+    }, [currentRankSummary.hasValue, estRankValueElement, estRankValuePlacement, isMobile]);
 
     const eventsAllPieDiameter = useMemo(() => {
         const width = eventsAllPieElement?.style?.width;
@@ -3883,13 +3982,13 @@ const Athletes: React.FC = () => {
                                         <>
                                             {renderConfigControlLabel(
                                                 estRankLabelElement,
-                                                `${estimatedRankSummary.label}:`,
+                                                `${currentRankSummary.label}:`,
                                                 estRankLabelElement?.helpTarget || 'control-other-adj',
                                                 'athletes-est-rank-label',
                                                 estRankLabelTextStyle,
                                                 estRankLabelWrapperStyle
                                             )}
-                                            <div style={{ ...estRankValueStyle, ...estRankValueTextStyle }}>{estimatedRankSummary.value}</div>
+                                            <div style={{ ...estRankValueStyle, ...estRankValueTextStyle }}>{currentRankSummary.value}</div>
                                         </>
                                     )}
 
@@ -3945,6 +4044,17 @@ const Athletes: React.FC = () => {
                                         style={profileButtonStyle}
                                     >
                                         {panelToggleLabel}
+                                    </button>
+
+                                    <button
+                                        id="athletes-next-event-btn"
+                                        type="button"
+                                        onClick={handleNextEventNavigate}
+                                        title="Open Next Event"
+                                        aria-label="Open Next Event"
+                                        style={nextEventButtonStyle}
+                                    >
+                                        {nextEventButtonElement?.name || 'Next Event'}
                                     </button>
 
                                     {resetButtonElement && (
@@ -4526,9 +4636,7 @@ const Athletes: React.FC = () => {
                                                             }
                                                         ].map((row, idx) => {
                                                             const renderRankTimeCell = (cell?: AthleteBestSummaryRow) => {
-                                                                const rawRank = cell?.rank;
-                                                                const parsedRank = rawRank === undefined || rawRank === null || rawRank === '' ? NaN : Number(rawRank);
-                                                                const rankDisplay = Number.isFinite(parsedRank) ? String(Math.round(parsedRank)) : '--';
+                                                                const rankDisplay = formatDisplayedRank(cell?.rank);
 
                                                                 return (
                                                                     <td

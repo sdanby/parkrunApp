@@ -27,6 +27,7 @@ export const getPageMarkerForPath = (path: string): string | null => {
     if (path === '/courses') return 'page-course';
     if (path === '/courses_test') return 'page-course';
     if (path === '/athletes') return 'page-participant';
+    if (path === '/next-event') return 'page-next-event';
     if (path === '/clubs') return 'page-club';
     if (path === '/lists') return 'page-lists';
     if (path === '/feedback') return 'page-feedback-log';

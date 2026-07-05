@@ -37,6 +37,7 @@ const labelByPath: Record<string, string> = {
     '/courses_test': 'Course',
     '/clubs': 'Club',
     '/athletes': 'Participant',
+    '/next-event': 'Next Event',
     '/lists': 'Lists',
     '/feedback': 'Error / Suggestion Log',
     '/': 'Home'

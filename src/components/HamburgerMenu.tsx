@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { API_BASE_URL, fetchAdminStatus, logoutSession } from '../api/backendAPI';
 import { clearNavStack } from '../utils/navigationStack';
 import './HamburgerMenu.css';
@@ -13,6 +13,7 @@ const HamburgerMenu: React.FC = () => {
     const [canSeeAdmin, setCanSeeAdmin] = useState(false);
     const menuRef = useRef<HTMLDivElement | null>(null);
     const navigate = useNavigate();
+    const location = useLocation();
     const isAuthenticated = Boolean(localStorage.getItem(AUTH_TOKEN_KEY));
 
     useEffect(() => {
@@ -132,6 +133,58 @@ const HamburgerMenu: React.FC = () => {
     const handleMenuClick = async (path: string) => {
         clearNavStack(path);
 
+        if (path === '/next-event' && location.pathname === '/athletes') {
+            const currentParams = new URLSearchParams(location.search || '');
+            const stateObj = (location.state && typeof location.state === 'object')
+                ? location.state as Record<string, unknown>
+                : {};
+            const athleteCode = String(currentParams.get('athlete_code') || stateObj.athleteCode || '').trim();
+            const athleteName = String(currentParams.get('athlete_name') || stateObj.athleteName || '').trim();
+            const nextParams = new URLSearchParams();
+            if (athleteCode) {
+                nextParams.set('athlete_code', athleteCode);
+            }
+            if (athleteName) {
+                nextParams.set('athlete_name', athleteName);
+            }
+            const nextSearch = nextParams.toString();
+            navigate(nextSearch ? `${path}?${nextSearch}` : path, {
+                state: {
+                    athleteCode: athleteCode || undefined,
+                    athleteName: athleteName || undefined,
+                    from: 'athletes'
+                }
+            });
+            setOpen(false);
+            return;
+        }
+
+        if (path === '/athletes' && location.pathname === '/next-event') {
+            const currentParams = new URLSearchParams(location.search || '');
+            const stateObj = (location.state && typeof location.state === 'object')
+                ? location.state as Record<string, unknown>
+                : {};
+            const athleteCode = String(currentParams.get('athlete_code') || stateObj.athleteCode || '').trim();
+            const athleteName = String(currentParams.get('athlete_name') || stateObj.athleteName || '').trim();
+            const nextParams = new URLSearchParams();
+            if (athleteCode) {
+                nextParams.set('athlete_code', athleteCode);
+            }
+            if (athleteName) {
+                nextParams.set('athlete_name', athleteName);
+            }
+            const nextSearch = nextParams.toString();
+            navigate(nextSearch ? `${path}?${nextSearch}` : path, {
+                state: {
+                    athleteCode: athleteCode || undefined,
+                    athleteName: athleteName || undefined,
+                    from: 'next-event'
+                }
+            });
+            setOpen(false);
+            return;
+        }
+
         if (path === '/races' || path === '/event_old') {
             const getPreferredEventCode = (): string => {
                 try {
@@ -203,6 +256,7 @@ const HamburgerMenu: React.FC = () => {
                     <li onClick={() => handleMenuClick('/races')}>Event</li>
                     <li onClick={() => handleMenuClick('/courses_test')}>Course</li>
                     <li onClick={() => handleMenuClick('/athletes')}>Participant</li>
+                    <li onClick={() => handleMenuClick('/next-event')}>Next Event</li>
                     <li onClick={() => handleMenuClick('/clubs')}>Club</li>
                     <li onClick={() => handleMenuClick('/lists')}>Lists</li>
                     <li onClick={() => handleMenuClick('/feedback')}>Log Error / Suggestion</li>

@@ -1772,6 +1772,8 @@ AES Rank is particularly useful for understanding how an athlete maintains their
 <a id="term-time-rank"></a>
 ### Time Rank
 
+[Event Rank Colouring](#term-event-rank-colouring)
+
 Time Rank shows the participant's placing when the event field is ordered by
 their recorded **raw time** for that day.
 
@@ -1788,6 +1790,8 @@ when you want to compare raw finishing quality against the adjusted rank columns
 <a id="term-ev-rank"></a>
 ### Ev Rank
 
+[Event Rank Colouring](#term-event-rank-colouring)
+
 Ev Rank shows the participant's placing after applying
 [Event Adj](#term-ev-adj).
 
@@ -1799,6 +1803,8 @@ time distribution is converted into rank scores.
 
 <a id="term-es-rank"></a>
 ### ES Rank
+
+[Event Rank Colouring](#term-event-rank-colouring)
 
 ES Rank shows the participant's placing after applying the combined
 [Event Adj](#term-ev-adj) and [Sex Adj](#term-sex-adj).
@@ -1812,6 +1818,8 @@ curves that underpin this ranking basis.
 <a id="term-ae-rank"></a>
 ### AE Rank
 
+[Event Rank Colouring](#term-event-rank-colouring)
+
 AE Rank shows the participant's placing after applying the combined
 [Age Adjustment](#term-age-adj) and [Event Adj](#term-ev-adj).
 
@@ -1824,6 +1832,8 @@ best times are mapped into rank groups.
 <a id="term-aes-rank"></a>
 ### AES Rank
 
+[Event Rank Colouring](#term-event-rank-colouring)
+
 AES Rank shows the participant's placing after applying
 [Age Adjustment](#term-age-adj), [Event Adj](#term-ev-adj), and
 [Sex Adj](#term-sex-adj).
@@ -1833,6 +1843,34 @@ choice when you want the fairest like-for-like comparison within the field.
 
 See [Ranked Time Reference](#term-ranked-time-reference) for the full
 time-to-rank conversion method used behind this column.
+
+<a id="term-event-rank-colouring"></a>
+### Event Rank Colouring
+
+On the Event Page and in the Participant Page Event Ranks view, only **one** of
+the five event-rank cells is coloured for each row.
+
+The coloured cell is always the **largest** of these five values:
+
+- [Time Rank](#term-time-rank)
+- [Ev Rank](#term-ev-rank)
+- [ES Rank](#term-es-rank)
+- [AE Rank](#term-ae-rank)
+- [AES Rank](#term-aes-rank)
+
+That largest event-rank value is then compared with the row's main
+[Rank](#term-rank), using **rounded whole-number values** for both.
+
+The background colour shows how close the largest event rank is to the main rank:
+
+- same rounded rank: light blue
+- within 2: light green
+- within 5: light grey
+- within 10: light orange
+- more than 10 away: light red
+
+Example: if the five event-rank values are `69.5`, `82.2`, `79.2`, `96.8`, and
+`95.5`, only `96.8` is coloured because it is the largest value in that row.
 
 **Hist Rank**
 
@@ -2966,6 +3004,44 @@ This page is usually reached from event, course, club or list tables by clicking
 - Participant history table: shows the athlete's runs and key fields over time.
 - Profile summary areas: give quick access to best performances and rankings.
 - Time progression visuals help show changes in form across dates.
+
+<a id="page-next-event"></a>
+
+### Next Event Page
+
+#### Purpose Description
+
+Next Event Page is a forward-looking planning view for a selected participant and course.  
+Its purpose is to estimate what the next run might look like under a chosen ranking mode, rather than to review only past results.
+
+#### Temporary Commentary
+
+This section is intentionally temporary and should be reviewed later.  
+For now, think of Next Event as a planning companion to the [Participant Page](#page-participant): it reuses participant identity, course selection and rank-reference ideas, but presents them in a more predictive layout.
+
+#### Navigation
+
+This page is reached from the burger menu.  
+It is expected to behave like the other detail pages, with normal back navigation returning you to the previous page context where possible.
+
+#### Label and Selection list
+
+- `Athlete Code`: identifies the currently selected participant.  
+- `Course`: uses the standard [Course (Selection Control)](#control-course) help behaviour and selects the course used for the preview table.  
+- Participant search box: lets you load a different athlete into the page.  
+- The page is expected to default toward the athlete's preferred or most recent course where possible.
+
+#### Buttons
+
+- `Next PR` / `Next Ext`: temporary commentary only for now. These controls switch the projection mode used by the page.  
+- Back button: returns to the prior page or falls back to the Participant page if no stack entry is available.  
+- Sortable column headers: change ordering or open help depending on the current top-bar column mode.
+
+#### Tables, Plots and Previews
+
+- Main projection table: shows hardness bands against projected ranking bands.  
+- Sticky first column and sticky header row are used so the comparison grid stays readable while scrolling.  
+- This area is still under active design and the explanatory wording here is deliberately provisional pending your review.
 
 <a id="section-curved-rank-time-reference"></a>
 

@@ -21,8 +21,8 @@
       "id": "participant.backButton",
       "type": "button",
       "name": "Back",
-      "laptop": { "x": "0.0cm", "y": "0.0cm", "width": "0.9cm", "height": "0.9cm" },
-      "mobile": { "x": "0.2cm", "y": "1.5cm", "width": "0.9cm", "height": "0.9cm" }
+      "laptop": { "x": "0.0cm", "y": "-0.2cm", "width": "0.9cm", "height": "0.9cm" },
+      "mobile": { "x": "0.2cm", "y": "1.3cm", "width": "0.9cm", "height": "0.9cm" }
     },
     {
       "id": "participant.input",
@@ -251,15 +251,22 @@
       "id": "participant.profileButton",
       "type": "button",
       "name": "Profile",
-      "laptop": { "x": "-0.2cm", "y": "2.2cm", "width": "1.0cm", "height": "1.0cm" },
-      "mobile": { "x": "-0.2cm", "y": "2.2cm", "width": "0.9cm", "height": "0.9cm" }
+      "laptop": { "x": "-0.2cm", "y": "2.0cm", "width": "1.0cm", "height": "1.0cm" },
+      "mobile": { "x": "-0.2cm", "y": "2.0cm", "width": "0.9cm", "height": "0.9cm" }
+    },
+    {
+      "id": "participant.nextEventButton",
+      "type": "button",
+      "name": "Next Event",
+      "laptop": { "x": "-0.2cm", "y": "3.2cm", "width": "1.0cm", "height": "1.0cm" },
+      "mobile": { "x": "-0.2cm", "y": "3.2cm", "width": "0.9cm", "height": "0.9cm" }
     },
     {
       "id": "participant.resetButton",
       "type": "button",
       "name": "Reset",
-      "laptop": { "x": "-0.2cm", "y": "1.0cm", "width": "1.0cm", "height": "1.0cm" },
-      "mobile": { "x": "-0.2cm", "y": "1.1cm", "width": "0.9cm", "height": "0.9cm" }
+      "laptop": { "x": "-0.2cm", "y": "0.8cm", "width": "1.0cm", "height": "1.0cm" },
+      "mobile": { "x": "-0.2cm", "y": "0.9cm", "width": "0.9cm", "height": "0.9cm" }
     },
     {
       "id": "participant.curveRankReferenceButton",
