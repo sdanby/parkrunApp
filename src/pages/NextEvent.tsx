@@ -45,7 +45,7 @@ type NextEventSummarySource = {
 
 const formatDisplayedRank = (value: unknown): string => {
     const numeric = value === undefined || value === null || value === '' ? NaN : Number(value);
-    return Number.isFinite(numeric) ? String(Math.floor(numeric)) : '--';
+    return Number.isFinite(numeric) ? String(Math.round(numeric)) : '--';
 };
 
 const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -180,19 +180,18 @@ const getRowTimeSeconds = (row: GenericRecord): number | null => {
 };
 
 const getEventAdjustedSeconds = (row: GenericRecord): number | null => {
-    const direct = parseTimeSortValue(pickField(row, ['age_event_adj_time_seconds', 'event_age_adj_time_seconds', 'age_event_adj_time', 'event_age_adj_time']));
+    const direct = parseTimeSortValue(pickField(row, ['event_adj_time_seconds', 'adj_time_seconds', 'event_adj_time', 'adj_time']));
     if (direct !== null) {
         return direct;
     }
     const rawSeconds = getRowTimeSeconds(row);
     const coeff = coerceNumber(pickField(row, ['coeff']));
     const coeffEvent = coerceNumber(pickField(row, ['coeff_event', 'coeffEvent']));
-    const ageRatioMale = coerceNumber(pickField(row, ['age_ratio_male', 'ageRatioMale']));
     const coeffProduct = coeff && coeffEvent ? coeff + coeffEvent - 1 : null;
-    if (rawSeconds === null || !coeffProduct || !ageRatioMale) {
+    if (rawSeconds === null || !coeffProduct) {
         return rawSeconds;
     }
-    return rawSeconds / (coeffProduct * ageRatioMale);
+    return rawSeconds / coeffProduct;
 };
 
 const getHardnessValue = (row: GenericRecord): number | null => {
@@ -260,6 +259,37 @@ const getBestRankMetric = (row: GenericRecord | null | undefined): BestRankMetri
     });
 
     return candidates[0] ?? null;
+};
+
+const getEventAdjustedMetric = (row: GenericRecord | null | undefined): BestRankMetric | null => {
+    if (!row) return null;
+    const rank = coerceNumber(pickField(row, ['event_rank_e', 'current_best_rank_e']));
+    if (rank === null) return null;
+    return {
+        metric: 'E',
+        label: 'E',
+        rank,
+        order: 2
+    };
+};
+
+const findRunBySummaryDate = (summaryRow: GenericRecord | null | undefined, runRows: AthleteRecord[]): AthleteRecord | null => {
+    if (!summaryRow || runRows.length === 0) return null;
+    const targetDateMs = getRowDateMs(summaryRow);
+    if (!targetDateMs) return null;
+    return runRows.find((row) => getRowDateMs(row) === targetDateMs) ?? null;
+};
+
+const getNextEventResolvedMetric = (
+    row: GenericRecord | null | undefined,
+    matchedRun?: GenericRecord | null,
+): BestRankMetric | null => {
+    const bestMetric = getBestRankMetric(row);
+    if (!bestMetric) return null;
+    if (bestMetric.metric !== 'B') {
+        return bestMetric;
+    }
+    return getEventAdjustedMetric(matchedRun ?? row) ?? bestMetric;
 };
 
 const getMetricAdjustedSeconds = (row: GenericRecord, metric: RankMetricKey): number | null => {
@@ -482,7 +512,7 @@ const buildIndexedLabel = (label: string, indexes: number[], includeParens: bool
     );
 };
 
-const getCurrentRankSummary = (profileRows: GenericRecord[]): { display: string; metricLabel: string; metric: RankMetricKey | null; anchorRank: number | null } => {
+const getCurrentRankSummary = (profileRows: GenericRecord[], runRows: AthleteRecord[], resolveStarMetric: boolean = true): { display: string; metricLabel: string; metric: RankMetricKey | null; anchorRank: number | null; sourceRun: AthleteRecord | null } => {
     const oneYearTypeToMetric: Record<string, { metric: string; order: number }> = {
         best_1y: { metric: 'B', order: 1 },
         event_1y: { metric: 'E', order: 2 },
@@ -499,19 +529,21 @@ const getCurrentRankSummary = (profileRows: GenericRecord[]): { display: string;
             const rankRaw = Number(row?.rank);
             if (!Number.isFinite(rankRaw)) return null;
             return {
+                row,
                 rank: rankRaw,
                 metric: mapping.metric as RankMetricKey,
                 order: mapping.order
             };
         })
-        .filter((item): item is { rank: number; metric: RankMetricKey; order: number } => Boolean(item));
+        .filter((item): item is { row: GenericRecord; rank: number; metric: RankMetricKey; order: number } => Boolean(item));
 
     if (candidates.length === 0) {
         return {
             display: '--',
             metricLabel: '',
             metric: null,
-            anchorRank: null
+            anchorRank: null,
+            sourceRun: null
         };
     }
 
@@ -521,13 +553,37 @@ const getCurrentRankSummary = (profileRows: GenericRecord[]): { display: string;
     });
 
     const best = candidates[0];
-    const displayMetric = best.metric === 'B' ? '*' : best.metric;
+    const matchedRun = best.metric === 'B' ? findRunBySummaryDate(best.row, runRows) : null;
+    const resolvedBest = resolveStarMetric ? getNextEventResolvedMetric(best.row, matchedRun) : null;
+    const displayMetric = resolvedBest ? (resolvedBest.metric === 'B' ? '*' : resolvedBest.metric) : (best.metric === 'B' ? '*' : best.metric);
+    const displayRank = resolvedBest?.rank ?? best.rank;
+    const displayMetricKey = resolvedBest?.metric ?? best.metric;
     return {
-        display: `${formatDisplayedRank(best.rank)} ${displayMetric}`,
+        display: `${formatDisplayedRank(displayRank)} ${displayMetric}`,
         metricLabel: displayMetric,
-        metric: best.metric,
-        anchorRank: Number.isFinite(best.rank) ? Math.floor(best.rank) : null
+        metric: displayMetricKey,
+        anchorRank: Number.isFinite(displayRank) ? Math.round(displayRank) : null,
+        sourceRun: matchedRun
     };
+};
+
+const buildRankSummaryFromRun = (run: AthleteRecord | null): { display: string; metricLabel: string; metric: RankMetricKey | null; anchorRank: number | null; sourceRun: AthleteRecord | null } | null => {
+    if (!run) return null;
+    const resolvedMetric = getNextEventResolvedMetric(run, run);
+    if (!resolvedMetric) return null;
+    const displayMetric = resolvedMetric.metric === 'B' ? '*' : resolvedMetric.metric;
+    return {
+        display: `${formatDisplayedRank(resolvedMetric.rank)} ${displayMetric}`,
+        metricLabel: displayMetric,
+        metric: resolvedMetric.metric,
+        anchorRank: Math.round(resolvedMetric.rank),
+        sourceRun: run
+    };
+};
+
+const buildRankSummaryFromRunSet = (runsToRank: AthleteRecord[]): { display: string; metricLabel: string; metric: RankMetricKey | null; anchorRank: number | null; sourceRun: AthleteRecord | null } | null => {
+    if (runsToRank.length === 0) return null;
+    return buildRankSummaryFromRun(pickBestEventRun(runsToRank));
 };
 
 const getCurveThresholdSecondsForScore = (rows: CurveRankReferenceRow[], score: number): number | null => {
@@ -607,7 +663,13 @@ const NextEvent: React.FC = () => {
     const [sortKey, setSortKey] = useState<string>('hardness_band');
     const [sortDir, setSortDir] = useState<SortDir>('desc');
     const [rankShift, setRankShift] = useState<number>(0);
-    const currentRankSummary = useMemo(() => getCurrentRankSummary(profileRows), [profileRows]);
+
+    const sortedRuns = useMemo(() => {
+        return [...runs].sort((a, b) => getRowDateMs(b) - getRowDateMs(a));
+    }, [runs]);
+
+    const profileDisplayRankSummary = useMemo(() => getCurrentRankSummary(profileRows, sortedRuns, false), [profileRows, sortedRuns]);
+    const profileEffectiveRankSummary = useMemo(() => getCurrentRankSummary(profileRows, sortedRuns, true), [profileRows, sortedRuns]);
 
     useGlobalWaitCursor(loading || curveLoading);
 
@@ -704,32 +766,6 @@ const NextEvent: React.FC = () => {
     }, [selectedAthleteCode]);
 
     useEffect(() => {
-        let cancelled = false;
-        const rankType = currentRankSummary.metric ?? (mode === 'next_ext' ? 'AE' : 'B');
-        const loadCurve = async () => {
-            try {
-                setCurveLoading(true);
-                const response = await fetchCurveRankReference(rankType);
-                if (!cancelled) {
-                    setCurveReferenceRows(Array.isArray(response?.rows) ? response.rows : []);
-                }
-            } catch (_err) {
-                if (!cancelled) {
-                    setCurveReferenceRows([]);
-                }
-            } finally {
-                if (!cancelled) {
-                    setCurveLoading(false);
-                }
-            }
-        };
-        loadCurve();
-        return () => {
-            cancelled = true;
-        };
-    }, [currentRankSummary.metric, mode]);
-
-    useEffect(() => {
         setRankShift(0);
     }, [selectedAthleteCode, mode]);
 
@@ -760,10 +796,6 @@ const NextEvent: React.FC = () => {
             cancelled = true;
         };
     }, [selectedCourseCode]);
-
-    const sortedRuns = useMemo(() => {
-        return [...runs].sort((a, b) => getRowDateMs(b) - getRowDateMs(a));
-    }, [runs]);
 
     const currentAthleteName = useMemo(() => {
         const latestRun = sortedRuns[0] ?? null;
@@ -850,6 +882,38 @@ const NextEvent: React.FC = () => {
         return pickBestEventRun(oneYearCourseRuns);
     }, [selectedCourseRuns]);
 
+    const currentRankSummary = useMemo(() => {
+        const selectedCourseSummary = buildRankSummaryFromRunSet(selectedCourseRuns);
+        const overallSummary = buildRankSummaryFromRunSet(sortedRuns);
+        return selectedCourseSummary ?? overallSummary ?? profileEffectiveRankSummary;
+    }, [profileEffectiveRankSummary, selectedCourseRuns, sortedRuns]);
+
+    useEffect(() => {
+        let cancelled = false;
+        const rankType = currentRankSummary.metric ?? (mode === 'next_ext' ? 'AE' : 'B');
+        const loadCurve = async () => {
+            try {
+                setCurveLoading(true);
+                const response = await fetchCurveRankReference(rankType);
+                if (!cancelled) {
+                    setCurveReferenceRows(Array.isArray(response?.rows) ? response.rows : []);
+                }
+            } catch (_err) {
+                if (!cancelled) {
+                    setCurveReferenceRows([]);
+                }
+            } finally {
+                if (!cancelled) {
+                    setCurveLoading(false);
+                }
+            }
+        };
+        loadCurve();
+        return () => {
+            cancelled = true;
+        };
+    }, [currentRankSummary.metric, mode]);
+
     const courseHistory = useMemo<GenericRecord[]>(() => {
         const source = courseEvents.length > 0 ? courseEvents : selectedCourseRuns;
         return [...source].sort((a, b) => getRowDateMs(b) - getRowDateMs(a));
@@ -868,7 +932,7 @@ const NextEvent: React.FC = () => {
     }, [courseHistory, selectedCourseRuns]);
 
     const projectionContext = useMemo(() => {
-        const referenceSource = bestRun ?? lastRun;
+        const referenceSource = currentRankSummary.sourceRun ?? bestRun ?? lastRun;
         if (!referenceSource) {
             return null;
         }
@@ -877,11 +941,11 @@ const NextEvent: React.FC = () => {
         const headerMetric = currentRankSummary.metric ?? (mode === 'next_ext' ? 'AE' : 'B');
 
         const currentBestRank = getCurrentBestRankValue(referenceSource, mode);
-        const exactCurrentRank = currentBestRank ?? getRankValue(referenceSource, mode);
-        const currentGroup = Math.max(0, Math.min(100, Math.floor(exactCurrentRank ?? 0)));
+        const exactCurrentRank = currentRankSummary.anchorRank ?? currentBestRank ?? getRankValue(referenceSource, mode);
+        const currentGroup = Math.max(0, Math.min(100, Math.round(exactCurrentRank ?? 0)));
         const exactRank = exactCurrentRank ?? currentGroup;
         const baseTimeSeconds = getModeTimeSeconds(referenceSource, mode);
-        const bestHardness = getHardnessValue(bestRun ?? referenceSource);
+        const bestHardness = getHardnessValue(currentRankSummary.sourceRun ?? bestRun ?? referenceSource);
         const lastHardness = getHardnessValue(lastRun ?? referenceSource);
         if (!baseTimeSeconds || !bestHardness || !exactRank) {
             const baseAnchorRank = currentRankSummary.anchorRank ?? currentGroup;
@@ -982,7 +1046,7 @@ const NextEvent: React.FC = () => {
             allRows,
             columns
         };
-    }, [bestRun, courseHistory, currentRankSummary.anchorRank, currentRankSummary.metric, curveReferenceRows, lastRun, mode, nextEventSummarySources, rankShift, sortedRuns]);
+    }, [bestRun, courseHistory, currentRankSummary.anchorRank, currentRankSummary.metric, currentRankSummary.sourceRun, curveReferenceRows, lastRun, mode, nextEventSummarySources, rankShift, sortedRuns]);
 
     const projectionColumns = useMemo<NextEventProjectionColumn[]>(() => {
         const baseColumn = getNextEventTableColumnByKey('hardness_band');
@@ -1148,7 +1212,7 @@ const NextEvent: React.FC = () => {
 
         const buildSummaryRow = (row: GenericRecord | null, label: string, index: number, fallbackTimeText?: string) => {
             if (!row) return;
-            const bestMetric = getBestRankMetric(row);
+            const bestMetric = getNextEventResolvedMetric(row);
             const timeText = formatTimeValue(getRowTimeSeconds(row));
             const adjustedText = bestMetric
                 ? formatTimeValue(getMetricAdjustedSeconds(row, bestMetric.metric))
@@ -1178,7 +1242,7 @@ const NextEvent: React.FC = () => {
         return entries;
     }, [nextEventSummarySources]);
 
-    const currentRankDisplay = currentRankSummary.display;
+    const currentRankDisplay = profileDisplayRankSummary.display || currentRankSummary.display;
 
     const onHeaderActivate = (
         event: React.MouseEvent<HTMLTableCellElement> | React.KeyboardEvent<HTMLTableCellElement>,
@@ -1201,9 +1265,6 @@ const NextEvent: React.FC = () => {
     };
 
     const handleBackNavigation = () => {
-        if (navigateBackWithNavStack(navigate, location.pathname)) {
-            return;
-        }
         const params = new URLSearchParams();
         if (selectedAthleteCode) {
             params.set('athlete_code', selectedAthleteCode);
@@ -1479,8 +1540,8 @@ const NextEvent: React.FC = () => {
                             borderRadius: '14px',
                             background: '#ffffff',
                             boxShadow: '0 1px 3px rgba(0, 0, 0, 0.08)',
-                            padding: isMobile ? '0.35rem 0.55rem' : '0.45rem 0.7rem',
-                            overflowY: 'auto',
+                            padding: isMobile ? '0.22rem 0.45rem' : '0.45rem 0.7rem',
+                            overflow: 'hidden',
                             zIndex: 10
                         }}
                     >
@@ -1500,23 +1561,23 @@ const NextEvent: React.FC = () => {
                             >
                                 <thead>
                                     <tr style={{ background: '#e5e7eb' }}>
-                                        <th style={{ textAlign: 'left', padding: '0.22rem 0.35rem', fontWeight: 700, width: summaryTableColumnConfig.label, minWidth: summaryTableColumnConfig.label, maxWidth: summaryTableColumnConfig.label }}>Key Events</th>
-                                        <th style={{ textAlign: 'center', padding: '0.22rem 0.35rem', fontWeight: 700, width: summaryTableColumnConfig.date, minWidth: summaryTableColumnConfig.date, maxWidth: summaryTableColumnConfig.date }}>Date</th>
-                                        <th style={{ textAlign: 'center', padding: '0.22rem 0.35rem', fontWeight: 700, width: summaryTableColumnConfig.combinedHardness, minWidth: summaryTableColumnConfig.combinedHardness, maxWidth: summaryTableColumnConfig.combinedHardness }}>Comb Hardness</th>
-                                        <th style={{ textAlign: 'center', padding: '0.22rem 0.35rem', fontWeight: 700, width: summaryTableColumnConfig.time, minWidth: summaryTableColumnConfig.time, maxWidth: summaryTableColumnConfig.time }}>Time</th>
-                                        <th style={{ textAlign: 'center', padding: '0.22rem 0.35rem', fontWeight: 700, width: summaryTableColumnConfig.adjTime, minWidth: summaryTableColumnConfig.adjTime, maxWidth: summaryTableColumnConfig.adjTime }}>Adj Time</th>
-                                        <th style={{ textAlign: 'center', padding: '0.22rem 0.35rem', fontWeight: 700, width: summaryTableColumnConfig.ranked, minWidth: summaryTableColumnConfig.ranked, maxWidth: summaryTableColumnConfig.ranked }}>Ranked</th>
+                                        <th style={{ textAlign: 'left', padding: isMobile ? '0.14rem 0.28rem' : '0.22rem 0.35rem', fontWeight: 700, width: summaryTableColumnConfig.label, minWidth: summaryTableColumnConfig.label, maxWidth: summaryTableColumnConfig.label }}>Key Events</th>
+                                        <th style={{ textAlign: 'center', padding: isMobile ? '0.14rem 0.28rem' : '0.22rem 0.35rem', fontWeight: 700, width: summaryTableColumnConfig.date, minWidth: summaryTableColumnConfig.date, maxWidth: summaryTableColumnConfig.date }}>Date</th>
+                                        <th style={{ textAlign: 'center', padding: isMobile ? '0.14rem 0.28rem' : '0.22rem 0.35rem', fontWeight: 700, width: summaryTableColumnConfig.combinedHardness, minWidth: summaryTableColumnConfig.combinedHardness, maxWidth: summaryTableColumnConfig.combinedHardness }}>Comb Hardness</th>
+                                        <th style={{ textAlign: 'center', padding: isMobile ? '0.14rem 0.28rem' : '0.22rem 0.35rem', fontWeight: 700, width: summaryTableColumnConfig.time, minWidth: summaryTableColumnConfig.time, maxWidth: summaryTableColumnConfig.time }}>Time</th>
+                                        <th style={{ textAlign: 'center', padding: isMobile ? '0.14rem 0.28rem' : '0.22rem 0.35rem', fontWeight: 700, width: summaryTableColumnConfig.adjTime, minWidth: summaryTableColumnConfig.adjTime, maxWidth: summaryTableColumnConfig.adjTime }}>Adj Time</th>
+                                        <th style={{ textAlign: 'center', padding: isMobile ? '0.14rem 0.28rem' : '0.22rem 0.35rem', fontWeight: 700, width: summaryTableColumnConfig.ranked, minWidth: summaryTableColumnConfig.ranked, maxWidth: summaryTableColumnConfig.ranked }}>Ranked</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {nextEventSummaryEntries.map((entry) => (
                                         <tr key={entry.key} style={{ borderTop: '1px solid #e5e7eb' }}>
-                                            <td style={{ padding: '0.18rem 0.35rem', fontWeight: 600, verticalAlign: 'top', width: summaryTableColumnConfig.label, minWidth: summaryTableColumnConfig.label, maxWidth: summaryTableColumnConfig.label }}>{entry.label}</td>
-                                            <td style={{ textAlign: 'center', padding: '0.18rem 0.35rem', verticalAlign: 'top', width: summaryTableColumnConfig.date, minWidth: summaryTableColumnConfig.date, maxWidth: summaryTableColumnConfig.date }}>{entry.date || '--'}</td>
-                                            <td style={{ textAlign: 'center', padding: '0.18rem 0.35rem', verticalAlign: 'top', width: summaryTableColumnConfig.combinedHardness, minWidth: summaryTableColumnConfig.combinedHardness, maxWidth: summaryTableColumnConfig.combinedHardness }}>{entry.combinedHardness}</td>
-                                            <td style={{ textAlign: 'center', padding: '0.18rem 0.35rem', verticalAlign: 'top', width: summaryTableColumnConfig.time, minWidth: summaryTableColumnConfig.time, maxWidth: summaryTableColumnConfig.time }}>{entry.time}</td>
-                                            <td style={{ textAlign: 'center', padding: '0.18rem 0.35rem', verticalAlign: 'top', width: summaryTableColumnConfig.adjTime, minWidth: summaryTableColumnConfig.adjTime, maxWidth: summaryTableColumnConfig.adjTime }}>{entry.adjTime}</td>
-                                            <td style={{ textAlign: 'center', padding: '0.18rem 0.35rem', verticalAlign: 'top', width: summaryTableColumnConfig.ranked, minWidth: summaryTableColumnConfig.ranked, maxWidth: summaryTableColumnConfig.ranked }}>{entry.ranked}</td>
+                                            <td style={{ padding: isMobile ? '0.12rem 0.28rem' : '0.18rem 0.35rem', fontWeight: 600, verticalAlign: 'top', width: summaryTableColumnConfig.label, minWidth: summaryTableColumnConfig.label, maxWidth: summaryTableColumnConfig.label }}>{entry.label}</td>
+                                            <td style={{ textAlign: 'center', padding: isMobile ? '0.12rem 0.28rem' : '0.18rem 0.35rem', verticalAlign: 'top', width: summaryTableColumnConfig.date, minWidth: summaryTableColumnConfig.date, maxWidth: summaryTableColumnConfig.date }}>{entry.date || '--'}</td>
+                                            <td style={{ textAlign: 'center', padding: isMobile ? '0.12rem 0.28rem' : '0.18rem 0.35rem', verticalAlign: 'top', width: summaryTableColumnConfig.combinedHardness, minWidth: summaryTableColumnConfig.combinedHardness, maxWidth: summaryTableColumnConfig.combinedHardness }}>{entry.combinedHardness}</td>
+                                            <td style={{ textAlign: 'center', padding: isMobile ? '0.12rem 0.28rem' : '0.18rem 0.35rem', verticalAlign: 'top', width: summaryTableColumnConfig.time, minWidth: summaryTableColumnConfig.time, maxWidth: summaryTableColumnConfig.time }}>{entry.time}</td>
+                                            <td style={{ textAlign: 'center', padding: isMobile ? '0.12rem 0.28rem' : '0.18rem 0.35rem', verticalAlign: 'top', width: summaryTableColumnConfig.adjTime, minWidth: summaryTableColumnConfig.adjTime, maxWidth: summaryTableColumnConfig.adjTime }}>{entry.adjTime}</td>
+                                            <td style={{ textAlign: 'center', padding: isMobile ? '0.12rem 0.28rem' : '0.18rem 0.35rem', verticalAlign: 'top', width: summaryTableColumnConfig.ranked, minWidth: summaryTableColumnConfig.ranked, maxWidth: summaryTableColumnConfig.ranked }}>{entry.ranked}</td>
                                         </tr>
                                     ))}
                                 </tbody>
@@ -1531,12 +1592,14 @@ const NextEvent: React.FC = () => {
                     position: 'relative',
                     marginTop: tableContainerPlacement?.y ?? (isMobile ? '3.4cm' : '3.1cm'),
                     marginLeft: tableContainerPlacement?.x ?? '0cm',
-                    width: tableContainerPlacement?.width ?? '100%',
-                    maxWidth: tableContainerPlacement?.width ?? '100%',
+                    width: tableContainerPlacement?.width
+                        ? `min(${tableContainerPlacement.width}, calc(100vw - ${tableContainerPlacement?.x ?? '0cm'} - 0.6cm))`
+                        : `calc(100vw - ${tableContainerPlacement?.x ?? '0cm'} - 0.6cm)`,
+                    maxWidth: `calc(100vw - ${tableContainerPlacement?.x ?? '0cm'} - 0.6cm)`,
                     height: tableContainerPlacement?.height,
                     maxHeight: tableContainerPlacement?.height,
                     boxSizing: 'border-box',
-                    overflow: 'auto'
+                    overflow: 'hidden'
                 }}
             >
                 {sortedProjectionRows.length > 0 ? (
@@ -1546,6 +1609,7 @@ const NextEvent: React.FC = () => {
                         sortKey={sortKey}
                         sortDir={sortDir}
                         onHeaderActivate={onHeaderActivate}
+                        tableMinWidth={tableContainerPlacement?.width}
                     />
                 ) : (
                     <div className="athlete-empty-state">

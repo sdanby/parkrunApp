@@ -116,14 +116,14 @@
       "type": "panel",
       "name": "Summary Panel",
       "laptop": { "x": "0.3cm", "y": "2.7cm", "width": "15.2cm", "height": "3.9cm" },
-      "mobile": { "x": "0.3cm", "y": "2.5cm", "width": "15.2cm", "height": "3.9cm" }
+      "mobile": { "x": "0.3cm", "y": "2.5cm", "width": "10.7cm", "height": "3.6cm" }
     },
     {
       "id": "nextEvent.tableContainer",
       "type": "table",
       "name": "tableContainer",
-      "laptop": { "x": "0.3cm", "y": "2.7cm", "width": "50cm", "height": "17.2cm" },
-      "mobile": { "x": "0.3cm", "y": "2.3cm", "width": "30cm", "height": "14.8cm" }
+      "laptop": { "x": "0.3cm", "y": "2.7cm", "width": "20cm", "height": "17.2cm" },
+      "mobile": { "x": "0.3cm", "y": "3.1cm", "width": "12cm", "height": "14.8cm" }
     }
   ],
   "tableColumns": [
@@ -144,7 +144,7 @@
       "headerName": "+1",
       "helpTarget": "term-rank",
       "laptop": { "width": "2.4cm" },
-      "mobile": { "width": "2.2cm" }
+      "mobile": { "width": "1.6cm" }
     },
     {
       "key": "rank_current",
@@ -153,7 +153,7 @@
       "headerName": "Current",
       "helpTarget": "term-rank",
       "laptop": { "width": "2.6cm" },
-      "mobile": { "width": "2.4cm" }
+      "mobile": { "width": "1.6cm" }
     },
     {
       "key": "rank_minus_1",
@@ -162,7 +162,7 @@
       "headerName": "-1",
       "helpTarget": "term-rank",
       "laptop": { "width": "2.4cm" },
-      "mobile": { "width": "2.2cm" }
+      "mobile": { "width": "1.6cm" }
     },
     {
       "key": "rank_minus_2",
@@ -171,7 +171,7 @@
       "headerName": "-2",
       "helpTarget": "term-rank",
       "laptop": { "width": "2.4cm" },
-      "mobile": { "width": "2.2cm" }
+      "mobile": { "width": "1.6cm" }
     },
     {
       "key": "rank_minus_3",
@@ -180,7 +180,7 @@
       "headerName": "-3",
       "helpTarget": "term-rank",
       "laptop": { "width": "2.4cm" },
-      "mobile": { "width": "2.2cm" }
+      "mobile": { "width": "1.6cm" }
     },
     {
       "key": "rank_minus_4",
@@ -189,7 +189,7 @@
       "headerName": "-4",
       "helpTarget": "term-rank",
       "laptop": { "width": "2.4cm" },
-      "mobile": { "width": "2.2cm" }
+      "mobile": { "width": "1.6cm" }
     },
     {
       "key": "rank_minus_5",
@@ -198,39 +198,39 @@
       "headerName": "-5",
       "helpTarget": "term-rank",
       "laptop": { "width": "2.4cm" },
-      "mobile": { "width": "2.2cm" }
+      "mobile": { "width": "1.6cm" }
     }
   ],
   "summaryTableColumns": [
     {
       "key": "label",
       "laptop": { "width": "3.0cm" },
-      "mobile": { "width": "3.0cm" }
+      "mobile": { "width": "2.5cm" }
     },
     {
       "key": "date",
       "laptop": { "width": "1.5cm" },
-      "mobile": { "width": "1.5cm" }
+      "mobile": { "width": "0.6cm" }
     },
     {
       "key": "combinedHardness",
       "laptop": { "width": "2.5cm" },
-      "mobile": { "width": "2.5cm" }
+      "mobile": { "width": "1.8cm" }
     },
     {
       "key": "time",
       "laptop": { "width": "1.4cm" },
-      "mobile": { "width": "1.4cm" }
+      "mobile": { "width": "0.7cm" }
     },
     {
       "key": "adjTime",
       "laptop": { "width": "1.9cm" },
-      "mobile": { "width": "1.9cm" }
+      "mobile": { "width": "1.7cm" }
     },
     {
       "key": "ranked",
       "laptop": { "width": "1.4cm" },
-      "mobile": { "width": "1.4cm" }
+      "mobile": { "width": "1.0cm" }
     }
   ]
 }

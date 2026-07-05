@@ -22,7 +22,7 @@
       "type": "button",
       "name": "Back",
       "laptop": { "x": "0.0cm", "y": "-0.2cm", "width": "0.9cm", "height": "0.9cm" },
-      "mobile": { "x": "0.2cm", "y": "1.3cm", "width": "0.9cm", "height": "0.9cm" }
+      "mobile": { "x": "0.2cm", "y": "1.5cm", "width": "0.9cm", "height": "0.9cm" }
     },
     {
       "id": "participant.input",
@@ -111,14 +111,14 @@
         "lineHeight": 0.9
       },
       "laptop": { "x": "1.3cm", "y": "2.7cm" },
-      "mobile": { "x": "1.0cm", "y": "2.7cm" }
+      "mobile": { "x": "1.35cm", "y": "2.7cm" }
     },
     {
       "id": "participant.recentClub",
       "type": "field",
       "name": "Recent club",
       "laptop": { "x": "3.6cm", "y": "2.7cm", "width": "6.0cm" },
-      "mobile": { "x": "3.3cm", "y": "2.7cm", "width": "4.4cm" }
+      "mobile": { "x": "3.7cm", "y": "2.7cm", "width": "4.4cm" }
     },
     {
       "id": "participant.statusMessage",
@@ -145,7 +145,7 @@
         "lineHeight": 0.9
       },
       "laptop": { "x": "8.0cm", "y": "0.7cm" },
-      "mobile": { "x": "5.5cm", "y": "0.7cm" }
+      "mobile": { "x": "5.4cm", "y": "0.7cm" }
     },
     {
       "id": "participant.tableViewSelect",
@@ -153,7 +153,7 @@
       "name": "Basic",
       "options": ["Basic", "Detailed", "All Time Adjustments", "Event Ranks"],
       "laptop": { "x": "10.5cm", "y": "0.7cm", "width": "4.3cm" },
-      "mobile": { "x": "7.8cm", "y": "0.7cm", "width": "3.2cm" }
+      "mobile": { "x": "7.7cm", "y": "0.7cm", "width": "3.2cm" }
     },
     {
       "id": "participant.courseAdjLabel",
@@ -168,7 +168,7 @@
         "lineHeight": 0.9
       },
       "laptop": { "x": "8.0cm", "y": "1.3cm" },
-      "mobile": { "x": "5.5cm", "y": "1.3cm" }
+      "mobile": { "x": "5.4cm", "y": "1.3cm" }
     },
     {
       "id": "participant.courseAdjSelect",
@@ -176,7 +176,7 @@
       "name": "no adjustment (default)",
       "options": ["no adjustment (default)", "seasonal adjustments", "full event adjustments"],
       "laptop": { "x": "10.5cm", "y": "1.3cm", "width": "4.3cm" },
-      "mobile": { "x": "7.8cm", "y": "1.3cm", "width": "3.2cm" }
+      "mobile": { "x": "7.7cm", "y": "1.3cm", "width": "3.2cm" }
     },
     {
       "id": "participant.otherAdjLabel",
@@ -190,16 +190,16 @@
         "color": "#111827",
         "lineHeight": 0.9
       },
-      "laptop": { "x": "8.2cm", "y": "2.0cm" },
-      "mobile": { "x": "5.7cm", "y": "2.0cm" }
+      "laptop": { "x": "8.1cm", "y": "2.0cm" },
+      "mobile": { "x": "5.6cm", "y": "2.0cm" }
     },
     {
       "id": "participant.otherAdjSelect",
       "type": "select",
       "name": "no adjustment (default)",
       "options": ["no adjustment (default)", "age adjustments", "sex adjustments", "age & sex adjustment"],
-      "laptop": { "x": "10.5cm", "y": "2.0cm", "width": "4.3cm" },
-      "mobile": { "x": "7.8cm", "y": "2.0cm", "width": "3.2cm" }
+      "laptop": { "x": "10.4cm", "y": "2.0cm", "width": "4.3cm" },
+      "mobile": { "x": "7.7cm", "y": "2.0cm", "width": "3.2cm" }
     },
     {
       "id": "participant.estRankLabel",
@@ -214,14 +214,14 @@
         "lineHeight": 0.9
       },
       "laptop": { "x": "8.7cm", "y": "2.7cm" },
-      "mobile": { "x": "1.95cm", "y": "3.85cm" }
+      "mobile": { "x": "2.4cm", "y": "3.85cm" }
     },
     {
       "id": "participant.estRankValue",
       "type": "field",
       "name": "Est. Rank value",
       "laptop": { "x": "10.5cm", "y": "2.8cm" },
-      "mobile": { "x": "3.5cm", "y": "3.9cm" },"style": {
+      "mobile": { "x": "3.95cm", "y": "3.9cm" },"style": {
         "fontSize": "0.9rem"
       }
     },
@@ -238,21 +238,21 @@
         "lineHeight": 0.7
       },
       "laptop": { "x": "1.3cm", "y": "3.4cm" },
-      "mobile": { "x": "1.0cm", "y": "3.3cm" }
+      "mobile": { "x": "1.4cm", "y": "3.3cm" }
     },
     {
       "id": "participant.freqCourse",
       "type": "field",
       "name": "Freq Course",
       "laptop": { "x": "3.8cm", "y": "3.4cm", "width": "4.4cm" },
-      "mobile": { "x": "3.6cm", "y": "3.2cm", "width": "4.4cm" }
+      "mobile": { "x": "4.0cm", "y": "3.2cm", "width": "4.4cm" }
     },
     {
       "id": "participant.profileButton",
       "type": "button",
       "name": "Profile",
       "laptop": { "x": "-0.2cm", "y": "2.0cm", "width": "1.0cm", "height": "1.0cm" },
-      "mobile": { "x": "-0.2cm", "y": "2.0cm", "width": "0.9cm", "height": "0.9cm" }
+      "mobile": { "x": "-0.2cm", "y": "2.1cm", "width": "0.9cm", "height": "0.9cm" }
     },
     {
       "id": "participant.nextEventButton",
@@ -266,7 +266,7 @@
       "type": "button",
       "name": "Reset",
       "laptop": { "x": "-0.2cm", "y": "0.8cm", "width": "1.0cm", "height": "1.0cm" },
-      "mobile": { "x": "-0.2cm", "y": "0.9cm", "width": "0.9cm", "height": "0.9cm" }
+      "mobile": { "x": "-0.2cm", "y": "1.05cm", "width": "0.9cm", "height": "0.9cm" }
     },
     {
       "id": "participant.curveRankReferenceButton",

@@ -3008,40 +3008,90 @@ This page is usually reached from event, course, club or list tables by clicking
 <a id="page-next-event"></a>
 
 ### Next Event Page
+Purpose Description
+The Next Event Page is a forward‑looking planning tool designed to help a participant understand what their next parkrun performance might look like under a chosen ranking mode.
+It answers three practical questions:
 
-#### Purpose Description
+How can I improve my ranking score on my usual course
 
-Next Event Page is a forward-looking planning view for a selected participant and course.  
-Its purpose is to estimate what the next run might look like under a chosen ranking mode, rather than to review only past results.
+What time would I need to maintain my ranking on an unfamiliar course
 
-#### Temporary Commentary
+How does my past performance on a course I haven’t visited recently compare to my current ability
 
-This section is intentionally temporary and should be reviewed later.  
-For now, think of Next Event as a planning companion to the [Participant Page](#page-participant): it reuses participant identity, course selection and rank-reference ideas, but presents them in a more predictive layout.
+The page uses the participant’s historical results, course hardness, and the selected ranking mode to provide a clear, contextual preview of what different finishing times would mean for their next event.
 
-#### Navigation
+**How the Page Works**
+By selecting yourself—or any other participant—you can view their key achievements and recent performances on the chosen course.
+For each relevant past result (e.g., last event, PB, best ever, best in the last year), the page displays:
 
-This page is reached from the burger menu.  
-It is expected to behave like the other detail pages, with normal back navigation returning you to the previous page context where possible.
+Course hardness on that day
 
-#### Label and Selection list
+Actual time
 
-- `Athlete Code`: identifies the currently selected participant.  
-- `Course`: uses the standard [Course (Selection Control)](#control-course) help behaviour and selects the course used for the preview table.  
-- Participant search box: lets you load a different athlete into the page.  
-- The page is expected to default toward the athlete's preferred or most recent course where possible.
+Adjusted time (depending on ranking mode)
 
-#### Buttons
+Rank score achieved for that performance
 
-- `Next PR` / `Next Ext`: temporary commentary only for now. These controls switch the projection mode used by the page.  
-- Back button: returns to the prior page or falls back to the Participant page if no stack entry is available.  
-- Sortable column headers: change ordering or open help depending on the current top-bar column mode.
+This gives immediate context for how the participant has historically performed on the selected course.
 
-#### Tables, Plots and Previews
+Projection Table (Lower Table)
+The lower table shows how different finishing times would translate into ranking scores on the selected course.
+It allows the participant to:
 
-- Main projection table: shows hardness bands against projected ranking bands.  
-- Sticky first column and sticky header row are used so the comparison grid stays readable while scrolling.  
-- This area is still under active design and the explanatory wording here is deliberately provisional pending your review.
+See what time is needed to maintain their current ranking
+
+See what time is needed to improve their ranking by one step
+
+Compare their historical times against the course’s current hardness
+
+Explore how ranking outcomes change when switching to a different course
+
+Arrow keys allow the user to reveal higher or lower ranking scores, and the course selector lets them switch between courses—even those they have never visited—to understand what time would be required to achieve the same ranking elsewhere.
+
+**Colour Indicators**
+
+Grey cell  
+Indicates the approximate ranking outcome of the participant’s most recent run on this course.
+If that run was a long time ago—and the participant is now older—the grey cell helps show that a slower time may still achieve the same ranking under age‑adjusted modes.
+
+Green cell (maintain)  
+Shows the time required to maintain the participant’s current ranking score, assuming the course hardness remains similar to last week.
+
+Green cell (exceed)  
+Shows the time required to exceed the participant’s current ranking score, again assuming similar course hardness.
+
+(If you prefer, these two greens can be labelled separately as “Maintain” and “Improve”.)
+
+**Navigation**
+Accessed from the burger menu
+
+Behaves like other detail pages
+
+Back navigation returns to the previous page or falls back to the Participant Page
+
+Defaults to the participant’s preferred or most recent course where possible
+
+**Controls**
+Athlete Code: identifies the selected participant
+
+Course: standard course selector behaviour
+
+Participant Search: load a different athlete
+
+Next PR / Next Ext: switches projection mode
+
+Sortable column headers: reorder or open help depending on top‑bar mode
+
+**Summary**
+The Next Event Page is a planning companion that helps participants understand:
+
+What time they need to run next week
+
+How their ranking might change
+
+How different courses compare
+
+How their past performances relate to their current ability
 
 <a id="section-curved-rank-time-reference"></a>
 

@@ -26,6 +26,7 @@ type Props = {
     sortKey: string;
     sortDir: 'asc' | 'desc';
     onHeaderActivate: (event: React.MouseEvent<HTMLTableCellElement> | React.KeyboardEvent<HTMLTableCellElement>, column: NextEventProjectionColumn) => void;
+    tableMinWidth?: string;
 };
 
 const getCellStyle = (tone?: 'default' | 'best' | 'last' | 'improve'): React.CSSProperties => {
@@ -53,10 +54,10 @@ const getCellStyle = (tone?: 'default' | 'best' | 'last' | 'improve'): React.CSS
     return {};
 };
 
-const NextEventProjectionTable: React.FC<Props> = ({ columns, rows, sortKey, sortDir, onHeaderActivate }) => {
+const NextEventProjectionTable: React.FC<Props> = ({ columns, rows, sortKey, sortDir, onHeaderActivate, tableMinWidth }) => {
     return (
         <div className="athlete-runs-table-wrapper">
-            <table className="athlete-runs-table">
+            <table className="athlete-runs-table" style={{ minWidth: tableMinWidth }}>
                 <thead>
                     <tr>
                         {columns.map((column, index) => {

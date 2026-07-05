@@ -126,7 +126,7 @@ const normalizeBoolParam = (value: string | null): boolean | null => {
 
 const formatDisplayedRank = (value: unknown): string => {
     const numeric = value === undefined || value === null || value === '' ? NaN : Number(value);
-    return Number.isFinite(numeric) ? String(Math.floor(numeric)) : '--';
+    return Number.isFinite(numeric) ? String(Math.round(numeric)) : '--';
 };
 
 type SummaryField = 'athlete_code' | 'athlete_name' | 'club' | 'current_age_estimate' | 'sex' | 'total_runs';
