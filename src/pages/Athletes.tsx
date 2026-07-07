@@ -916,7 +916,7 @@ const Athletes: React.FC = () => {
     const [profileLoading, setProfileLoading] = useState<boolean>(false);
     useGlobalWaitCursor(loading);
     const [profileError, setProfileError] = useState<string | null>(null);
-    const [curveRankReferenceOpen, setCurveRankReferenceOpen] = useState<boolean>(false);
+    const [curveRankReferenceOpen] = useState<boolean>(false);
     const [curveRankReferenceLoading, setCurveRankReferenceLoading] = useState<boolean>(false);
     const [curveRankReferenceError, setCurveRankReferenceError] = useState<string | null>(null);
     const [curveRankReferenceRows, setCurveRankReferenceRows] = useState<CurveRankReferenceRow[]>([]);
@@ -3732,37 +3732,25 @@ const Athletes: React.FC = () => {
         };
     }, [showProfile, profileJumpRequest, rowsToRender]);
 
-    const currentPanelMode: 'table' | 'profile' | 'plot' | 'rank' = curveRankReferenceOpen ? 'rank' : (showProfile ? 'profile' : (showPlot ? 'plot' : 'table'));
-    const nextPanelMode: 'table' | 'profile' | 'plot' | 'rank' =
+    const currentPanelMode: 'table' | 'profile' | 'plot' = showProfile ? 'profile' : (showPlot ? 'plot' : 'table');
+    const nextPanelMode: 'table' | 'profile' | 'plot' =
         currentPanelMode === 'table'
             ? 'profile'
             : currentPanelMode === 'profile'
                 ? 'plot'
-                : currentPanelMode === 'plot'
-                    ? 'rank'
-                    : 'table';
-    const panelToggleLabel = nextPanelMode === 'table' ? 'Table' : (nextPanelMode === 'profile' ? 'Profile' : (nextPanelMode === 'plot' ? 'Plot' : 'Rank'));
+                : 'table';
+    const panelToggleLabel = nextPanelMode === 'table' ? 'Table' : (nextPanelMode === 'profile' ? 'Profile' : 'Plot');
     const handlePanelCycle = () => {
-        if (!showProfile && !showPlot && !curveRankReferenceOpen) {
+        if (!showProfile && !showPlot) {
             setShowProfile(true);
             setShowPlot(false);
-            setCurveRankReferenceOpen(false);
             return;
         }
         if (showProfile) {
             setShowProfile(false);
             setShowPlot(true);
-            setCurveRankReferenceOpen(false);
             return;
         }
-        if (showPlot) {
-            setShowProfile(false);
-            setShowPlot(false);
-            setCurveRankReferenceError(null);
-            setCurveRankReferenceOpen(true);
-            return;
-        }
-        setCurveRankReferenceOpen(false);
         setShowPlot(false);
         setShowProfile(false);
     };

@@ -98,18 +98,25 @@
       "mobile": { "x": "4.3cm", "y": "1.65cm", "width": "4.8cm" }
     },
     {
+      "id": "nextEvent.nextExtButton",
+      "type": "button",
+      "name": "Next Ext",
+      "laptop": { "x": "0.3cm", "y": "1.0cm", "width": "1.0cm", "height": "1.0cm" },
+      "mobile": { "x": "0.3cm", "y": "1.1cm", "width": "0.9cm", "height": "0.9cm" }
+    },
+    {
+      "id": "nextEvent.curveRankReferenceButton",
+      "type": "button",
+      "name": "Rank",
+      "laptop": { "x": "-0.2cm", "y": "1.0cm", "width": "1.0cm", "height": "1.0cm" },
+      "mobile": { "x": "-0.2cm", "y": "1.1cm", "width": "0.9cm", "height": "0.9cm" }
+    },
+    {
       "id": "nextEvent.nextPrButton",
       "type": "button",
       "name": "Next PR",
       "laptop": { "x": "0.3cm", "y": "1.0cm", "width": "1.0cm", "height": "1.0cm" },
       "mobile": { "x": "0.3cm", "y": "1.1cm", "width": "0.9cm", "height": "0.9cm" }
-    },
-    {
-      "id": "nextEvent.nextExtButton",
-      "type": "button",
-      "name": "Next Ext",
-      "laptop": { "x": "0.3cm", "y": "2.2cm", "width": "1.0cm", "height": "1.0cm" },
-      "mobile": { "x": "0.3cm", "y": "2.2cm", "width": "0.9cm", "height": "0.9cm" }
     },
     {
       "id": "nextEvent.summaryPanel",
@@ -124,6 +131,13 @@
       "name": "tableContainer",
       "laptop": { "x": "0.3cm", "y": "2.7cm", "width": "20cm", "height": "17.2cm" },
       "mobile": { "x": "0.3cm", "y": "3.1cm", "width": "12cm", "height": "14.8cm" }
+    },
+    {
+      "id": "nextEvent.curveRankReferenceContainer",
+      "type": "table",
+      "name": "curveRankReferenceContainer",
+      "laptop": { "width": "16cm", "height": "15cm", "x": "0cm", "y": "4.2cm" },
+      "mobile": { "width": "11.8cm", "height": "12.5cm", "x": "0.2cm", "y": "3.2cm" }
     }
   ],
   "tableColumns": [

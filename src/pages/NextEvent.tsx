@@ -27,6 +27,7 @@ type AthleteRecord = GenericRecord;
 type ModeKey = 'next_pr' | 'next_ext';
 type SortDir = 'asc' | 'desc';
 type RankMetricKey = 'B' | 'E' | 'AE' | 'ES' | 'AES';
+type CurveRankReferenceType = RankMetricKey;
 
 type BestRankMetric = {
     metric: RankMetricKey;
@@ -42,6 +43,14 @@ type NextEventSummarySource = {
     row: GenericRecord | null;
     fallbackTimeText?: string;
 };
+
+const curveRankReferenceTypeOptions: Array<{ value: CurveRankReferenceType; label: string }> = [
+    { value: 'B', label: 'Best Time' },
+    { value: 'E', label: 'Event Adj (E)' },
+    { value: 'ES', label: 'Event & Sex Adj (ES)' },
+    { value: 'AE', label: 'Age & Event Adj (AE)' },
+    { value: 'AES', label: 'Age & Event & Sex Adj (AES)' }
+];
 
 const formatDisplayedRank = (value: unknown): string => {
     const numeric = value === undefined || value === null || value === '' ? NaN : Number(value);
@@ -722,6 +731,14 @@ const NextEvent: React.FC = () => {
     const [eventOptions, setEventOptions] = useState<EventOption[]>([]);
     const [courseEvents, setCourseEvents] = useState<ParkrunEventRow[]>([]);
     const [curveReferenceRows, setCurveReferenceRows] = useState<CurveRankReferenceRow[]>([]);
+    const [curveRankReferenceOpen, setCurveRankReferenceOpen] = useState<boolean>(false);
+    const [curveRankReferenceLoading, setCurveRankReferenceLoading] = useState<boolean>(false);
+    const [curveRankReferenceError, setCurveRankReferenceError] = useState<string | null>(null);
+    const [curveRankReferenceRows, setCurveRankReferenceRows] = useState<CurveRankReferenceRow[]>([]);
+    const [curveRankReferenceType, setCurveRankReferenceType] = useState<CurveRankReferenceType>('B');
+    const [curveRankReferenceVersion, setCurveRankReferenceVersion] = useState<string>('');
+    const [curveRankReferenceLatestVersion, setCurveRankReferenceLatestVersion] = useState<string>('');
+    const [curveRankReferenceVersions, setCurveRankReferenceVersions] = useState<string[]>([]);
     const [curveLoading, setCurveLoading] = useState<boolean>(false);
     const [loading, setLoading] = useState<boolean>(false);
     const [sortKey, setSortKey] = useState<string>('hardness_band');
@@ -832,6 +849,10 @@ const NextEvent: React.FC = () => {
     useEffect(() => {
         setRankShift(0);
     }, [selectedAthleteCode, mode]);
+
+    useEffect(() => {
+        setCurveRankReferenceOpen(false);
+    }, [selectedAthleteCode, selectedCourseCode]);
 
     useEffect(() => {
         let cancelled = false;
@@ -977,6 +998,56 @@ const NextEvent: React.FC = () => {
             cancelled = true;
         };
     }, [currentRankSummary.metric, mode]);
+
+    useEffect(() => {
+        if (!curveRankReferenceOpen) {
+            return;
+        }
+
+        let cancelled = false;
+
+        const loadCurveRankReference = async () => {
+            try {
+                setCurveRankReferenceLoading(true);
+                setCurveRankReferenceError(null);
+                const payload = await fetchCurveRankReference(curveRankReferenceType, curveRankReferenceVersion || undefined);
+                if (cancelled) {
+                    return;
+                }
+                const versions = Array.isArray(payload?.available_curve_rank_reference_versions)
+                    ? payload.available_curve_rank_reference_versions.filter((value): value is string => typeof value === 'string' && value.trim() !== '')
+                    : [];
+                const latestVersion = typeof payload?.latest_curve_rank_reference_version === 'string'
+                    ? payload.latest_curve_rank_reference_version
+                    : '';
+                const selectedVersion = typeof payload?.curve_rank_reference_version === 'string'
+                    ? payload.curve_rank_reference_version
+                    : latestVersion;
+                setCurveRankReferenceRows(Array.isArray(payload?.rows) ? payload.rows : []);
+                setCurveRankReferenceVersions(versions);
+                setCurveRankReferenceLatestVersion(latestVersion);
+                if (selectedVersion && selectedVersion !== curveRankReferenceVersion) {
+                    setCurveRankReferenceVersion(selectedVersion);
+                }
+            } catch (_error) {
+                if (cancelled) {
+                    return;
+                }
+                setCurveRankReferenceRows([]);
+                setCurveRankReferenceError('Unable to load curved time rank reference right now.');
+            } finally {
+                if (!cancelled) {
+                    setCurveRankReferenceLoading(false);
+                }
+            }
+        };
+
+        loadCurveRankReference();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [curveRankReferenceOpen, curveRankReferenceType, curveRankReferenceVersion]);
 
     const courseHistory = useMemo<GenericRecord[]>(() => {
         const source = courseEvents.length > 0 ? courseEvents : selectedCourseRuns;
@@ -1231,8 +1302,11 @@ const NextEvent: React.FC = () => {
     const courseLabelElement = getNextEventElementById('nextEvent.courseLabel');
     const courseSelectElement = getNextEventElementById('nextEvent.courseSelect');
     const nextPrButtonElement = getNextEventElementById('nextEvent.nextPrButton');
+    const nextExtButtonElement = getNextEventElementById('nextEvent.nextExtButton');
+    const curveRankReferenceButtonElement = getNextEventElementById('nextEvent.curveRankReferenceButton');
     const summaryPanelElement = getNextEventElementById('nextEvent.summaryPanel');
     const tableContainerElement = getNextEventElementById('nextEvent.tableContainer');
+    const curveRankReferenceContainerElement = getNextEventElementById('nextEvent.curveRankReferenceContainer');
     const rankLabelElement = getNextEventElementById('nextEvent.rankLabel');
     const rankValueElement = getNextEventElementById('nextEvent.rankValue');
 
@@ -1244,10 +1318,31 @@ const NextEvent: React.FC = () => {
     const courseLabelPlacement = courseLabelElement?.[activePlacementKey];
     const courseSelectPlacement = courseSelectElement?.[activePlacementKey];
     const nextPrButtonPlacement = nextPrButtonElement?.[activePlacementKey];
+    const nextExtButtonPlacement = nextExtButtonElement?.[activePlacementKey];
+    const curveRankReferenceButtonPlacement = curveRankReferenceButtonElement?.[activePlacementKey];
     const summaryPanelPlacement = summaryPanelElement?.[activePlacementKey];
     const tableContainerPlacement = tableContainerElement?.[activePlacementKey];
+    const curveRankReferenceContainerPlacement = curveRankReferenceContainerElement?.[activePlacementKey];
     const rankLabelPlacement = rankLabelElement?.[activePlacementKey];
     const rankValuePlacement = rankValueElement?.[activePlacementKey];
+
+    const curveRankReferenceVersionOptions = useMemo(() => {
+        const values = curveRankReferenceVersions.slice();
+        if (curveRankReferenceLatestVersion && !values.includes(curveRankReferenceLatestVersion)) {
+            values.unshift(curveRankReferenceLatestVersion);
+        }
+        return values;
+    }, [curveRankReferenceLatestVersion, curveRankReferenceVersions]);
+
+    const curveRankReferenceSelectedVersion = curveRankReferenceVersion || curveRankReferenceLatestVersion || curveRankReferenceVersionOptions[0] || '';
+
+    const formatCurveRankReferenceScore = (value: unknown): string => {
+        const numeric = Number(value);
+        if (!Number.isFinite(numeric)) {
+            return '--';
+        }
+        return Number.isInteger(numeric) ? `${numeric}` : numeric.toFixed(1);
+    };
     const summaryTableColumnConfig = useMemo(() => {
         const layoutConfig = getNextEventLayoutConfig() as any;
         const configured = Array.isArray(layoutConfig?.summaryTableColumns)
@@ -1343,6 +1438,39 @@ const NextEvent: React.FC = () => {
                 from: 'next-event'
             }
         });
+    };
+
+    const handleCurveRankReferenceHelp = (event?: React.MouseEvent<HTMLElement>) => {
+        if (event?.currentTarget) {
+            const rect = event.currentTarget.getBoundingClientRect();
+            requestUnifiedHelp('section-curved-rank-time-reference', {
+                x: rect.left,
+                y: rect.bottom
+            }, 'Curved Rank Time Reference');
+            return;
+        }
+        requestUnifiedHelp('section-curved-rank-time-reference', null, 'Curved Rank Time Reference');
+    };
+
+    const nextCycleButtonPlacement = nextExtButtonPlacement ?? curveRankReferenceButtonPlacement ?? nextPrButtonPlacement;
+    const nextCycleButtonLabel = curveRankReferenceOpen
+        ? (nextPrButtonElement?.name || 'Next PR')
+        : mode === 'next_pr'
+            ? (nextExtButtonElement?.name || 'Next Ext')
+            : (curveRankReferenceButtonElement?.name || 'Rank');
+
+    const handleNextEventCycle = () => {
+        if (curveRankReferenceOpen) {
+            setCurveRankReferenceOpen(false);
+            setMode('next_pr');
+            return;
+        }
+        if (mode === 'next_pr') {
+            setMode('next_ext');
+            return;
+        }
+        setCurveRankReferenceError(null);
+        setCurveRankReferenceOpen(true);
     };
 
     return (
@@ -1568,13 +1696,13 @@ const NextEvent: React.FC = () => {
 
                 <button
                     type="button"
-                    onClick={() => setMode((current) => current === 'next_pr' ? 'next_ext' : 'next_pr')}
+                    onClick={handleNextEventCycle}
                     style={{
                         position: 'absolute',
-                        left: nextPrButtonPlacement?.x ?? '-0.2cm',
-                        top: nextPrButtonPlacement?.y ?? '1.0cm',
-                        width: nextPrButtonPlacement?.width ?? '1cm',
-                        height: nextPrButtonPlacement?.height ?? '1cm',
+                        left: nextCycleButtonPlacement?.x ?? '-0.2cm',
+                        top: nextCycleButtonPlacement?.y ?? '1.0cm',
+                        width: nextCycleButtonPlacement?.width ?? '1cm',
+                        height: nextCycleButtonPlacement?.height ?? '1cm',
                         border: '1px solid #777',
                         borderRadius: '6px',
                         background: '#fff',
@@ -1586,9 +1714,7 @@ const NextEvent: React.FC = () => {
                         padding: 0
                     }}
                 >
-                    {mode === 'next_pr'
-                        ? (nextPrButtonElement?.name || 'Next PR')
-                        : 'Next Ext'}
+                    {nextCycleButtonLabel}
                 </button>
 
                 {summaryPanelPlacement ? (
@@ -1651,37 +1777,174 @@ const NextEvent: React.FC = () => {
                 ) : null}
             </div>
 
-            <div
-                style={{
-                    position: 'relative',
-                    marginTop: tableContainerPlacement?.y ?? (isMobile ? '3.4cm' : '3.1cm'),
-                    marginLeft: tableContainerPlacement?.x ?? '0cm',
-                    width: tableContainerPlacement?.width
-                        ? `min(${tableContainerPlacement.width}, calc(100vw - ${tableContainerPlacement?.x ?? '0cm'} - 0.6cm))`
-                        : `calc(100vw - ${tableContainerPlacement?.x ?? '0cm'} - 0.6cm)`,
-                    maxWidth: `calc(100vw - ${tableContainerPlacement?.x ?? '0cm'} - 0.6cm)`,
-                    height: tableContainerPlacement?.height,
-                    maxHeight: tableContainerPlacement?.height,
-                    boxSizing: 'border-box',
-                    overflow: 'hidden'
-                }}
-            >
-                {sortedProjectionRows.length > 0 ? (
-                    <NextEventProjectionTable
-                        columns={projectionColumns}
-                        rows={sortedProjectionRows}
-                        sortKey={sortKey}
-                        sortDir={sortDir}
-                        onHeaderActivate={onHeaderActivate}
-                        tableMinWidth={tableContainerPlacement?.width}
-                    />
-                ) : (
-                    <div className="athlete-empty-state">
-                        <h2>Next Event preview unavailable</h2>
-                        <p>Select a participant and course with at least one usable run to build the first projection slice.</p>
+            {curveRankReferenceOpen ? (
+                <div
+                    style={{
+                        position: 'relative',
+                        marginTop: curveRankReferenceContainerPlacement?.y ?? (isMobile ? '5.2cm' : '4.8cm'),
+                        marginLeft: curveRankReferenceContainerPlacement?.x ?? '0cm',
+                        width: curveRankReferenceContainerPlacement?.width
+                            ? `min(${curveRankReferenceContainerPlacement.width}, calc(100vw - ${curveRankReferenceContainerPlacement?.x ?? '0cm'} - 0.6cm))`
+                            : `calc(100vw - ${curveRankReferenceContainerPlacement?.x ?? '0cm'} - 0.6cm)`,
+                        maxWidth: `calc(100vw - ${curveRankReferenceContainerPlacement?.x ?? '0cm'} - 0.6cm)`,
+                        height: curveRankReferenceContainerPlacement?.height,
+                        maxHeight: curveRankReferenceContainerPlacement?.height,
+                        boxSizing: 'border-box',
+                        overflow: 'visible'
+                    }}
+                >
+                    <div
+                        role="dialog"
+                        aria-label="Curved Time Ranks Reference"
+                        style={{
+                            border: '2px solid #9ca3af',
+                            borderRadius: '12px',
+                            background: '#fff',
+                            marginLeft: '0.3cm',
+                            marginRight: '0.3cm',
+                            overflow: 'hidden',
+                            boxShadow: '0 10px 18px rgba(15, 23, 42, 0.08)',
+                            height: '100%',
+                            boxSizing: 'border-box',
+                            display: 'flex',
+                            flexDirection: 'column'
+                        }}
+                    >
+                        <div
+                            style={{
+                                background: '#e5e7eb',
+                                borderBottom: '1px solid #d1d5db',
+                                padding: '0.55rem 0.8rem',
+                                fontSize: '1.02rem',
+                                fontWeight: 700,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '0.35rem'
+                            }}
+                        >
+                            <span>Curved Time Ranks Reference</span>
+                            <button
+                                type="button"
+                                className="top-bar-help-btn"
+                                aria-label="Curved Rank Time Reference help"
+                                title="Curved Rank Time Reference help"
+                                onClick={handleCurveRankReferenceHelp}
+                                style={{ flexShrink: 0 }}
+                            >
+                                📖
+                            </button>
+                        </div>
+                        <div style={{ padding: '0.45rem 0.7rem 0.55rem 0.7rem', display: 'flex', flexDirection: 'column', gap: '0.45rem', flex: 1, minHeight: 0 }}>
+                            {curveRankReferenceError ? (
+                                <div style={{ color: '#b91c1c', fontSize: '0.92rem' }}>{curveRankReferenceError}</div>
+                            ) : null}
+                            <div style={{ overflowY: 'auto', overflowX: 'hidden', border: '1px solid #d1d5db', borderRadius: '10px', flex: 1, minHeight: 0 }}>
+                                <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', fontSize: isMobile ? '0.67rem' : '0.74rem' }}>
+                                    <thead>
+                                        <tr style={{ background: '#f0fdf4' }}>
+                                            <th style={{ width: '12%', textAlign: 'left', padding: '0.42rem 0.42rem', borderBottom: '1px solid #d1d5db', whiteSpace: 'normal', wordBreak: 'break-word', lineHeight: 1.15 }}>Rank</th>
+                                            <th style={{ width: '18%', textAlign: 'left', padding: '0.42rem 0.42rem', borderBottom: '1px solid #d1d5db', whiteSpace: 'normal', wordBreak: 'break-word', lineHeight: 1.15 }}>Min<br />time</th>
+                                            <th style={{ width: '18%', textAlign: 'left', padding: '0.42rem 0.42rem', borderBottom: '1px solid #d1d5db', whiteSpace: 'normal', wordBreak: 'break-word', lineHeight: 1.15 }}>Max<br />time</th>
+                                            <th style={{ width: '18%', textAlign: 'left', padding: '0.42rem 0.42rem', borderBottom: '1px solid #d1d5db', whiteSpace: 'normal', wordBreak: 'break-word', lineHeight: 1.15 }}>Low<br />bound</th>
+                                            <th style={{ width: '18%', textAlign: 'left', padding: '0.42rem 0.42rem', borderBottom: '1px solid #d1d5db', whiteSpace: 'normal', wordBreak: 'break-word', lineHeight: 1.15 }}>High<br />bound</th>
+                                            <th style={{ width: '16%', textAlign: 'left', padding: '0.42rem 0.42rem', borderBottom: '1px solid #d1d5db', whiteSpace: 'normal', wordBreak: 'break-word', lineHeight: 1.15 }}>Rank<br />cnt</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {curveRankReferenceLoading ? (
+                                            <tr>
+                                                <td colSpan={6} style={{ padding: '0.7rem 0.42rem', color: '#6b7280' }}>Loading reference rows…</td>
+                                            </tr>
+                                        ) : curveRankReferenceRows.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={6} style={{ padding: '0.7rem 0.42rem', color: '#6b7280' }}>No curved rank reference rows available.</td>
+                                            </tr>
+                                        ) : curveRankReferenceRows.map((row) => (
+                                            <tr key={`${row.curve_rank_reference_version || 'latest'}-${row.curved_rank_group}`}>
+                                                <td style={{ padding: '0.42rem 0.42rem', borderBottom: '1px solid #e5e7eb', fontWeight: 600, whiteSpace: 'nowrap' }}>{row.curved_rank_group ?? '--'}</td>
+                                                <td style={{ padding: '0.42rem 0.42rem', borderBottom: '1px solid #e5e7eb', whiteSpace: 'nowrap' }}>{row.min_time || formatTimeValue(row.min_seconds) || '--'}</td>
+                                                <td style={{ padding: '0.42rem 0.42rem', borderBottom: '1px solid #e5e7eb', whiteSpace: 'nowrap' }}>{row.max_time || formatTimeValue(row.max_seconds) || '--'}</td>
+                                                <td style={{ padding: '0.42rem 0.42rem', borderBottom: '1px solid #e5e7eb', whiteSpace: 'nowrap' }}>{formatCurveRankReferenceScore(row.score_lower)}</td>
+                                                <td style={{ padding: '0.42rem 0.42rem', borderBottom: '1px solid #e5e7eb', whiteSpace: 'nowrap' }}>{formatCurveRankReferenceScore(row.score_upper)}</td>
+                                                <td style={{ padding: '0.42rem 0.42rem', borderBottom: '1px solid #e5e7eb', whiteSpace: 'nowrap' }}>{row.actual_group_cnt ?? '--'}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div
+                            style={{
+                                display: 'flex',
+                                flexWrap: 'wrap',
+                                alignItems: 'center',
+                                gap: '0.9rem',
+                                padding: '0.75rem 0.9rem 0.85rem 0.9rem',
+                                borderTop: '1px solid #d1d5db',
+                                background: '#f9fafb'
+                            }}
+                        >
+                            <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.88rem', color: '#111827', fontWeight: 600 }}>
+                                <span>Rank type</span>
+                                <select
+                                    value={curveRankReferenceType}
+                                    onChange={(event) => setCurveRankReferenceType(event.target.value as CurveRankReferenceType)}
+                                    style={{ minWidth: '12rem' }}
+                                >
+                                    {curveRankReferenceTypeOptions.map((option) => (
+                                        <option key={option.value} value={option.value}>{option.label}</option>
+                                    ))}
+                                </select>
+                            </label>
+                            <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.88rem', color: '#111827', fontWeight: 600 }}>
+                                <span>Date Snap</span>
+                                <select
+                                    value={curveRankReferenceSelectedVersion}
+                                    onChange={(event) => setCurveRankReferenceVersion(event.target.value)}
+                                    style={{ minWidth: '10rem' }}
+                                >
+                                    {curveRankReferenceVersionOptions.map((version) => (
+                                        <option key={version} value={version}>{version}</option>
+                                    ))}
+                                </select>
+                            </label>
+                        </div>
                     </div>
-                )}
-            </div>
+                </div>
+            ) : (
+                <div
+                    style={{
+                        position: 'relative',
+                        marginTop: tableContainerPlacement?.y ?? (isMobile ? '3.4cm' : '3.1cm'),
+                        marginLeft: tableContainerPlacement?.x ?? '0cm',
+                        width: tableContainerPlacement?.width
+                            ? `min(${tableContainerPlacement.width}, calc(100vw - ${tableContainerPlacement?.x ?? '0cm'} - 0.6cm))`
+                            : `calc(100vw - ${tableContainerPlacement?.x ?? '0cm'} - 0.6cm)`,
+                        maxWidth: `calc(100vw - ${tableContainerPlacement?.x ?? '0cm'} - 0.6cm)`,
+                        height: tableContainerPlacement?.height,
+                        maxHeight: tableContainerPlacement?.height,
+                        boxSizing: 'border-box',
+                        overflow: 'hidden'
+                    }}
+                >
+                    {sortedProjectionRows.length > 0 ? (
+                        <NextEventProjectionTable
+                            columns={projectionColumns}
+                            rows={sortedProjectionRows}
+                            sortKey={sortKey}
+                            sortDir={sortDir}
+                            onHeaderActivate={onHeaderActivate}
+                            tableMinWidth={tableContainerPlacement?.width}
+                        />
+                    ) : (
+                        <div className="athlete-empty-state">
+                            <h2>Next Event preview unavailable</h2>
+                            <p>Select a participant and course with at least one usable run to build the first projection slice.</p>
+                        </div>
+                    )}
+                </div>
+            )}
         </div>
     );
 };

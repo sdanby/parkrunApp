@@ -12,6 +12,7 @@ This is the single help source for this parkrun app. Use this to navigate throug
 * [Feedback](#section-feedback)
 * [Navigation](#section-navigation)
 * [Weekly Data Updates & New Courses](#section-weekly-updates)
+* [Using Help Inside the App](#section-using-help)
 * [Device Differences](#section-device-differences)
 * [Glossary of Terms](#glossary)
 * [Pages](#section-pages)
@@ -317,6 +318,27 @@ New courses may take a few weeks to build up enough data for deeper analysis (su
 
 The goal is simple:  
 **You always have access to the latest parkrun landscape, without needing to do anything manually.**
+
+---
+
+<a id="section-using-help"></a>
+
+## Using Help Inside the App
+
+Throughout using this app, click the help icon <span aria-label="Page help icon" style="display:inline-flex;align-items:center;justify-content:center;vertical-align:middle;width:1.7rem;height:1.7rem;border:1px solid #b8a95a;border-radius:999px;background:#fff8cc;color:#1f2937;line-height:1;font-size:0.95rem;">📖</span> to get more detailed page help.
+
+You can also use the built-in help labels and table help in two other ways:
+
+- Click a label such as
+  <span style="display:inline-block;padding:0.08rem 0.55rem;border:1px solid #93c5fd;border-radius:999px;background:#eff6ff;color:#111827;font-weight:600;line-height:1.2;">Type:</span>
+  to get access to selection help.
+- Hold your cursor over a table column for about 3 seconds to get column help for that table.
+
+This means help is available at three levels:
+
+- page help from the main help icon
+- selection help from clickable labels
+- column help from table headers
 
 ---
 

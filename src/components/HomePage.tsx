@@ -52,7 +52,58 @@ const HomePage: React.FC = () => {
 
 
                 </p>
-                 <h2>Laptop v Mobile</h2>
+                <h2>Using Help Inside the App</h2>
+                <p>
+                    Throughout using this app, click the help icon{' '}
+                    <span
+                        aria-label="Page help icon"
+                        role="img"
+                        style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            width: '1.7rem',
+                            height: '1.7rem',
+                            border: '1px solid #b8a95a',
+                            borderRadius: '999px',
+                            background: '#fff8cc',
+                            color: '#1f2937',
+                            lineHeight: 1,
+                            fontSize: '0.95rem'
+                        }}
+                    >
+                        📖
+                    </span>{' '}
+                    to get more detailed page help.
+                </p>
+                <p>
+                    You can also use the built-in help labels and table help in two other ways.
+                </p>
+                <ul>
+                    <li>
+                        Click a label such as{' '}
+                        <span
+                            style={{
+                                display: 'inline-block',
+                                padding: '0.08rem 0.55rem',
+                                border: '1px solid #93c5fd',
+                                borderRadius: '999px',
+                                background: '#eff6ff',
+                                color: '#111827',
+                                fontWeight: 600,
+                                lineHeight: 1.2
+                            }}
+                        >
+                            Type:
+                        </span>{' '}
+                        to get access to selection help.
+                    </li>
+                    <li>Hold your cursor over a table column for about 3 seconds to get column help for that table.</li>
+                </ul>
+                <p>
+                    This means help is available at three levels: page help from the main help icon, selection help from clickable labels, and column help from table headers.
+                </p>
+                <h2>Laptop v Mobile</h2>
                 <p>
                     This app was initially built for the laptop and then adapted for the mobile.
                     <br />
