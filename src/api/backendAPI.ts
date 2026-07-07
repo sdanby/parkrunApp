@@ -233,6 +233,14 @@ export type FeedbackRequest = {
     deleted?: boolean;
 };
 
+export type ChatMessage = {
+    id: number;
+    messageText: string;
+    createdAt?: string | null;
+    createdBy: string;
+    athleteCode?: string | null;
+};
+
 export type FeedbackRequestStatus =
     | 'logged'
     | 'updated'
@@ -926,6 +934,32 @@ export const updateFeedbackRequest = async (
         return response.data;
     } catch (error) {
         console.error('Error updating feedback request:', error);
+        throw error;
+    }
+};
+
+export const fetchChatMessages = async (limit = 200): Promise<ChatMessage[]> => {
+    try {
+        const params = new URLSearchParams();
+        params.set('limit', String(limit));
+        const response = await axios.get(`${API_BASE_URL}/api/chat/messages?${params.toString()}`, {
+            headers: getAuthHeaders()
+        });
+        return Array.isArray(response.data) ? response.data : [];
+    } catch (error) {
+        console.error('Error fetching chat messages:', error);
+        throw error;
+    }
+};
+
+export const createChatMessage = async (payload: { messageText: string }): Promise<ChatMessage> => {
+    try {
+        const response = await axios.post(`${API_BASE_URL}/api/chat/messages`, payload, {
+            headers: getAuthHeaders()
+        });
+        return response.data;
+    } catch (error) {
+        console.error('Error creating chat message:', error);
         throw error;
     }
 };

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { createBrowserRouter, RouterProvider, Outlet, useLocation, Navigate } from 'react-router-dom';
 import HamburgerMenu from './components/HamburgerMenu';
 import Home from './pages/Home';
@@ -13,6 +13,7 @@ import Athletes from './pages/Athletes';
 import NextEvent from './pages/NextEvent';
 import Lists from './pages/Lists';
 import Feedback from './pages/Feedback';
+import Chat from './pages/Chat';
 import Admin from './pages/Admin';
 import NavigationStackOverlay from './components/NavigationStackOverlay';
 import EventHelpManual, { UnifiedHelpOverlay, UNIFIED_HELP_EVENT, getPageMarkerForPath, type UnifiedHelpAnchor, type UnifiedHelpRequestDetail } from './pages/UnifiedHelp';
@@ -44,6 +45,7 @@ const headings: { [key: string]: string } = {
     '/athletes': 'Participant',
     '/next-event': 'Next Event',
     '/lists': 'Lists',
+    '/chat': 'Chat',
     '/feedback': 'Error / Suggestion Log',
     '/admin': 'Admin',
     '/help-manual': 'Help Manual'
@@ -196,7 +198,15 @@ const PageActivityTracker: React.FC = () => {
     const currentPathRef = useRef(`${location.pathname}${location.search}`);
     const enteredAtRef = useRef<number>(Date.now());
 
-    const sendUsage = (path: string, enteredAt: number, leftAt: number, referrer: string) => {
+    const shouldSkipAutoTracking = useCallback((path: string): boolean => {
+        const normalizedPath = String(path || '').toLowerCase();
+        return normalizedPath === '/chat' || normalizedPath.startsWith('/chat?');
+    }, []);
+
+    const sendUsage = useCallback((path: string, enteredAt: number, leftAt: number, referrer: string) => {
+        if (shouldSkipAutoTracking(path)) {
+            return;
+        }
         const durationMs = Math.max(0, leftAt - enteredAt);
         const token = localStorage.getItem('auth_token_v1') || undefined;
         const payload = {
@@ -218,7 +228,7 @@ const PageActivityTracker: React.FC = () => {
         } catch (_err) {
             // ignore analytics failures
         }
-    };
+    }, [shouldSkipAutoTracking]);
 
     useEffect(() => {
         const nextPath = `${location.pathname}${location.search}`;
@@ -229,7 +239,7 @@ const PageActivityTracker: React.FC = () => {
             currentPathRef.current = nextPath;
             enteredAtRef.current = leftAt;
         }
-    }, [location.pathname, location.search]);
+    }, [location.pathname, location.search, sendUsage]);
 
     useEffect(() => {
         const handleVisibility = () => {
@@ -252,7 +262,7 @@ const PageActivityTracker: React.FC = () => {
             document.removeEventListener('visibilitychange', handleVisibility);
             window.removeEventListener('beforeunload', handleBeforeUnload);
         };
-    }, []);
+    }, [sendUsage]);
 
     return null;
 };
@@ -303,6 +313,7 @@ const router = createBrowserRouter([
             { path: 'athletes', element: <Athletes /> },
             { path: 'next-event', element: <NextEvent /> },
             { path: 'lists', element: <Lists /> },
+            { path: 'chat', element: <Chat /> },
             { path: 'feedback', element: <Feedback /> },
             { path: 'admin', element: <Admin /> },
             { path: 'help-manual', element: <EventHelpManual /> }

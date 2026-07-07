@@ -1,0 +1,31 @@
+{
+  "version": "1.0.0-draft",
+  "page": "Chat",
+  "units": "cm",
+  "anchor": "chat-page-root",
+  "notes": "Config for the Chat page message area and composer area.",
+  "viewports": {
+    "laptop": {
+      "breakpointMin": 641
+    },
+    "mobile": {
+      "breakpointMax": 640
+    }
+  },
+  "elements": [
+    {
+      "id": "chat.mainBody",
+      "type": "table",
+      "name": "Main Body",
+      "laptop": { "x": "0.4cm", "y": "0.0cm", "width": "18.0cm", "height": "13.8cm" },
+      "mobile": { "x": "0.2cm", "y": "0.0cm", "width": "10.5cm", "height": "13.8cm" }
+    },
+    {
+      "id": "chat.textRectangle",
+      "type": "field",
+      "name": "Text Rectangle",
+      "laptop": { "x": "0.4cm", "y": "14.0cm", "width": "18.0cm", "height": "4.5cm" },
+      "mobile": { "x": "0.2cm", "y": "14.0cm", "width": "10.5cm", "height": "4.5cm" }
+    }
+  ]
+}
