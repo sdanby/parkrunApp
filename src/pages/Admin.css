@@ -435,9 +435,21 @@
 
 .admin-activity-filter-inline {
     display: grid;
-    grid-template-columns: repeat(7, minmax(0, 1fr));
-    gap: 0.35rem;
+    grid-template-columns: 14% 8% 15% 10% 10% 16% 10% 17%;
+    gap: 0;
     margin-bottom: 0.5rem;
+    align-items: center;
+}
+
+.admin-activity-filter-inline > * {
+    min-width: 0;
+    box-sizing: border-box;
+    padding: 0 0.4rem;
+}
+
+.admin-activity-filter-blank {
+    display: block;
+    min-height: 1px;
 }
 
 .admin-activity-blocks {
@@ -461,10 +473,20 @@
 .admin-activity-summary-table {
     width: 100%;
     min-width: 100%;
+    table-layout: fixed;
+    font-size: 0.8rem;
 }
 
 .admin-activity-summary-table th,
-.admin-activity-summary-table td,
+.admin-activity-summary-table td {
+    padding: 0.32rem 0.4rem;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.admin-activity-detail-table th,
 .admin-activity-detail-table th,
 .admin-activity-detail-table td {
     max-width: 5cm;
@@ -473,6 +495,38 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+.admin-activity-summary-col-day {
+    width: 14%;
+}
+
+.admin-activity-summary-col-time {
+    width: 8%;
+}
+
+.admin-activity-summary-col-person {
+    width: 15%;
+}
+
+.admin-activity-summary-col-device {
+    width: 10%;
+}
+
+.admin-activity-summary-col-type {
+    width: 10%;
+}
+
+.admin-activity-summary-col-visit {
+    width: 16%;
+}
+
+.admin-activity-summary-col-hits {
+    width: 10%;
+}
+
+.admin-activity-summary-col-minutes {
+    width: 17%;
 }
 
 .admin-summary-row {

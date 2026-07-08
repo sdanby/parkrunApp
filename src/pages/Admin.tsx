@@ -55,12 +55,14 @@ type ActivityFilters = {
 type ActivitySummaryRow = {
     id: string;
     day: string;
+    latestActivityAt: string | null;
     person: string;
     device: string;
     type: string;
     typeVisit: string;
     hitCount: number;
     totalDurationMs: number;
+    latestActivityAtMs: number;
     rows: AdminActivityRecord[];
 };
 
@@ -144,6 +146,16 @@ const formatTimeWithSeconds = (value?: string | null): string => {
         hour: '2-digit',
         minute: '2-digit',
         second: '2-digit'
+    });
+};
+
+const formatTimeOnly = (value?: string | null): string => {
+    if (!value) return '—';
+    const dt = new Date(value);
+    if (Number.isNaN(dt.getTime())) return value;
+    return dt.toLocaleTimeString('en-GB', {
+        hour: '2-digit',
+        minute: '2-digit'
     });
 };
 
@@ -1300,24 +1312,37 @@ const Admin: React.FC = () => {
                 buckets.set(id, {
                     id,
                     day,
+                    latestActivityAt: null,
                     person,
                     device,
                     type,
                     typeVisit,
                     hitCount: 0,
                     totalDurationMs: 0,
+                    latestActivityAtMs: Number.NEGATIVE_INFINITY,
                     rows: []
                 });
             }
 
             const bucket = buckets.get(id)!;
+            const activityAtMs = new Date(row.activityAt || '').getTime();
             bucket.hitCount += 1;
             bucket.totalDurationMs += Number(row.durationMs || 0);
+            if (Number.isFinite(activityAtMs)) {
+                if (activityAtMs >= bucket.latestActivityAtMs) {
+                    bucket.latestActivityAtMs = activityAtMs;
+                    bucket.latestActivityAt = row.activityAt || null;
+                }
+            }
             bucket.rows.push(row);
         }
 
         const sorted = Array.from(buckets.values()).sort((a, b) => {
             if (a.day !== b.day) return b.day.localeCompare(a.day);
+            if (a.latestActivityAtMs !== b.latestActivityAtMs) {
+                return (Number.isFinite(b.latestActivityAtMs) ? b.latestActivityAtMs : Number.NEGATIVE_INFINITY)
+                    - (Number.isFinite(a.latestActivityAtMs) ? a.latestActivityAtMs : Number.NEGATIVE_INFINITY);
+            }
             if (a.person !== b.person) return a.person.localeCompare(b.person);
             if (a.device !== b.device) return a.device.localeCompare(b.device);
             if (a.type !== b.type) return a.type.localeCompare(b.type);
@@ -1617,6 +1642,7 @@ const Admin: React.FC = () => {
 
                             <div className="admin-activity-filter-inline">
                                 <input className="admin-filter-input" placeholder="day" value={activityFilters.day} onChange={(e) => onActivityFilterChange('day', e.target.value)} />
+                                <div className="admin-activity-filter-blank" aria-hidden="true" />
                                 <input className="admin-filter-input" placeholder="person" value={activityFilters.person} onChange={(e) => onActivityFilterChange('person', e.target.value)} />
                                 <input className="admin-filter-input" placeholder="device" value={activityFilters.device} onChange={(e) => onActivityFilterChange('device', e.target.value)} />
                                 <input className="admin-filter-input" placeholder="type" value={activityFilters.type} onChange={(e) => onActivityFilterChange('type', e.target.value)} />
@@ -1631,23 +1657,24 @@ const Admin: React.FC = () => {
                                 <table className="admin-table admin-activity-summary-table">
                                     <thead>
                                         <tr>
-                                            <th>Day</th>
-                                            <th>Person</th>
-                                            <th>Device</th>
-                                            <th>Type</th>
-                                            <th>Type-visit</th>
-                                            <th>Total Hits</th>
-                                            <th>Total Minutes</th>
+                                            <th className="admin-activity-summary-col-day">Day</th>
+                                            <th className="admin-activity-summary-col-time">Time</th>
+                                            <th className="admin-activity-summary-col-person">Person</th>
+                                            <th className="admin-activity-summary-col-device">Device</th>
+                                            <th className="admin-activity-summary-col-type">Type</th>
+                                            <th className="admin-activity-summary-col-visit">Type-visit</th>
+                                            <th className="admin-activity-summary-col-hits">Total Hits</th>
+                                            <th className="admin-activity-summary-col-minutes">Total Minutes</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {activityLoading ? (
                                             <tr>
-                                                <td colSpan={7} className="admin-empty">Loading activity...</td>
+                                                <td colSpan={8} className="admin-empty">Loading activity...</td>
                                             </tr>
                                         ) : filteredAggregatedRows.length === 0 ? (
                                             <tr>
-                                                <td colSpan={7} className="admin-empty">No matching activity found.</td>
+                                                <td colSpan={8} className="admin-empty">No matching activity found.</td>
                                             </tr>
                                         ) : filteredAggregatedRows.map((row) => (
                                             <tr
@@ -1664,13 +1691,14 @@ const Admin: React.FC = () => {
                                                 }}
                                                 aria-label={`Open details for ${row.day} ${row.person} ${row.typeVisit}`}
                                             >
-                                                <td title={row.day}>{row.day}</td>
-                                                <td title={row.person}>{row.person}</td>
-                                                <td title={row.device}>{row.device}</td>
-                                                <td title={row.type}>{row.type}</td>
-                                                <td title={row.typeVisit}>{row.typeVisit}</td>
-                                                <td>{row.hitCount}</td>
-                                                <td>{formatDurationTotalMinutes(row.totalDurationMs)}</td>
+                                                <td className="admin-activity-summary-col-day" title={row.day}>{row.day}</td>
+                                                <td className="admin-activity-summary-col-time" title={formatTimeWithSeconds(row.latestActivityAt)}>{formatTimeOnly(row.latestActivityAt)}</td>
+                                                <td className="admin-activity-summary-col-person" title={row.person}>{row.person}</td>
+                                                <td className="admin-activity-summary-col-device" title={row.device}>{row.device}</td>
+                                                <td className="admin-activity-summary-col-type" title={row.type}>{row.type}</td>
+                                                <td className="admin-activity-summary-col-visit" title={row.typeVisit}>{row.typeVisit}</td>
+                                                <td className="admin-activity-summary-col-hits">{row.hitCount}</td>
+                                                <td className="admin-activity-summary-col-minutes">{formatDurationTotalMinutes(row.totalDurationMs)}</td>
                                             </tr>
                                         ))}
                                     </tbody>
