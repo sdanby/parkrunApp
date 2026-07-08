@@ -529,6 +529,38 @@
     width: 17%;
 }
 
+.admin-activity-summary-table .admin-activity-summary-col-day {
+    min-width: 6.4rem;
+}
+
+.admin-activity-summary-table .admin-activity-summary-col-time {
+    min-width: 4.2rem;
+}
+
+.admin-activity-summary-table .admin-activity-summary-col-person {
+    min-width: 7.2rem;
+}
+
+.admin-activity-summary-table .admin-activity-summary-col-device {
+    min-width: 5.8rem;
+}
+
+.admin-activity-summary-table .admin-activity-summary-col-type {
+    min-width: 5.2rem;
+}
+
+.admin-activity-summary-table .admin-activity-summary-col-visit {
+    min-width: 7.6rem;
+}
+
+.admin-activity-summary-table .admin-activity-summary-col-hits {
+    min-width: 5.6rem;
+}
+
+.admin-activity-summary-table .admin-activity-summary-col-minutes {
+    min-width: 7rem;
+}
+
 .admin-summary-row {
     cursor: pointer;
 }
@@ -1209,6 +1241,37 @@
 
     .admin-activity-filter-inline {
         grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.3rem;
+    }
+
+    .admin-table-wrap {
+        overflow-x: auto;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .admin-activity-summary-table {
+        width: max-content;
+        min-width: max-content;
+        table-layout: auto;
+    }
+
+    .admin-activity-summary-table th,
+    .admin-activity-summary-table td {
+        white-space: nowrap;
+        overflow: visible;
+        text-overflow: clip;
+    }
+
+    .admin-activity-summary-col-day,
+    .admin-activity-summary-col-time,
+    .admin-activity-summary-col-person,
+    .admin-activity-summary-col-device,
+    .admin-activity-summary-col-type,
+    .admin-activity-summary-col-visit,
+    .admin-activity-summary-col-hits,
+    .admin-activity-summary-col-minutes {
+        width: auto;
     }
 
     .admin-activity-blocks {
