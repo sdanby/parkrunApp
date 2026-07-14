@@ -7,6 +7,12 @@ import {
     updateFeedbackRequest,
     FeedbackRequestStatus
 } from '../api/backendAPI';
+import {
+    getErrorElementById,
+    getErrorViewportForWidth,
+    type ErrorPositionSpec,
+    type ErrorViewport
+} from '../config/layout/errorLayoutHelper';
 
 type RequestType = 'error' | 'suggestion';
 type RequestStatus = FeedbackRequestStatus;
@@ -128,6 +134,36 @@ const normalizeStatusSelect = (value: unknown): RequestStatusSelect => {
     return STATUS_LABELS[normalized] ? normalized : 'logged';
 };
 
+const getViewportWidth = (): number => {
+    if (typeof window === 'undefined') {
+        return 1024;
+    }
+    return window.innerWidth;
+};
+
+const toAbsoluteBoxStyle = (placement?: ErrorPositionSpec): React.CSSProperties => ({
+    position: 'absolute',
+    left: placement?.x ?? '0cm',
+    top: placement?.y ?? '0cm',
+    width: placement?.width ?? '100%',
+    height: placement?.height,
+    minHeight: placement?.minHeight,
+    maxHeight: placement?.maxHeight,
+    minWidth: placement?.minWidth,
+    maxWidth: placement?.maxWidth
+});
+
+const cmToNumber = (value?: string): number => {
+    if (!value) {
+        return 0;
+    }
+    const match = String(value).trim().match(/^(-?\d+(?:\.\d+)?)cm$/i);
+    return match ? Number(match[1]) : 0;
+};
+
+const getBottomCm = (placement?: ErrorPositionSpec): number => cmToNumber(placement?.y) + cmToNumber(placement?.height);
+const getRightCm = (placement?: ErrorPositionSpec): number => cmToNumber(placement?.x) + cmToNumber(placement?.width);
+
 const sortRequests = (items: LoggedRequest[]): LoggedRequest[] => [...items].sort((left, right) => {
     const statusDiff = (STATUS_RANK[left.status] ?? Number.MAX_SAFE_INTEGER) - (STATUS_RANK[right.status] ?? Number.MAX_SAFE_INTEGER);
     if (statusDiff !== 0) {
@@ -153,7 +189,18 @@ const Feedback: React.FC = () => {
     const [requests, setRequests] = useState<LoggedRequest[]>([]);
     const [requestSyncError, setRequestSyncError] = useState<string | null>(null);
     const [editingRequestId, setEditingRequestId] = useState<number | null>(null);
+    const [viewportWidth, setViewportWidth] = useState<number>(() => getViewportWidth());
     const canSubmitRequest = requestTitle.trim().length > 0 && requestDetails.trim().length > 0;
+
+    useEffect(() => {
+        if (typeof window === 'undefined') {
+            return undefined;
+        }
+
+        const handleResize = () => setViewportWidth(window.innerWidth);
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
 
     useEffect(() => {
         const loadRequests = async () => {
@@ -254,30 +301,97 @@ const Feedback: React.FC = () => {
         }
     };
 
+    const viewport: ErrorViewport = getErrorViewportForWidth(viewportWidth);
+    const getPlacement = (id: string): ErrorPositionSpec | undefined => getErrorElementById(id)?.[viewport];
+
+    const headerTitlePlacement = getPlacement('error.headerTitle');
+    const headerIntroPlacement = getPlacement('error.headerIntro');
+    const headerNotePlacement = getPlacement('error.headerNote');
+    const syncErrorPlacement = getPlacement('error.syncError');
+    const editBannerPlacement = getPlacement('error.editBanner');
+    const typeFieldPlacement = getPlacement('error.typeField');
+    const statusFieldPlacement = getPlacement('error.statusField');
+    const titleFieldPlacement = getPlacement('error.titleField');
+    const detailsFieldPlacement = getPlacement('error.detailsField');
+    const submitButtonPlacement = getPlacement('error.submitButton');
+    const clearButtonPlacement = getPlacement('error.clearButton');
+    const tableContainerPlacement = getPlacement('error.tableContainer');
+
+    const allPlacements = [
+        headerTitlePlacement,
+        headerIntroPlacement,
+        headerNotePlacement,
+        syncErrorPlacement,
+        editBannerPlacement,
+        typeFieldPlacement,
+        statusFieldPlacement,
+        titleFieldPlacement,
+        detailsFieldPlacement,
+        submitButtonPlacement,
+        clearButtonPlacement,
+        tableContainerPlacement
+    ];
+
+    const pageHeightCm = Math.max(...allPlacements.map((placement) => getBottomCm(placement)), 0) + 0.8;
+    const pageWidthCm = Math.max(...allPlacements.map((placement) => getRightCm(placement)), 0) + 0.8;
+    const formHeightCm = Math.max(
+        getBottomCm(typeFieldPlacement),
+        getBottomCm(statusFieldPlacement),
+        getBottomCm(titleFieldPlacement),
+        getBottomCm(detailsFieldPlacement),
+        getBottomCm(submitButtonPlacement),
+        getBottomCm(clearButtonPlacement)
+    ) + 0.2;
+
     return (
         <div className="page-content">
-            <div className="feedback-page">
-                <div className="feedback-page-header">
-                    <h2>Log an Error or Suggestion</h2>
-                    <p>
+            <div
+                className="feedback-page"
+                style={{
+                    position: 'relative',
+                    width: `${pageWidthCm}cm`,
+                    maxWidth: '100%',
+                    height: `${pageHeightCm}cm`,
+                    minHeight: `${pageHeightCm}cm`
+                }}
+            >
+                <div className="feedback-page-header" style={{ ...toAbsoluteBoxStyle(headerTitlePlacement), marginBottom: 0 }}>
+                    <h2 style={{ margin: 0 }}>Log an Error or Suggestion</h2>
+                </div>
+                <div style={toAbsoluteBoxStyle(headerIntroPlacement)}>
+                    <p style={{ margin: 0 }}>
                         Use this page to capture issues, data problems, and improvement ideas in one shared list.
                     </p>
-                    <p className="feedback-page-note">
+                </div>
+                <div className="feedback-page-note" style={toAbsoluteBoxStyle(headerNotePlacement)}>
+                    <p style={{ margin: 0 }}>
                         {isAdmin ? 'Admins can amend existing requests and update their status.' : 'You can log new requests. Existing requests can only be amended by admins.'}
                     </p>
                 </div>
 
-                {requestSyncError ? <p>{requestSyncError}</p> : null}
+                {requestSyncError ? (
+                    <p style={{ ...toAbsoluteBoxStyle(syncErrorPlacement), margin: 0, color: '#b91c1c' }}>{requestSyncError}</p>
+                ) : null}
                 {isAdmin && editingRequestId !== null ? (
-                    <div className="feedback-edit-banner">
+                    <div className="feedback-edit-banner" style={{ ...toAbsoluteBoxStyle(editBannerPlacement), boxSizing: 'border-box' }}>
                         <span>Editing request #{editingRequestId}</span>
                         <button type="button" className="feedback-cancel-button" onClick={resetEditor}>Cancel Edit</button>
                     </div>
                 ) : null}
 
-                <form className="home-request-form" onSubmit={handleSubmitRequest}>
-                    <div className="home-request-inline-row">
-                        <div className="home-request-row home-request-row-type" style={{ gridColumn: 1 }}>
+                <form
+                    className="home-request-form"
+                    onSubmit={handleSubmitRequest}
+                    style={{
+                        position: 'absolute',
+                        left: 0,
+                        top: 0,
+                        width: `${pageWidthCm}cm`,
+                        height: `${formHeightCm}cm`,
+                        marginBottom: 0
+                    }}
+                >
+                        <div className="home-request-row home-request-row-type" style={{ ...toAbsoluteBoxStyle(typeFieldPlacement), boxSizing: 'border-box' }}>
                             <label htmlFor="feedback-request-type">Type</label>
                             <select
                                 id="feedback-request-type"
@@ -289,7 +403,7 @@ const Feedback: React.FC = () => {
                             </select>
                         </div>
                         {isAdmin && editingRequestId !== null ? (
-                            <div className="home-request-row home-request-row-status" style={{ gridColumn: 2 }}>
+                            <div className="home-request-row home-request-row-status" style={{ ...toAbsoluteBoxStyle(statusFieldPlacement), boxSizing: 'border-box' }}>
                                 <label htmlFor="feedback-request-status">Status</label>
                                 <select
                                     id="feedback-request-status"
@@ -301,10 +415,8 @@ const Feedback: React.FC = () => {
                                     ))}
                                 </select>
                             </div>
-                        ) : (
-                            <div />
-                        )}
-                        <div className="home-request-row home-request-row-title" style={{ gridColumn: 3 }}>
+                        ) : null}
+                        <div className="home-request-row home-request-row-title" style={{ ...toAbsoluteBoxStyle(titleFieldPlacement), boxSizing: 'border-box' }}>
                             <label htmlFor="feedback-request-title">Title</label>
                             <input
                                 id="feedback-request-title"
@@ -315,8 +427,7 @@ const Feedback: React.FC = () => {
                                 required
                             />
                         </div>
-                    </div>
-                    <div className="home-request-row">
+                    <div className="home-request-row" style={{ ...toAbsoluteBoxStyle(detailsFieldPlacement), boxSizing: 'border-box' }}>
                         <label htmlFor="feedback-request-details">Details</label>
                         <textarea
                             id="feedback-request-details"
@@ -327,18 +438,55 @@ const Feedback: React.FC = () => {
                             required
                         />
                     </div>
-                    <div className="feedback-form-actions">
-                        <button type="submit" className="home-request-submit" disabled={!canSubmitRequest}>
+                        <button
+                            type="submit"
+                            className="home-request-submit"
+                            disabled={!canSubmitRequest}
+                            style={{
+                                ...toAbsoluteBoxStyle(submitButtonPlacement),
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                textAlign: 'center',
+                                whiteSpace: 'nowrap',
+                                lineHeight: 1,
+                                padding: '0 0.8rem'
+                            }}
+                        >
                             {editingRequestId !== null ? 'Update Request' : 'Log Request'}
                         </button>
                         {isAdmin && editingRequestId !== null ? (
-                            <button type="button" className="feedback-cancel-button" onClick={resetEditor}>Clear</button>
+                            <button
+                                type="button"
+                                className="feedback-cancel-button"
+                                onClick={resetEditor}
+                                style={{
+                                    ...toAbsoluteBoxStyle(clearButtonPlacement),
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    textAlign: 'center',
+                                    whiteSpace: 'nowrap',
+                                    lineHeight: 1,
+                                    padding: '0 0.8rem'
+                                }}
+                            >
+                                Clear
+                            </button>
                         ) : null}
-                    </div>
                 </form>
 
-                <div className="home-request-table-container">
-                  <div className="home-request-table-scroll">
+                <div
+                    className="home-request-table-container"
+                    style={{
+                        ...toAbsoluteBoxStyle(tableContainerPlacement),
+                        boxSizing: 'border-box',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        overflow: 'hidden'
+                    }}
+                >
+                  <div className="home-request-table-scroll" style={{ maxHeight: '100%', height: '100%', flex: '1 1 auto', overflowX: 'auto', overflowY: 'auto', width: '100%' }}>
                     <table className="home-request-table">
                         <thead>
                             <tr>

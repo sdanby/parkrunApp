@@ -1,18 +1,22 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import AthleteSearch from '../components/AthleteSearch';
 import NextEventProjectionTable, { type NextEventProjectionColumn, type NextEventProjectionRow } from '../components/NextEventProjectionTable';
+import NextExtSimilarTable, { type NextExtSimilarColumn, type NextExtSimilarTableRow } from '../components/NextExtSimilarTable';
 import {
     fetchAthleteBestSummary,
+    fetchNextExtSimilar,
     fetchAthleteRuns,
     fetchCurveRankReference,
     fetchEventOptions,
     fetchParkrunEvents,
     type CurveRankReferenceRow,
     type EventOption,
+    type NextExtSimilarRow,
     type ParkrunEventRow
 } from '../api/backendAPI';
 import {
+    getNextEventColumnsForView,
     getNextEventLayoutConfig,
     getNextEventElementById,
     getNextEventTableColumnByKey
@@ -28,6 +32,60 @@ type ModeKey = 'next_pr' | 'next_ext';
 type SortDir = 'asc' | 'desc';
 type RankMetricKey = 'B' | 'E' | 'AE' | 'ES' | 'AES';
 type CurveRankReferenceType = RankMetricKey;
+
+const normalizeRankMetricKey = (value: unknown, fallback: RankMetricKey = 'AE'): RankMetricKey => {
+    const raw = String(value || '').trim().toUpperCase();
+    if (raw === '*') return 'B';
+    if (raw === 'B' || raw === 'E' || raw === 'AE' || raw === 'ES' || raw === 'AES') {
+        return raw;
+    }
+    return fallback;
+};
+
+const COURSE_ALL_VALUE = 'ALL';
+const AGE_GRADE_ALL_VALUE = 'ALL';
+const NEXT_EXT_AGE_GRADE_OPTIONS: readonly string[] = [
+    'JM10',
+    'JM11-14',
+    'JM15-17',
+    'SM18-19',
+    'SM20-24',
+    'SM25-29',
+    'SM30-34',
+    'VM35-39',
+    'VM40-44',
+    'VM45-49',
+    'VM50-54',
+    'VM55-59',
+    'VM60-64',
+    'VM65-69',
+    'VM70-74',
+    'VM75-79',
+    'VM80-84',
+    'VM85-89',
+    'VM90-94',
+    'VM95-99',
+    'VM100+',
+    'JW10',
+    'JW11-14',
+    'JW15-17',
+    'SW18-19',
+    'SW20-24',
+    'SW25-29',
+    'SW30-34',
+    'VW35-39',
+    'VW40-44',
+    'VW45-49',
+    'VW50-54',
+    'VW55-59',
+    'VW60-64',
+    'VW65-69',
+    'VW70-74',
+    'VW75-79',
+    'VW80-84',
+    'VW85-89',
+    'VW90-94'
+];
 
 type BestRankMetric = {
     metric: RankMetricKey;
@@ -75,6 +133,16 @@ const formatDateValue = (value: unknown): string => {
         return `${String(parsed.getUTCDate()).padStart(2, '0')}${monthNames[parsed.getUTCMonth()] || ''}${String(parsed.getUTCFullYear()).slice(-2)}`;
     }
     return raw;
+};
+
+const formatAgeGradeValue = (value: unknown): string => {
+    if (value === undefined || value === null || value === '') return '—';
+    const raw = String(value).trim();
+    if (!raw) return '—';
+    if (raw.includes('%')) return raw;
+    const numeric = Number(raw);
+    if (!Number.isFinite(numeric)) return raw;
+    return `${numeric.toFixed(1)}%`;
 };
 
 const secondsToTime = (seconds: number): string => {
@@ -426,6 +494,49 @@ const getCourseCode = (row: GenericRecord): string => {
     return String(pickField(row, ['event_code', 'eventCode']) ?? '').trim();
 };
 
+const getMostFrequentCourseCode = (runsToCheck: AthleteRecord[]): string => {
+    const summaryByCourse = new Map<string, { count: number; latestDateMs: number }>();
+
+    runsToCheck.forEach((row) => {
+        const courseCode = getCourseCode(row);
+        if (!courseCode) {
+            return;
+        }
+
+        const rowDateMs = getRowDateMs(row);
+        const current = summaryByCourse.get(courseCode);
+        if (!current) {
+            summaryByCourse.set(courseCode, {
+                count: 1,
+                latestDateMs: rowDateMs
+            });
+            return;
+        }
+
+        summaryByCourse.set(courseCode, {
+            count: current.count + 1,
+            latestDateMs: Math.max(current.latestDateMs, rowDateMs)
+        });
+    });
+
+    let selectedCode = '';
+    let selectedCount = -1;
+    let selectedLatestDateMs = -1;
+
+    summaryByCourse.forEach((summary, courseCode) => {
+        if (
+            summary.count > selectedCount
+            || (summary.count === selectedCount && summary.latestDateMs > selectedLatestDateMs)
+        ) {
+            selectedCode = courseCode;
+            selectedCount = summary.count;
+            selectedLatestDateMs = summary.latestDateMs;
+        }
+    });
+
+    return selectedCode;
+};
+
 const subtractMonthsUtc = (timeMs: number, months: number): number => {
     if (!Number.isFinite(timeMs) || timeMs <= 0) return 0;
     const date = new Date(timeMs);
@@ -659,6 +770,49 @@ const buildRankSummaryFromRunSet = (runsToRank: AthleteRecord[]): { display: str
     return buildRankSummaryFromRun(pickBestEventRun(runsToRank));
 };
 
+const buildRankSummaryFromMetricRunSet = (runsToRank: AthleteRecord[], metric: RankMetricKey): { display: string; metricLabel: string; metric: RankMetricKey | null; anchorRank: number | null; sourceRun: AthleteRecord | null } | null => {
+    if (runsToRank.length === 0) return null;
+
+    const metricDefinition = rankMetricDefinitions.find((definition) => definition.metric === metric);
+    if (!metricDefinition) return null;
+
+    const candidates = runsToRank
+        .map((run) => {
+            const rank = coerceNumber(pickField(run, metricDefinition.keys));
+            const metricSeconds = getMetricAdjustedSeconds(run, metric);
+            if (rank === null || metricSeconds === null) {
+                return null;
+            }
+            return {
+                run,
+                rank,
+                metricSeconds,
+                dateMs: getRowDateMs(run),
+            };
+        })
+        .filter((item): item is { run: AthleteRecord; rank: number; metricSeconds: number; dateMs: number } => Boolean(item));
+
+    if (candidates.length === 0) return null;
+
+    candidates.sort((left, right) => {
+        const leftRounded = Math.round(left.rank);
+        const rightRounded = Math.round(right.rank);
+        if (rightRounded !== leftRounded) return rightRounded - leftRounded;
+        if (right.rank !== left.rank) return right.rank - left.rank;
+        if (left.metricSeconds !== right.metricSeconds) return left.metricSeconds - right.metricSeconds;
+        return right.dateMs - left.dateMs;
+    });
+
+    const best = candidates[0];
+    return {
+        display: `${formatDisplayedRank(best.rank)} ${metricDefinition.label}`,
+        metricLabel: metricDefinition.label,
+        metric,
+        anchorRank: Math.round(best.rank),
+        sourceRun: best.run
+    };
+};
+
 const getCurveThresholdSecondsForScore = (rows: CurveRankReferenceRow[], score: number): number | null => {
     if (!Number.isFinite(score) || rows.length === 0) return null;
 
@@ -716,16 +870,37 @@ const NextEvent: React.FC = () => {
     const loggedInAthleteCode = typeof loggedInUser.athleteCode === 'string' && loggedInUser.athleteCode.trim()
         ? loggedInUser.athleteCode.trim()
         : '';
-    const loggedInDefaultCourseCode = typeof loggedInUser.defaultCourseCode === 'string' && loggedInUser.defaultCourseCode.trim()
-        ? loggedInUser.defaultCourseCode.trim()
-        : '';
     const loggedInDisplayName = typeof loggedInUser.displayName === 'string' && loggedInUser.displayName.trim()
         ? loggedInUser.displayName.trim()
         : '';
 
+    const initialMode: ModeKey = searchParams.get('mode') === 'next_ext' ? 'next_ext' : 'next_pr';
+    const initialCourseCode = String(searchParams.get('event_code') || '').trim();
+    const initialNextExtCourseCodes = (() => {
+        const raw = String(searchParams.get('course_code') || '').trim();
+        if (!raw) return [] as string[];
+        return raw
+            .split(',')
+            .map((value) => value.trim())
+            .filter((value, index, values) => value.length > 0 && value.toUpperCase() !== COURSE_ALL_VALUE && values.indexOf(value) === index);
+    })();
+    const initialNextExtAgeGroups = (() => {
+        const raw = String(searchParams.get('age_group') || '').trim();
+        if (!raw) return [] as string[];
+        return raw
+            .split(',')
+            .map((value) => String(value || '').trim().toUpperCase())
+            .filter((value, index, values) => value.length > 0 && value.toUpperCase() !== AGE_GRADE_ALL_VALUE && values.indexOf(value) === index);
+    })();
+
     const [selectedAthleteCode, setSelectedAthleteCode] = useState<string>(String(searchParams.get('athlete_code') || locationState.athleteCode || loggedInAthleteCode || ''));
-    const [selectedCourseCode, setSelectedCourseCode] = useState<string>(searchParams.get('event_code') || loggedInDefaultCourseCode);
-    const [mode, setMode] = useState<ModeKey>((searchParams.get('mode') === 'next_ext' ? 'next_ext' : 'next_pr'));
+    const [selectedCourseCode, setSelectedCourseCode] = useState<string>(initialCourseCode);
+    const [selectedNextExtCourseCodes, setSelectedNextExtCourseCodes] = useState<string[]>(initialNextExtCourseCodes);
+    const [nextExtCourseMenuOpen, setNextExtCourseMenuOpen] = useState<boolean>(false);
+    const [selectedNextExtAgeGrades, setSelectedNextExtAgeGrades] = useState<string[]>(initialNextExtAgeGroups);
+    const [nextExtAgeGradeMenuOpen, setNextExtAgeGradeMenuOpen] = useState<boolean>(false);
+    const [selectedNextExtAdjType, setSelectedNextExtAdjType] = useState<RankMetricKey>(() => normalizeRankMetricKey(searchParams.get('adj_type'), 'AE'));
+    const [mode, setMode] = useState<ModeKey>(initialMode);
     const [runs, setRuns] = useState<AthleteRecord[]>([]);
     const [profileRows, setProfileRows] = useState<GenericRecord[]>([]);
     const [eventOptions, setEventOptions] = useState<EventOption[]>([]);
@@ -740,14 +915,58 @@ const NextEvent: React.FC = () => {
     const [curveRankReferenceLatestVersion, setCurveRankReferenceLatestVersion] = useState<string>('');
     const [curveRankReferenceVersions, setCurveRankReferenceVersions] = useState<string[]>([]);
     const [curveLoading, setCurveLoading] = useState<boolean>(false);
+    const [nextExtRows, setNextExtRows] = useState<NextExtSimilarRow[]>([]);
+    const [nextExtPreferredAdjType, setNextExtPreferredAdjType] = useState<RankMetricKey | null>(null);
+    const [nextExtPreferredRankDisplay, setNextExtPreferredRankDisplay] = useState<string | null>(null);
+    const [nextExtPreferredExactRank, setNextExtPreferredExactRank] = useState<number | null>(null);
+    const [nextExtLoading, setNextExtLoading] = useState<boolean>(false);
+    const [nextExtError, setNextExtError] = useState<string | null>(null);
     const [loading, setLoading] = useState<boolean>(false);
     const [sortKey, setSortKey] = useState<string>('hardness_band');
     const [sortDir, setSortDir] = useState<SortDir>('desc');
     const [rankShift, setRankShift] = useState<number>(0);
+    const nextExtCourseMenuRef = useRef<HTMLDivElement | null>(null);
+    const nextExtAgeGradeMenuRef = useRef<HTMLDivElement | null>(null);
+    const previousAthleteCodeRef = useRef<string>(selectedAthleteCode);
+    const isAllCoursesSelected = mode === 'next_ext'
+        ? selectedNextExtCourseCodes.length === 0
+        : false;
+    const selectedNextExtCourseCodesKey = selectedNextExtCourseCodes.join(',');
+    const selectedNextExtAgeGradesKey = selectedNextExtAgeGrades.join(',');
 
     const sortedRuns = useMemo(() => {
         return [...runs].sort((a, b) => getRowDateMs(b) - getRowDateMs(a));
     }, [runs]);
+
+    const nextExtAdjTypeOptions = useMemo(() => rankMetricDefinitions.map((definition) => ({
+        value: definition.metric,
+        label: definition.label,
+    })), []);
+
+    const nextExtCourseSummary = useMemo(() => {
+        if (selectedNextExtCourseCodes.length === 0) {
+            return 'All courses';
+        }
+        const labelByCode = new Map(eventOptions.map((option) => [String(option.eventCode), option.eventName]));
+        const labels = selectedNextExtCourseCodes.map((code) => labelByCode.get(code) || code);
+        if (labels.length <= 2) {
+            return labels.join(', ');
+        }
+        return `${labels.slice(0, 2).join(', ')} +${labels.length - 2}`;
+    }, [eventOptions, selectedNextExtCourseCodes]);
+
+    const nextExtAgeGradeOptions = useMemo(() => [...NEXT_EXT_AGE_GRADE_OPTIONS], []);
+    const nextExtAgeGradeOptionSet = useMemo(() => new Set<string>(nextExtAgeGradeOptions), [nextExtAgeGradeOptions]);
+
+    const nextExtAgeGradeSummary = useMemo(() => {
+        if (selectedNextExtAgeGrades.length === 0) {
+            return 'All age grades';
+        }
+        if (selectedNextExtAgeGrades.length <= 2) {
+            return selectedNextExtAgeGrades.join(', ');
+        }
+        return `${selectedNextExtAgeGrades.slice(0, 2).join(', ')} +${selectedNextExtAgeGrades.length - 2}`;
+    }, [selectedNextExtAgeGrades]);
 
     const profileDisplayRankSummary = useMemo(() => getCurrentRankSummary(profileRows, sortedRuns, false), [profileRows, sortedRuns]);
     const profileEffectiveRankSummary = useMemo(() => getCurrentRankSummary(profileRows, sortedRuns, true), [profileRows, sortedRuns]);
@@ -779,7 +998,7 @@ const NextEvent: React.FC = () => {
 
     useEffect(() => {
         let cancelled = false;
-        if (!selectedAthleteCode) {
+        if (!selectedAthleteCode || mode === 'next_ext') {
             setRuns([]);
             setLoading(false);
             return () => {
@@ -816,11 +1035,11 @@ const NextEvent: React.FC = () => {
         return () => {
             cancelled = true;
         };
-    }, [selectedAthleteCode]);
+    }, [mode, selectedAthleteCode]);
 
     useEffect(() => {
         let cancelled = false;
-        if (!selectedAthleteCode) {
+        if (!selectedAthleteCode || mode === 'next_ext') {
             setProfileRows([]);
             return () => {
                 cancelled = true;
@@ -844,6 +1063,70 @@ const NextEvent: React.FC = () => {
         return () => {
             cancelled = true;
         };
+    }, [mode, selectedAthleteCode]);
+
+    useEffect(() => {
+        let cancelled = false;
+        if (!selectedAthleteCode || mode !== 'next_ext' || curveRankReferenceOpen) {
+            if (!selectedAthleteCode) {
+                setNextExtRows([]);
+            }
+            if (!selectedAthleteCode) {
+                setNextExtPreferredAdjType(null);
+                setNextExtPreferredRankDisplay(null);
+                setNextExtPreferredExactRank(null);
+            }
+            setNextExtError(null);
+            setNextExtLoading(false);
+            return () => {
+                cancelled = true;
+            };
+        }
+
+        const loadNextExtRows = async () => {
+            try {
+                setNextExtLoading(true);
+                setNextExtError(null);
+                const payload = await fetchNextExtSimilar(
+                    selectedAthleteCode,
+                    10,
+                    10,
+                    selectedNextExtCourseCodes.length > 0 ? selectedNextExtCourseCodes : undefined,
+                    selectedNextExtAgeGrades.length > 0 ? selectedNextExtAgeGrades : undefined,
+                    selectedNextExtAdjType
+                );
+
+                if (!cancelled) {
+                    setNextExtRows(Array.isArray(payload?.rows) ? payload.rows : []);
+                    setNextExtPreferredAdjType((payload?.selectedPreferredAdjType as RankMetricKey | null | undefined) ?? null);
+                    setNextExtPreferredRankDisplay(String(payload?.selectedPreferredRankDisplay || '').trim() || null);
+                    setNextExtPreferredExactRank(typeof payload?.selectedPreferredExactRank === 'number' ? payload.selectedPreferredExactRank : null);
+                }
+            } catch (_err) {
+                if (!cancelled) {
+                    setNextExtRows([]);
+                    setNextExtPreferredAdjType(null);
+                    setNextExtPreferredRankDisplay(null);
+                    setNextExtPreferredExactRank(null);
+                    setNextExtError('Unable to load similar participants right now.');
+                }
+            } finally {
+                if (!cancelled) {
+                    setNextExtLoading(false);
+                }
+            }
+        };
+
+        loadNextExtRows();
+        return () => {
+            cancelled = true;
+        };
+    }, [curveRankReferenceOpen, mode, selectedAthleteCode, selectedNextExtAdjType, selectedNextExtAgeGrades, selectedNextExtCourseCodes]);
+
+    useEffect(() => {
+        setNextExtPreferredAdjType(null);
+        setNextExtPreferredRankDisplay(null);
+        setNextExtPreferredExactRank(null);
     }, [selectedAthleteCode]);
 
     useEffect(() => {
@@ -851,12 +1134,77 @@ const NextEvent: React.FC = () => {
     }, [selectedAthleteCode, mode]);
 
     useEffect(() => {
+        if (mode === 'next_ext') {
+            previousAthleteCodeRef.current = selectedAthleteCode;
+            return;
+        }
+        if (previousAthleteCodeRef.current === selectedAthleteCode) {
+            return;
+        }
+        previousAthleteCodeRef.current = selectedAthleteCode;
+        setSelectedCourseCode('');
+    }, [mode, selectedAthleteCode]);
+
+    useEffect(() => {
+        setNextExtCourseMenuOpen(false);
+        setNextExtAgeGradeMenuOpen(false);
+    }, [mode]);
+
+    useEffect(() => {
+        if (!nextExtCourseMenuOpen) {
+            return undefined;
+        }
+
+        const handlePointerDown = (event: MouseEvent) => {
+            const menuRoot = nextExtCourseMenuRef.current;
+            if (!menuRoot) {
+                return;
+            }
+            const target = event.target;
+            if (target instanceof Node && !menuRoot.contains(target)) {
+                setNextExtCourseMenuOpen(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handlePointerDown);
+        return () => {
+            document.removeEventListener('mousedown', handlePointerDown);
+        };
+    }, [nextExtCourseMenuOpen]);
+
+    useEffect(() => {
+        if (!nextExtAgeGradeMenuOpen) {
+            return undefined;
+        }
+
+        const handlePointerDown = (event: MouseEvent) => {
+            const menuRoot = nextExtAgeGradeMenuRef.current;
+            if (!menuRoot) {
+                return;
+            }
+            const target = event.target;
+            if (target instanceof Node && !menuRoot.contains(target)) {
+                setNextExtAgeGradeMenuOpen(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handlePointerDown);
+        return () => {
+            document.removeEventListener('mousedown', handlePointerDown);
+        };
+    }, [nextExtAgeGradeMenuOpen]);
+
+    useEffect(() => {
+        setSelectedNextExtAgeGrades((current) => current.filter((value) => nextExtAgeGradeOptionSet.has(value)));
+    }, [nextExtAgeGradeOptionSet]);
+
+    useEffect(() => {
         setCurveRankReferenceOpen(false);
     }, [selectedAthleteCode, selectedCourseCode]);
 
     useEffect(() => {
         let cancelled = false;
-        if (!selectedCourseCode) {
+        if (mode === 'next_ext' || !selectedCourseCode) {
             setCourseEvents([]);
             return () => {
                 cancelled = true;
@@ -880,9 +1228,15 @@ const NextEvent: React.FC = () => {
         return () => {
             cancelled = true;
         };
-    }, [selectedCourseCode]);
+    }, [mode, selectedCourseCode]);
 
     const currentAthleteName = useMemo(() => {
+        if (mode === 'next_ext') {
+            const selectedNextExtName = String(nextExtRows.find((row) => Boolean(row.is_selected))?.athlete_name || '').trim();
+            if (selectedNextExtName) {
+                return selectedNextExtName;
+            }
+        }
         const latestRun = sortedRuns[0] ?? null;
         const runName = latestRun
             ? String(pickField(latestRun, ['athlete_name', 'name', 'display_name']) ?? '').trim()
@@ -898,18 +1252,23 @@ const NextEvent: React.FC = () => {
             return loggedInDisplayName;
         }
         return '';
-    }, [locationState.athleteName, loggedInAthleteCode, loggedInDisplayName, searchParams, selectedAthleteCode, sortedRuns]);
+    }, [locationState.athleteName, loggedInAthleteCode, loggedInDisplayName, mode, nextExtRows, searchParams, selectedAthleteCode, sortedRuns]);
 
     useEffect(() => {
-        if (selectedCourseCode || sortedRuns.length === 0) {
+        if (mode === 'next_ext' || sortedRuns.length === 0) {
             return;
         }
-        const latestRun = sortedRuns[0];
-        const latestCourseCode = getCourseCode(latestRun);
-        if (latestCourseCode) {
-            setSelectedCourseCode(latestCourseCode);
+
+        const availableCourseCodes = new Set(sortedRuns.map((row) => getCourseCode(row)).filter(Boolean));
+        if (selectedCourseCode && availableCourseCodes.has(selectedCourseCode)) {
+            return;
         }
-    }, [selectedCourseCode, sortedRuns]);
+
+        const mostFrequentCourseCode = getMostFrequentCourseCode(sortedRuns);
+        if (mostFrequentCourseCode) {
+            setSelectedCourseCode(mostFrequentCourseCode);
+        }
+    }, [mode, selectedCourseCode, sortedRuns]);
 
     useEffect(() => {
         const params = new URLSearchParams(location.search);
@@ -923,10 +1282,25 @@ const NextEvent: React.FC = () => {
         } else {
             params.delete('athlete_name');
         }
-        if (selectedCourseCode) {
+        if (mode !== 'next_ext' && selectedCourseCode) {
             params.set('event_code', selectedCourseCode);
         } else {
             params.delete('event_code');
+        }
+        if (mode === 'next_ext' && selectedNextExtCourseCodes.length > 0) {
+            params.set('course_code', selectedNextExtCourseCodes.join(','));
+        } else {
+            params.delete('course_code');
+        }
+        if (mode === 'next_ext' && selectedNextExtAgeGrades.length > 0) {
+            params.set('age_group', selectedNextExtAgeGrades.join(','));
+        } else {
+            params.delete('age_group');
+        }
+        if (mode === 'next_ext') {
+            params.set('adj_type', selectedNextExtAdjType);
+        } else {
+            params.delete('adj_type');
         }
         params.set('mode', mode);
         const nextSearch = params.toString();
@@ -942,14 +1316,42 @@ const NextEvent: React.FC = () => {
         if (nextSearch !== currentSearch || stateNeedsUpdate) {
             navigate({ pathname: location.pathname, search: nextSearch ? `?${nextSearch}` : '' }, { replace: true, state: nextState });
         }
-    }, [currentAthleteName, location.pathname, location.search, locationState, mode, navigate, selectedAthleteCode, selectedCourseCode]);
+    }, [currentAthleteName, isAllCoursesSelected, location.pathname, location.search, locationState, mode, navigate, selectedAthleteCode, selectedCourseCode, selectedNextExtAdjType, selectedNextExtAgeGrades, selectedNextExtAgeGradesKey, selectedNextExtCourseCodes, selectedNextExtCourseCodesKey]);
+
+    const toggleNextExtCourseCode = (courseCode: string) => {
+        setSelectedNextExtCourseCodes((current) => {
+            if (!courseCode || courseCode === COURSE_ALL_VALUE) {
+                return [];
+            }
+            if (current.includes(courseCode)) {
+                return current.filter((value) => value !== courseCode);
+            }
+            return [...current, courseCode];
+        });
+    };
+
+    const toggleNextExtAgeGrade = (ageGrade: string) => {
+        setSelectedNextExtAgeGrades((current) => {
+            if (!ageGrade || ageGrade === AGE_GRADE_ALL_VALUE) {
+                return [];
+            }
+            if (current.includes(ageGrade)) {
+                return current.filter((value) => value !== ageGrade);
+            }
+            return [...current, ageGrade];
+        });
+    };
 
     const selectedCourseRuns = useMemo(() => {
+        if (mode === 'next_ext') {
+            return sortedRuns;
+        }
+
         if (!selectedCourseCode) {
             return sortedRuns;
         }
         return sortedRuns.filter((row) => getCourseCode(row) === selectedCourseCode);
-    }, [selectedCourseCode, sortedRuns]);
+    }, [mode, selectedCourseCode, sortedRuns]);
 
     const bestRun = useMemo(() => {
         const candidates = selectedCourseRuns.length > 0 ? selectedCourseRuns : sortedRuns;
@@ -968,10 +1370,35 @@ const NextEvent: React.FC = () => {
     }, [selectedCourseRuns]);
 
     const currentRankSummary = useMemo(() => {
+        if (mode === 'next_ext') {
+            if (nextExtPreferredRankDisplay || nextExtPreferredAdjType || nextExtPreferredExactRank !== null) {
+                return {
+                    display: nextExtPreferredRankDisplay || '--',
+                    metricLabel: rankMetricDefinitions.find((definition) => definition.metric === (nextExtPreferredAdjType || selectedNextExtAdjType))?.label || 'AE',
+                    metric: (nextExtPreferredAdjType || selectedNextExtAdjType || 'AE') as RankMetricKey,
+                    anchorRank: nextExtPreferredExactRank,
+                    sourceRun: null
+                };
+            }
+            const selectedNextExtRow = nextExtRows.find((row) => Boolean(row.is_selected)) ?? null;
+            if (selectedNextExtRow) {
+                return {
+                    display: String(selectedNextExtRow.rank_display || '').trim() || '--',
+                    metricLabel: String(selectedNextExtRow.rank_suffix || '').trim() || 'AE',
+                    metric: (selectedNextExtRow.rank_metric || selectedNextExtAdjType || 'AE') as RankMetricKey,
+                    anchorRank: coerceNumber(selectedNextExtRow.exact_rank ?? selectedNextExtRow.rank_score),
+                    sourceRun: null
+                };
+            }
+            const selectedCourseSummary = buildRankSummaryFromMetricRunSet(selectedCourseRuns, selectedNextExtAdjType);
+            const overallSummary = buildRankSummaryFromMetricRunSet(sortedRuns, selectedNextExtAdjType);
+            return selectedCourseSummary ?? overallSummary ?? profileEffectiveRankSummary;
+        }
+
         const selectedCourseSummary = buildRankSummaryFromRunSet(selectedCourseRuns);
         const overallSummary = buildRankSummaryFromRunSet(sortedRuns);
         return selectedCourseSummary ?? overallSummary ?? profileEffectiveRankSummary;
-    }, [profileEffectiveRankSummary, selectedCourseRuns, sortedRuns]);
+    }, [mode, nextExtPreferredAdjType, nextExtPreferredExactRank, nextExtPreferredRankDisplay, nextExtRows, profileEffectiveRankSummary, selectedCourseRuns, selectedNextExtAdjType, sortedRuns]);
 
     useEffect(() => {
         let cancelled = false;
@@ -1301,11 +1728,17 @@ const NextEvent: React.FC = () => {
     const athleteCodeElement = getNextEventElementById('nextEvent.athleteCode');
     const courseLabelElement = getNextEventElementById('nextEvent.courseLabel');
     const courseSelectElement = getNextEventElementById('nextEvent.courseSelect');
+    const nextExtAdjTypeLabelElement = getNextEventElementById('nextEvent.nextExtAdjTypeLabel');
+    const nextExtAdjTypeSelectElement = getNextEventElementById('nextEvent.nextExtAdjTypeSelect');
+    const ageGradeLabelElement = getNextEventElementById('nextEvent.ageGradeLabel');
+    const ageGradeSelectElement = getNextEventElementById('nextEvent.ageGradeSelect');
     const nextPrButtonElement = getNextEventElementById('nextEvent.nextPrButton');
     const nextExtButtonElement = getNextEventElementById('nextEvent.nextExtButton');
     const curveRankReferenceButtonElement = getNextEventElementById('nextEvent.curveRankReferenceButton');
     const summaryPanelElement = getNextEventElementById('nextEvent.summaryPanel');
     const tableContainerElement = getNextEventElementById('nextEvent.tableContainer');
+    const nextExtTableContainerElement = getNextEventElementById('nextEvent.nextExtTableContainer');
+    const nextExtTableTitleElement = getNextEventElementById('nextEvent.nextExtTableTitle');
     const curveRankReferenceContainerElement = getNextEventElementById('nextEvent.curveRankReferenceContainer');
     const rankLabelElement = getNextEventElementById('nextEvent.rankLabel');
     const rankValueElement = getNextEventElementById('nextEvent.rankValue');
@@ -1317,15 +1750,20 @@ const NextEvent: React.FC = () => {
     const athleteCodePlacement = athleteCodeElement?.[activePlacementKey];
     const courseLabelPlacement = courseLabelElement?.[activePlacementKey];
     const courseSelectPlacement = courseSelectElement?.[activePlacementKey];
+    const nextExtAdjTypeLabelPlacement = nextExtAdjTypeLabelElement?.[activePlacementKey];
+    const nextExtAdjTypeSelectPlacement = nextExtAdjTypeSelectElement?.[activePlacementKey];
+    const ageGradeLabelPlacement = ageGradeLabelElement?.[activePlacementKey];
+    const ageGradeSelectPlacement = ageGradeSelectElement?.[activePlacementKey];
     const nextPrButtonPlacement = nextPrButtonElement?.[activePlacementKey];
     const nextExtButtonPlacement = nextExtButtonElement?.[activePlacementKey];
     const curveRankReferenceButtonPlacement = curveRankReferenceButtonElement?.[activePlacementKey];
     const summaryPanelPlacement = summaryPanelElement?.[activePlacementKey];
     const tableContainerPlacement = tableContainerElement?.[activePlacementKey];
+    const nextExtTableContainerPlacement = nextExtTableContainerElement?.[activePlacementKey];
+    const nextExtTableTitlePlacement = nextExtTableTitleElement?.[activePlacementKey];
     const curveRankReferenceContainerPlacement = curveRankReferenceContainerElement?.[activePlacementKey];
     const rankLabelPlacement = rankLabelElement?.[activePlacementKey];
     const rankValuePlacement = rankValueElement?.[activePlacementKey];
-
     const curveRankReferenceVersionOptions = useMemo(() => {
         const values = curveRankReferenceVersions.slice();
         if (curveRankReferenceLatestVersion && !values.includes(curveRankReferenceLatestVersion)) {
@@ -1357,6 +1795,91 @@ const NextEvent: React.FC = () => {
         });
         return map;
     }, [activePlacementKey]);
+
+    const nextExtColumns = useMemo<NextExtSimilarColumn[]>(() => {
+        return getNextEventColumnsForView('next_ext').map((column) => ({
+            key: column.key,
+            label: column.headerName || column.name,
+            width: column?.[isMobile ? 'mobile' : 'laptop']?.width,
+            sticky: Boolean(column.sticky),
+            textAlign: column.style?.textAlign
+        }));
+    }, [isMobile]);
+
+    const selectedNextExtRow = useMemo(() => {
+        return nextExtRows.find((row) => Boolean(row.is_selected)) ?? null;
+    }, [nextExtRows]);
+
+    const nextExtTableRows = useMemo<NextExtSimilarTableRow[]>(() => {
+        return nextExtRows.map((row) => ({
+            athleteCode: String(row.athlete_code || ''),
+            athleteName: String(row.athlete_name || row.athlete_code || '—'),
+            rank: String(row.rank_display || '—'),
+            eventDate: String(row.event_date || '—'),
+            eventCode: String(row.best_course_code || ''),
+            eventName: String(row.best_course || ''),
+            time: formatTimeValue(row.actual_time_seconds) || '—',
+            ageGroup: String(row.age_group || '—'),
+            ageGrade: formatAgeGradeValue(row.age_grade),
+            course: String(row.best_course || '—'),
+            club: String(row.club || '—'),
+            adjTime: `${formatTimeValue(row.best_time_seconds) || '—'} ${String(row.rank_suffix || '').trim() || ''}`.trim(),
+            runsIn1Y: row.local_runs_1y === undefined || row.local_runs_1y === null ? '—' : String(row.local_runs_1y),
+            freqCourse: String(row.freq_course || '—'),
+            isSelected: Boolean(row.is_selected)
+        }));
+    }, [nextExtRows]);
+
+    const handleNextExtDateNavigation = (row: NextExtSimilarTableRow) => {
+        const athleteCode = String(row.athleteCode || '').trim();
+        if (!athleteCode) {
+            return;
+        }
+
+        const returnParams = new URLSearchParams(location.search || '');
+        if (selectedAthleteCode) {
+            returnParams.set('athlete_code', selectedAthleteCode);
+        }
+        if (currentAthleteName) {
+            returnParams.set('athlete_name', currentAthleteName);
+        }
+        returnParams.set('mode', 'next_ext');
+        returnParams.set('adj_type', selectedNextExtAdjType);
+        const returnSearch = returnParams.toString() ? `?${returnParams.toString()}` : '';
+
+        const params = new URLSearchParams();
+        params.set('athlete_code', athleteCode);
+        if (row.athleteName && row.athleteName !== '—') {
+            params.set('athlete_name', row.athleteName);
+        }
+        if (row.eventCode) {
+            params.set('event_code', row.eventCode);
+            params.set('source_event_code', row.eventCode);
+        }
+        if (row.eventName) {
+            params.set('source_event', row.eventName);
+        }
+        if (row.eventDate && row.eventDate !== '—') {
+            params.set('source_date', row.eventDate);
+        }
+
+        navigate(params.toString() ? `/athletes?${params.toString()}` : '/athletes', {
+            state: {
+                athleteCode,
+                athleteName: row.athleteName || undefined,
+                from: 'next-event',
+                returnTo: {
+                    pathname: '/next-event',
+                    search: returnSearch
+                },
+                sourceEvent: {
+                    eventCode: row.eventCode || undefined,
+                    eventName: row.eventName || undefined,
+                    eventDate: row.eventDate || undefined
+                }
+            }
+        });
+    };
 
     const nextEventSummaryEntries = useMemo(() => {
         const entries: Array<{
@@ -1401,7 +1924,9 @@ const NextEvent: React.FC = () => {
         return entries;
     }, [nextEventSummarySources]);
 
-    const currentRankDisplay = profileDisplayRankSummary.display || currentRankSummary.display;
+    const currentRankDisplay = mode === 'next_ext'
+        ? (nextExtPreferredRankDisplay || String(selectedNextExtRow?.rank_display || '').trim() || currentRankSummary.display || profileDisplayRankSummary.display)
+        : (profileDisplayRankSummary.display || currentRankSummary.display);
 
     const onHeaderActivate = (
         event: React.MouseEvent<HTMLTableCellElement> | React.KeyboardEvent<HTMLTableCellElement>,
@@ -1456,7 +1981,7 @@ const NextEvent: React.FC = () => {
     const nextCycleButtonLabel = curveRankReferenceOpen
         ? (nextPrButtonElement?.name || 'Next PR')
         : mode === 'next_pr'
-            ? (nextExtButtonElement?.name || 'Next Ext')
+            ? (nextExtButtonElement?.name || 'Partic. Match')
             : (curveRankReferenceButtonElement?.name || 'Rank');
 
     const handleNextEventCycle = () => {
@@ -1473,12 +1998,16 @@ const NextEvent: React.FC = () => {
         setCurveRankReferenceOpen(true);
     };
 
+    const activeTableContainerPlacement = mode === 'next_ext'
+        ? (nextExtTableContainerPlacement ?? tableContainerPlacement)
+        : tableContainerPlacement;
+
     return (
         <div className="athletes-page next-event-page" style={{ padding: isMobile ? '0.4rem 0 1rem' : '0.6rem 0 1rem' }}>
             <div
                 style={{
                     position: 'relative',
-                    minHeight: tableContainerPlacement?.y || (isMobile ? '3.4cm' : '3.1cm')
+                    minHeight: activeTableContainerPlacement?.y || (isMobile ? '3.4cm' : '3.1cm')
                 }}
             >
                 <button
@@ -1592,7 +2121,7 @@ const NextEvent: React.FC = () => {
                     {currentRankDisplay}
                 </div>
 
-                {renderConfigControlLabel(
+                {!curveRankReferenceOpen ? renderConfigControlLabel(
                     courseLabelElement,
                     'Course:',
                     'page-course',
@@ -1610,89 +2139,309 @@ const NextEvent: React.FC = () => {
                         pointerEvents: 'auto'
                     },
                     true
-                )}
+                ) : null}
 
-                <select
-                    value={selectedCourseCode}
-                    onChange={(event) => setSelectedCourseCode(event.target.value)}
-                    style={{
-                        position: 'absolute',
-                        left: courseSelectPlacement?.x ?? '3.6cm',
-                        top: courseSelectPlacement?.y ?? '1.25cm',
-                        width: courseSelectPlacement?.width ?? '6.6cm',
-                        minWidth: courseSelectPlacement?.width ?? '6.6cm',
-                        maxWidth: courseSelectPlacement?.width ?? '6.6cm',
-                        fontSize: '0.82rem',
-                        border: '1px solid #c7ced9',
-                        borderRadius: '8px',
-                        background: '#fff',
-                        color: '#1f2937',
-                        padding: '0.15rem 0.35rem'
-                    }}
-                >
-                    <option value="">Select course</option>
-                    {eventOptions.map((option) => (
-                        <option key={option.eventCode} value={option.eventCode}>{option.eventName}</option>
-                    ))}
-                </select>
-
-                <div
-                    style={{
-                        position: 'absolute',
-                        left: `calc(${courseSelectPlacement?.x ?? '3.6cm'} + ${courseSelectPlacement?.width ?? '6.6cm'} + 0.15cm)`,
-                        top: courseSelectPlacement?.y ?? '1.25cm',
-                        display: 'inline-flex',
-                        gap: '0.12rem',
-                        alignItems: 'center'
-                    }}
-                >
-                    <button
-                        type="button"
-                        onClick={() => setRankShift((current) => Math.min(100, current + 1))}
-                        aria-label="Shift rank range higher"
-                        title="Shift rank range higher"
+                {!curveRankReferenceOpen ? (mode === 'next_ext' ? (
+                    <>
+                        <div
+                            ref={nextExtCourseMenuRef}
+                            style={{
+                                position: 'absolute',
+                                left: courseSelectPlacement?.x ?? '3.6cm',
+                                top: courseSelectPlacement?.y ?? '1.25cm',
+                                width: courseSelectPlacement?.width ?? '6.6cm',
+                                minWidth: courseSelectPlacement?.width ?? '6.6cm',
+                                maxWidth: courseSelectPlacement?.width ?? '6.6cm',
+                                zIndex: 20
+                            }}
+                        >
+                            <button
+                                type="button"
+                                onClick={() => setNextExtCourseMenuOpen((current) => !current)}
+                                style={{
+                                    width: '100%',
+                                    fontSize: '0.82rem',
+                                    border: '1px solid #c7ced9',
+                                    borderRadius: '8px',
+                                    background: '#fff',
+                                    color: '#1f2937',
+                                    padding: '0.2rem 0.45rem',
+                                    boxSizing: 'border-box',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap',
+                                    textAlign: 'left',
+                                    cursor: 'pointer'
+                                }}
+                                title={nextExtCourseSummary}
+                            >
+                                {nextExtCourseSummary}
+                            </button>
+                            {nextExtCourseMenuOpen ? (
+                                <div
+                                    style={{
+                                        marginTop: '0.15rem',
+                                        border: '1px solid #c7ced9',
+                                        borderRadius: '8px',
+                                        background: '#fff',
+                                        boxShadow: '0 10px 20px rgba(0,0,0,0.12)',
+                                        padding: '0.35rem 0.45rem',
+                                        maxHeight: '6.4cm',
+                                        overflowY: 'auto'
+                                    }}
+                                >
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.8rem', fontWeight: 600, color: '#111827', marginBottom: '0.2rem' }}>
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedNextExtCourseCodes.length === 0}
+                                            onChange={() => toggleNextExtCourseCode(COURSE_ALL_VALUE)}
+                                        />
+                                        <span>All courses</span>
+                                    </label>
+                                    {eventOptions.map((option) => {
+                                        const checked = selectedNextExtCourseCodes.includes(String(option.eventCode));
+                                        return (
+                                            <label key={option.eventCode} style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.78rem', color: '#1f2937', marginBottom: '0.18rem' }}>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={checked}
+                                                    onChange={() => toggleNextExtCourseCode(String(option.eventCode))}
+                                                />
+                                                <span>{option.eventName}</span>
+                                            </label>
+                                        );
+                                    })}
+                                </div>
+                            ) : null}
+                        </div>
+                        {renderConfigControlLabel(
+                            nextExtAdjTypeLabelElement,
+                            'Adj Type:',
+                            'control-next-event-adj-type',
+                            {
+                                fontSize: nextExtAdjTypeLabelElement?.style?.fontSize ?? courseLabelElement?.style?.fontSize ?? '0.75rem',
+                                fontWeight: Number(nextExtAdjTypeLabelElement?.style?.fontWeight ?? courseLabelElement?.style?.fontWeight ?? 600),
+                                color: nextExtAdjTypeLabelElement?.style?.color ?? courseLabelElement?.style?.color ?? '#111827',
+                                lineHeight: Number(nextExtAdjTypeLabelElement?.style?.lineHeight ?? courseLabelElement?.style?.lineHeight ?? 0.9)
+                            },
+                            {
+                                position: 'absolute',
+                                left: nextExtAdjTypeLabelPlacement?.x ?? courseLabelPlacement?.x ?? '1.8cm',
+                                top: nextExtAdjTypeLabelPlacement?.y ?? `calc(${courseLabelPlacement?.y ?? '1.3cm'} + 0.72cm)`,
+                                display: 'inline-flex',
+                                pointerEvents: 'auto'
+                            },
+                            true
+                        )}
+                        <select
+                            value={selectedNextExtAdjType}
+                            onChange={(event) => setSelectedNextExtAdjType(event.target.value as RankMetricKey)}
+                            style={{
+                                position: 'absolute',
+                                left: nextExtAdjTypeSelectPlacement?.x ?? courseSelectPlacement?.x ?? '3.6cm',
+                                top: nextExtAdjTypeSelectPlacement?.y ?? `calc(${courseSelectPlacement?.y ?? '1.25cm'} + 0.68cm)`,
+                                width: nextExtAdjTypeSelectPlacement?.width ?? '2.1cm',
+                                minWidth: nextExtAdjTypeSelectPlacement?.width ?? '2.1cm',
+                                maxWidth: nextExtAdjTypeSelectPlacement?.width ?? '2.1cm',
+                                fontSize: '0.82rem',
+                                border: '1px solid #c7ced9',
+                                borderRadius: '8px',
+                                background: '#fff',
+                                color: '#1f2937',
+                                padding: '0.15rem 0.35rem'
+                            }}
+                        >
+                            {nextExtAdjTypeOptions.map((option) => (
+                                <option key={option.value} value={option.value}>{option.label}</option>
+                            ))}
+                        </select>
+                        {renderConfigControlLabel(
+                            ageGradeLabelElement,
+                            'Age grade:',
+                            'term-age-group',
+                            {
+                                fontSize: ageGradeLabelElement?.style?.fontSize ?? courseLabelElement?.style?.fontSize ?? '0.75rem',
+                                fontWeight: Number(ageGradeLabelElement?.style?.fontWeight ?? courseLabelElement?.style?.fontWeight ?? 600),
+                                color: ageGradeLabelElement?.style?.color ?? courseLabelElement?.style?.color ?? '#111827',
+                                lineHeight: Number(ageGradeLabelElement?.style?.lineHeight ?? courseLabelElement?.style?.lineHeight ?? 0.9)
+                            },
+                            {
+                                position: 'absolute',
+                                left: ageGradeLabelPlacement?.x ?? courseLabelPlacement?.x ?? '1.8cm',
+                                top: ageGradeLabelPlacement?.y ?? `calc(${courseLabelPlacement?.y ?? '1.3cm'} + 1.45cm)`,
+                                display: 'inline-flex',
+                                pointerEvents: 'auto'
+                            },
+                            true
+                        )}
+                        <div
+                            ref={nextExtAgeGradeMenuRef}
+                            style={{
+                                position: 'absolute',
+                                left: ageGradeSelectPlacement?.x ?? courseSelectPlacement?.x ?? '3.6cm',
+                                top: ageGradeSelectPlacement?.y ?? `calc(${courseSelectPlacement?.y ?? '1.25cm'} + 1.4cm)`,
+                                width: ageGradeSelectPlacement?.width ?? courseSelectPlacement?.width ?? '6.6cm',
+                                minWidth: ageGradeSelectPlacement?.width ?? courseSelectPlacement?.width ?? '6.6cm',
+                                maxWidth: ageGradeSelectPlacement?.width ?? courseSelectPlacement?.width ?? '6.6cm',
+                                zIndex: 20
+                            }}
+                        >
+                            <button
+                                type="button"
+                                onClick={() => setNextExtAgeGradeMenuOpen((current) => !current)}
+                                style={{
+                                    width: '100%',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between',
+                                    gap: '0.35rem',
+                                    fontSize: '0.82rem',
+                                    border: '1px solid #c7ced9',
+                                    borderRadius: '8px',
+                                    background: '#fff',
+                                    color: '#1f2937',
+                                    padding: '0.2rem 0.45rem',
+                                    boxSizing: 'border-box',
+                                    cursor: 'pointer'
+                                }}
+                                title={nextExtAgeGradeSummary}
+                            >
+                                <span
+                                    style={{
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis',
+                                        whiteSpace: 'nowrap',
+                                        textAlign: 'left',
+                                        flex: '1 1 auto'
+                                    }}
+                                >
+                                    {nextExtAgeGradeSummary}
+                                </span>
+                                <span aria-hidden="true" style={{ flex: '0 0 auto', fontSize: '0.72rem', color: '#4b5563' }}>▼</span>
+                            </button>
+                            {nextExtAgeGradeMenuOpen ? (
+                                <div
+                                    style={{
+                                        marginTop: '0.15rem',
+                                        border: '1px solid #c7ced9',
+                                        borderRadius: '8px',
+                                        background: '#fff',
+                                        boxShadow: '0 10px 20px rgba(0,0,0,0.12)',
+                                        padding: '0.35rem 0.45rem',
+                                        maxHeight: '6.4cm',
+                                        overflowY: 'auto'
+                                    }}
+                                >
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.8rem', fontWeight: 600, color: '#111827', marginBottom: '0.2rem' }}>
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedNextExtAgeGrades.length === 0}
+                                            onChange={() => toggleNextExtAgeGrade(AGE_GRADE_ALL_VALUE)}
+                                        />
+                                        <span>All age grades</span>
+                                    </label>
+                                    {nextExtAgeGradeOptions.map((option) => {
+                                        const checked = selectedNextExtAgeGrades.includes(option);
+                                        return (
+                                            <label key={option} style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.78rem', color: '#1f2937', marginBottom: '0.18rem' }}>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={checked}
+                                                    onChange={() => toggleNextExtAgeGrade(option)}
+                                                />
+                                                <span>{option}</span>
+                                            </label>
+                                        );
+                                    })}
+                                </div>
+                            ) : null}
+                        </div>
+                    </>
+                ) : (
+                    <select
+                        value={selectedCourseCode}
+                        onChange={(event) => setSelectedCourseCode(event.target.value)}
                         style={{
-                            width: '0.52cm',
-                            height: '0.52cm',
-                            border: '1px solid #9ca3af',
-                            borderRadius: '6px',
+                            position: 'absolute',
+                            left: courseSelectPlacement?.x ?? '3.6cm',
+                            top: courseSelectPlacement?.y ?? '1.25cm',
+                            width: courseSelectPlacement?.width ?? '6.6cm',
+                            minWidth: courseSelectPlacement?.width ?? '6.6cm',
+                            maxWidth: courseSelectPlacement?.width ?? '6.6cm',
+                            fontSize: '0.82rem',
+                            border: '1px solid #c7ced9',
+                            borderRadius: '8px',
                             background: '#fff',
-                            color: '#111827',
-                            cursor: 'pointer',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: '0.78rem',
-                            lineHeight: 1,
-                            padding: 0
+                            color: '#1f2937',
+                            padding: '0.15rem 0.35rem'
                         }}
                     >
-                        ←
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => setRankShift((current) => Math.max(-100, current - 1))}
-                        aria-label="Shift rank range lower"
-                        title="Shift rank range lower"
+                        <option value="" disabled>Select course</option>
+                        {eventOptions.map((option) => (
+                            <option key={option.eventCode} value={option.eventCode}>{option.eventName}</option>
+                        ))}
+                    </select>
+                )) : null}
+
+                {mode === 'next_pr' && !curveRankReferenceOpen ? (
+                    <div
                         style={{
-                            width: '0.52cm',
-                            height: '0.52cm',
-                            border: '1px solid #9ca3af',
-                            borderRadius: '6px',
-                            background: '#fff',
-                            color: '#111827',
-                            cursor: 'pointer',
+                            position: 'absolute',
+                            left: `calc(${courseSelectPlacement?.x ?? '3.6cm'} + ${courseSelectPlacement?.width ?? '6.6cm'} + 0.15cm)`,
+                            top: courseSelectPlacement?.y ?? '1.25cm',
                             display: 'inline-flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: '0.78rem',
-                            lineHeight: 1,
-                            padding: 0
+                            gap: '0.12rem',
+                            alignItems: 'center'
                         }}
                     >
-                        →
-                    </button>
-                </div>
+                        <button
+                            type="button"
+                            onClick={() => setRankShift((current) => Math.min(100, current + 1))}
+                            aria-label="Shift rank range higher"
+                            title="Shift rank range higher"
+                            style={{
+                                width: '0.52cm',
+                                height: '0.52cm',
+                                border: '1px solid #9ca3af',
+                                borderRadius: '6px',
+                                background: '#fff',
+                                color: '#111827',
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: '0.78rem',
+                                lineHeight: 1,
+                                padding: 0
+                            }}
+                        >
+                            ←
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setRankShift((current) => Math.max(-100, current - 1))}
+                            aria-label="Shift rank range lower"
+                            title="Shift rank range lower"
+                            style={{
+                                width: '0.52cm',
+                                height: '0.52cm',
+                                border: '1px solid #9ca3af',
+                                borderRadius: '6px',
+                                background: '#fff',
+                                color: '#111827',
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: '0.78rem',
+                                lineHeight: 1,
+                                padding: 0
+                            }}
+                        >
+                            →
+                        </button>
+                    </div>
+                ) : null}
 
                 <button
                     type="button"
@@ -1717,7 +2466,43 @@ const NextEvent: React.FC = () => {
                     {nextCycleButtonLabel}
                 </button>
 
-                {summaryPanelPlacement ? (
+                {mode === 'next_ext' && !curveRankReferenceOpen && nextExtTableTitlePlacement ? (
+                    <div
+                        style={{
+                            position: 'absolute',
+                            left: nextExtTableTitlePlacement.x,
+                            top: nextExtTableTitlePlacement.y,
+                            fontSize: nextExtTableTitleElement?.style?.fontSize ?? '1.2rem',
+                            fontWeight: Number(nextExtTableTitleElement?.style?.fontWeight ?? 700),
+                            color: nextExtTableTitleElement?.style?.color ?? '#111827',
+                            lineHeight: Number(nextExtTableTitleElement?.style?.lineHeight ?? 1.1),
+                            zIndex: 5,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.35rem'
+                        }}
+                    >
+                        <span>{nextExtTableTitleElement?.name || 'Participant Match Analysis'}</span>
+                        <button
+                            type="button"
+                            className="top-bar-help-btn"
+                            aria-label="Participant Match Analysis help"
+                            title="Participant Match Analysis help"
+                            onClick={(event) => {
+                                const rect = (event.currentTarget as HTMLButtonElement).getBoundingClientRect();
+                                requestUnifiedHelp('page-next-event-participant-match-analysis', {
+                                    x: rect.left,
+                                    y: rect.bottom
+                                }, 'Participant Match Analysis');
+                            }}
+                            style={{ flexShrink: 0 }}
+                        >
+                            📖
+                        </button>
+                    </div>
+                ) : null}
+
+                {mode === 'next_pr' && summaryPanelPlacement ? (
                     <div
                         style={{
                             position: 'absolute',
@@ -1916,26 +2701,51 @@ const NextEvent: React.FC = () => {
                 <div
                     style={{
                         position: 'relative',
-                        marginTop: tableContainerPlacement?.y ?? (isMobile ? '3.4cm' : '3.1cm'),
-                        marginLeft: tableContainerPlacement?.x ?? '0cm',
-                        width: tableContainerPlacement?.width
-                            ? `min(${tableContainerPlacement.width}, calc(100vw - ${tableContainerPlacement?.x ?? '0cm'} - 0.6cm))`
-                            : `calc(100vw - ${tableContainerPlacement?.x ?? '0cm'} - 0.6cm)`,
-                        maxWidth: `calc(100vw - ${tableContainerPlacement?.x ?? '0cm'} - 0.6cm)`,
-                        height: tableContainerPlacement?.height,
-                        maxHeight: tableContainerPlacement?.height,
+                        marginTop: activeTableContainerPlacement?.y ?? (isMobile ? '3.4cm' : '3.1cm'),
+                        marginLeft: activeTableContainerPlacement?.x ?? '0cm',
+                        width: activeTableContainerPlacement?.width
+                            ? `min(${activeTableContainerPlacement.width}, calc(100vw - ${activeTableContainerPlacement?.x ?? '0cm'} - 0.6cm))`
+                            : `calc(100vw - ${activeTableContainerPlacement?.x ?? '0cm'} - 0.6cm)`,
+                        maxWidth: `calc(100vw - ${activeTableContainerPlacement?.x ?? '0cm'} - 0.6cm)`,
+                        height: activeTableContainerPlacement?.height,
+                        maxHeight: activeTableContainerPlacement?.height,
                         boxSizing: 'border-box',
                         overflow: 'hidden'
                     }}
                 >
-                    {sortedProjectionRows.length > 0 ? (
+                    {mode === 'next_ext' ? (
+                        nextExtLoading ? (
+                            <div className="athlete-empty-state">
+                                <h2>Loading similar participants</h2>
+                                <p>Collecting runners around this participant's adjusted time.</p>
+                            </div>
+                        ) : nextExtError ? (
+                            <div className="athlete-empty-state">
+                                <h2>Next Ext unavailable</h2>
+                                <p>{nextExtError}</p>
+                            </div>
+                        ) : nextExtTableRows.length > 0 ? (
+                            <NextExtSimilarTable
+                                columns={nextExtColumns}
+                                rows={nextExtTableRows}
+                                onSelectAthlete={(athleteCode) => setSelectedAthleteCode(athleteCode)}
+                                onSelectEventDate={handleNextExtDateNavigation}
+                                tableMinWidth={activeTableContainerPlacement?.width}
+                            />
+                        ) : (
+                            <div className="athlete-empty-state">
+                                <h2>Next Ext unavailable</h2>
+                                <p>Select a participant with a usable 1Y best rank to build the similar-runners slice.</p>
+                            </div>
+                        )
+                    ) : sortedProjectionRows.length > 0 ? (
                         <NextEventProjectionTable
                             columns={projectionColumns}
                             rows={sortedProjectionRows}
                             sortKey={sortKey}
                             sortDir={sortDir}
                             onHeaderActivate={onHeaderActivate}
-                            tableMinWidth={tableContainerPlacement?.width}
+                            tableMinWidth={activeTableContainerPlacement?.width}
                         />
                     ) : (
                         <div className="athlete-empty-state">

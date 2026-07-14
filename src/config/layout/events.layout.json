@@ -273,7 +273,10 @@
       "total_runs",
       "last_event_code_count_long",
       "event_eligible_appearances",
-      "distinct_courses_long"
+      "distinct_courses_long",
+      "tourist_flag",
+      "super_tourist",
+      "returner"
     ],
     "allTimeAdjustments": [
       "position",
@@ -455,6 +458,36 @@
       "helpTarget": "term-other-event",
       "laptop": { "width": "3.0cm" },
       "mobile": { "width": "2.5cm" }
+    },
+    {
+      "key": "tourist_flag",
+      "type": "table",
+      "name": "col13",
+      "headerName": "Tourist",
+      "helpTarget": "term-tourists",
+      "style": { "textAlign": "center" },
+      "laptop": { "width": "2.0cm" },
+      "mobile": { "width": "2.0cm" }
+    },
+    {
+      "key": "super_tourist",
+      "type": "table",
+      "name": "col14",
+      "headerName": "Super tourist",
+      "helpTarget": "term-super-tourists",
+      "style": { "textAlign": "center" },
+      "laptop": { "width": "3.1cm" },
+      "mobile": { "width": "3.1cm" }
+    },
+    {
+      "key": "returner",
+      "type": "table",
+      "name": "col15",
+      "headerName": "Returner",
+      "helpTarget": "term-returners",
+      "style": { "textAlign": "center" },
+      "laptop": { "width": "2.3cm" },
+      "mobile": { "width": "2.3cm" }
     },
     {
       "key": "season_adj_time",

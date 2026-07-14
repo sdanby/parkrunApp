@@ -18,14 +18,14 @@
       "type": "table",
       "name": "Main Body",
       "laptop": { "x": "0.4cm", "y": "0.0cm", "width": "18.0cm", "height": "13.8cm" },
-      "mobile": { "x": "0.2cm", "y": "0.0cm", "width": "10.5cm", "height": "13.8cm" }
+      "mobile": { "x": "0.2cm", "y": "0.0cm", "width": "10.5cm", "height": "13.3cm" }
     },
     {
       "id": "chat.textRectangle",
       "type": "field",
       "name": "Text Rectangle",
       "laptop": { "x": "0.4cm", "y": "14.0cm", "width": "18.0cm", "height": "4.5cm" },
-      "mobile": { "x": "0.2cm", "y": "14.0cm", "width": "10.5cm", "height": "5.0cm" }
+      "mobile": { "x": "0.2cm", "y": "13.5cm", "width": "10.5cm", "height": "5.0cm" }
     }
   ]
 }

@@ -56,7 +56,7 @@
   box-sizing: border-box;
   height: calc(100vh - 110px);
   width: 66.6667%;
-  overflow-y: auto;
+  overflow: hidden;
   padding-right: 0.5rem;
 }
 
@@ -350,8 +350,7 @@
 
   .home-top-region,
   .home-bottom-region,
-  .home-request-table-container,
-  .feedback-page {
+  .home-request-table-container {
     overflow-y: scroll;
     scrollbar-width: thin;
     scrollbar-color: #b5bcc6 #eef1f5;
@@ -359,23 +358,20 @@
 
   .home-top-region::-webkit-scrollbar,
   .home-bottom-region::-webkit-scrollbar,
-  .home-request-table-container::-webkit-scrollbar,
-  .feedback-page::-webkit-scrollbar {
+  .home-request-table-container::-webkit-scrollbar {
     width: 8px;
   }
 
   .home-top-region::-webkit-scrollbar-track,
   .home-bottom-region::-webkit-scrollbar-track,
-  .home-request-table-container::-webkit-scrollbar-track,
-  .feedback-page::-webkit-scrollbar-track {
+  .home-request-table-container::-webkit-scrollbar-track {
     background: #eef1f5;
     border-radius: 999px;
   }
 
   .home-top-region::-webkit-scrollbar-thumb,
   .home-bottom-region::-webkit-scrollbar-thumb,
-  .home-request-table-container::-webkit-scrollbar-thumb,
-  .feedback-page::-webkit-scrollbar-thumb {
+  .home-request-table-container::-webkit-scrollbar-thumb {
     background: #b5bcc6;
     border-radius: 999px;
   }

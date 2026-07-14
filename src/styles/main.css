@@ -1121,6 +1121,16 @@ h1, h2, h3 {
     white-space: normal;
     max-width: 26rem;
 }
+
+.next-ext-similar-table-wrapper {
+    border-color: #cfd6df;
+    box-shadow: none;
+}
+
+.next-ext-similar-table th,
+.next-ext-similar-table td {
+    border-color: #d6dde6;
+}
 .athlete-runs-empty {
     padding: 1rem;
     text-align: center;

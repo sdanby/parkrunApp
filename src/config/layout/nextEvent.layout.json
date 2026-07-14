@@ -88,19 +88,63 @@
         "lineHeight": 0.9
       },
       "laptop": { "x": "2.4cm", "y": "1.7cm" },
-      "mobile": { "x": "2.4cm", "y": "1.7cm" }
+      "mobile": { "x": "1.8cm", "y": "1.7cm" }
     },
     {
       "id": "nextEvent.courseSelect",
       "type": "select",
       "name": "Course Select",
       "laptop": { "x": "4.3cm", "y": "1.65cm", "width": "6.6cm" },
-      "mobile": { "x": "4.3cm", "y": "1.65cm", "width": "4.8cm" }
+      "mobile": { "x": "3.7cm", "y": "1.65cm", "width": "4.8cm" }
+    },
+    {
+      "id": "nextEvent.nextExtAdjTypeLabel",
+      "type": "label",
+      "name": "Adj Type:",
+      "helpTarget": "control-next-event-adj-type",
+      "helpLabel": true,
+      "style": {
+        "fontSize": "0.80rem",
+        "fontWeight": 600,
+        "color": "#111827",
+        "lineHeight": 0.9
+      },
+      "laptop": { "x": "2.2cm", "y": "2.4cm" },
+      "mobile": { "x": "1.55cm", "y": "2.4cm" }
+    },
+    {
+      "id": "nextEvent.nextExtAdjTypeSelect",
+      "type": "select",
+      "name": "Adj Type Select",
+      "laptop": { "x": "4.3cm", "y": "2.33cm", "width": "2.1cm" },
+      "mobile": { "x": "3.7cm", "y": "2.33cm", "width": "2.1cm" }
+    },
+    {
+      "id": "nextEvent.ageGradeLabel",
+      "type": "label",
+      "name": "Age grade:",
+      "helpTarget": "term-age-group",
+      "helpLabel": true,
+      "style": {
+        "fontSize": "0.80rem",
+        "fontWeight": 600,
+        "color": "#111827",
+        "lineHeight": 0.9
+      },
+      "laptop": { "x": "7.0cm", "y": "2.4cm" },
+      "mobile": { "x": "6.0cm", "y": "2.4cm" }
+    },
+    {
+      "id": "nextEvent.ageGradeSelect",
+      "type": "select",
+      "name": "Age grade Select",
+      "laptop": { "x": "9.3cm", "y": "2.35cm", "width": "3.5cm" },
+      "mobile": { "x": "8.3cm", "y": "2.35cm", "width": "3.1cm" }
     },
     {
       "id": "nextEvent.nextExtButton",
       "type": "button",
-      "name": "Next Ext",
+      "name": "Partic. Match",
       "laptop": { "x": "0.3cm", "y": "1.0cm", "width": "1.0cm", "height": "1.0cm" },
       "mobile": { "x": "0.3cm", "y": "1.1cm", "width": "0.9cm", "height": "0.9cm" }
     },
@@ -133,13 +177,58 @@
       "mobile": { "x": "0.3cm", "y": "3.1cm", "width": "12cm", "height": "14.8cm" }
     },
     {
+      "id": "nextEvent.nextExtTableContainer",
+      "type": "table",
+      "name": "nextExtTableContainer",
+      "laptop": { "x": "0.3cm", "y": "2.2cm", "width": "30.0cm", "height": "16.3cm" },
+      "mobile": { "x": "0.3cm", "y": "2.3cm", "width": "11.8cm", "height": "14.8cm" }
+    },
+    {
+      "id": "nextEvent.nextExtTableTitle",
+      "type": "label",
+      "name": "Participant Match Analysis",
+      "style": {
+        "fontSize": "1.20rem",
+        "fontWeight": 700,
+        "color": "#111827",
+        "lineHeight": 1.1
+      },
+      "laptop": { "x": "0.3cm", "y": "3.4cm" },
+      "mobile": { "x": "0.3cm", "y": "3.4cm" }
+    },
+    {
       "id": "nextEvent.curveRankReferenceContainer",
       "type": "table",
       "name": "curveRankReferenceContainer",
-      "laptop": { "width": "16cm", "height": "15cm", "x": "0cm", "y": "4.2cm" },
-      "mobile": { "width": "11.8cm", "height": "12.5cm", "x": "0.2cm", "y": "3.2cm" }
+      "laptop": { "width": "16cm", "height": "15cm", "x": "0cm", "y": "2.2cm" },
+      "mobile": { "width": "11.8cm", "height": "12.5cm", "x": "0.2cm", "y": "2.2cm" }
     }
   ],
+  "tableViews": {
+    "next_pr": [
+      "hardness_band",
+      "rank_plus_1",
+      "rank_current",
+      "rank_minus_1",
+      "rank_minus_2",
+      "rank_minus_3",
+      "rank_minus_4",
+      "rank_minus_5"
+    ],
+    "next_ext": [
+      "participant_name",
+      "rank_display",
+      "event_date",
+      "time",
+      "age_group",
+      "age_grade",
+      "best_course",
+      "club",
+      "best_time",
+      "runs_in_1y",
+      "freq_course"
+    ]
+  },
   "tableColumns": [
     {
       "key": "hardness_band",
@@ -213,6 +302,109 @@
       "helpTarget": "term-rank",
       "laptop": { "width": "2.4cm" },
       "mobile": { "width": "1.6cm" }
+    },
+    {
+      "key": "participant_name",
+      "type": "table",
+      "name": "Participant Name",
+      "headerName": "Participant",
+      "sticky": true,
+      "helpTarget": "page-athletes",
+      "laptop": { "width": "4.6cm" },
+      "mobile": { "width": "3.8cm" }
+    },
+    {
+      "key": "event_date",
+      "type": "table",
+      "name": "Date",
+      "headerName": "Date",
+      "helpTarget": "term-rank",
+      "laptop": { "width": "2.0cm" },
+      "mobile": { "width": "2.0cm" }
+    },
+    {
+      "key": "time",
+      "type": "table",
+      "name": "Time",
+      "headerName": "Time",
+      "helpTarget": "term-rank",
+      "laptop": { "width": "1.9cm" },
+      "mobile": { "width": "1.7cm" }
+    },
+    {
+      "key": "best_time",
+      "type": "table",
+      "name": "Adjusted Time",
+      "headerName": "Adj Time",
+      "helpTarget": "term-rank",
+      "laptop": { "width": "2.4cm" },
+      "mobile": { "width": "2.1cm" }
+    },
+    {
+      "key": "best_course",
+      "type": "table",
+      "name": "Course",
+      "headerName": "Course",
+      "helpTarget": "page-course",
+      "style": { "textAlign": "left" },
+      "laptop": { "width": "3.0cm" },
+      "mobile": { "width": "2.7cm" }
+    },
+    {
+      "key": "runs_in_1y",
+      "type": "table",
+      "name": "Runs in 1Y",
+      "headerName": "Runs in 1Y",
+      "helpTarget": "control-freq-course",
+      "laptop": { "width": "2.0cm" },
+      "mobile": { "width": "1.8cm" }
+    },
+    {
+      "key": "freq_course",
+      "type": "table",
+      "name": "Freq Course",
+      "headerName": "Freq Course",
+      "helpTarget": "control-freq-course",
+      "style": { "textAlign": "left" },
+      "laptop": { "width": "3.8cm" },
+      "mobile": { "width": "3.2cm" }
+    },
+    {
+      "key": "age_group",
+      "type": "table",
+      "name": "Age Group",
+      "headerName": "Age Group",
+      "helpTarget": "term-age-group",
+      "laptop": { "width": "2.2cm" },
+      "mobile": { "width": "1.9cm" }
+    },
+    {
+      "key": "age_grade",
+      "type": "table",
+      "name": "Age Grade",
+      "headerName": "Age Grade",
+      "helpTarget": "term-age-grade",
+      "laptop": { "width": "2.1cm" },
+      "mobile": { "width": "2.1cm" }
+    },
+    {
+      "key": "rank_display",
+      "type": "table",
+      "name": "Rank",
+      "headerName": "Rank",
+      "helpTarget": "term-rank",
+      "laptop": { "width": "1.8cm" },
+      "mobile": { "width": "1.5cm" }
+    },
+    {
+      "key": "club",
+      "type": "table",
+      "name": "Club",
+      "headerName": "Club",
+      "helpTarget": "page-clubs",
+      "style": { "textAlign": "left" },
+      "laptop": { "width": "3.8cm" },
+      "mobile": { "width": "3.2cm" }
     }
   ],
   "summaryTableColumns": [

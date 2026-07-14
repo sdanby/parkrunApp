@@ -248,16 +248,16 @@
       "mobile": { "x": "4.0cm", "y": "3.2cm", "width": "4.4cm" }
     },
     {
-      "id": "participant.profileButton",
+      "id": "participant.nextEventButton",
       "type": "button",
-      "name": "Profile",
+      "name": "Next Event",
       "laptop": { "x": "-0.2cm", "y": "2.0cm", "width": "1.0cm", "height": "1.0cm" },
       "mobile": { "x": "-0.2cm", "y": "2.1cm", "width": "0.9cm", "height": "0.9cm" }
     },
     {
-      "id": "participant.nextEventButton",
+      "id": "participant.profileButton",
       "type": "button",
-      "name": "Next Event",
+      "name": "Profile",
       "laptop": { "x": "-0.2cm", "y": "3.2cm", "width": "1.0cm", "height": "1.0cm" },
       "mobile": { "x": "-0.2cm", "y": "3.2cm", "width": "0.9cm", "height": "0.9cm" }
     },

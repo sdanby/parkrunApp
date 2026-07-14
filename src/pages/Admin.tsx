@@ -79,6 +79,7 @@ type WeeklySqlPipelineFormState = {
     leaveAthletePostgres: boolean;
     noVolunteers: boolean;
     refreshMaterializedView: boolean;
+    rebuildMaterializedViewsFromDefinitions: boolean;
     rebuildHistoricAfterRun: boolean;
     resumeCurveFromStage2: boolean;
     resumeCurveFromAllHistory: boolean;
@@ -232,6 +233,7 @@ const createDefaultWeeklySqlPipelineFormState = (): WeeklySqlPipelineFormState =
     leaveAthletePostgres: false,
     noVolunteers: false,
     refreshMaterializedView: true,
+    rebuildMaterializedViewsFromDefinitions: false,
     rebuildHistoricAfterRun: false,
     resumeCurveFromStage2: false,
     resumeCurveFromAllHistory: false,
@@ -300,6 +302,12 @@ const WEEKLY_SQL_OPTION_DEFINITIONS: WeeklySqlOptionDefinition[] = [
         defaultValue: true
     },
     {
+        key: 'rebuildMaterializedViewsFromDefinitions',
+        label: 'Rebuild MV Chain From Definitions',
+        description: 'Drops and recreates the Postgres MV chain sequentially from mv_extend_runs using the checked-in SQL definitions. Use this for MV schema changes; it replaces the normal refresh step.',
+        defaultValue: false
+    },
+    {
         key: 'rebuildHistoricAfterRun',
         label: 'Rebuild Historic After Run',
         description: 'Recomputes historic prior-best values once the weekly run has finished.',
@@ -341,6 +349,7 @@ const weeklySqlFormFromStatus = (options?: WeeklySqlPipelineOptions | null): Wee
         leaveAthletePostgres: options.leaveAthletePostgres ?? defaults.leaveAthletePostgres,
         noVolunteers: options.noVolunteers ?? defaults.noVolunteers,
         refreshMaterializedView: options.refreshMaterializedView ?? defaults.refreshMaterializedView,
+        rebuildMaterializedViewsFromDefinitions: options.rebuildMaterializedViewsFromDefinitions ?? defaults.rebuildMaterializedViewsFromDefinitions,
         rebuildHistoricAfterRun: options.rebuildHistoricAfterRun ?? defaults.rebuildHistoricAfterRun,
         resumeCurveFromStage2: options.resumeCurveFromStage2 ?? defaults.resumeCurveFromStage2,
         resumeCurveFromAllHistory: options.resumeCurveFromAllHistory ?? defaults.resumeCurveFromAllHistory,
@@ -781,6 +790,7 @@ const Admin: React.FC = () => {
                     leaveAthletePostgres: weeklySqlOptions.leaveAthletePostgres,
                     noVolunteers: weeklySqlOptions.noVolunteers,
                     refreshMaterializedView: weeklySqlOptions.refreshMaterializedView,
+                    rebuildMaterializedViewsFromDefinitions: weeklySqlOptions.rebuildMaterializedViewsFromDefinitions,
                     rebuildHistoricAfterRun: weeklySqlOptions.rebuildHistoricAfterRun,
                     resumeCurveFromStage2: weeklySqlOptions.resumeCurveFromStage2,
                     resumeCurveFromAllHistory: weeklySqlOptions.resumeCurveFromAllHistory,

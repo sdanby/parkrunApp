@@ -595,6 +595,9 @@ Age groups distinguish between:
 
 These categories help observers understand the demographic profile of an event and allow meaningful comparisons within and across age‑based groups.
 
+On the **Next Event** page, the **Age grade** selection in **Participant Match Analysis** defaults to comparing the selected participant against **all age groups**.  
+It can then be narrowed to a **single age group** or to a **collection of age groups** when you want to compare against more similar participants.
+
 In this app, additional logic is used to **estimate a participant’s age** from their age‑group history.  
 This enables much more precise calculations for:
 
@@ -950,6 +953,14 @@ The Course control allows you to select which course is being displayed on the
 current page.  
 It appears on pages such as the **Event Page** and **Event Analysis**.
 
+On the **Next Event** page, the Course control behaves differently depending on
+which table is active:
+
+- for the main **Next PR** view, it selects a single course
+- for **Participant Match Analysis**, it allows **All courses** to remain
+  selected or one or more individual courses to be selected when filtering the
+  table
+
 The course label serves two functions:
 
 1. **Navigation to the Course Page**  
@@ -979,6 +990,23 @@ On the Club Page, this column lists the **courses most regularly attended by
 members of the club**.  
 Clicking a course name takes you to the [Course Page](#page-course) for full
 history and statistics.
+
+<a id="control-next-event-adj-type"></a>
+### Adj Type (Next Event)
+
+On the **Next Event** page, **Adj Type** lets you choose which adjustment basis
+is used when comparing participants in **Participant Match Analysis**.
+
+It allows the user to compare **like-for-like participants** by selecting the
+type of adjustment applied to finishing times.
+
+For example, if a participant defaults to **AE** adjustment type, switching to
+**E** adjustment type will show the nearest participants using the same best
+time comparison with **event adjustment only**.
+
+Changing **Adj Type** does not change the selected participant.  
+It changes the comparison basis used to find the closest matching participants
+in the table.
 
 <a id="term-course-number"></a>
 ### Course '#'
@@ -2523,7 +2551,14 @@ This provides a measure of the participant’s **recent running volume**.
 ### Tourists
 
 Participants who normally attend a different course to the one selected.  
-The app does not know a participant’s official “home” course, so it infers it from the participant’s **most frequently attended course**. Anyone attending a different course is counted as a Tourist.  
+The app does not know a participant’s official “home” course, so it infers it from the participant’s **most frequently attended course over the last 1Y**.  
+
+There are three practical states in the Tourist field:
+
+- `T` - the participant is considered a tourist because this course represents a **minority** of their normal parkrun visits, using the last 1Y of activity to infer their main course.
+- `F` - the participant is a **first-timer tourist** at this course.
+- blank - the participant is **not treated as a tourist** for this course.
+
 Selected via the Type control on the [Event Analysis](#page-event-analysis) page.
 
 ---
@@ -3069,6 +3104,27 @@ Compare their historical times against the course’s current hardness
 Explore how ranking outcomes change when switching to a different course
 
 Arrow keys allow the user to reveal higher or lower ranking scores, and the course selector lets them switch between courses—even those they have never visited—to understand what time would be required to achieve the same ranking elsewhere.
+
+<a id="page-next-event-participant-match-analysis"></a>
+
+### Participant Match Analysis
+
+Participant Match Analysis is the lower comparison table on the **Next Event** page.
+It is designed to show the selected participant alongside the **closest comparable participants** based on their best recent ranking profile.
+
+The selected participant stays fixed in the table, while the surrounding rows are chosen to show participants with the most similar level under the selected comparison basis.
+
+The controls above the table let you narrow the comparison group:
+
+- **Course** can compare across all courses or one or more selected courses  
+- **Adj Type** changes which adjusted performance basis is used for matching  
+- **Age grade** can keep the comparison open to all age groups or narrow it to one or more selected age groups
+
+This makes the table useful when you want to answer questions such as:
+
+- who currently performs at a very similar level to this participant  
+- how that comparison changes when only certain courses are considered  
+- whether the participant looks similar to others in the same or related age groups
 
 **Colour Indicators**
 

@@ -10,8 +10,29 @@ export const API_BASE_URL = process.env.REACT_APP_API_BASE_URL
 export const WEEKLY_UPLOAD_API_BASE_URL = process.env.REACT_APP_WEEKLY_UPLOAD_API_BASE_URL
     || API_BASE_URL;
 
+const NEXT_EXT_API_TIMEOUT_MS = 12000;
 const WEEKLY_UPLOAD_API_GET_TIMEOUT_MS = 20000;
 const WEEKLY_UPLOAD_API_POST_TIMEOUT_MS = 20000;
+
+const getNextExtApiBaseUrls = (): string[] => {
+    const configuredBaseUrl = String(API_BASE_URL || '').trim();
+    const candidates: string[] = [];
+
+    if (configuredBaseUrl) {
+        candidates.push(configuredBaseUrl);
+    }
+
+    if (isLocalHost && !configuredBaseUrl.includes('onrender.com')) {
+        candidates.push('https://hello-world-9yb9.onrender.com');
+    }
+
+    const seen = new Set<string>();
+    return candidates.filter((value) => {
+        if (!value || seen.has(value)) return false;
+        seen.add(value);
+        return true;
+    });
+};
 
 const getWeeklyUploadApiBaseUrls = (): string[] => {
     const configuredBaseUrl = String(WEEKLY_UPLOAD_API_BASE_URL || '').trim();
@@ -153,6 +174,7 @@ export type WeeklySqlPipelineOptions = {
     leaveAthletePostgres?: boolean;
     noVolunteers?: boolean;
     refreshMaterializedView?: boolean;
+    rebuildMaterializedViewsFromDefinitions?: boolean;
     rebuildHistoricAfterRun?: boolean;
     resumeCurveFromStage2?: boolean;
     resumeCurveFromAllHistory?: boolean;
@@ -581,6 +603,102 @@ export const fetchAthleteBestSummary = async (athleteCode: string) => {
         return response.data;
     } catch (error) {
         console.error('Error fetching athlete best summary:', error);
+        throw error;
+    }
+};
+
+export type NextExtSimilarRow = {
+    athlete_code: string;
+    athlete_name: string;
+    club?: string | null;
+    best_course_code?: string | null;
+    best_course?: string | null;
+    freq_course_code?: string | null;
+    freq_course?: string | null;
+    age_group?: string | null;
+    age_grade?: string | number | null;
+    event_date?: string | null;
+    rank_metric: 'B' | 'E' | 'AE' | 'ES' | 'AES';
+    rank_suffix: string;
+    rank_score: number;
+    exact_rank?: number | null;
+    rank_display: string;
+    best_time_seconds?: number | null;
+    actual_time_seconds?: number | null;
+    local_runs_1y?: number | null;
+    peer_rn?: number | null;
+    selected_peer_rn?: number | null;
+    is_selected?: boolean;
+};
+
+export type NextExtSimilarResponse = {
+    selectedAthleteCode: string;
+    selectedRankScore: number | null;
+    selectedRankDisplay: string | null;
+    selectedPreferredAdjType?: 'B' | 'E' | 'AE' | 'ES' | 'AES' | null;
+    selectedPreferredRankScore?: number | null;
+    selectedPreferredExactRank?: number | null;
+    selectedPreferredRankDisplay?: string | null;
+    courseCodeFilter?: string | string[] | null;
+    ageGroupFilter?: string | string[] | null;
+    adjTypeFilter?: 'B' | 'E' | 'AE' | 'ES' | 'AES' | null;
+    rows: NextExtSimilarRow[];
+};
+
+export const fetchNextExtSimilar = async (
+    athleteCode: string,
+    above: number = 10,
+    below: number = 10,
+    courseCode?: string | string[] | null,
+    ageGroup?: string | string[] | null,
+    adjType: 'B' | 'E' | 'AE' | 'ES' | 'AES' = 'AE',
+): Promise<NextExtSimilarResponse> => {
+    if (!athleteCode) {
+        throw new Error('athleteCode is required');
+    }
+    try {
+        const params = new URLSearchParams({
+            athlete_code: String(athleteCode),
+            above: String(above),
+            below: String(below),
+            adj_type: String(adjType || 'AE')
+        });
+        if (Array.isArray(courseCode)) {
+            const normalizedCourseCodes = courseCode
+                .map((value) => String(value || '').trim())
+                .filter((value) => value.length > 0);
+            if (normalizedCourseCodes.length > 0) {
+                params.set('course_code', normalizedCourseCodes.join(','));
+            }
+        } else if (courseCode) {
+            params.set('course_code', String(courseCode));
+        }
+        if (Array.isArray(ageGroup)) {
+            const normalizedAgeGroups = ageGroup
+                .map((value) => String(value || '').trim())
+                .filter((value) => value.length > 0);
+            if (normalizedAgeGroups.length > 0) {
+                params.set('age_group', normalizedAgeGroups.join(','));
+            }
+        } else if (ageGroup) {
+            params.set('age_group', String(ageGroup));
+        }
+        const candidates = getNextExtApiBaseUrls();
+        let lastError: unknown = null;
+
+        for (const baseUrl of candidates) {
+            try {
+                const url = `${baseUrl}/api/next_ext_similar?${params.toString()}`;
+                const response = await axios.get(url, { timeout: NEXT_EXT_API_TIMEOUT_MS });
+                return response.data as NextExtSimilarResponse;
+            } catch (error) {
+                lastError = error;
+            }
+        }
+
+        throw lastError;
+    } catch (error) {
+        console.error('Error fetching Next Ext similar participants:', error);
         throw error;
     }
 };

@@ -33,14 +33,30 @@ const AthleteSearch: React.FC<Props> = ({ onSelect, placeholder, inputId, initia
   const dropdownRef = useRef<HTMLDivElement | null>(null);
   const prefilledOnEntryRef = useRef(false);
   const suppressReopenRef = useRef(false);
+  const appliedInitialQueryRef = useRef<string>('');
 
   useEffect(() => {
     if (typeof initialQuery !== 'string') return;
     const trimmed = initialQuery.trim();
-    if (!trimmed) return;
-    if (query.trim() !== '') return;
+    const previousApplied = appliedInitialQueryRef.current;
+
+    if (!trimmed) {
+      appliedInitialQueryRef.current = '';
+      return;
+    }
+
+    if (trimmed === previousApplied) {
+      return;
+    }
+
+    appliedInitialQueryRef.current = trimmed;
     setQuery(initialQuery);
+    setResults([]);
+    setOpen(false);
+    setLoading(false);
+    setHighlight(-1);
     prefilledOnEntryRef.current = true;
+    suppressReopenRef.current = true;
   }, [initialQuery]);
 
   useEffect(() => {

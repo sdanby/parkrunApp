@@ -23,6 +23,7 @@ type AthletesLocationState = {
     sourceEvent?: {
         eventName?: string;
         eventDate?: string;
+        eventCode?: string;
     };
 };
 
@@ -55,10 +56,11 @@ const toAthletesLocationState = (value: unknown): AthletesLocationState => {
     }
     if (possible.sourceEvent && typeof possible.sourceEvent === 'object') {
         const se: any = possible.sourceEvent;
-        if (typeof se.eventName === 'string' || typeof se.eventDate === 'string') {
+        if (typeof se.eventName === 'string' || typeof se.eventDate === 'string' || typeof se.eventCode === 'string') {
             next.sourceEvent = {
                 eventName: typeof se.eventName === 'string' ? se.eventName : undefined,
-                eventDate: typeof se.eventDate === 'string' ? se.eventDate : undefined
+                eventDate: typeof se.eventDate === 'string' ? se.eventDate : undefined,
+                eventCode: typeof se.eventCode === 'string' ? se.eventCode : undefined
             };
         }
     }
@@ -1028,24 +1030,32 @@ const Athletes: React.FC = () => {
     const returnTarget = locationState.returnTo;
     // Use event_date from query string if coming from Lists
     const sourceEvent = locationState.sourceEvent || {
+        eventCode: searchParams.get('source_event_code') || searchParams.get('event_code') || undefined,
         eventName: searchParams.get('source_event'),
         eventDate: searchParams.get('source_date') || searchParams.get('event_date')
     };
-    const hasSourceEvent = Boolean(sourceEvent?.eventName || sourceEvent?.eventDate);
+    const hasSourceEvent = Boolean(sourceEvent?.eventCode || sourceEvent?.eventName || sourceEvent?.eventDate);
 
     // Function to check if a row matches the source event
     const isHighlightedRow = (row: AthleteRecord): boolean => {
-        if (!sourceEvent?.eventName && !sourceEvent?.eventDate) return false;
+        if (!sourceEvent?.eventCode && !sourceEvent?.eventName && !sourceEvent?.eventDate) return false;
         
+        const rowEventCode = String(pickField(row, ['event_code', 'eventCode']) ?? '').trim();
         const rowEventName = pickField(row, ['event_display', 'eventDisplay', 'event_name', 'eventName', 'event']);
         const rowDate = pickField(row, ['formatted_date', 'event_date', 'date']);
-        
-        const eventMatches = !sourceEvent.eventName || 
-            (rowEventName && String(rowEventName).toLowerCase().includes(sourceEvent.eventName.toLowerCase()));
+
+        const codeMatches = !sourceEvent.eventCode || (rowEventCode && rowEventCode === String(sourceEvent.eventCode).trim());
         const dateMatches = !sourceEvent.eventDate || 
             (rowDate && formatDateValue(rowDate) === formatDateValue(sourceEvent.eventDate));
+
+        if (sourceEvent.eventCode && sourceEvent.eventDate) {
+            return Boolean(codeMatches && dateMatches);
+        }
+
+        const eventMatches = !sourceEvent.eventName || 
+            (rowEventName && String(rowEventName).toLowerCase().includes(sourceEvent.eventName.toLowerCase()));
             
-        return eventMatches && dateMatches;
+        return codeMatches && eventMatches && dateMatches;
     };
 
     const persistEventReturnHighlight = (eventCodeRaw?: unknown, eventDateRaw?: unknown) => {
@@ -1135,6 +1145,18 @@ const Athletes: React.FC = () => {
     }, [activeSelectedCode]);
 
     useEffect(() => {
+        if (!hasSourceEvent) {
+            return;
+        }
+        if (!showProfile && !showPlot) {
+            return;
+        }
+
+        setShowProfile(false);
+        setShowPlot(false);
+    }, [hasSourceEvent, showPlot, showProfile]);
+
+    useEffect(() => {
         let cancelled = false;
         if (!activeSelectedCode) {
             return () => {
@@ -1171,11 +1193,10 @@ const Athletes: React.FC = () => {
 
     // Auto-scroll to highlighted row when coming from Single Event
     useEffect(() => {
-        if (!runs.length) return;
-        
-        // Small delay to ensure DOM is updated after rendering
+        if (!runs.length || showProfile || showPlot) return;
+
         const scrollTimeout = setTimeout(() => {
-            const highlightedRow = document.querySelector('.highlighted-source-row');
+            const highlightedRow = runsTableWrapperRef.current?.querySelector<HTMLTableRowElement>('.highlighted-source-row');
             if (highlightedRow) {
                 highlightedRow.scrollIntoView({
                     behavior: 'smooth',
@@ -1185,7 +1206,7 @@ const Athletes: React.FC = () => {
         }, 100);
 
         return () => clearTimeout(scrollTimeout);
-    }, [runs, sourceEvent]);
+    }, [runs, showPlot, showProfile, sourceEvent]);
 
     useEffect(() => {
         if (!runs.length || showProfile) {
@@ -1298,15 +1319,15 @@ const Athletes: React.FC = () => {
             handleBackToRaces();
             return;
         }
-        if (navigateBackWithNavStack(navigate, location.pathname)) {
-            return;
-        }
         if (returnTarget?.pathname) {
             const targetPath = getReturnNavigationPath();
             if (targetPath) {
                 navigate(targetPath);
                 return;
             }
+            return;
+        }
+        if (navigateBackWithNavStack(navigate, location.pathname)) {
             return;
         }
         // Default: go to Event Analysis screen
@@ -1751,7 +1772,8 @@ const Athletes: React.FC = () => {
             return {
                 label: 'Rank',
                 value: '--',
-                hasValue: false
+                hasValue: false,
+                metric: null as string | null
             };
         }
 
@@ -1765,7 +1787,8 @@ const Athletes: React.FC = () => {
         return {
             label: 'Rank',
             value: `${formatDisplayedRank(best.rank)} ${displayMetric}`,
-            hasValue: true
+            hasValue: true,
+            metric: best.metric
         };
     }, [profileRows]);
 
@@ -1847,6 +1870,23 @@ const Athletes: React.FC = () => {
     const formatProfileTime = (value: unknown): string => {
         if (value === undefined || value === null || value === '') return '--';
         return renderCell(formatTimeValue(value));
+    };
+
+    const pickMetricRankValue = (row: AthleteRecord, metric: string): unknown => {
+        switch (metric) {
+            case 'B':
+                return pickField(row, ['event_rank_b', 'eventRankB']);
+            case 'E':
+                return pickField(row, ['event_rank_e', 'eventRankE']);
+            case 'AE':
+                return pickField(row, ['event_rank_ae', 'eventRankAe']);
+            case 'ES':
+                return pickField(row, ['event_rank_es', 'eventRankEs']);
+            case 'AES':
+                return pickField(row, ['event_rank_aes', 'eventRankAes']);
+            default:
+                return null;
+        }
     };
 
     const getCellDisplayValue = (row: AthleteRecord, key: ColumnKey): string => {
@@ -2077,7 +2117,7 @@ const Athletes: React.FC = () => {
             return;
         }
 
-        const element = eventTarget as HTMLElement | null;
+        const element = eventTarget instanceof HTMLElement ? eventTarget : null;
         if (!element) {
             requestUnifiedHelp(helpTarget || 'top', null, label);
             return;
@@ -5023,6 +5063,19 @@ const Athletes: React.FC = () => {
                                                         }
 
                                                         if (col.key === 'best_curve_ranking_current') {
+                                                            if (viewMode === 'detailed' && currentRankSummary.metric) {
+                                                                const metricRankRaw = pickMetricRankValue(row, currentRankSummary.metric);
+                                                                const metricRank = Number(metricRankRaw);
+                                                                if (Number.isFinite(metricRank)) {
+                                                                    const metricSuffix = currentRankSummary.metric === 'B' ? '*' : currentRankSummary.metric;
+                                                                    return (
+                                                                        <td key={col.key} style={{ ...alignmentStyle, textAlign: 'center' }}>
+                                                                            {`${formatDisplayedRank(metricRank)}${metricSuffix}`}
+                                                                        </td>
+                                                                    );
+                                                                }
+                                                            }
+
                                                             const currentRankRaw = pickField(row, ['best_curve_ranking_current', 'bestCurveRankingCurrent', 'rank']);
                                                             const historicRankRaw = pickField(row, ['best_curve_ranking_historic', 'bestCurveRankingHistoric']);
                                                             const rankTypeRaw = pickField(row, ['best_curve_ranking_current_type', 'bestCurveRankingCurrentType']);
