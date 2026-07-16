@@ -403,9 +403,9 @@ const adjustmentColumnMatrix: Record<CourseAdjOption, Record<OtherAdjOption, str
     },
     full: {
         none: ['event_adj_time'],
-        age: ['age_event_adj_time'],
-        sex: ['sex_event_adj_time'],
-        age_sex: ['age_sex_event_adj_time']
+        age: ['event_age_adj_time'],
+        sex: ['event_sex_adj_time'],
+        age_sex: ['event_age_sex_adj_time']
     }
 };
 
@@ -2282,6 +2282,16 @@ const Athletes: React.FC = () => {
         () => plotContainerElement?.[isMobile ? 'mobile' : 'laptop'],
         [isMobile, plotContainerElement]
     );
+    const resolvedPlotContainerPlacement = useMemo(() => {
+        if (!plotContainerPlacement) {
+            return plotContainerBasePlacement;
+        }
+
+        return {
+            ...plotContainerBasePlacement,
+            ...plotContainerPlacement
+        };
+    }, [plotContainerBasePlacement, plotContainerPlacement]);
     const curveRankReferenceContainerPlacement = useMemo(
         () => curveRankReferenceContainerElement?.[isMobile ? 'mobile' : 'laptop'],
         [curveRankReferenceContainerElement, isMobile]
@@ -2616,8 +2626,12 @@ const Athletes: React.FC = () => {
     }, [buildPanelContainerStyle, tableContainerPlacement]);
 
     const plotContainerStyle = useMemo<React.CSSProperties>(() => {
-        return buildPanelContainerStyle(plotContainerPlacement, plotContainerPlacement?.height, plotContainerPlacement?.width ?? '100%');
-    }, [buildPanelContainerStyle, plotContainerPlacement]);
+        return buildPanelContainerStyle(
+            resolvedPlotContainerPlacement,
+            resolvedPlotContainerPlacement?.height,
+            resolvedPlotContainerPlacement?.width ?? '100%'
+        );
+    }, [buildPanelContainerStyle, resolvedPlotContainerPlacement]);
 
     const curveRankReferenceContainerStyle = useMemo<React.CSSProperties>(() => {
         return buildPanelContainerStyle(curveRankReferenceContainerPlacement, curveRankReferenceContainerPlacement?.height, curveRankReferenceContainerPlacement?.width ?? '100%');
@@ -2997,8 +3011,8 @@ const Athletes: React.FC = () => {
     }, [runs, selectedPlotAdjustmentKey]);
 
     const canTogglePlotExpand = !isMobileButtonLayout;
-    const configuredPlotWidth = plotContainerPlacement?.width;
-    const configuredPlotHeight = plotContainerPlacement?.height;
+    const configuredPlotWidth = resolvedPlotContainerPlacement?.width;
+    const configuredPlotHeight = resolvedPlotContainerPlacement?.height;
     const configuredPlotControlsWidth = plotContainerBasePlacement?.width;
     const plotPanelHeight = configuredPlotHeight ?? (isMobile ? '8.5cm' : isPlotExpanded ? '14cm' : '10cm');
     const plotPanelMaxWidth = configuredPlotWidth ?? (isMobile ? '100%' : isPlotExpanded ? '100%' : '20cm');

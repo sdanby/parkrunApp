@@ -114,11 +114,15 @@ const HomePage: React.FC = () => {
                 </p>
                 <h2>Parkruns Courses included in this app</h2>
                 <p>
-                    This app has been built with local parkrun to Essex only. This was a prototype app, and the amount of web scrapping and processes required us to keep it small enough and cheap enough for this purpose was necessary.
+                    This app has been built focusing on local parkruns in Essex.
+                    <br /> 
+                    This is a prototype app, and even with a small number of parkruns, managing the data and keeping it
+                    cheap enough for this purpose, was necessary.
                     <br />
-                    This can be fully expanded to analyse all parkrun but that will need a wider commitment.
+                    This could be fully expanded to analyse all parkruns but that will need a wider commitment and investment.
                     <br />
-                    As such, a number of Tourists will have very limited information on them and local participants will have no infomation on parkruns outside of the local parkruns in scope.
+                    As such, only regular local parkrunners will benefit from the wide functionality, 
+                    most regional Tourists will have limited information available on them.
                 </p>
                 <p></p>
                 <div className="home-help-entry">
