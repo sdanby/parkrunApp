@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { navigateWithNavStack } from '../utils/navigationStack';
+import { navigateBackWithNavStack, navigateWithNavStack } from '../utils/navigationStack';
 import { useColumnHeaderMode } from '../utils/useColumnHeaderMode';
 import { useGlobalWaitCursor } from '../utils/useGlobalWaitCursor';
 import {
@@ -241,6 +241,13 @@ const Lists: React.FC = () => {
         : 2000;
     const delayedHeaderHelp = useDelayedUnifiedHelp(tableHeaderHelpEnabled, tableHeaderHelpDelayMs);
 
+    const handleBack = () => {
+        if (navigateBackWithNavStack(navigate, location.pathname)) {
+            return;
+        }
+        navigate('/quick-start');
+    };
+
     useEffect(() => {
         const onResize = () => setViewport(getListsViewportForWidth(window.innerWidth));
         window.addEventListener('resize', onResize);
@@ -256,6 +263,7 @@ const Lists: React.FC = () => {
 
     // Get layout placements for all UI elements (absolute positioning)
     const pTitle = getListsElementPlacement('lists.title', viewport);
+    const pBackButton = getListsElementPlacement('lists.backButton', viewport);
     const pStatusLabel = getListsElementPlacement('lists.statusLabel', viewport);
     const pListLabel = getListsElementPlacement('lists.listLabel', viewport);
     const pListSelect = getListsElementPlacement('lists.listSelect', viewport);
@@ -271,6 +279,7 @@ const Lists: React.FC = () => {
     const pTableContainer = getListsElementPlacement('lists.tableContainer', viewport);
 
     const titleElement = getListsElementById('lists.title');
+    const backButtonElement = getListsElementById('lists.backButton');
     const statusLabelElement = getListsElementById('lists.statusLabel');
     const listLabelElement = getListsElementById('lists.listLabel');
     const listSelectElement = getListsElementById('lists.listSelect');
@@ -1094,6 +1103,37 @@ const Lists: React.FC = () => {
                 }}
             >
                 {/* Title */}
+                <button
+                    type="button"
+                    aria-label="Back to Quick Start"
+                    title="Back to Quick Start"
+                    onClick={handleBack}
+                    style={{
+                        position: 'absolute',
+                        left: pBackButton?.x ?? '0.1cm',
+                        top: pBackButton?.y ?? pTitle?.y ?? '3.8cm',
+                        fontSize: '1.2rem',
+                        border: '1px solid #222',
+                        borderRadius: '8px',
+                        background: backButtonElement?.style?.backgroundColor ?? '#fff',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        boxSizing: 'border-box',
+                        width: '30px',
+                        height: '30px',
+                        minWidth: '30px',
+                        minHeight: '30px',
+                        zIndex: 2147483001,
+                        pointerEvents: 'auto',
+                        touchAction: 'manipulation',
+                        WebkitTapHighlightColor: 'transparent',
+                        userSelect: 'none'
+                    }}
+                >
+                    &#8592;
+                </button>
                 <div style={{ position: 'absolute', left: pTitle?.x, top: pTitle?.y, pointerEvents: 'auto' }}>
                     <h1 style={{
                         fontSize: titleElement?.style?.fontSize ?? '1.2rem',

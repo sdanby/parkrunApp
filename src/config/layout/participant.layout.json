@@ -214,7 +214,7 @@
         "lineHeight": 0.9
       },
       "laptop": { "x": "8.7cm", "y": "2.7cm" },
-      "mobile": { "x": "2.4cm", "y": "3.85cm" }
+      "mobile": { "x": "2.3cm", "y": "3.85cm" }
     },
     {
       "id": "participant.estRankValue",
@@ -248,6 +248,28 @@
       "mobile": { "x": "4.0cm", "y": "3.2cm", "width": "4.4cm" }
     },
     {
+      "id": "participant.estVoluntsLabel",
+      "type": "label",
+      "name": "Est. Volunts:",
+      "helpTarget": "term-est-volunts",
+      "helpLabel": true,
+      "style": {
+        "fontSize": "0.75rem",
+        "fontWeight": 600,
+        "color": "#111827",
+        "lineHeight": 0.9
+      },
+      "laptop": { "x": "7.7cm", "y": "3.4cm" },
+      "mobile": { "x": "5.3cm", "y": "3.8cm" }
+    },
+    {
+      "id": "participant.estVolunts",
+      "type": "field",
+      "name": "Est. Volunts",
+      "laptop": { "x": "10.5cm", "y": "3.4cm", "width": "1.6cm" },
+      "mobile": { "x": "7.8cm", "y": "3.8cm", "width": "2.0cm" }
+    },
+    {
       "id": "participant.nextEventButton",
       "type": "button",
       "name": "Next Event",
@@ -273,7 +295,7 @@
       "type": "plot",
       "name": "plotContainer",
       "laptop": { "width": "16cm", "height": "14cm" , "x": "0cm", "y": "5.0cm"},
-      "mobile": { "width": "11.5cm", "height": "12.5cm" , "x": "0cm", "y": "4.3cm"},
+      "mobile": { "width": "11.3cm", "height": "13.5cm" , "x": "0cm", "y": "4.3cm"},
       "laptopExpanded": { "width": "30cm", "height": "16cm" },
       "mobileExpanded": { "width": "13.5cm", "height": "13cm" }
     },
@@ -329,7 +351,7 @@
         "padding": "0 0.65rem"
       },
       "laptop": { "x": "10.0cm", "y": "2.8cm", "width": "1.8cm", "height": "1.7rem" },
-      "mobile": { "x": "7.2cm", "y": "5.0cm", "width": "1.6cm", "height": "1.7rem" }
+      "mobile": { "x": "7.1cm", "y": "5.0cm", "width": "1.6cm", "height": "1.7rem" }
     },
     {
       "id": "participant.plotRankOnlyButton",
@@ -345,7 +367,7 @@
         "padding": "0 0.65rem"
       },
       "laptop": { "x": "11.9cm", "y": "2.8cm", "width": "1.8cm", "height": "1.7rem" },
-      "mobile": { "x": "9.0cm", "y": "5.0cm", "width": "1.6cm", "height": "1.7rem" }
+      "mobile": { "x": "8.8cm", "y": "5.0cm", "width": "1.6cm", "height": "1.7rem" }
     },
     {
       "id": "participant.plotExpandButton",

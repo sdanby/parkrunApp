@@ -176,6 +176,24 @@ const sortPeriodKeys = (keys: string[], periodMode: string): string[] => {
   });
 };
 
+const getPlotOrderedPeriodKeys = (periodKeys: string[], periodMode: string): string[] => {
+  if (periodMode === 'Annual') {
+    return [...periodKeys].sort((a, b) => Number(a) - Number(b));
+  }
+  if (periodMode === 'Mseason') {
+    return [...periodKeys].sort((a, b) => monthNames.indexOf(String(a)) - monthNames.indexOf(String(b)));
+  }
+  if (periodMode === 'Qseason') {
+    return [...periodKeys].sort((a, b) => quarterNames.indexOf(String(a)) - quarterNames.indexOf(String(b)));
+  }
+  return [...periodKeys].sort((a, b) => {
+    const ad = parseEventDate(a);
+    const bd = parseEventDate(b);
+    if (!ad || !bd) return String(a).localeCompare(String(b));
+    return ad.getTime() - bd.getTime();
+  });
+};
+
 const getFilterField = (filterType: string): string => {
   switch (filterType) {
     case 'all': return 'last_position';
@@ -431,6 +449,29 @@ const selectDisplayOption = (
   return found || options[0] || canonical;
 };
 
+const readQuickStartAnalysisState = (value: unknown): Record<string, unknown> | null => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return null;
+  }
+
+  const record = value as Record<string, unknown>;
+  const hasQuickStartFields = [
+    'type',
+    'period',
+    'agg',
+    'calc',
+    'cellAgg',
+    'timeAdj',
+    'plot',
+    'expand',
+    'sort',
+    'legendTopCount',
+    'legendSelectionMode'
+  ].some((key) => key in record);
+
+  return hasQuickStartFields ? record : null;
+};
+
 const EventAnalysisTest: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -558,6 +599,68 @@ const EventAnalysisTest: React.FC = () => {
     setShowPlot(false);
     setIsPlotExpanded(false);
   }, [location.key, location.state]);
+
+  useEffect(() => {
+    const quickStartState = readQuickStartAnalysisState(location.state);
+    if (!quickStartState) {
+      return;
+    }
+
+    const quickStartViewport = getEventAnalysisViewportForWidth(window.innerWidth);
+
+    setControlValues((prev) => {
+      const next = { ...prev };
+      let changed = false;
+
+      const applyQuickStartSelection = (
+        element: EventAnalysisLayoutElement | undefined,
+        rawValue: unknown,
+        normalizer: (value: string) => string
+      ) => {
+        const token = String(rawValue ?? '').trim();
+        if (!element || !token) {
+          return;
+        }
+
+        const options = (element.options || []).map((option) => String(option).trim()).filter(Boolean);
+        if (options.length === 0) {
+          return;
+        }
+
+        const selected = selectDisplayOption(options, normalizer(token), normalizer);
+        if (next[element.id] !== selected) {
+          next[element.id] = selected;
+          changed = true;
+        }
+      };
+
+      applyQuickStartSelection(typeSelectElement, quickStartState.calc, normalizeAnalysisType);
+      applyQuickStartSelection(filterSelectElement, quickStartState.type, normalizeFilterType);
+      applyQuickStartSelection(periodSelectElement, quickStartState.period, normalizePeriodMode);
+      applyQuickStartSelection(aggSelectElement, quickStartState.agg, normalizeAggType);
+      applyQuickStartSelection(cellAggSelectElement, quickStartState.cellAgg, normalizeCellAgg);
+      applyQuickStartSelection(timeAdjSelectElement, quickStartState.timeAdj, normalizeTimeAdj);
+
+      return changed ? next : prev;
+    });
+
+    const quickStartWantsPlot = quickStartState.plot === true || quickStartState.expand === true;
+    setShowPlot(quickStartWantsPlot);
+  setIsPlotExpanded(quickStartState.expand === true && quickStartViewport !== 'mobile');
+
+    if (quickStartState.sort && typeof quickStartState.sort === 'object' && !Array.isArray(quickStartState.sort)) {
+      const sortRecord = quickStartState.sort as Record<string, unknown>;
+      const columnToken = String(sortRecord.column ?? '').trim().toLowerCase();
+      if (columnToken) {
+        setSortKey(columnToken === 'name' || columnToken === 'label' ? 'col1' : 'col2');
+      }
+
+      const directionToken = String(sortRecord.direction ?? '').trim().toLowerCase();
+      if (directionToken === 'asc' || directionToken === 'desc') {
+        setSortDir(directionToken);
+      }
+    }
+  }, [aggSelectElement, cellAggSelectElement, filterSelectElement, location.key, location.state, periodSelectElement, timeAdjSelectElement, typeSelectElement]);
 
   const periodMode = ((): 'recent' | 'last50' | 'since-lockdown' | 'all' | 'Annual' | 'Qseason' | 'Mseason' => {
     const key = periodSelectElement?.id || 'eventAnalysis.periodSelect';
@@ -1124,6 +1227,113 @@ const EventAnalysisTest: React.FC = () => {
     return courses;
   }, [pivot, sortDir, sortKey]);
 
+  useEffect(() => {
+    const quickStartState = readQuickStartAnalysisState(location.state);
+    const requestedCount = Number(quickStartState?.legendTopCount ?? 0);
+    if (!quickStartState || !Number.isFinite(requestedCount) || requestedCount < 1 || !showPlot) {
+      return;
+    }
+
+    const selectionMode = String(quickStartState.legendSelectionMode ?? '').trim().toLowerCase();
+
+    const topSeries = selectionMode === 'latest-event-participants'
+      ? (() => {
+          let latestEventTime = Number.NEGATIVE_INFINITY;
+          const attendanceByCourse: Record<string, number> = {};
+
+          rows.forEach((row) => {
+            const eventDate = parseEventDate(readRowValue(row, 'event_date'));
+            if (!eventDate) {
+              return;
+            }
+
+            const attendance = parseNumeric(readRowValue(row, 'last_position'));
+            if (attendance === null || !Number.isFinite(attendance) || attendance <= 0) {
+              return;
+            }
+
+            const course = String(readRowValue(row, 'event_name') || readRowValue(row, 'event_code') || '').trim();
+            if (!course) {
+              return;
+            }
+
+            const eventTime = eventDate.getTime();
+            if (eventTime > latestEventTime) {
+              latestEventTime = eventTime;
+              Object.keys(attendanceByCourse).forEach((key) => delete attendanceByCourse[key]);
+            }
+
+            if (eventTime === latestEventTime) {
+              attendanceByCourse[course] = Math.max(attendanceByCourse[course] ?? Number.NEGATIVE_INFINITY, attendance);
+            }
+          });
+
+          return Object.entries(attendanceByCourse)
+            .sort((a, b) => {
+              const valueDiff = b[1] - a[1];
+              if (valueDiff !== 0) {
+                return valueDiff;
+              }
+              return a[0].localeCompare(b[0]);
+            })
+            .slice(0, Math.min(MAX_PLOT_HIGHLIGHTED_SERIES, Math.floor(requestedCount)))
+            .map(([course]) => course.trim())
+            .filter(Boolean);
+        })()
+      : (() => {
+          const plotOrderedPeriodKeys = getPlotOrderedPeriodKeys(pivot.periodKeys, periodMode);
+          const getLatestSeriesValue = (course: string): number => {
+            for (let index = plotOrderedPeriodKeys.length - 1; index >= 0; index -= 1) {
+              const value = pivot.transformedCell[course]?.[plotOrderedPeriodKeys[index]];
+              if (typeof value === 'number' && Number.isFinite(value)) {
+                return value;
+              }
+            }
+            return Number.NEGATIVE_INFINITY;
+          };
+
+          return [...pivot.courses]
+            .sort((a, b) => {
+              const valueDiff = getLatestSeriesValue(b) - getLatestSeriesValue(a);
+              if (valueDiff !== 0) {
+                return valueDiff;
+              }
+              return String(a).localeCompare(String(b));
+            })
+            .slice(0, Math.min(MAX_PLOT_HIGHLIGHTED_SERIES, Math.floor(requestedCount)))
+            .map((course) => String(course).trim())
+            .filter(Boolean);
+        })();
+
+    if (topSeries.length === 0) {
+      return;
+    }
+
+    setPlotSelectionOrder((prev) => {
+      if (prev.length === topSeries.length && prev.every((value, index) => value === topSeries[index])) {
+        return prev;
+      }
+      return topSeries;
+    });
+
+    setPlotSeriesColorMap((prev) => {
+      const next = Object.fromEntries(
+        topSeries.map((seriesName, index) => [seriesName, PLOT_COLOR_PALETTE[index % PLOT_COLOR_PALETTE.length]])
+      );
+
+      const prevKeys = Object.keys(prev);
+      const nextKeys = Object.keys(next);
+      if (
+        prevKeys.length === nextKeys.length
+        && nextKeys.every((key) => prev[key] === next[key])
+      ) {
+        return prev;
+      }
+
+      return next;
+    });
+  }, [location.state, periodMode, pivot.courses, pivot.periodKeys, pivot.transformedCell, rows, showPlot]);
+
   const clampZoom = (next: { start: number; end: number }) => {
     const start = Math.max(0, Math.min(100, next.start));
     const end = Math.max(0, Math.min(100, next.end));
@@ -1228,23 +1438,7 @@ const EventAnalysisTest: React.FC = () => {
 
   const plotOption = useMemo(() => {
     const lineColor = '#c4c7cf';
-    const axisPeriodKeys = (() => {
-      if (periodMode === 'Annual') {
-        return [...pivot.periodKeys].sort((a, b) => Number(a) - Number(b));
-      }
-      if (periodMode === 'Mseason') {
-        return [...pivot.periodKeys].sort((a, b) => monthNames.indexOf(String(a)) - monthNames.indexOf(String(b)));
-      }
-      if (periodMode === 'Qseason') {
-        return [...pivot.periodKeys].sort((a, b) => quarterNames.indexOf(String(a)) - quarterNames.indexOf(String(b)));
-      }
-      return [...pivot.periodKeys].sort((a, b) => {
-        const ad = parseEventDate(a);
-        const bd = parseEventDate(b);
-        if (!ad || !bd) return String(a).localeCompare(String(b));
-        return ad.getTime() - bd.getTime();
-      });
-    })();
+    const axisPeriodKeys = getPlotOrderedPeriodKeys(pivot.periodKeys, periodMode);
     const xLabels = axisPeriodKeys.map((periodKey) => formatPeriodHeader(periodKey, periodMode));
     const monthTickIndices = (() => {
       if (['Annual', 'Mseason', 'Qseason'].includes(periodMode)) {
@@ -1660,6 +1854,35 @@ const EventAnalysisTest: React.FC = () => {
         : (statusMessageElement?.name || ''))
     );
 
+  const handleBackAction = () => {
+    const popped = navigateBackWithNavStack(navigate, location.pathname);
+    if (!popped) {
+      navigate('/');
+    }
+  };
+
+  const plotBackButtonStyle: React.CSSProperties = {
+    position: 'absolute',
+    left: `calc(${pViewSelect?.x ?? '0.3cm'} - 1cm)`,
+    top: pViewSelect?.y ?? '2.2cm',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '30px',
+    height: '30px',
+    margin: 0,
+    border: '1px solid rgba(0,0,0,1)',
+    background: 'white',
+    color: '#333',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    fontSize: '1.05rem',
+    lineHeight: 1,
+    fontWeight: 1000,
+    padding: 0,
+    transform: 'none'
+  };
+
   return (
     <div className="page-content">
       <div className="races-header" style={{ marginLeft: 0 }}>
@@ -1668,12 +1891,7 @@ const EventAnalysisTest: React.FC = () => {
             {leftArrowElement ? (
               <button
                 type="button"
-                onClick={() => {
-                  const popped = navigateBackWithNavStack(navigate, location.pathname);
-                  if (!popped) {
-                    navigate('/');
-                  }
-                }}
+                onClick={handleBackAction}
                 title="Back to Home"
                 aria-label="Back to Home"
                 style={{
@@ -1759,29 +1977,41 @@ const EventAnalysisTest: React.FC = () => {
             {renderConfigSelect(timeAdjSelectElement, pTimeAdjSelect, ['No Adjustment', 'Hardness Adjusted', 'Age Adjusted', 'Hardness and Age Adjusted'], undefined, analysisType !== 'Times')}
 
             {viewSelectElement?.type === 'button' ? (
-              <button
-                type="button"
-                onClick={() => setShowPlot((prev) => !prev)}
-                title={`Show ${showPlot ? 'table' : 'plot'}`}
-                aria-label={`Show ${showPlot ? 'table' : 'plot'}`}
-                style={{
-                  position: 'absolute',
-                  left: pViewSelect?.x,
-                  top: pViewSelect?.y,
-                  width: pViewSelect?.width || viewSelectElement?.style?.width || '1cm',
-                  height: pViewSelect?.height || viewSelectElement?.style?.height || '1cm',
-                  border: '1px solid #777',
-                  borderRadius: '6px',
-                  background: '#fff',
-                  cursor: 'pointer',
-                  fontSize: viewSelectElement?.style?.fontSize || '0.5rem',
-                  fontWeight: viewSelectElement?.style?.fontWeight || 700,
-                  lineHeight: Number(viewSelectElement?.style?.lineHeight || 1),
-                  padding: 0
-                }}
-              >
-                {showPlot ? 'Table' : (viewSelectElement?.name || 'Plot')}
-              </button>
+              <>
+                <button
+                  type="button"
+                  className="races-back-btn"
+                  onClick={handleBackAction}
+                  title="Back"
+                  aria-label="Back"
+                  style={plotBackButtonStyle}
+                >
+                  ←
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowPlot((prev) => !prev)}
+                  title={`Show ${showPlot ? 'table' : 'plot'}`}
+                  aria-label={`Show ${showPlot ? 'table' : 'plot'}`}
+                  style={{
+                    position: 'absolute',
+                    left: pViewSelect?.x,
+                    top: pViewSelect?.y,
+                    width: pViewSelect?.width || viewSelectElement?.style?.width || '1cm',
+                    height: pViewSelect?.height || viewSelectElement?.style?.height || '1cm',
+                    border: '1px solid #777',
+                    borderRadius: '6px',
+                    background: '#fff',
+                    cursor: 'pointer',
+                    fontSize: viewSelectElement?.style?.fontSize || '0.5rem',
+                    fontWeight: viewSelectElement?.style?.fontWeight || 700,
+                    lineHeight: Number(viewSelectElement?.style?.lineHeight || 1),
+                    padding: 0
+                  }}
+                >
+                  {showPlot ? 'Table' : (viewSelectElement?.name || 'Plot')}
+                </button>
+              </>
             ) : null}
 
             {expandSelectElement?.type === 'button' && showPlot ? (

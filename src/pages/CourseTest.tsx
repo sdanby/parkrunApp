@@ -127,6 +127,13 @@ const normalizeSummaryMode = (value: string): SummaryMode => {
     return 'average';
 };
 
+const normalizeGroupsBarMode = (value: string): GroupsBarMode => {
+    const token = normalizeControlToken(value);
+    if (token === 'type') return 'type';
+    if (token === 'age' || token === 'agegroup') return 'age';
+    return 'both';
+};
+
 const widthToPx = (value?: string): number | undefined => {
     if (!value) return undefined;
     const match = String(value).trim().match(/^(\d+(?:\.\d+)?)px$/i);
@@ -407,6 +414,7 @@ const top250Columns: ColumnDef[] = getCourseColumnsForView('top250').map((column
 }));
 
 const top250SortableKeys = new Set<string>(top250Columns.map((col) => col.key));
+const courseSortableKeys = new Set<string>(['date', ...basicColumns.map((col) => col.key), ...detailedOnlyColumns.map((col) => col.key)]);
 
 const buildConfiguredColumnDef = (column: ColumnDef): ColumnDef => {
     const configColumn = getCourseTableColumnByKey(column.key);
@@ -521,10 +529,16 @@ const CourseTest: React.FC = () => {
             : initialPanelModeParam === 'groups' || initialPanelModeParam === 'plot_groups'
                 ? 'groups'
             : 'table';
+    const initialSortKeyParam = String(searchParams.get('sort') || '').trim();
+    const initialSortDirParam = String(searchParams.get('dir') || '').trim().toLowerCase();
+    const initialSortKey = courseSortableKeys.has(initialSortKeyParam) ? initialSortKeyParam : 'date';
+    const initialSortDir: 'asc' | 'desc' = initialSortDirParam === 'asc' ? 'asc' : 'desc';
     const initialTop250SortKeyParam = searchParams.get('top250_sort') || 'total_count';
     const initialTop250SortKey = top250SortableKeys.has(initialTop250SortKeyParam) ? initialTop250SortKeyParam : 'total_count';
     const initialTop250SortDirParam = searchParams.get('top250_dir');
     const initialTop250SortDir: 'asc' | 'desc' = initialTop250SortDirParam === 'asc' ? 'asc' : 'desc';
+    const initialGroupsModeParam = searchParams.get('groups_mode') || '';
+    const initialGroupsBarMode = normalizeGroupsBarMode(initialGroupsModeParam);
     const highlightedTop250AthleteCode = searchParams.get('highlight_athlete') || locationState.highlightAthleteCode || '';
     const highlightedTop250ClubName = searchParams.get('highlight_club') || locationState.highlightClubName || '';
     const highlightedTop250ClubToken = String(highlightedTop250ClubName || '').trim().toLowerCase();
@@ -565,8 +579,8 @@ const CourseTest: React.FC = () => {
         return normalizePeriodQuery(configured);
     });
     const [panelMode, setPanelMode] = useState<CoursePanelMode>(initialPanelMode);
-    const [sortKey, setSortKey] = useState<string>('date');
-    const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+    const [sortKey, setSortKey] = useState<string>(initialSortKey);
+    const [sortDir, setSortDir] = useState<'asc' | 'desc'>(initialSortDir);
     const [top250SortKey, setTop250SortKey] = useState<string>(initialTop250SortKey);
     const [top250SortDir, setTop250SortDir] = useState<'asc' | 'desc'>(initialTop250SortDir);
     const [summaryMode, setSummaryMode] = useState<SummaryMode>(() => {
@@ -582,7 +596,7 @@ const CourseTest: React.FC = () => {
     const [monthlyCascadeLoading, setMonthlyCascadeLoading] = useState<boolean>(false);
     const [monthlyCascadeError, setMonthlyCascadeError] = useState<string | null>(null);
     useGlobalWaitCursor(loading || top250Loading || monthlyCascadeLoading);
-    const [groupsBarMode, setGroupsBarMode] = useState<GroupsBarMode>('both');
+    const [groupsBarMode, setGroupsBarMode] = useState<GroupsBarMode>(initialGroupsBarMode);
     const [isIndexMode, setIsIndexMode] = useState<boolean>(false);
     const [isPlotExpanded, setIsPlotExpanded] = useState<boolean>(false);
     const [profileXZoom, setProfileXZoom] = useState<{ start: number; end: number }>({ start: 0, end: 100 });
@@ -796,6 +810,8 @@ const CourseTest: React.FC = () => {
         nextParams.set('panel', panelMode);
         nextParams.set('view', viewMode);
         nextParams.set('period', periodQuery);
+        nextParams.set('sort', sortKey);
+        nextParams.set('dir', sortDir);
 
         if (panelMode === 'top250') {
             nextParams.set('top250_sort', top250SortKey);
@@ -805,6 +821,12 @@ const CourseTest: React.FC = () => {
             nextParams.delete('top250_dir');
             nextParams.delete('highlight_athlete');
             nextParams.delete('highlight_club');
+        }
+
+        if (panelMode === 'groups') {
+            nextParams.set('groups_mode', groupsBarMode);
+        } else {
+            nextParams.delete('groups_mode');
         }
 
         const nextSearch = `?${nextParams.toString()}`;
@@ -820,6 +842,7 @@ const CourseTest: React.FC = () => {
         location.search,
         location.state,
         navigate,
+        groupsBarMode,
         panelMode,
         periodQuery,
         top250SortDir,
@@ -1680,7 +1703,7 @@ const CourseTest: React.FC = () => {
 
     const groupsBaseHeight = String(activeGroupsPanelSpec?.height ?? activeTableContainerSpec?.height ?? (isMobile ? '8.8cm' : '10.8cm'));
     const groupsMessageVisible = panelMode === 'groups' && monthlyCascadeLoading;
-    const groupsPlotHeight = isMobile ? `calc(${groupsBaseHeight} + 3cm)` : `calc(${groupsBaseHeight} + 1cm)`;
+    const groupsPlotHeight = isMobile ? `calc(${groupsBaseHeight} + 1cm)` : `calc(${groupsBaseHeight} + 1cm)`;
     const groupsWindowHeight = isMobile ? `calc(${groupsBaseHeight} + 4cm)` : `calc(${groupsBaseHeight} + 1cm)`;
     const groupsWindowFixedHeight = isMobile ? groupsWindowHeight : undefined;
     const groupsPanelTop = String(activeGroupsPanelSpec?.y ?? pGroupsPanel?.y ?? (isMobile ? '12cm' : '2cm'));

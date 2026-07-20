@@ -873,9 +873,16 @@ const NextEvent: React.FC = () => {
     const loggedInDisplayName = typeof loggedInUser.displayName === 'string' && loggedInUser.displayName.trim()
         ? loggedInUser.displayName.trim()
         : '';
+    const loggedInDefaultCourseCode = typeof loggedInUser.defaultCourseCode === 'string' && loggedInUser.defaultCourseCode.trim()
+        ? loggedInUser.defaultCourseCode.trim()
+        : '';
 
     const initialMode: ModeKey = searchParams.get('mode') === 'next_ext' ? 'next_ext' : 'next_pr';
     const initialCourseCode = String(searchParams.get('event_code') || '').trim();
+    const initialNextExtCourseSeed = String(searchParams.get('course_seed') || '').trim().toLowerCase();
+    const initialNextEventCycle = String(searchParams.get('next_event_cycle') || '').trim().toLowerCase();
+    const initialCurveRankReferenceOpen = ['1', 'true', 'yes'].includes(String(searchParams.get('curve_rank_open') || '').trim().toLowerCase());
+    const initialCurveRankReferenceTypeRaw = String(searchParams.get('curve_rank_type') || '').trim().toUpperCase();
     const initialNextExtCourseCodes = (() => {
         const raw = String(searchParams.get('course_code') || '').trim();
         if (!raw) return [] as string[];
@@ -906,11 +913,16 @@ const NextEvent: React.FC = () => {
     const [eventOptions, setEventOptions] = useState<EventOption[]>([]);
     const [courseEvents, setCourseEvents] = useState<ParkrunEventRow[]>([]);
     const [curveReferenceRows, setCurveReferenceRows] = useState<CurveRankReferenceRow[]>([]);
-    const [curveRankReferenceOpen, setCurveRankReferenceOpen] = useState<boolean>(false);
+    const [curveRankReferenceOpen, setCurveRankReferenceOpen] = useState<boolean>(initialCurveRankReferenceOpen);
     const [curveRankReferenceLoading, setCurveRankReferenceLoading] = useState<boolean>(false);
     const [curveRankReferenceError, setCurveRankReferenceError] = useState<string | null>(null);
     const [curveRankReferenceRows, setCurveRankReferenceRows] = useState<CurveRankReferenceRow[]>([]);
-    const [curveRankReferenceType, setCurveRankReferenceType] = useState<CurveRankReferenceType>('B');
+    const [curveRankReferenceType, setCurveRankReferenceType] = useState<CurveRankReferenceType>(() => {
+        if (initialCurveRankReferenceTypeRaw === 'B' || initialCurveRankReferenceTypeRaw === 'E' || initialCurveRankReferenceTypeRaw === 'AE' || initialCurveRankReferenceTypeRaw === 'ES' || initialCurveRankReferenceTypeRaw === 'AES') {
+            return initialCurveRankReferenceTypeRaw;
+        }
+        return 'B';
+    });
     const [curveRankReferenceVersion, setCurveRankReferenceVersion] = useState<string>('');
     const [curveRankReferenceLatestVersion, setCurveRankReferenceLatestVersion] = useState<string>('');
     const [curveRankReferenceVersions, setCurveRankReferenceVersions] = useState<string[]>([]);
@@ -921,6 +933,7 @@ const NextEvent: React.FC = () => {
     const [nextExtPreferredExactRank, setNextExtPreferredExactRank] = useState<number | null>(null);
     const [nextExtLoading, setNextExtLoading] = useState<boolean>(false);
     const [nextExtError, setNextExtError] = useState<string | null>(null);
+    const [resolvedNextExtRequestKey, setResolvedNextExtRequestKey] = useState<string>('');
     const [loading, setLoading] = useState<boolean>(false);
     const [sortKey, setSortKey] = useState<string>('hardness_band');
     const [sortDir, setSortDir] = useState<SortDir>('desc');
@@ -928,6 +941,11 @@ const NextEvent: React.FC = () => {
     const nextExtCourseMenuRef = useRef<HTMLDivElement | null>(null);
     const nextExtAgeGradeMenuRef = useRef<HTMLDivElement | null>(null);
     const previousAthleteCodeRef = useRef<string>(selectedAthleteCode);
+    const nextExtCourseSeedRef = useRef<string>('');
+    const curveRankReferenceTypeSeedRef = useRef<string>('');
+    const curveRankReferenceResetInitializedRef = useRef<boolean>(false);
+    const nextEventCycleSeedRef = useRef<string>('');
+    const pendingNextEventCycleRef = useRef<boolean>(initialNextEventCycle === 'rank_reference');
     const isAllCoursesSelected = mode === 'next_ext'
         ? selectedNextExtCourseCodes.length === 0
         : false;
@@ -1078,10 +1096,19 @@ const NextEvent: React.FC = () => {
             }
             setNextExtError(null);
             setNextExtLoading(false);
+            setResolvedNextExtRequestKey('');
             return () => {
                 cancelled = true;
             };
         }
+
+        const requestKey = JSON.stringify({
+            athleteCode: selectedAthleteCode,
+            adjType: selectedNextExtAdjType,
+            courseCodes: selectedNextExtCourseCodes,
+            ageGrades: selectedNextExtAgeGrades
+        });
+        setResolvedNextExtRequestKey('');
 
         const loadNextExtRows = async () => {
             try {
@@ -1101,6 +1128,7 @@ const NextEvent: React.FC = () => {
                     setNextExtPreferredAdjType((payload?.selectedPreferredAdjType as RankMetricKey | null | undefined) ?? null);
                     setNextExtPreferredRankDisplay(String(payload?.selectedPreferredRankDisplay || '').trim() || null);
                     setNextExtPreferredExactRank(typeof payload?.selectedPreferredExactRank === 'number' ? payload.selectedPreferredExactRank : null);
+                    setResolvedNextExtRequestKey(requestKey);
                 }
             } catch (_err) {
                 if (!cancelled) {
@@ -1109,6 +1137,7 @@ const NextEvent: React.FC = () => {
                     setNextExtPreferredRankDisplay(null);
                     setNextExtPreferredExactRank(null);
                     setNextExtError('Unable to load similar participants right now.');
+                    setResolvedNextExtRequestKey(requestKey);
                 }
             } finally {
                 if (!cancelled) {
@@ -1199,8 +1228,15 @@ const NextEvent: React.FC = () => {
     }, [nextExtAgeGradeOptionSet]);
 
     useEffect(() => {
+        if (!curveRankReferenceResetInitializedRef.current) {
+            curveRankReferenceResetInitializedRef.current = true;
+            return;
+        }
+        if (pendingNextEventCycleRef.current && mode === 'next_ext') {
+            return;
+        }
         setCurveRankReferenceOpen(false);
-    }, [selectedAthleteCode, selectedCourseCode]);
+    }, [mode, selectedAthleteCode, selectedCourseCode]);
 
     useEffect(() => {
         let cancelled = false;
@@ -1269,6 +1305,82 @@ const NextEvent: React.FC = () => {
             setSelectedCourseCode(mostFrequentCourseCode);
         }
     }, [mode, selectedCourseCode, sortedRuns]);
+
+    useEffect(() => {
+        if (!curveRankReferenceOpen || initialCurveRankReferenceTypeRaw !== 'BEST') {
+            return;
+        }
+
+        const bestMetric = nextExtPreferredAdjType || profileEffectiveRankSummary.metric;
+        if (bestMetric !== 'B' && bestMetric !== 'E' && bestMetric !== 'AE' && bestMetric !== 'ES' && bestMetric !== 'AES') {
+            return;
+        }
+
+        const seedKey = `${selectedAthleteCode}::${bestMetric}`;
+        if (curveRankReferenceTypeSeedRef.current === seedKey) {
+            return;
+        }
+
+        if (curveRankReferenceType !== bestMetric) {
+            setCurveRankReferenceType(bestMetric);
+        }
+        curveRankReferenceTypeSeedRef.current = seedKey;
+    }, [curveRankReferenceOpen, curveRankReferenceType, initialCurveRankReferenceTypeRaw, nextExtPreferredAdjType, profileEffectiveRankSummary.metric, selectedAthleteCode]);
+
+    useEffect(() => {
+        if (initialNextEventCycle !== 'rank_reference' || mode !== 'next_ext' || curveRankReferenceOpen) {
+            return;
+        }
+        const requestKey = JSON.stringify({
+            athleteCode: selectedAthleteCode,
+            adjType: selectedNextExtAdjType,
+            courseCodes: selectedNextExtCourseCodes,
+            ageGrades: selectedNextExtAgeGrades
+        });
+        if (!selectedAthleteCode || nextExtLoading || resolvedNextExtRequestKey !== requestKey) {
+            return;
+        }
+
+        const seedKey = `${selectedAthleteCode}::${initialNextEventCycle}`;
+        if (nextEventCycleSeedRef.current === seedKey) {
+            return;
+        }
+
+        nextEventCycleSeedRef.current = seedKey;
+        pendingNextEventCycleRef.current = false;
+        setCurveRankReferenceError(null);
+        setCurveRankReferenceOpen(true);
+    }, [curveRankReferenceOpen, initialNextEventCycle, mode, nextExtLoading, resolvedNextExtRequestKey, selectedAthleteCode, selectedNextExtAdjType, selectedNextExtAgeGrades, selectedNextExtCourseCodes]);
+
+    useEffect(() => {
+        if (mode !== 'next_ext' || initialNextExtCourseSeed !== 'default_or_freq') {
+            return;
+        }
+
+        const seedKey = `${selectedAthleteCode}::${initialNextExtCourseSeed}`;
+        if (nextExtCourseSeedRef.current === seedKey) {
+            return;
+        }
+        if (selectedNextExtCourseCodes.length > 0) {
+            nextExtCourseSeedRef.current = seedKey;
+            return;
+        }
+
+        const preferredCourseCode = selectedAthleteCode && selectedAthleteCode === loggedInAthleteCode && loggedInDefaultCourseCode
+            ? loggedInDefaultCourseCode
+            : '';
+        if (preferredCourseCode) {
+            setSelectedNextExtCourseCodes([preferredCourseCode]);
+            nextExtCourseSeedRef.current = seedKey;
+            return;
+        }
+
+        const mostFrequentCourseCode = getMostFrequentCourseCode(sortedRuns);
+        if (mostFrequentCourseCode) {
+            setSelectedNextExtCourseCodes([mostFrequentCourseCode]);
+            nextExtCourseSeedRef.current = seedKey;
+        }
+    }, [initialNextExtCourseSeed, loggedInAthleteCode, loggedInDefaultCourseCode, mode, selectedAthleteCode, selectedNextExtCourseCodes, sortedRuns]);
 
     useEffect(() => {
         const params = new URLSearchParams(location.search);
@@ -1949,6 +2061,10 @@ const NextEvent: React.FC = () => {
     };
 
     const handleBackNavigation = () => {
+        if (navigateBackWithNavStack(navigate, location.pathname)) {
+            return;
+        }
+
         const params = new URLSearchParams();
         if (selectedAthleteCode) {
             params.set('athlete_code', selectedAthleteCode);

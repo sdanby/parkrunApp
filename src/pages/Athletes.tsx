@@ -87,6 +87,8 @@ type AthleteSummary = {
     current_age_estimate?: number | string;
     sex?: string;
     total_runs?: number;
+    total_vols?: number | string | null;
+    local_volunteer_count?: number | string | null;
 };
 
 type AthleteBestSummaryRow = {
@@ -131,7 +133,18 @@ const formatDisplayedRank = (value: unknown): string => {
     return Number.isFinite(numeric) ? String(Math.round(numeric)) : '--';
 };
 
-type SummaryField = 'athlete_code' | 'athlete_name' | 'club' | 'current_age_estimate' | 'sex' | 'total_runs';
+const parseOptionalWholeNumber = (value: unknown): number | null => {
+    if (value === undefined || value === null || value === '') {
+        return null;
+    }
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) {
+        return null;
+    }
+    return Math.max(0, Math.round(numeric));
+};
+
+type SummaryField = 'athlete_code' | 'athlete_name' | 'club' | 'current_age_estimate' | 'sex' | 'total_runs' | 'total_vols' | 'local_volunteer_count';
 
 type AthleteRunsNormalized = {
     runs: AthleteRecord[];
@@ -207,6 +220,8 @@ const normalizeAthleteResponse = (payload: any, fallbackCode?: string): AthleteR
     fill('sex', ['sex', 'gender']);
     fill('current_age_estimate', ['athlete_current_age_estimate', 'athleteCurrentAgeEstimate', 'current_age_estimate', 'age_estimate', 'age']);
     fill('total_runs', ['total_runs', 'totalRuns', 'run_count', 'runs']);
+    fill('total_vols', ['total_vols', 'totalVols']);
+    fill('local_volunteer_count', ['local_volunteer_count', 'localVolunteerCount', 'volunteer_count']);
 
     if (summary.total_runs === undefined && runs.length > 0) {
         summary.total_runs = runs.length;
@@ -1028,13 +1043,21 @@ const Athletes: React.FC = () => {
     const shouldSuppressInitialSearch = Boolean((initialSearchQuery && initialSearchQuery.trim()) || activeSelectedCode);
     const fromRaces = locationState.from === 'races';
     const returnTarget = locationState.returnTo;
+    const sourceEventCodeFromQuery = searchParams.get('source_event_code') || searchParams.get('event_code') || undefined;
+    const sourceEventNameFromQuery = searchParams.get('source_event');
+    const sourceEventDateFromQuery = searchParams.get('source_date') || searchParams.get('event_date');
     // Use event_date from query string if coming from Lists
-    const sourceEvent = locationState.sourceEvent || {
-        eventCode: searchParams.get('source_event_code') || searchParams.get('event_code') || undefined,
-        eventName: searchParams.get('source_event'),
-        eventDate: searchParams.get('source_date') || searchParams.get('event_date')
-    };
+    const sourceEvent = useMemo(() => locationState.sourceEvent || {
+        eventCode: sourceEventCodeFromQuery,
+        eventName: sourceEventNameFromQuery,
+        eventDate: sourceEventDateFromQuery
+    }, [locationState.sourceEvent, sourceEventCodeFromQuery, sourceEventDateFromQuery, sourceEventNameFromQuery]);
     const hasSourceEvent = Boolean(sourceEvent?.eventCode || sourceEvent?.eventName || sourceEvent?.eventDate);
+    const sourceEventKey = useMemo(() => JSON.stringify({
+        eventCode: sourceEvent?.eventCode || '',
+        eventName: sourceEvent?.eventName || '',
+        eventDate: sourceEvent?.eventDate || ''
+    }), [sourceEvent?.eventCode, sourceEvent?.eventDate, sourceEvent?.eventName]);
 
     // Function to check if a row matches the source event
     const isHighlightedRow = (row: AthleteRecord): boolean => {
@@ -1148,13 +1171,10 @@ const Athletes: React.FC = () => {
         if (!hasSourceEvent) {
             return;
         }
-        if (!showProfile && !showPlot) {
-            return;
-        }
 
         setShowProfile(false);
         setShowPlot(false);
-    }, [hasSourceEvent, showPlot, showProfile]);
+    }, [activeSelectedCode, hasSourceEvent, sourceEventKey]);
 
     useEffect(() => {
         let cancelled = false;
@@ -1603,6 +1623,13 @@ const Athletes: React.FC = () => {
     })();
 
     const totalRunsCount = summary?.total_runs ?? (runs.length > 0 ? runs.length : undefined);
+    const totalVolsRaw = summary?.total_vols ?? pickField(latestRun, ['total_vols', 'totalVols']);
+    const localVolunteerCountRaw = summary?.local_volunteer_count ?? pickField(latestRun, ['local_volunteer_count', 'localVolunteerCount', 'volunteer_count']);
+    const totalVolsCount = parseOptionalWholeNumber(totalVolsRaw);
+    const localVolunteerCount = parseOptionalWholeNumber(localVolunteerCountRaw);
+    const estVoluntsDisplay = totalVolsCount !== null
+        ? String(totalVolsCount)
+        : (localVolunteerCount !== null && localVolunteerCount > 0 ? 'pend' : 'NA');
 
     const headerName = pickField(latestRun, ['athlete_name', 'name']) || summary?.athlete_name;
     const fallbackName = summary?.athlete_code ? `Athlete ${summary.athlete_code}` : activeSelectedCode ? `Athlete ${activeSelectedCode}` : 'Athlete';
@@ -2144,6 +2171,8 @@ const Athletes: React.FC = () => {
     const recentClubValueElement = getParticipantElementById('participant.recentClub');
     const freqCourseLabelElement = getParticipantElementById('participant.freqCourseLabel');
     const freqCourseValueElement = getParticipantElementById('participant.freqCourse');
+    const estVoluntsLabelElement = getParticipantElementById('participant.estVoluntsLabel');
+    const estVoluntsValueElement = getParticipantElementById('participant.estVolunts');
     const athleteCodeLabelElement = useMemo(
         () => participantElements.find((element) => element.id === 'participant.athleteCodeLabel' && element.type === 'label'),
         [participantElements]
@@ -2216,6 +2245,14 @@ const Athletes: React.FC = () => {
     const freqCourseValuePlacement = useMemo(
         () => freqCourseValueElement?.[isMobile ? 'mobile' : 'laptop'],
         [freqCourseValueElement, isMobile]
+    );
+    const estVoluntsLabelPlacement = useMemo(
+        () => estVoluntsLabelElement?.[isMobile ? 'mobile' : 'laptop'],
+        [estVoluntsLabelElement, isMobile]
+    );
+    const estVoluntsValuePlacement = useMemo(
+        () => estVoluntsValueElement?.[isMobile ? 'mobile' : 'laptop'],
+        [estVoluntsValueElement, isMobile]
     );
     const athleteCodeLabelPlacement = useMemo(
         () => athleteCodeLabelElement?.[isMobile ? 'mobile' : 'laptop'],
@@ -2438,6 +2475,22 @@ const Athletes: React.FC = () => {
         width: freqCourseValuePlacement?.width,
         pointerEvents: 'auto'
     }), [freqCourseValuePlacement]);
+
+    const estVoluntsLabelWrapperStyle = useMemo<React.CSSProperties>(() => ({
+        display: 'inline-flex',
+        position: 'absolute',
+        left: estVoluntsLabelPlacement?.x ?? '8.5cm',
+        top: estVoluntsLabelPlacement?.y ?? '3.4cm',
+        pointerEvents: 'auto'
+    }), [estVoluntsLabelPlacement]);
+
+    const estVoluntsValueStyle = useMemo<React.CSSProperties>(() => ({
+        position: 'absolute',
+        left: estVoluntsValuePlacement?.x ?? '11.2cm',
+        top: estVoluntsValuePlacement?.y ?? '3.4cm',
+        width: estVoluntsValuePlacement?.width,
+        pointerEvents: 'auto'
+    }), [estVoluntsValuePlacement]);
 
     const recentClubValueStyle = useMemo<React.CSSProperties>(() => ({
         position: 'absolute',
@@ -2711,6 +2764,16 @@ const Athletes: React.FC = () => {
         };
     }, [freqCourseLabelElement]);
 
+    const estVoluntsLabelTextStyle = useMemo<React.CSSProperties>(() => {
+        const style = estVoluntsLabelElement?.style;
+        return {
+            fontSize: style?.fontSize,
+            fontWeight: style?.fontWeight,
+            color: style?.color,
+            lineHeight: style?.lineHeight
+        };
+    }, [estVoluntsLabelElement]);
+
     const totalRunsLabelTextStyle = useMemo<React.CSSProperties>(() => {
         const style = totalRunsLabelElement?.style;
         return {
@@ -2802,6 +2865,22 @@ const Athletes: React.FC = () => {
             height: freqCourseValuePlacement?.height ?? style?.height
         };
     }, [freqCourseValueElement, freqCourseValuePlacement]);
+
+    const estVoluntsValueTextStyle = useMemo<React.CSSProperties>(() => {
+        const style = estVoluntsValueElement?.style;
+        const isPending = estVoluntsDisplay === 'pend';
+        const isMissing = estVoluntsDisplay === 'NA';
+        return {
+            fontSize: style?.fontSize,
+            fontWeight: style?.fontWeight,
+            color: style?.color ?? (isPending ? '#92400e' : (isMissing ? '#6b7280' : '#111827')),
+            lineHeight: style?.lineHeight,
+            fontStyle: style?.fontStyle,
+            textAlign: style?.textAlign,
+            width: estVoluntsValuePlacement?.width ?? style?.width,
+            height: estVoluntsValuePlacement?.height ?? style?.height
+        };
+    }, [estVoluntsDisplay, estVoluntsValueElement, estVoluntsValuePlacement]);
 
     const estimatedAgeValueTextStyle = useMemo<React.CSSProperties>(() => {
         const style = estimatedAgeValueElement?.style;
@@ -4076,6 +4155,23 @@ const Athletes: React.FC = () => {
                                             headerFavoriteCourse
                                         )}
                                     </div>
+
+                                    {showHeader && !showPlot && (
+                                        <>
+                                            {renderConfigControlLabel(
+                                                estVoluntsLabelElement,
+                                                'Est. Volunts:',
+                                                'term-est-volunts',
+                                                'athletes-est-volunts',
+                                                estVoluntsLabelTextStyle,
+                                                estVoluntsLabelWrapperStyle,
+                                                true
+                                            )}
+                                            <div id="athletes-est-volunts" title="Estimated total volunteering" style={{ ...estVoluntsValueStyle, ...estVoluntsValueTextStyle }}>
+                                                {estVoluntsDisplay}
+                                            </div>
+                                        </>
+                                    )}
 
                                     <button
                                         id="athletes-view-cycle-btn"

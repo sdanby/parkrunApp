@@ -8,6 +8,7 @@ This is the single help source for this parkrun app. Use this to navigate throug
 ## Contents
 * [Introduction](#section-introduction)
 * [Getting Started](#section-getting-started)
+* [Quick Starts](#section-quick-starts)
 * [Concepts](#section-concepts)
 * [Feedback](#section-feedback)
 * [Navigation](#section-navigation)
@@ -49,6 +50,129 @@ Neither of these are mandatory but they will make navigation features easier whe
 On the **Home** page navigation is through the burger bar in the top left-hand corner and each page, help is covered in detail: [Pages](#section-pages)
 
 <img src="/help-images/burger-menu.png" alt="Burger Menu" height="200" />
+
+<a id="section-quick-starts"></a>
+
+## Quick Starts
+
+Quick Starts are preset launch tiles that take you straight to a destination page with the main controls already set for a specific question. When you open a tile, the destination page now also opens this help panel automatically so you can see, in plain English, what that preset is trying to show you.
+
+<a id="quick-start-hardness-last50"></a>
+### Hardest Local Courses
+
+This tile opens Event Analysis with Combined Hardness over the last 50 events, summarised to highlight the toughest local courses first. Use it when you want a quick ranking of which courses have recently been the most demanding rather than just the slowest by raw finishing time.
+
+<a id="quick-start-pb-hotspots"></a>
+### PB Hotspots
+
+This tile opens Event Analysis focused on PBs so you can see which events have been producing the strongest personal-best conditions. It is a quick way to spot courses or periods where runners have recently been improving most often.
+
+<a id="quick-start-tourist-density"></a>
+### Tourist Density
+
+This tile opens Event Analysis on tourist participation and ranks events by how visitor-heavy they have been. It helps you identify courses that attract more non-regular runners relative to the overall participation per course and therefore have a more destination-style attendance profile.
+
+<a id="quick-start-hardest-month"></a>
+### Hardest Month of the Year
+
+This tile opens Event Analysis in month-seasonality mode for Combined Hardness so you can compare which months tend to make conditions hardest. It is useful for spotting recurring seasonal patterns rather than one-off difficult events.
+
+<a id="quick-start-participation-growth"></a>
+### Attendance Growth
+
+This tile opens Event Analysis on annual participant levels with the plot expanded and the legend preselected for the five biggest courses by attendance. Use it when you want a fast visual read on longer-term attendance trends rather than a single snapshot table, with the main growth lines already highlighted for you.
+
+<a id="quick-start-all-time-attendance"></a>
+### All-Time Attendance Ranking
+
+This tile opens the Course page with detailed all-events view, sorted to surface the most attended courses in order. It gives you a quick league table of the events for the selected course that have attracted the highest participation across their full history.
+
+<a id="quick-start-course-deep-dive"></a>
+### Course attendance and volunteering league
+
+This tile opens the Course page on the second button Top250. The order is the combination of participants order by course parkruns and volunteering totals
+
+<a id="quick-start-local-course-monthly-participation-chart"></a>
+### Local course monthly participation chart
+
+Show the average course participation by month, comparing the most recent year to the entire history. In addition averages summarising all courses are displayed for comparison.
+
+Click cumulative to see the progressive growth.
+
+<a id="quick-start-course-monthly-participation-split-by-age-group"></a>
+### Course monthly participation split by age group
+
+Show how participation is split by age group across the months, with all-course comparison bars displayed for context.
+
+This quick start opens the groups chart with Age Group already selected. Use the same toggle to switch back and look at the other types of participant data.
+
+Note: this takes up to 30 seconds to produce chart
+
+<a id="quick-start-my-participant-page"></a>
+### My Last Local Event
+
+This tile opens the Participant page so you can review your own running profile, history and adjusted performance measures in one place. If your athlete code is already linked to your login, it acts as the quickest route into your personal statistics.
+
+<a id="quick-start-participant-ranking-profile"></a>
+### Participant Ranking Profile
+
+Show the profile for the selected participant. Click the PLOT button on the page. See [Participant Profile](#section-participant-profile).
+
+<a id="quick-start-participant-adjusted-plot-rankings"></a>
+### Adjusted plot of a participants historic times and rankings
+
+Show the plot of a participants parkrun adjusted times, indicating the colour by course and showing the ranking score over time.
+
+<a id="quick-start-next-event-planner"></a>
+### What time do I need to improve my ranking
+
+This tile opens the Next Event page so you can review the perfomances both past and recent times and rankings. The aim of this page is to select a course  and see what times you would need to achieve to increase your ranking.
+
+<a id="quick-start-participant-match-performance"></a>
+### Which participants match my running performance
+
+This tile opens the Next Event page directly in Participant Match mode so you can compare the selected participant against runners with similar adjusted rank performance. Select the participant, narrow to their local course if needed, review the preferred adjustment type, and use the table to see slightly stronger and slightly weaker comparable runners.
+
+<a id="quick-start-rank-100-times"></a>
+### What times do I need to get a rank of 100
+
+This tile opens the Next Event page through Participant Match and into the Rank reference view. The Rank Type is preset to the participant's best adjustment type so you can inspect the cut-off times for rank 100 and nearby thresholds for that metric.
+
+<a id="quick-start-club-members-overview"></a>
+### Club Members Overview
+
+This tile opens the Clubs page in members mode so you can inspect the broader member list and associated club metrics. Use it when you want the fuller historic-style club view rather than only the current declared membership picture.
+
+<a id="quick-start-current-club-members"></a>
+### The Club's most frequently attended courses
+
+This tile opens the Clubs page showing the most frequently attended course over the history of the club and in the last year.
+This page on course popularity shows different stats and whther courses have become in or out of favour.
+
+<a id="quick-start-fastest-local-runners-recorded"></a>
+### Fastest local runners recorded
+
+This page shows the fastest participants ever, on the local courses, unadjusted, with the best time for each participant.
+
+<a id="quick-start-fastest-local-runners-event-adjusted"></a>
+### Fastest local runners adjusted with event adjustment
+
+This page shows the fastest participants on the local courses, who are ranked by their adjusted time for event hardness with the adjusted time for each participant.
+
+<a id="quick-start-fastest-local-runners-year-aes-course-sort"></a>
+### Fastest local runners this year with adj for sex, age & event and sorted by course
+
+This page shows the fastest participants on local courses, by local runners over the last year, on times that have been adjusted for event, sex and age and then sorted by course and AES times to see who has run great times by course.
+
+<a id="quick-start-highest-total-parkruns-local-attendees"></a>
+### Highest Total Parkruns - all participants attending local parkruns
+
+This page shows the most active parkrunners ever to visit our local parkruns across all of their parkrun visits.
+
+<a id="quick-start-highest-local-runs-this-year"></a>
+### Highest Local Runs this year
+
+This page shows the most active participants this year on our local parkruns.
 
 <a id="section-concepts"></a>
 
@@ -2546,6 +2670,14 @@ Total Runs is used throughout participant summaries and profile pages to provide
 The total number of parkruns the participant has completed in the **last year**,
 across **all courses and all clubs**.  
 This provides a measure of the participant’s **recent running volume**.
+
+<a id="term-est-volunts"></a>
+### Est. Volunts
+
+This is the latest total volunteering for this participant.
+This data is only recently collected and is only collected from participants that have been active.
+If `pend` is shown, then we have local volunteer information but we havent collected the up to date data yet.
+If `NA` is shown then no data has been collected, and `0` means no volunteering when last snapped.
 
 <a id="term-tourists"></a>
 ### Tourists

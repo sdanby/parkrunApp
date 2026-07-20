@@ -5,6 +5,7 @@ import { getChatElementById, getChatViewportForWidth, type ChatPositionSpec, typ
 
 const AUTH_USER_KEY = 'auth_user_v1';
 const AUTH_TOKEN_KEY = 'auth_token_v1';
+const CHAT_UNREAD_STATUS_CHANGED_EVENT = 'chat-unread-status-changed';
 
 const getLoggedInUser = (): AuthUser | null => {
     if (typeof window === 'undefined') {
@@ -68,6 +69,13 @@ const cmToNumber = (value?: string): number => {
 const getBottomCm = (placement?: ChatPositionSpec): number => cmToNumber(placement?.y) + cmToNumber(placement?.height);
 const getRightCm = (placement?: ChatPositionSpec): number => cmToNumber(placement?.x) + cmToNumber(placement?.width);
 
+const notifyChatUnreadStatusChanged = () => {
+    if (typeof window === 'undefined') {
+        return;
+    }
+    window.dispatchEvent(new Event(CHAT_UNREAD_STATUS_CHANGED_EVENT));
+};
+
 const Chat: React.FC = () => {
     const location = useLocation();
     const currentUser = useMemo(() => getLoggedInUser(), []);
@@ -101,14 +109,17 @@ const Chat: React.FC = () => {
         }).catch(() => undefined);
     }, [location.pathname, location.search]);
 
-    const loadMessages = async (showLoading = false) => {
+    const loadMessages = async (showLoading = false, markRead = true) => {
         if (showLoading) {
             setLoading(true);
         }
         try {
-            const rows = await fetchChatMessages(200);
+            const rows = await fetchChatMessages(200, { markRead });
             setMessages(rows);
             setError(null);
+            if (markRead) {
+                notifyChatUnreadStatusChanged();
+            }
         } catch (_err) {
             setError('Unable to load chat messages right now.');
         } finally {
@@ -119,9 +130,9 @@ const Chat: React.FC = () => {
     };
 
     useEffect(() => {
-        loadMessages(true);
+        loadMessages(true, true);
         const timerId = window.setInterval(() => {
-            loadMessages(false);
+            loadMessages(false, true);
         }, 5000);
         return () => window.clearInterval(timerId);
     }, []);
@@ -150,6 +161,7 @@ const Chat: React.FC = () => {
             setMessages((current) => [...current, created]);
             setDraft('');
             setError(null);
+            notifyChatUnreadStatusChanged();
             const token = window.localStorage.getItem(AUTH_TOKEN_KEY) || undefined;
             const path = `${location.pathname}${location.search}`;
             trackPageVisit({

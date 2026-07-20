@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import AthleteSearch from '../components/AthleteSearch';
 import EventSearch from '../components/EventSearch';
-import { fetchAuthConfig, fetchEventOptions, linkAthleteCode, loginWithEmail, loginWithGoogle, logoutSession, registerWithEmail, type AuthUser, type EventOption } from '../api/backendAPI';
+import { confirmPasswordReset, fetchAuthConfig, fetchEventOptions, linkAthleteCode, loginWithEmail, loginWithGoogle, logoutSession, registerWithEmail, requestPasswordReset, validatePasswordResetToken, type AuthUser, type EventOption } from '../api/backendAPI';
 
 declare global {
     interface Window {
@@ -18,23 +18,32 @@ type PendingLogin = {
     user: AuthUser;
 };
 
+type LoginMode = 'signin' | 'register' | 'forgot' | 'reset';
+
 const Login: React.FC = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const googleBtnRef = useRef<HTMLDivElement | null>(null);
-    const [mode, setMode] = useState<'signin' | 'register'>('signin');
+    const [mode, setMode] = useState<LoginMode>('signin');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [displayName, setDisplayName] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [googleClientId, setGoogleClientId] = useState<string>(process.env.REACT_APP_GOOGLE_CLIENT_ID || '');
+    const [passwordResetEnabled, setPasswordResetEnabled] = useState<boolean>(true);
     const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => Boolean(localStorage.getItem(AUTH_TOKEN_KEY)));
     const [pendingLogin, setPendingLogin] = useState<PendingLogin | null>(null);
     const [selectedAthleteCode, setSelectedAthleteCode] = useState<string>('');
     const [selectedDefaultCourseCode, setSelectedDefaultCourseCode] = useState<string>('');
     const [selectedDefaultCourseName, setSelectedDefaultCourseName] = useState<string>('');
     const [courseOptions, setCourseOptions] = useState<EventOption[]>([]);
+    const [resetToken, setResetToken] = useState<string>('');
+    const [resetTokenValid, setResetTokenValid] = useState<boolean>(false);
+    const [resetValidationLoading, setResetValidationLoading] = useState<boolean>(false);
+    const [resetPassword, setResetPassword] = useState('');
+    const [resetPasswordConfirm, setResetPasswordConfirm] = useState('');
+    const [infoMessage, setInfoMessage] = useState<string | null>(null);
 
     const completeLogin = (token: string, user: any) => {
         const normalizedUser = (user || {}) as AuthUser;
@@ -145,10 +154,27 @@ const Login: React.FC = () => {
         const state: any = location.state;
         const sessionMessage = state?.sessionMessage;
         if (sessionMessage) {
-            setError(String(sessionMessage));
+            setInfoMessage(String(sessionMessage));
             navigate(location.pathname, { replace: true, state: null });
         }
     }, [location.pathname, location.state, navigate]);
+
+    useEffect(() => {
+        const params = new URLSearchParams(location.search || '');
+        const token = String(params.get('reset_token') || '').trim();
+        setResetToken(token);
+        if (token) {
+            setMode('reset');
+            setInfoMessage(null);
+            setError(null);
+            return;
+        }
+        setResetTokenValid(false);
+        setResetPassword('');
+        setResetPasswordConfirm('');
+        setResetValidationLoading(false);
+        setMode((current) => (current === 'reset' ? 'signin' : current));
+    }, [location.search]);
 
     useEffect(() => {
         if (googleClientId) {
@@ -162,6 +188,9 @@ const Login: React.FC = () => {
                 if (!cancelled && runtimeClientId) {
                     setGoogleClientId(runtimeClientId);
                 }
+                if (!cancelled) {
+                    setPasswordResetEnabled(config?.passwordResetEnabled !== false);
+                }
             } catch (_err) {
                 // ignore, UI will keep fallback message
             }
@@ -171,6 +200,41 @@ const Login: React.FC = () => {
             cancelled = true;
         };
     }, [googleClientId]);
+
+    useEffect(() => {
+        if (!resetToken) {
+            return;
+        }
+
+        let cancelled = false;
+        const checkResetToken = async () => {
+            try {
+                setResetValidationLoading(true);
+                const validation = await validatePasswordResetToken(resetToken);
+                if (cancelled) {
+                    return;
+                }
+                setResetTokenValid(Boolean(validation.valid));
+                if (!validation.valid) {
+                    setError('This password reset link is invalid or has expired.');
+                }
+            } catch (_err) {
+                if (!cancelled) {
+                    setResetTokenValid(false);
+                    setError('Unable to validate this password reset link right now.');
+                }
+            } finally {
+                if (!cancelled) {
+                    setResetValidationLoading(false);
+                }
+            }
+        };
+
+        checkResetToken();
+        return () => {
+            cancelled = true;
+        };
+    }, [resetToken]);
 
     useEffect(() => {
         if (!googleClientId) {
@@ -225,6 +289,7 @@ const Login: React.FC = () => {
     const handleEmailSubmit = async (event: React.FormEvent) => {
         event.preventDefault();
         setError(null);
+        setInfoMessage(null);
 
         if (!email.trim() || !password.trim()) {
             setError('Email and password are required.');
@@ -246,6 +311,73 @@ const Login: React.FC = () => {
             setError(err?.response?.data?.error || 'Unable to sign in.');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleForgotPasswordSubmit = async (event: React.FormEvent) => {
+        event.preventDefault();
+        setError(null);
+        setInfoMessage(null);
+
+        if (!email.trim()) {
+            setError('Email is required.');
+            return;
+        }
+
+        try {
+            setLoading(true);
+            const response = await requestPasswordReset(email.trim());
+            setInfoMessage(response?.message || 'If that email address is registered, a password reset link has been sent.');
+        } catch (err: any) {
+            setError(err?.response?.data?.error || 'Unable to send a password reset email right now.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handlePasswordResetConfirm = async (event: React.FormEvent) => {
+        event.preventDefault();
+        setError(null);
+        setInfoMessage(null);
+
+        if (!resetToken) {
+            setError('This password reset link is invalid or has expired.');
+            return;
+        }
+        if (resetPassword.trim().length < 8) {
+            setError('Password must be at least 8 characters.');
+            return;
+        }
+        if (resetPassword !== resetPasswordConfirm) {
+            setError('Passwords do not match.');
+            return;
+        }
+
+        try {
+            setLoading(true);
+            const response = await confirmPasswordReset(resetToken, resetPassword);
+            setResetPassword('');
+            setResetPasswordConfirm('');
+            navigate('/login', {
+                replace: true,
+                state: { sessionMessage: response?.message || 'Your password has been updated. Please sign in.' }
+            });
+        } catch (err: any) {
+            setError(err?.response?.data?.error || 'Unable to update your password right now.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const resetToSignIn = () => {
+        setMode('signin');
+        setError(null);
+        setInfoMessage(null);
+        setPassword('');
+        setResetPassword('');
+        setResetPasswordConfirm('');
+        if (resetToken) {
+            navigate('/login', { replace: true });
         }
     };
 
@@ -360,7 +492,11 @@ const Login: React.FC = () => {
                 <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
                     <button
                         type="button"
-                        onClick={() => setMode('signin')}
+                        onClick={() => {
+                            setMode('signin');
+                            setError(null);
+                            setInfoMessage(null);
+                        }}
                         style={{
                             flex: 1,
                             padding: '0.45rem 0.5rem',
@@ -375,7 +511,11 @@ const Login: React.FC = () => {
                     </button>
                     <button
                         type="button"
-                        onClick={() => setMode('register')}
+                        onClick={() => {
+                            setMode('register');
+                            setError(null);
+                            setInfoMessage(null);
+                        }}
                         style={{
                             flex: 1,
                             padding: '0.45rem 0.5rem',
@@ -390,6 +530,111 @@ const Login: React.FC = () => {
                     </button>
                 </div>
 
+                {mode === 'forgot' ? (
+                    <form onSubmit={handleForgotPasswordSubmit} style={{ display: 'grid', gap: 10 }}>
+                        <div style={{ fontWeight: 700, fontSize: '1rem' }}>Reset your password</div>
+                        <div style={{ color: '#475569' }}>Enter your email address and we will send you a reset link.</div>
+                        <label htmlFor="forgot-email" style={{ fontWeight: 600 }}>Email</label>
+                        <input
+                            id="forgot-email"
+                            type="email"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            placeholder="you@example.com"
+                            autoComplete="email"
+                            style={{ padding: '0.45rem', border: '1px solid #cbd5e1', borderRadius: 8 }}
+                        />
+                        <button
+                            type="submit"
+                            disabled={loading || !passwordResetEnabled}
+                            style={{
+                                marginTop: 4,
+                                padding: '0.55rem 0.75rem',
+                                borderRadius: 8,
+                                border: '1px solid #1f2937',
+                                background: '#111827',
+                                color: '#fff',
+                                fontWeight: 700,
+                                cursor: loading || !passwordResetEnabled ? 'default' : 'pointer',
+                                opacity: loading || !passwordResetEnabled ? 0.7 : 1
+                            }}
+                        >
+                            {loading ? 'Please wait…' : 'Send Reset Email'}
+                        </button>
+                        <button
+                            type="button"
+                            onClick={resetToSignIn}
+                            style={{
+                                padding: '0.55rem 0.75rem',
+                                borderRadius: 8,
+                                border: '1px solid #cbd5e1',
+                                background: '#fff',
+                                color: '#111827',
+                                fontWeight: 700,
+                                cursor: 'pointer'
+                            }}
+                        >
+                            Back to Sign In
+                        </button>
+                    </form>
+                ) : mode === 'reset' ? (
+                    <form onSubmit={handlePasswordResetConfirm} style={{ display: 'grid', gap: 10 }}>
+                        <div style={{ fontWeight: 700, fontSize: '1rem' }}>Choose a new password</div>
+                        <div style={{ color: '#475569' }}>Set your new password for this account.</div>
+                        <label htmlFor="reset-password" style={{ fontWeight: 600 }}>New Password</label>
+                        <input
+                            id="reset-password"
+                            type="password"
+                            value={resetPassword}
+                            onChange={(e) => setResetPassword(e.target.value)}
+                            placeholder="At least 8 characters"
+                            autoComplete="new-password"
+                            style={{ padding: '0.45rem', border: '1px solid #cbd5e1', borderRadius: 8 }}
+                        />
+                        <label htmlFor="reset-password-confirm" style={{ fontWeight: 600 }}>Confirm Password</label>
+                        <input
+                            id="reset-password-confirm"
+                            type="password"
+                            value={resetPasswordConfirm}
+                            onChange={(e) => setResetPasswordConfirm(e.target.value)}
+                            placeholder="Repeat new password"
+                            autoComplete="new-password"
+                            style={{ padding: '0.45rem', border: '1px solid #cbd5e1', borderRadius: 8 }}
+                        />
+                        <button
+                            type="submit"
+                            disabled={loading || resetValidationLoading || !resetTokenValid}
+                            style={{
+                                marginTop: 4,
+                                padding: '0.55rem 0.75rem',
+                                borderRadius: 8,
+                                border: '1px solid #1f2937',
+                                background: '#111827',
+                                color: '#fff',
+                                fontWeight: 700,
+                                cursor: loading || resetValidationLoading || !resetTokenValid ? 'default' : 'pointer',
+                                opacity: loading || resetValidationLoading || !resetTokenValid ? 0.7 : 1
+                            }}
+                        >
+                            {resetValidationLoading ? 'Checking link…' : loading ? 'Please wait…' : 'Update Password'}
+                        </button>
+                        <button
+                            type="button"
+                            onClick={resetToSignIn}
+                            style={{
+                                padding: '0.55rem 0.75rem',
+                                borderRadius: 8,
+                                border: '1px solid #cbd5e1',
+                                background: '#fff',
+                                color: '#111827',
+                                fontWeight: 700,
+                                cursor: 'pointer'
+                            }}
+                        >
+                            Back to Sign In
+                        </button>
+                    </form>
+                ) : (
                 <form onSubmit={handleEmailSubmit} style={{ display: 'grid', gap: 10 }}>
                     {mode === 'register' && (
                         <>
@@ -427,6 +672,28 @@ const Login: React.FC = () => {
                         style={{ padding: '0.45rem', border: '1px solid #cbd5e1', borderRadius: 8 }}
                     />
 
+                    {mode === 'signin' && (
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setMode('forgot');
+                                setError(null);
+                                setInfoMessage(null);
+                            }}
+                            style={{
+                                justifySelf: 'start',
+                                padding: 0,
+                                border: 'none',
+                                background: 'transparent',
+                                color: '#1d4ed8',
+                                cursor: 'pointer',
+                                fontWeight: 600
+                            }}
+                        >
+                            Forgot password?
+                        </button>
+                    )}
+
                     <button
                         type="submit"
                         disabled={loading}
@@ -445,7 +712,10 @@ const Login: React.FC = () => {
                         {loading ? 'Please wait…' : mode === 'register' ? 'Create Account' : 'Sign In'}
                     </button>
                 </form>
+                )}
 
+                {(mode === 'signin' || mode === 'register') && (
+                    <>
                 <div style={{ margin: '14px 0', textAlign: 'center', color: '#64748b', fontSize: '0.85rem' }}>OR</div>
 
                 {googleClientId ? (
@@ -453,6 +723,14 @@ const Login: React.FC = () => {
                 ) : (
                     <div style={{ color: '#b45309', background: '#fffbeb', border: '1px solid #fcd34d', borderRadius: 8, padding: '0.5rem' }}>
                         Google sign-in is unavailable until `REACT_APP_GOOGLE_CLIENT_ID` is configured.
+                    </div>
+                )}
+                    </>
+                )}
+
+                {infoMessage && (
+                    <div style={{ marginTop: 12, color: '#166534', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8, padding: '0.45rem' }}>
+                        {infoMessage}
                     </div>
                 )}
 

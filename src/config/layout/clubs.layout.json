@@ -342,7 +342,7 @@
     {
       "id": "clubs.eventsTitle",
       "type": "label",
-      "name": "Club popularity",
+      "name": "Course popularity",
       "style": {
         "fontSize": "0.95rem",
         "fontWeight": 700,

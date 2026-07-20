@@ -5,7 +5,7 @@ const isLocalHost = typeof window !== 'undefined'
 
 // Use environment variable when available. In local browser dev, default to local backend.
 export const API_BASE_URL = process.env.REACT_APP_API_BASE_URL
-    || (isLocalHost ? 'http://localhost:5000' : 'https://hello-world-9yb9.onrender.com');
+    || (isLocalHost ? 'http://127.0.0.1:5050' : 'https://hello-world-9yb9.onrender.com');
 
 export const WEEKLY_UPLOAD_API_BASE_URL = process.env.REACT_APP_WEEKLY_UPLOAD_API_BASE_URL
     || API_BASE_URL;
@@ -263,6 +263,12 @@ export type ChatMessage = {
     athleteCode?: string | null;
 };
 
+export type ChatUnreadStatus = {
+    hasUnread: boolean;
+    lastReadChatMessageId?: number | null;
+    latestChatMessageId?: number | null;
+};
+
 export type FeedbackRequestStatus =
     | 'logged'
     | 'updated'
@@ -293,6 +299,11 @@ const getAuthHeaders = () => {
 export type AuthResponse = {
     token: string;
     user: AuthUser;
+};
+
+export type PasswordResetValidation = {
+    valid: boolean;
+    expiresAt?: string | null;
 };
 
 export const fetchResults = async (opts?: number | string) => {
@@ -807,9 +818,30 @@ export const trackPageVisit = async (payload: {
     await axios.post(`${API_BASE_URL}/api/analytics/page-visit`, payload);
 };
 
-export const fetchAuthConfig = async (): Promise<{ googleClientId?: string }> => {
+export const fetchAuthConfig = async (): Promise<{ googleClientId?: string; passwordResetEnabled?: boolean }> => {
     const response = await axios.get(`${API_BASE_URL}/api/auth/config`);
     return response.data || {};
+};
+
+export const requestPasswordReset = async (email: string): Promise<{ ok: boolean; message?: string }> => {
+    const response = await axios.post(`${API_BASE_URL}/api/auth/password-reset/request`, {
+        email
+    });
+    return response.data;
+};
+
+export const validatePasswordResetToken = async (token: string): Promise<PasswordResetValidation> => {
+    const params = new URLSearchParams({ token });
+    const response = await axios.get(`${API_BASE_URL}/api/auth/password-reset/validate?${params.toString()}`);
+    return response.data;
+};
+
+export const confirmPasswordReset = async (token: string, password: string): Promise<{ ok: boolean; message?: string }> => {
+    const response = await axios.post(`${API_BASE_URL}/api/auth/password-reset/confirm`, {
+        token,
+        password
+    });
+    return response.data;
 };
 
 export const fetchEventOptions = async (): Promise<EventOption[]> => {
@@ -1056,10 +1088,13 @@ export const updateFeedbackRequest = async (
     }
 };
 
-export const fetchChatMessages = async (limit = 200): Promise<ChatMessage[]> => {
+export const fetchChatMessages = async (limit = 200, options?: { markRead?: boolean }): Promise<ChatMessage[]> => {
     try {
         const params = new URLSearchParams();
         params.set('limit', String(limit));
+        if (options?.markRead) {
+            params.set('markRead', '1');
+        }
         const response = await axios.get(`${API_BASE_URL}/api/chat/messages?${params.toString()}`, {
             headers: getAuthHeaders()
         });
@@ -1078,6 +1113,30 @@ export const createChatMessage = async (payload: { messageText: string }): Promi
         return response.data;
     } catch (error) {
         console.error('Error creating chat message:', error);
+        throw error;
+    }
+};
+
+export const fetchChatUnreadStatus = async (): Promise<ChatUnreadStatus> => {
+    try {
+        const response = await axios.get(`${API_BASE_URL}/api/chat/unread-status`, {
+            headers: getAuthHeaders()
+        });
+        return response.data as ChatUnreadStatus;
+    } catch (error) {
+        console.error('Error fetching chat unread status:', error);
+        throw error;
+    }
+};
+
+export const markChatMessagesRead = async (): Promise<ChatUnreadStatus> => {
+    try {
+        const response = await axios.post(`${API_BASE_URL}/api/chat/read`, {}, {
+            headers: getAuthHeaders()
+        });
+        return response.data as ChatUnreadStatus;
+    } catch (error) {
+        console.error('Error marking chat messages as read:', error);
         throw error;
     }
 };

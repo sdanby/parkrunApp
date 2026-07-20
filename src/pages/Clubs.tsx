@@ -1003,7 +1003,7 @@ const Clubs: React.FC = () => {
                         pointerEvents: 'none'
                     }}
                 >
-                    {eventsTitleElement?.name || 'Club popularity'}
+                    {eventsTitleElement?.name || 'Course popularity'}
                 </div>
             )}
 

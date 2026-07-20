@@ -1,16 +1,18 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { API_BASE_URL, fetchAdminStatus, logoutSession } from '../api/backendAPI';
+import { API_BASE_URL, fetchAdminStatus, fetchChatUnreadStatus, logoutSession } from '../api/backendAPI';
 import { clearNavStack } from '../utils/navigationStack';
 import './HamburgerMenu.css';
 
 const AUTH_TOKEN_KEY = 'auth_token_v1';
 const AUTH_USER_KEY = 'auth_user_v1';
 const SESSION_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+const CHAT_UNREAD_STATUS_CHANGED_EVENT = 'chat-unread-status-changed';
 
 const HamburgerMenu: React.FC = () => {
     const [open, setOpen] = useState(false);
     const [canSeeAdmin, setCanSeeAdmin] = useState(false);
+    const [hasUnreadChat, setHasUnreadChat] = useState(false);
     const menuRef = useRef<HTMLDivElement | null>(null);
     const navigate = useNavigate();
     const location = useLocation();
@@ -70,6 +72,43 @@ const HamburgerMenu: React.FC = () => {
             cancelled = true;
         };
     }, [isAuthenticated, open]);
+
+    useEffect(() => {
+        let cancelled = false;
+
+        const refreshChatUnreadStatus = async () => {
+            if (!isAuthenticated) {
+                if (!cancelled) {
+                    setHasUnreadChat(false);
+                }
+                return;
+            }
+
+            try {
+                const status = await fetchChatUnreadStatus();
+                if (!cancelled) {
+                    setHasUnreadChat(Boolean(status.hasUnread));
+                }
+            } catch (_err) {
+                if (!cancelled) {
+                    setHasUnreadChat(false);
+                }
+            }
+        };
+
+        refreshChatUnreadStatus();
+        const intervalId = window.setInterval(refreshChatUnreadStatus, 5000);
+        const handleChatUnreadStatusChanged = () => {
+            refreshChatUnreadStatus();
+        };
+        window.addEventListener(CHAT_UNREAD_STATUS_CHANGED_EVENT, handleChatUnreadStatusChanged);
+
+        return () => {
+            cancelled = true;
+            window.clearInterval(intervalId);
+            window.removeEventListener(CHAT_UNREAD_STATUS_CHANGED_EVENT, handleChatUnreadStatusChanged);
+        };
+    }, [isAuthenticated, location.pathname, location.search]);
 
     const handleLogout = async () => {
         const token = localStorage.getItem(AUTH_TOKEN_KEY) || undefined;
@@ -252,6 +291,7 @@ const HamburgerMenu: React.FC = () => {
             {open && (
                 <ul className="hamburger-list">
                     <li onClick={() => handleMenuClick('/')}>Home</li>
+                    <li onClick={() => handleMenuClick('/quick-start')}>Quick Start</li>
                     <li onClick={() => handleMenuClick('/results_test')}>Event Analysis</li>
                     <li onClick={() => handleMenuClick('/races')}>Event</li>
                     <li onClick={() => handleMenuClick('/courses_test')}>Course</li>
@@ -259,7 +299,9 @@ const HamburgerMenu: React.FC = () => {
                     <li onClick={() => handleMenuClick('/next-event')}>Next Event</li>
                     <li onClick={() => handleMenuClick('/clubs')}>Club</li>
                     <li onClick={() => handleMenuClick('/lists')}>Lists</li>
-                    <li onClick={() => handleMenuClick('/chat')}>Chat</li>
+                    <li className={hasUnreadChat ? 'hamburger-chat-unread' : undefined} onClick={() => handleMenuClick('/chat')}>
+                        {hasUnreadChat ? 'Chat*' : 'Chat'}
+                    </li>
                     <li onClick={() => handleMenuClick('/feedback')}>Log Error / Suggestion</li>
                     {canSeeAdmin && <li onClick={() => handleMenuClick('/admin')}>Admin</li>}
                     <li onClick={() => (isAuthenticated ? handleLogout() : handleMenuClick('/login'))}>

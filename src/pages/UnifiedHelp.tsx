@@ -3,6 +3,8 @@ import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
 
 export const UNIFIED_HELP_EVENT = 'parkrun:open-unified-help';
+export const QUICK_START_HELP_STATE_KEY = '__quickStartHelp';
+export const QUICK_START_TOUR_STATE_KEY = '__quickStartTour';
 
 export type UnifiedHelpAnchor = {
     x: number;
@@ -15,17 +17,92 @@ export type UnifiedHelpRequestDetail = {
     query?: string;
 };
 
+export type QuickStartHelpRequest = {
+    markerId?: string;
+    query?: string;
+};
+
+export type QuickStartTourRequest = {
+    tileId: string;
+};
+
 export const requestUnifiedHelp = (markerId: string = 'top', anchor?: UnifiedHelpAnchor | null, query?: string) => {
     window.dispatchEvent(new CustomEvent(UNIFIED_HELP_EVENT, { detail: { markerId, anchor: anchor || null, query: query || '' } }));
 };
 
+export const buildQuickStartHelpMarkerId = (tileId: string): string => `quick-start-${String(tileId || '').trim()}`;
+
+export const readQuickStartHelpRequest = (state: unknown): QuickStartHelpRequest | null => {
+    if (!state || typeof state !== 'object') {
+        return null;
+    }
+
+    const raw = (state as Record<string, unknown>)[QUICK_START_HELP_STATE_KEY];
+    if (!raw || typeof raw !== 'object') {
+        return null;
+    }
+
+    const markerId = String((raw as Record<string, unknown>).markerId || '').trim();
+    const query = String((raw as Record<string, unknown>).query || '').trim();
+
+    if (!markerId && !query) {
+        return null;
+    }
+
+    return {
+        markerId: markerId || 'section-quick-starts',
+        query
+    };
+};
+
+export const stripQuickStartHelpRequest = (state: unknown): unknown => {
+    if (!state || typeof state !== 'object') {
+        return state;
+    }
+
+    const nextState = { ...(state as Record<string, unknown>) };
+    delete nextState[QUICK_START_HELP_STATE_KEY];
+    return Object.keys(nextState).length ? nextState : null;
+};
+
+export const readQuickStartTourRequest = (state: unknown): QuickStartTourRequest | null => {
+    if (!state || typeof state !== 'object') {
+        return null;
+    }
+
+    const raw = (state as Record<string, unknown>)[QUICK_START_TOUR_STATE_KEY];
+    if (!raw || typeof raw !== 'object') {
+        return null;
+    }
+
+    const tileId = String((raw as Record<string, unknown>).tileId || '').trim();
+    if (!tileId) {
+        return null;
+    }
+
+    return { tileId };
+};
+
+export const stripQuickStartTourRequest = (state: unknown): unknown => {
+    if (!state || typeof state !== 'object') {
+        return state;
+    }
+
+    const nextState = { ...(state as Record<string, unknown>) };
+    delete nextState[QUICK_START_TOUR_STATE_KEY];
+    return Object.keys(nextState).length ? nextState : null;
+};
+
 export const getPageMarkerForPath = (path: string): string | null => {
+    if (path === '/quick-start') return 'section-quick-starts';
     if (path === '/results') return 'page-event-analysis';
     if (path === '/results_test') return 'page-event-analysis';
+    if (path === '/event-analysis') return 'page-event-analysis';
     if (path === '/races') return 'page-single-event';
     if (path === '/event_test') return 'page-single-event';
     if (path === '/courses') return 'page-course';
     if (path === '/courses_test') return 'page-course';
+    if (path === '/course') return 'page-course';
     if (path === '/athletes') return 'page-participant';
     if (path === '/next-event') return 'page-next-event';
     if (path === '/clubs') return 'page-club';

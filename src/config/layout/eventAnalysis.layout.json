@@ -176,8 +176,8 @@
         "lineHeight": 1.0,
         "height": "1cm"
       },
-      "laptop": { "x": "0.3cm", "y": "2.2cm", "width": "1.0cm", "height": "0.7cm" },
-      "mobile": { "x": "0.3cm", "y": "2.2cm", "width": "1.0cm", "height": "0.7cm" }
+      "laptop": { "x": "1.3cm", "y": "2.2cm", "width": "1.0cm", "height": "0.7cm" },
+      "mobile": { "x": "1.3cm", "y": "2.2cm", "width": "1.0cm", "height": "0.7cm" }
     },
     {
       "id": "eventAnalysis.expandSelect",
@@ -189,8 +189,8 @@
         "lineHeight": 1.0,
         "height": "1cm"
       },
-      "laptop": { "x": "1.4cm", "y": "2.2cm", "width": "1.0cm", "height": "0.7cm" },
-      "mobile": { "x": "1.4cm", "y": "2.2cm", "width": "1.0cm", "height": "0.7cm" }
+      "laptop": { "x": "2.4cm", "y": "2.2cm", "width": "1.0cm", "height": "0.7cm" },
+      "mobile": { "x": "2.4cm", "y": "2.2cm", "width": "1.0cm", "height": "0.7cm" }
     },
     {
       "id": "eventAnalysis.plotPanel",

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { createBrowserRouter, RouterProvider, Outlet, useLocation, Navigate } from 'react-router-dom';
+import { createBrowserRouter, RouterProvider, Outlet, useLocation, Navigate, useNavigate } from 'react-router-dom';
 import HamburgerMenu from './components/HamburgerMenu';
 import Home from './pages/Home';
 import Login from './pages/Login';
@@ -15,8 +15,10 @@ import Lists from './pages/Lists';
 import Feedback from './pages/Feedback';
 import Chat from './pages/Chat';
 import Admin from './pages/Admin';
+import QuickStart from './pages/QuickStart';
 import NavigationStackOverlay from './components/NavigationStackOverlay';
-import EventHelpManual, { UnifiedHelpOverlay, UNIFIED_HELP_EVENT, getPageMarkerForPath, type UnifiedHelpAnchor, type UnifiedHelpRequestDetail } from './pages/UnifiedHelp';
+import QuickStartTourOverlay from './components/QuickStartTourOverlay';
+import EventHelpManual, { UnifiedHelpOverlay, UNIFIED_HELP_EVENT, getPageMarkerForPath, readQuickStartHelpRequest, readQuickStartTourRequest, stripQuickStartHelpRequest, stripQuickStartTourRequest, type UnifiedHelpAnchor, type UnifiedHelpRequestDetail } from './pages/UnifiedHelp';
 import { API_BASE_URL } from './api/backendAPI';
 import { useColumnHeaderMode } from './utils/useColumnHeaderMode';
 import { useDelayedUnifiedHelp } from './utils/useDelayedUnifiedHelp';
@@ -33,14 +35,17 @@ const AUTH_TOKEN_KEY = 'auth_token_v1';
 
 const headings: { [key: string]: string } = {
     '/': 'Home',
+    '/quick-start': 'Quick Start',
     '/login': 'Login',
     '/results': 'Event Analysis Old',
     '/results_test': 'Event Analysis',
+    '/event-analysis': 'Event Analysis',
     '/races': 'Event',
     '/event_test': 'Event',
     '/event_old': 'Event_old',
     '/courses': 'Course Old',
     '/courses_test': 'Course',
+    '/course': 'Course',
     '/clubs': 'Club',
     '/athletes': 'Participant',
     '/next-event': 'Next Event',
@@ -54,9 +59,11 @@ const headings: { [key: string]: string } = {
 const supportsColumnHeaderMode = (path: string): boolean => {
     return path === '/races'
         || path === '/event_test'
+        || path === '/event-analysis'
         || path === '/athletes'
         || path === '/next-event'
         || path === '/courses_test'
+        || path === '/course'
         || path === '/clubs'
         || path === '/lists';
 };
@@ -78,12 +85,15 @@ const getTopBarUserLabel = (): string => {
 
 const TopBar: React.FC = () => {
     const location = useLocation();
+    const navigate = useNavigate();
     const heading = headings[location.pathname] || '';
     const userLabel = getTopBarUserLabel();
     const [isHelpOpen, setIsHelpOpen] = useState(false);
     const [helpMarkerId, setHelpMarkerId] = useState<string>('top');
     const [helpQuery, setHelpQuery] = useState<string>('');
     const [helpAnchor, setHelpAnchor] = useState<UnifiedHelpAnchor | null>(null);
+    const [queuedQuickStartTourTileId, setQueuedQuickStartTourTileId] = useState<string | null>(null);
+    const [activeQuickStartTourTileId, setActiveQuickStartTourTileId] = useState<string | null>(null);
     const { mode: columnHeaderMode, toggleMode: toggleColumnHeaderMode } = useColumnHeaderMode();
     const pageMarker = getPageMarkerForPath(location.pathname);
     const showColumnModeToggle = supportsColumnHeaderMode(location.pathname);
@@ -108,6 +118,43 @@ const TopBar: React.FC = () => {
         window.addEventListener(UNIFIED_HELP_EVENT, onHelpRequest as EventListener);
         return () => window.removeEventListener(UNIFIED_HELP_EVENT, onHelpRequest as EventListener);
     }, []);
+
+    useEffect(() => {
+        const quickStartHelpRequest = readQuickStartHelpRequest(location.state);
+        if (!quickStartHelpRequest) {
+            return;
+        }
+
+        const quickStartTourRequest = readQuickStartTourRequest(location.state);
+        setQueuedQuickStartTourTileId(quickStartTourRequest?.tileId || null);
+        setActiveQuickStartTourTileId(null);
+
+        setHelpMarkerId(quickStartHelpRequest.markerId || pageMarker || 'top');
+        setHelpQuery(quickStartHelpRequest.query || '');
+        setHelpAnchor(null);
+        setIsHelpOpen(true);
+
+        const strippedHelpState = stripQuickStartHelpRequest(location.state);
+        const strippedState = stripQuickStartTourRequest(strippedHelpState);
+
+        navigate(
+            { pathname: location.pathname, search: location.search },
+            {
+                replace: true,
+                state: strippedState
+            }
+        );
+    }, [location.pathname, location.search, location.state, navigate, pageMarker]);
+
+    const handleHelpClose = () => {
+        setIsHelpOpen(false);
+        setHelpAnchor(null);
+
+        if (queuedQuickStartTourTileId) {
+            setActiveQuickStartTourTileId(queuedQuickStartTourTileId);
+            setQueuedQuickStartTourTileId(null);
+        }
+    };
 
     return (
         <div className="top-bar" style={{ padding: '0px 0', display: 'flex', alignItems: 'center', position: 'sticky', top: 0, zIndex: 2147483647, background: '#f4f4f4', borderBottom: '1px solid #dbe2ea' }}>
@@ -187,7 +234,12 @@ const TopBar: React.FC = () => {
                 startMarkerId={helpMarkerId}
                 queryTerm={helpQuery}
                 anchor={helpAnchor}
-                onClose={() => setIsHelpOpen(false)}
+                onClose={handleHelpClose}
+            />
+            <QuickStartTourOverlay
+                tileId={activeQuickStartTourTileId}
+                open={Boolean(activeQuickStartTourTileId)}
+                onClose={() => setActiveQuickStartTourTileId(null)}
             />
         </div>
     );
@@ -302,13 +354,16 @@ const router = createBrowserRouter([
         element: <RequireAuthLayout />,
         children: [
             { index: true, element: <Home /> },
+            { path: 'quick-start', element: <QuickStart /> },
             { path: 'results', element: <Navigate to="/results_test" replace /> },
             { path: 'results_test', element: <EventAnalysisTest /> },
+            { path: 'event-analysis', element: <EventAnalysisTest /> },
             { path: 'races', element: <EventTest /> },
             { path: 'event_test', element: <EventTest /> },
             { path: 'event_old', element: <Races /> },
             { path: 'courses', element: <Courses /> },
             { path: 'courses_test', element: <CourseTest /> },
+            { path: 'course', element: <CourseTest /> },
             { path: 'clubs', element: <Clubs /> },
             { path: 'athletes', element: <Athletes /> },
             { path: 'next-event', element: <NextEvent /> },

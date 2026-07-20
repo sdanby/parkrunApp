@@ -52,7 +52,6 @@ h1, h2, h3 {
     font-size: 0.95rem;
     line-height: 1;
     position: relative;
-    z-index: 2147483647;
 }
 
 .top-bar-column-mode-wrap {
@@ -519,6 +518,146 @@ h1, h2, h3 {
 
 .unified-help-link:hover {
     background: linear-gradient(180deg, #dff0ff 0%, #c2e0ff 100%);
+}
+
+.quick-start-tour-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 2147483647;
+    background: rgba(15, 23, 42, 0.12);
+    cursor: pointer;
+}
+
+.quick-start-tour-skip {
+    position: fixed;
+    top: 1rem;
+    left: 10cm;
+    transform: none;
+    z-index: 2147483647;
+    border: 1px solid rgba(15, 23, 42, 0.25);
+    background: #fffef3;
+    color: #111827;
+    border-radius: 999px;
+    padding: 0.45rem 0.85rem;
+    font-size: 0.82rem;
+    font-weight: 700;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.18);
+}
+
+.quick-start-tour-step {
+    position: fixed;
+    width: 0;
+    height: 0;
+    pointer-events: none;
+    z-index: 2147483647;
+    isolation: isolate;
+}
+
+.quick-start-tour-card {
+    position: absolute;
+    z-index: 2147483647;
+    box-sizing: border-box;
+    max-width: min(22rem, calc(100vw - 2rem));
+    min-width: 15rem;
+    padding: 0.7rem 0.95rem 0.8rem;
+    border: 4px solid #f59e0b;
+    border-radius: 1.1rem;
+    background: #fff3a3;
+    box-shadow: 0 16px 30px rgba(15, 23, 42, 0.24);
+}
+
+.quick-start-tour-arrow {
+    position: absolute;
+    z-index: 2147483647;
+    overflow: visible;
+}
+
+.quick-start-tour-arrow-east {
+    left: -58px;
+    top: 50%;
+    width: 58px;
+    height: 34px;
+    transform: translateY(-50%);
+}
+
+.quick-start-tour-arrow-west {
+    left: 0;
+    top: 50%;
+    width: 58px;
+    height: 34px;
+    transform: translateY(-50%);
+}
+
+.quick-start-tour-arrow-north {
+    left: 50%;
+    top: 0;
+    width: 34px;
+    height: 58px;
+    transform: translateX(-50%);
+}
+
+.quick-start-tour-arrow-south {
+    left: 50%;
+    top: -58px;
+    width: 34px;
+    height: 58px;
+    transform: translateX(-50%);
+}
+
+.quick-start-tour-arrow-line {
+    stroke: #facc15;
+    stroke-width: 12;
+    stroke-linecap: round;
+    stroke: #d97706;
+}
+
+.quick-start-tour-arrow-head {
+    fill: #facc15;
+    stroke: #b45309;
+    stroke-width: 3;
+    paint-order: stroke fill;
+}
+
+.quick-start-tour-copy {
+    margin: 0;
+    color: #3f2b00;
+    font-weight: 600;
+    line-height: 1.25;
+    font-size: 0.92rem;
+}
+
+.quick-start-tour-kicker {
+    font-size: 0.7rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #92400e;
+    margin-bottom: 0.4rem;
+}
+
+.quick-start-tour-cta {
+    margin-top: 0.7rem;
+    font-size: 0.76rem;
+    font-weight: 800;
+    color: #7c2d12;
+}
+
+@media (max-width: 640px) {
+    .quick-start-tour-skip {
+        left: auto;
+        right: 1rem;
+        transform: none;
+    }
+
+    .quick-start-tour-card {
+        max-width: min(18rem, calc(100vw - 1.25rem));
+        min-width: 12.5rem;
+        padding: 0.62rem 0.82rem 0.72rem;
+    }
+
+    .quick-start-tour-copy {
+        font-size: 0.84rem;
+    }
 }
 
 .scrollable {

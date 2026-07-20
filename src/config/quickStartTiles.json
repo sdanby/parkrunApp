@@ -1,0 +1,310 @@
+[
+  {
+    "id": "hardness-last50",
+    "label": "Hardest Local Courses",
+    "icon": "🔥",
+    "category": "Course Insights",
+    "route": "/event-analysis",
+    "params": {
+      "type": "combined-hardness",
+      "period": "last-50",
+      "agg": "average",
+      "calc": "actual",
+      "cellAgg": "single",
+      "sort": { "column": "avg", "direction": "desc" }
+    },
+    "keywords": ["hardness", "toughest", "courses"]
+  },
+  {
+    "id": "pb-hotspots",
+    "label": "PB Hotspots",
+    "icon": "🏅",
+    "category": "Event Analysis",
+    "route": "/event-analysis",
+    "params": {
+      "type": "pbs",
+      "period": "recent",
+      "agg": "maximum",
+      "calc": "actual",
+      "cellAgg": "single",
+      "sort": { "column": "max", "direction": "desc" }
+    },
+    "keywords": ["personal best", "pbs", "hotspots"]
+  },
+  {
+    "id": "tourist-density",
+    "label": "Tourist Density",
+    "icon": "🧳",
+    "category": "Event Analysis",
+    "route": "/event-analysis",
+    "params": {
+      "type": "tourist",
+      "period": "recent",
+      "agg": "average",
+      "calc": "actual-percent",
+      "cellAgg": "single",
+      "sort": { "column": "avg", "direction": "desc" }
+    },
+    "keywords": ["tourists", "visitor", "density"]
+  },
+  {
+    "id": "hardest-month",
+    "label": "Hardest Month of the Year",
+    "icon": "📅",
+    "category": "Event Analysis",
+    "route": "/event-analysis",
+    "params": {
+      "type": "combined-hardness",
+      "period": "month-seasonality",
+      "agg": "maximum",
+      "calc": "actual",
+      "cellAgg": "average",
+      "sort": null
+    },
+    "keywords": ["seasonality", "month", "hardness"]
+  },
+  {
+    "id": "participation-growth",
+    "label": "Attendance Growth",
+    "icon": "📈",
+    "category": "Event Analysis",
+    "route": "/event-analysis",
+    "params": {
+      "type": "participants",
+      "period": "annual",
+      "agg": "average",
+      "calc": "actual",
+      "cellAgg": "average",
+      "sort": null,
+      "plot": true,
+      "expand": true,
+      "legendTopCount": 5,
+      "legendSelectionMode": "latest-plotted-value"
+    },
+    "keywords": ["growth", "attendance", "participation", "annual"]
+  },
+  {
+    "id": "all-time-attendance",
+    "label": "All-Time Attendance Ranking",
+    "icon": "👥",
+    "category": "Course Insights",
+    "route": "/course",
+    "params": {
+      "view": "detailed",
+      "period": "all-events",
+      "sort": { "column": "participants", "direction": "desc" }
+    },
+    "keywords": ["attendance", "course", "participants"]
+  },
+  {
+    "id": "course-deep-dive",
+    "label": "Course attendance and volunteering league",
+    "icon": "🗺️",
+    "category": "Course Insights",
+    "route": "/course",
+    "params": {
+      "view": "detailed",
+      "panel": "top250"
+    },
+    "keywords": ["course", "details", "insights"]
+  },
+  {
+    "id": "local-course-monthly-participation-chart",
+    "label": "Local course monthly participation chart",
+    "icon": "📊",
+    "category": "Course Insights",
+    "route": "/course",
+    "params": {
+      "view": "detailed",
+      "panel": "profile"
+    },
+    "keywords": ["course", "monthly", "participation", "chart", "plot"]
+  },
+  {
+    "id": "course-monthly-participation-split-by-age-group",
+    "label": "Course monthly participation split by age group",
+    "icon": "🧩",
+    "category": "Course Insights",
+    "route": "/course",
+    "params": {
+      "view": "detailed",
+      "panel": "groups",
+      "groupsMode": "age"
+    },
+    "keywords": ["course", "monthly", "participation", "age", "group", "split"]
+  },
+  {
+    "id": "my-participant-page",
+    "label": "My Last Local Event",
+    "icon": "🧍",
+    "category": "Personal Stats",
+    "route": "/athletes",
+    "params": {
+      "ath_panel": "table"
+    },
+    "keywords": ["athlete", "participant", "profile"]
+  },
+  {
+    "id": "participant-ranking-profile",
+    "label": "Participant Ranking Profile",
+    "icon": "🏁",
+    "category": "Personal Stats",
+    "route": "/athletes",
+    "params": {
+      "ath_panel": "profile"
+    },
+    "keywords": ["participant", "ranking", "profile", "personal", "stats"]
+  },
+  {
+    "id": "participant-adjusted-plot-rankings",
+    "label": "Adjusted plot of a participants historic times and rankings",
+    "icon": "📉",
+    "category": "Personal Stats",
+    "route": "/athletes",
+    "params": {
+      "ath_panel": "plot",
+      "ath_course_adj": "full",
+      "ath_other_adj": "age",
+      "ath_plot_eligibility": "all",
+      "ath_plot_series": "rank_only"
+    },
+    "keywords": ["participant", "plot", "adjusted", "times", "rankings", "historic"]
+  },
+  {
+    "id": "next-event-planner",
+    "label": "What time do I need to improve my ranking",
+    "icon": "🧭",
+    "category": "Next Event",
+    "route": "/next-event",
+    "params": {},
+    "keywords": ["next", "planner", "future"]
+  },
+  {
+    "id": "participant-match-performance",
+    "label": "Which participants match my running performance",
+    "icon": "🤝",
+    "category": "Next Event",
+    "route": "/next-event",
+    "params": {
+      "mode": "next_ext",
+      "course_seed": "default_or_freq"
+    },
+    "keywords": ["participant", "match", "similar", "performance", "ranking", "next event"]
+  },
+  {
+    "id": "rank-100-times",
+    "label": "What times do I need to get a rank of 100",
+    "icon": "🎯",
+    "category": "Next Event",
+    "route": "/next-event",
+    "params": {
+      "mode": "next_ext",
+      "next_event_cycle": "rank_reference",
+      "curve_rank_type": "BEST"
+    },
+    "keywords": ["rank 100", "times", "threshold", "participant", "match", "rank"]
+  },
+  {
+    "id": "club-members-overview",
+    "label": "Club Members Overview",
+    "icon": "🛡️",
+    "category": "Clubs",
+    "route": "/clubs",
+    "params": {
+      "club_mode": "members"
+    },
+    "keywords": ["club", "members", "historic"]
+  },
+  {
+    "id": "current-club-members",
+    "label": "A club's most popular course attendance",
+    "icon": "🏟️",
+    "category": "Clubs",
+    "route": "/clubs",
+    "params": {
+      "club_mode": "events"
+    },
+    "keywords": ["club", "popular", "course", "attendance", "events", "visits", "frequent"]
+  },
+  {
+    "id": "fastest-local-runners-recorded",
+    "label": "Fastest local runners recorded",
+    "icon": "📚",
+    "category": "Lists & Records",
+    "route": "/lists",
+    "params": {
+      "list": "fastest_runs",
+      "courseAdj": "1",
+      "otherAdj": "1",
+      "participantFilter": "gt_50_local_runs",
+      "filteredByAdjustments": "1",
+      "sortKey": "Time",
+      "sortDir": "asc"
+    },
+    "keywords": ["lists", "records", "fastest", "all time", "local", "time"]
+  },
+  {
+    "id": "fastest-local-runners-event-adjusted",
+    "label": "Fastest local runners adjusted with event adjustment",
+    "icon": "📘",
+    "category": "Lists & Records",
+    "route": "/lists",
+    "params": {
+      "list": "fastest_runs_last_year",
+      "courseAdj": "3",
+      "otherAdj": "1",
+      "participantFilter": "gt_10_local_runs_1y",
+      "filteredByAdjustments": "1",
+      "sortKey": "EventAdj",
+      "sortDir": "asc"
+    },
+    "keywords": ["lists", "records", "fastest", "event adjustment", "last year", "local"]
+  },
+  {
+    "id": "fastest-local-runners-year-aes-course-sort",
+    "label": "Fastest local runners this year with adj for sex, age & event and sorted by course",
+    "icon": "📗",
+    "category": "Lists & Records",
+    "route": "/lists",
+    "params": {
+      "list": "fastest_runs_last_year",
+      "courseAdj": "3",
+      "otherAdj": "4",
+      "participantFilter": "gt_10_local_runs_1y",
+      "filteredByAdjustments": "1",
+      "sortKey": "Event",
+      "sortDir": "asc"
+    },
+    "keywords": ["lists", "records", "fastest", "age sex event", "course", "last year"]
+  },
+  {
+    "id": "highest-total-parkruns-local-attendees",
+    "label": "Highest Total Parkruns - all participants attending local parkruns",
+    "icon": "📙",
+    "category": "Lists & Records",
+    "route": "/lists",
+    "params": {
+      "list": "highest_total_runs",
+      "participantFilter": "all_participants",
+      "filteredByAdjustments": "0",
+      "sortKey": "TotalRuns",
+      "sortDir": "desc"
+    },
+    "keywords": ["lists", "records", "highest", "total runs", "parkruns", "local"]
+  },
+  {
+    "id": "highest-local-runs-this-year",
+    "label": "Highest Local Runs this year",
+    "icon": "📒",
+    "category": "Lists & Records",
+    "route": "/lists",
+    "params": {
+      "list": "highest_local_runs_1y",
+      "participantFilter": "all_participants",
+      "filteredByAdjustments": "0",
+      "sortKey": "LocalRuns1Y",
+      "sortDir": "desc"
+    },
+    "keywords": ["lists", "records", "highest", "local runs", "this year", "1y"]
+  }
+]

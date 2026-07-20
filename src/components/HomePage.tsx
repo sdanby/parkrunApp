@@ -129,6 +129,17 @@ const HomePage: React.FC = () => {
                     <button
                         type="button"
                         className="home-help-link"
+                        aria-label="Open Quick Start"
+                        onClick={() => navigate('/quick-start')}
+                    >
+                        <span className="home-help-icon" aria-hidden="true">⚡</span>
+                        <span>Open Quick Start</span>
+                    </button>
+                </div>
+                <div className="home-help-entry">
+                    <button
+                        type="button"
+                        className="home-help-link"
                         aria-label="Getting started"
                         onClick={() => requestUnifiedHelp('section-getting-started')}
                     >

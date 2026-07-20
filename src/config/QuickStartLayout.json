@@ -1,0 +1,834 @@
+{
+  "version": "1.0.0",
+  "units": "cm",
+  "viewports": {
+    "mobile": {
+      "breakpointMax": 640
+    }
+  },
+  "tours": [
+    {
+      "tileId": "hardness-last50",
+      "steps": [
+        {
+          "id": "hardness-type",
+          "text": "Select Combined Hardness to get the data into the table",
+          "side": "west",
+          "laptop": { "x": "5.5cm", "y": "2.7cm", "side": "west" },
+          "mobile": { "x": "4.5cm", "y": "3.0cm", "side": "north" }
+        },
+        {
+          "id": "hardness-avg",
+          "text": "Select the Average to get the average hardness over the defined period",
+          "side": "west",
+          "laptop": { "x": "5.5cm", "y": "4.1cm", "side": "west" },
+          "mobile": { "x": "4.5cm", "y": "4.4cm", "side": "north" }
+        },
+        {
+          "id": "hardness-period",
+          "text": "Select the last 50 events to get the most recent one year's stats on hardness per course",
+          "side": "west",
+          "laptop": { "x": "10.8cm", "y": "2.7cm", "side": "west" },
+          "mobile": { "x": "9.0cm", "y": "3.0cm", "side": "north" }
+        },
+        {
+          "id": "hardness-sort",
+          "text": "Select the Avg column header to sort the table by hardness",
+          "side": "west",
+          "laptop": { "x": "5.1cm", "y": "7.3cm", "side": "west" },
+          "mobile": { "x": "4.5cm", "y": "7.3cm", "side": "west" }
+        },
+        {
+          "id": "hardness-vscroll",
+          "text": "Scroll right to reveal more historic hardness data over the 50 event period",
+          "side": "west",
+          "laptop": { "x": "8.1cm", "y": "23.3cm", "side": "south" },
+          "mobile": { "x": "8.1cm", "y": "13.3cm", "side": "east" }
+        }
+      ]
+    },
+    {
+      "tileId": "pb-hotspots",
+      "steps": [
+        {
+          "id": "pb-type",
+          "text": "Select PBs to fill the table with number of PBs per event",
+          "side": "west",
+          "laptop": { "x": "5.5cm", "y": "2.7cm", "side": "west" },
+          "mobile": { "x": "4.5cm", "y": "3.0cm", "side": "north" }
+        },
+        {
+          "id": "pb-agg",
+          "text": "Select Agg to Maximum to show the maximum number of PBs per course over the period",
+          "side": "west",
+          "laptop": { "x": "5.5cm", "y": "4.1cm", "side": "west" },
+          "mobile": { "x": "4.5cm", "y": "4.4cm", "side": "north" }
+        },      
+        {
+          "id": "pb-period",
+          "text": "Select the 3 months (recent period) of events  to show PB count",
+          "side": "west",
+          "laptop": { "x": "10.8cm", "y": "2.7cm", "side": "west" },
+          "mobile": { "x": "9.0cm", "y": "3.0cm", "side": "north" }
+        }, 
+        {
+          "id": "pb-sort",
+          "text": "The max aggregate column is sorted to show the biggest PB count per course over the recent period.",
+          "side": "west",
+          "laptop": { "x": "5.1cm", "y": "7.3cm", "side": "west" },
+          "mobile": { "x": "3.8cm", "y": "7.6cm", "side": "north" }
+        }
+      ]
+    },
+    {
+      "tileId": "tourist-density",
+      "steps": [
+        {
+          "id": "tourist-type",
+          "text": "Select Tourist count to fill the table with number of Tourists per event",
+          "side": "west",
+          "laptop": { "x": "5.5cm", "y": "2.7cm", "side": "west" },
+          "mobile": { "x": "4.5cm", "y": "3.0cm", "side": "north" }
+        },
+                {
+          "id": "tourist-calc",
+          "text": "Express the actual Tourist count as a percentage of the total participants per event",
+          "side": "west",
+          "laptop": { "x": "5.5cm", "y": "3.5cm", "side": "west" },
+          "mobile": { "x": "4.5cm", "y": "3.8cm", "side": "north" }
+        },
+        {
+          "id": "tourist-avg",
+          "text": "Select the Average to get the average tourist count over the defined period",
+          "side": "west",
+          "laptop": { "x": "5.5cm", "y": "4.1cm", "side": "west" },
+          "mobile": { "x": "4.5cm", "y": "4.4cm", "side": "north" }
+        },
+        {
+          "id": "tourist-period",
+          "text": "Select the 3 months (recent period) of events  to show tourist count",
+          "side": "west",
+          "laptop": { "x": "10.8cm", "y": "2.7cm", "side": "west" },
+          "mobile": { "x": "9.0cm", "y": "3.0cm", "side": "north" }
+        }, 
+        {
+          "id": "tourist-sort",
+          "text": "The avg aggregate column is sorted to show the average tourist count per course over the recent period.",
+          "side": "west",
+          "laptop": { "x": "5.1cm", "y": "7.3cm", "side": "west" },
+          "mobile": { "x": "4.3cm", "y": "7.3cm", "side": "west" }
+        }
+      ]
+    },
+    {
+      "tileId": "hardest-month",
+      "steps": [
+        {
+          "id": "hardmonth-type",
+          "text": "Select Combined Hardness to get the data into the table",
+          "side": "west",
+          "laptop": { "x": "5.5cm", "y": "2.7cm", "side": "west" },
+          "mobile": { "x": "4.5cm", "y": "3.0cm", "side": "north" }
+        },
+        {
+          "id": "hardmonth-max",
+          "text": "Select the Maximum to get the maximum hardness over the monthly data presented per month",
+          "side": "west",
+          "laptop": { "x": "5.5cm", "y": "4.1cm", "side": "west" },
+          "mobile": { "x": "4.5cm", "y": "4.4cm", "side": "north" }
+        },
+        {
+          "id": "hardmonth-cellAgg",
+          "text": "The selected average per cell, averages the combined hardness over the month per course for all historic data",
+          "side": "west",
+          "laptop": { "x": "11.5cm", "y": "3.5cm", "side": "west" },
+          "mobile": { "x": "9.0cm", "y": "3.8cm", "side": "north" }
+        },        {
+          "id": "hardmonth-period",
+          "text": "Select month-seasonality to show the hardness aggregated per month over the history lifetime",
+          "side": "west",
+          "laptop": { "x": "10.8cm", "y": "2.7cm", "side": "west" },
+          "mobile": { "x": "9.0cm", "y": "3.0cm", "side": "north" }
+        },
+        {
+          "id": "hardmonth-sort",
+          "text": "Select the Max column header to sort the table by hardness",
+          "side": "west",
+          "laptop": { "x": "5.1cm", "y": "7.3cm", "side": "west" },
+          "mobile": { "x": "4.3cm", "y": "7.3cm", "side": "west" }
+        }
+      ]
+    },
+    {
+      "tileId": "participation-growth",
+      "steps": [
+        {
+          "id": "growth-type",
+          "text": "Select Participants to get the data into the table/plot",
+          "side": "west",
+          "laptop": { "x": "5.5cm", "y": "2.7cm", "side": "west" },
+          "mobile": { "x": "4.5cm", "y": "3.0cm", "side": "north" }
+        },
+    {
+          "id": "growth-period",
+          "text": "Select annual to show the participants per year over the history lifetime",
+          "side": "west",
+          "laptop": { "x": "10.8cm", "y": "2.7cm", "side": "west" },
+          "mobile": { "x": "9.0cm", "y": "3.0cm", "side": "north" }
+        },
+        {
+          "id": "growth-cellAgg",
+          "text": "The selected average per cell (annualised in this case), averages the participants over the year per course for all historic data",
+          "side": "west",
+          "laptop": { "x": "11.5cm", "y": "3.5cm", "side": "west" },
+          "mobile": { "x": "9.0cm", "y": "3.8cm", "side": "north" }
+        },      
+        {
+          "id": "growth-legend",
+          "text": "The legend allows selection of up to 5 courses to show the growth trend over the years. The legend is also interactive, allowing you to click on a course to highlight it in the plot.",
+          "direction": "south",
+          "laptop": { "x": "8.4cm", "y": "20.8cm" },
+          "mobile": { "x": "6.4cm", "y": "16.8cm" }
+        },
+        {
+          "id": "growth-legend",
+          "text": "Click the Cummulative button to see all course participants per year stacked to get an idea of the overall growth trend.",
+          "direction": "south",
+          "laptop": { "x": "12.0cm", "y": "21.8cm" },
+          "mobile": { "x": "12.0cm", "y": "21.8cm" }
+        }
+      ]
+    },
+    {
+      "tileId": "all-time-attendance",
+      "steps": [
+        {
+          "id": "Attendance-course",
+          "text": "Select the Course to be analysed in the table. Just start typing the course name and the search will find it for you.",
+          "side": "west",
+          "laptop": { "x": "5.5cm", "y": "3.5cm", "side": "west" },
+          "mobile": { "x": "5.5cm", "y": "3.7cm", "side": "north" }
+        },
+        {
+          "id": "attendance-sort",
+          "text": "The Particpt (participant) column is clicked to sort the table by the highest cumulative attendance over the history lifetime.",
+          "direction": "north",
+          "laptop": { "x": "6.6cm", "y": "8.0cm" },
+          "mobile": { "x": "6.6cm", "y": "8.0cm" }
+        },
+        {
+          "id": "attendance-date",
+          "text": "Click any blue date to jump to the event page and show the full deatils of the event for that date",
+          "direction": "west",
+          "laptop": { "x": "2.7cm", "y": "10.1cm" },
+          "mobile": { "x": "2.7cm", "y": "10.1cm" }
+        }
+      ]
+    },
+    {
+      "tileId": "course-deep-dive",
+      "steps": [
+        {
+          "id": "course-search",
+          "text": "Select the course you want in the search box. Start typing and pick from the list",
+          "direction": "west",
+          "laptop": { "x": "5.7cm", "y": "3.4cm" },
+          "mobile": { "x": "5.5cm", "y": "3.7cm", "side": "north" }
+        },
+        {
+          "id": "course-button",
+          "text": "Top250 button was clicked to get this table of participants",
+          "direction": "west",
+          "laptop": { "x": "1.4cm", "y": "4.4cm" },
+          "mobile": { "x": "1.4cm", "y": "4.4cm" }
+        },
+        {
+          "id": "course-sort",
+          "text": "Click header to sort by combined total",
+          "direction": "north",
+          "laptop": { "x": "6.3cm", "y": "6.4cm" },
+          "mobile": { "x": "5.5cm", "y": "6.7cm" }
+        }
+      ]
+    },
+    {
+      "tileId": "local-course-monthly-participation-chart",
+      "steps": [
+        {
+          "id": "course-search",
+          "text": "Select the course you want in the course search box before reading the monthly participation chart.",
+          "direction": "west",
+          "laptop": { "x": "5.7cm", "y": "3.4cm" },
+          "mobile": { "x": "5.5cm", "y": "3.7cm", "side": "north" }
+        },
+        {
+          "id": "plot-parts-button",
+          "text": "This preset follows the Course page panel toggle through Top250 and into Plot Parts to open the monthly participation chart.",
+          "direction": "west",
+          "laptop": { "x": "1.4cm", "y": "4.4cm" },
+          "mobile": { "x": "1.4cm", "y": "4.4cm" }
+        },
+        {
+          "id": "cumulative-button",
+          "text": "Click cumulative to switch from monthly levels to the progressive growth view.",
+          "direction": "south",
+          "laptop": { "x": "12.0cm", "y": "22.3cm" },
+          "mobile": { "x": "2.6cm", "y": "19.8cm" }
+        }
+      ]
+    },
+    {
+      "tileId": "course-monthly-participation-split-by-age-group",
+      "steps": [
+        {
+          "id": "course-search",
+          "text": "Select the course you want in the course search box before comparing the monthly age-group split.",
+          "direction": "west",
+          "laptop": { "x": "5.7cm", "y": "3.4cm" },
+          "mobile": { "x": "5.5cm", "y": "3.7cm", "side": "north" }
+        },
+        {
+          "id": "plot-groups-button",
+          "text": "This preset follows the Course page panel toggle through Top250, Plot Parts and Plot Hardness to reach Plot Groups.",
+          "direction": "west",
+          "laptop": { "x": "1.4cm", "y": "4.4cm" },
+          "mobile": { "x": "1.4cm", "y": "4.4cm" }
+        },
+        {
+          "id": "type-group-button",
+          "text": "This tile also cycles the Type Group control once so the chart opens on Age Group for the monthly age split.",
+          "direction": "east",
+          "laptop": { "x": "10.5cm", "y": "7.6cm" },
+          "mobile": { "x": "8.8cm", "y": "8.0cm" }
+        }
+      ]
+    },
+    {
+      "tileId": "my-participant-page",
+      "steps": [
+        {
+          "id": "participant-search",
+          "text": "This page is your participant workspace. If your athlete code is linked (set-up during login), the page will show you profile and activity.",
+          "direction": "down",
+          "laptop": { "x": "4.2cm", "y": "3.1cm", "side": "north" },
+          "mobile": { "x": "4.2cm", "y": "3.1cm", "side": "north" }
+        },
+        {
+          "id": "participant-controls",
+          "text": "Use these controls to switch view mode or apply adjustments so you can compare raw runs with age-, sex- or hardness-adjusted performance.",
+          "direction": "left",
+          "laptop": { "x": "10.8cm", "y": "5.1cm", "side": "north" },
+          "mobile": { "x": "8.8cm", "y": "5.1cm", "side": "north" }
+        },
+        {
+          "id": "participant-table",
+          "text": "The run history table is where your full event record, rankings and linked navigation into courses and clubs all come together.",
+          "direction": "right",
+          "laptop": { "x": "3.8cm", "y": "12.0cm" ,"side": "west" },
+          "mobile": { "x": "3.8cm", "y": "12.0cm" ,"side": "west" }
+        }
+      ]
+    },
+    {
+      "tileId": "participant-ranking-profile",
+      "steps": [
+        {
+          "id": "participant-search-box",
+          "text": "Select the participant start typing their name or code in the search box. The page will open on their profile.",
+          "direction": "west",
+          "laptop": { "x": "7.2cm", "y": "2.8cm" },
+          "mobile": { "x": "4.2cm", "y": "3.1cm", "side": "north" }
+        },
+        {
+          "id": "participant-plot-button",
+          "text": "This quick start opens the profile first, so the button now reads Plot for the next panel.",
+          "direction": "left",
+          "laptop": { "x": "1.0cm", "y": "6.3cm" },
+          "mobile": { "x": "1.0cm", "y": "6.3cm" }
+        },
+        {
+          "id": "participant-1y-row",
+          "text": "1Y shows the participant's ranking profile over the previous year.",
+          "direction": "west",
+          "laptop": { "x": "1.9cm", "y": "11.4cm" },
+          "mobile": { "x": "1.9cm", "y": "11.4cm" }
+        },
+        {
+          "id": "participant-all-row",
+          "text": "All shows the participant's best rankings across their full recorded history.",
+          "direction": "west",
+          "laptop": { "x": "1.9cm", "y": "13.3cm" },
+          "mobile": { "x": "1.9cm", "y": "13.3cm" }
+        },
+        {
+          "id": "participant-event-age-column",
+          "text": "Evnt & Age rankings are adjusted by both the event and the participant's age to give the adjusted AE time.",
+          "direction": "south",
+          "laptop": { "x": "8.7cm", "y": "9.3cm" },
+          "mobile": { "x": "8.7cm", "y": "9.3cm" }
+        },
+        {
+          "id": "participant-rank-click",
+          "text": "Click any ranking number in the profile to jump to the associated event in the participant history table.",
+          "direction": "west",
+          "laptop": { "x": "9.2cm", "y": "11.0cm" },
+          "mobile": { "x": "8.5cm", "y": "11.5cm" , "side": "east" }
+        },
+        {
+          "id": "participant-profile-cell",
+          "text": "Each square shows the best ranking, the event date, and the adjusted time for that profile measure.",
+          "direction": "west",
+          "laptop": { "x": "9.6cm", "y": "11.6cm" },
+          "mobile": { "x": "8.5cm", "y": "11.5cm" , "side": "east" }
+        },
+        {
+          "id": "participant-pie-chart",
+          "text": "The pie chart visualizes the distribution of the participant's attendance at different courses.",
+          "direction": "west",
+          "laptop": { "x": "11.9cm", "y": "17.6cm" },
+          "mobile": { "x": "5.5cm", "y": "14.5cm" , "side": "south" }
+        }
+      ]
+    },
+    {
+      "tileId": "participant-adjusted-plot-rankings",
+      "steps": [
+        {
+          "id": "participant-search-box",
+          "text": "Select the participant here before reviewing the adjusted time and ranking plot.",
+          "direction": "west",
+          "laptop": { "x": "7.2cm", "y": "2.8cm" },
+          "mobile": { "x": "4.2cm", "y": "3.1cm", "side": "north" }
+        },
+        {
+          "id": "participant-course-adj",
+          "text": "Use Course adj to choose the course adjustment type. This preset opens with full event adjustment selected.",
+          "direction": "west",
+          "laptop": { "x": "15.0cm", "y": "4.0cm" },
+           "mobile": { "x": "8.9cm", "y": "4.3cm", "side": "north" }
+        },
+        {
+          "id": "participant-other-adj",
+          "text": "Use Other adj to choose the age or sex adjustment. This preset opens with age adjustment selected.",
+          "direction": "west",
+          "laptop": { "x": "15.0cm", "y": "4.8cm" },
+          "mobile": { "x": "8.9cm", "y": "4.9cm", "side": "north" }
+        },
+        {
+          "id": "participant-series-button",
+          "text": "This button cycles the plot through Rank Only, Both Series, and Events Only views.",
+          "direction": "west",
+          "laptop": { "x": "13.6cm", "y": "6.4cm" },
+          "mobile": { "x": "1.3cm", "y": "6.2cm", "side":"west" }
+        },
+        {
+          "id": "participant-eligible-button",
+          "text": "Click Eligible to remove parkruns that are not eligible for the hardness coefficient.",
+          "direction": "west",
+          "laptop": { "x": "11.6cm", "y": "6.4cm" },
+          "mobile": { "x": "8.0cm", "y": "6.9cm", "side": "north" }
+        },
+        {
+          "id": "participant-course-legend",
+          "text": "These legend points show how different courses are coloured in the participant time series.",
+          "direction": "west",
+          "laptop": { "x": "12.5cm", "y": "19.1cm" },
+          "mobile": { "x": "4.0cm", "y": "17.9cm", "side": "south" }
+        },
+        {
+          "id": "participant-rank-legend",
+          "text": "These diamond legend markers show which ranking types are being used in the rank series.",
+          "direction": "west",
+          "laptop": { "x": "7.1cm", "y": "18.45cm" },
+          "mobile": { "x": "4.0cm", "y": "16.9cm", "side": "south" }
+        }
+      ]
+    },
+    {
+      "tileId": "next-event-planner",
+      "steps": [
+        {
+          "id": "next-event-search-box",
+          "text": "Select the participant here before reviewing the adjusted time and ranking plot.",
+          "direction": "west",
+          "laptop": { "x": "7.2cm", "y": "2.7cm" },
+          "mobile": { "x": "4.2cm", "y": "2.7cm", "side": "north" }
+        },
+        {
+          "id": "next-event-search-course",
+          "text": "Select the course here to see the participant's record on that course and the estimated next event ranking.",
+          "direction": "west",
+          "laptop": { "x": "8.2cm", "y": "4.0cm" },
+          "mobile": { "x": "5.2cm", "y": "4.0cm", "side": "north" }
+        },
+        {
+          "id": "next-event-last course",
+          "text": "The last course event - this was the recorded hardness",
+          "direction": "west",
+          "laptop": { "x": "8.2cm", "y": "5.8cm" },
+          "mobile": { "x": "5.2cm", "y": "5.8cm", "side": "north" }
+        },
+        {
+          "id": "next-event-athlete",
+          "text": "This is the best rank score on this course (assuming you've run it",
+          "direction": "west",
+          "laptop": { "x": "15.0cm", "y": "8.1cm" },
+          "mobile": { "x": "9.2cm", "y": "7.8cm", "side": "north" }
+        },
+        {
+          "id": "next-event-results",
+          "text": "With this time for this course, given this hardness what ranking score would you get. The green shading represents a time to get your current best ranking and the blue would improve your current ranking",
+          "direction": "west",
+          "laptop": { "x": "10.0cm", "y": "15.4cm" },
+          "mobile": { "x": "5.0cm", "y": "15.4cm" }
+        }
+      ]
+    },
+    {
+      "tileId": "participant-match-performance",
+      "steps": [
+        {
+          "id": "next-event-search-box",
+          "text": "Change the participant here. Start typing the runner name or athlete code to load the participant you want to compare.",
+          "direction": "west",
+          "laptop": { "x": "7.2cm", "y": "2.7cm" },
+          "mobile": { "x": "4.2cm", "y": "2.7cm", "side": "north" }
+        },
+        {
+          "id": "next-event-current-rank",
+          "text": "This current rank score is the participant's latest best rank for the chosen adjustment type.",
+          "direction": "north",
+          "laptop": { "x": "8.8cm", "y": "3.8cm" },
+          "mobile": { "x": "8.6cm", "y": "3.9cm", "side": "north" }
+        },
+        {
+          "id": "next-event-search-course",
+          "text": "Use Course to narrow the participant match analysis to the participant's local course or any other local course set.",
+          "direction": "west",
+          "laptop": { "x": "8.2cm", "y": "4.2cm" },
+          "mobile": { "x": "5.2cm", "y": "4.4cm", "side": "north" }
+        },
+        {
+          "id": "next-event-adj-type",
+          "text": "Adj Type selects the best rank metric you want to compare on for this participant.",
+          "direction": "west",
+          "laptop": { "x": "6.0cm", "y": "4.75cm" },
+          "mobile": { "x": "5.0cm", "y": "5.0cm", "side": "north" }
+        },
+        {
+          "id": "next-event-age-grade",
+          "text": "Age grade starts on All age grades. Narrow this only if you want the participant matches filtered to a smaller age range.",
+          "direction": "north",
+          "laptop": { "x": "11.2cm", "y": "5.3cm" },
+          "mobile": { "x": "9.0cm", "y": "5.3cm" }
+        },
+        {
+          "id": "next-event-course-header",
+          "text": "The Course column shows where each matched participant recorded the comparison run being used here.",
+          "direction": "north",
+          "laptop": { "x": "15.5cm", "y": "7.3cm" },
+          "mobile": { "x": "11.2cm", "y": "7.3cm" , "side": "east" }
+        },
+        {
+          "id": "next-event-central-participant",
+          "text": "The selected participant sits in the middle of this table, with slightly stronger runners above and slightly weaker runners below - based on the adjustment type comparison and their performance over the last year",
+          "direction": "west",
+          "laptop": { "x": "4.3cm", "y": "15.2cm" },
+          "mobile": { "x": "4.3cm", "y": "15.9cm" }
+        }
+      ]
+    },
+    {
+      "tileId": "rank-100-times",
+      "steps": [
+        {
+          "id": "next-event-search-box",
+          "text": "Change the participant here. Start typing the runner name or athlete code to analyse someone else.",
+          "direction": "west",
+          "laptop": { "x": "7.2cm", "y": "2.7cm" },
+          "mobile": { "x": "4.2cm", "y": "2.7cm", "side": "north" }
+        },
+        {
+          "id": "next-event-rank-100-row",
+          "text": "These are the calculated cut-off times for this Rank Type. The thresholds differ by adjustment type. To reach rank 100, the adjusted time must be below the Max Time, and Rank cnt shows how many participants made that cut over the one-year period.",
+          "direction": "north",
+          "laptop": { "x": "6.2cm", "y": "10.1cm" },
+          "mobile": { "x": "6.2cm", "y": "10.1cm" }
+        },
+        {
+          "id": "next-event-rank-type",
+          "text": "The rank type can be selected to show the ranking cut-off time per adjustment group. These are recalculated periodically",
+          "direction": "south",
+          "laptop": { "x": "6.2cm", "y": "20.5cm" },
+          "mobile": { "x": "5.2cm", "y": "17.3cm" }
+        }
+      ]
+    },
+    {
+      "tileId": "club-members-overview",
+      "steps": [
+        {
+          "id": "club-search-input",
+          "text": "Use this club selection to study other club memberships. Just start typing the club name and select",
+          "direction": "west",
+          "laptop": { "x": "7.3cm", "y": "3.5cm" },
+          "mobile": { "x": "4.3cm", "y": "3.7cm" , "side": "north" }
+        },
+        {
+          "id": "club-sort",
+          "text": "This table is currently sorted by the most club runs; click on the Club Runs column header to sort this column. ",
+          "direction": "north",
+          "laptop": { "x": "4.9cm", "y": "6.0cm" },
+          "mobile": { "x": "4.9cm", "y": "6.0cm" }
+        },
+        {
+          "id": "club-headert",
+          "text": "The header shows the best adjusted times for each member, their current rank, age group and when they first ran and last ran for the club. ",
+          "direction": "north",
+          "laptop": { "x": "8.9cm", "y": "6.0cm" },
+          "mobile": { "x": "8.9cm", "y": "6.0cm" }
+        },
+                {
+          "id": "club-current club",
+          "text": "Some members in this table have left the club and often joined another. It possible to see this in the CURRENT CLUB column, which shows the current club for each member. ",
+          "direction": "east",
+          "laptop": { "x": "10.9cm", "y": "5.5cm" },
+          "mobile": { "x": "10.9cm", "y": "5.5cm" }
+        },
+        {
+          "id": "club-members-select",
+          "text": "To see more detail on a member select them to go to the participant page",
+          "direction": "west",
+          "laptop": { "x": "3.9cm", "y": "13.4cm" },
+          "mobile": { "x": "3.9cm", "y": "13.4cm" }
+        }
+      ]
+    },
+    {
+      "tileId": "current-club-members",
+      "steps": [
+        {
+          "id": "current-club-search",
+          "text": "Start typing the club name here and select it from the list to load that club's course attendance summary.",
+          "direction": "west",
+          "laptop": { "x": "7.3cm", "y": "3.5cm" },
+          "mobile": { "x": "4.3cm", "y": "3.7cm" , "side": "north" }
+        },
+        {
+          "id": "club-frequent-visits",
+          "text": "Sort by the Freq column to see which courses the club has visited most often across its full recorded history.",
+          "direction": "north",
+          "laptop": { "x": "7.3cm", "y": "6.0cm" },
+          "mobile": { "x": "7.3cm", "y": "6.0cm" }
+        },
+        {
+          "id": "club-events-header",
+          "text": "This header view also shows how many events were visited by at least one club member, how many members are represented overall, and lets you compare history against the last year.",
+          "direction": "north",
+          "laptop": { "x": "8.8cm", "y": "6.0cm" },
+          "mobile": { "x": "8.8cm", "y": "6.0cm" }
+        },
+        {
+          "id": "club-events-course",
+          "text": "Click a course to get more information on the course's stats",
+          "direction": "west",
+          "laptop": { "x": "4.8cm", "y": "16.0cm" },
+          "mobile": { "x": "4.2cm", "y": "16.0cm" }
+        }
+      ]
+    },
+    {
+      "tileId": "fastest-local-runners-recorded",
+      "steps": [
+        {
+          "id": "lists-selection-fastest-all-time",
+          "text": "List selection opens on Fastest Athletes - All Time for this preset.",
+          "direction": "west",
+          "laptop": { "x": "9.9cm", "y": "2.5cm" },
+          "mobile": { "x": "5.9cm", "y": "2.9cm" , "side": "north" }
+        },
+        {
+          "id": "lists-participant-filter-fastest-all-time",
+          "text": "Participant Filter is set to runners with more than 50 local runs.",
+          "direction": "west",
+          "laptop": { "x": "9.9cm", "y": "3.1cm" },
+          "mobile": { "x": "5.9cm", "y": "3.5cm" , "side": "north" }
+        },
+        {
+          "id": "lists-course-adj-fastest-all-time",
+          "text": "Course adj stays on no adjustment for the recorded fastest local runners view.",
+          "direction": "west",
+          "laptop": { "x": "8.9cm", "y": "3.8cm" },
+          "mobile": { "x": "5.9cm", "y": "4.2cm" , "side": "north" }
+        },
+        {
+          "id": "lists-other-adj-fastest-all-time",
+          "text": "Other Adj also stays on no adjustment here.",
+          "direction": "west",
+          "laptop": { "x": "8.9cm", "y": "4.5cm" },
+          "mobile": { "x": "5.9cm", "y": "4.9cm" , "side": "north" }
+        },
+        {
+          "id": "lists-sort-time-fastest-all-time",
+          "text": "The Time column is sorted ascending so the fastest recorded local runners appear first.",
+          "direction": "west",
+          "laptop": { "x": "7.1cm", "y": "7.4cm" },
+          "mobile": { "x": "5.9cm", "y": "8.0cm" , "side": "north" }
+        }
+      ]
+    },
+    {
+      "tileId": "fastest-local-runners-event-adjusted",
+      "steps": [
+        {
+          "id": "lists-selection-fastest-1y-event-adj",
+          "text": "List selection opens on Fastest Athletes - Over last 1 Year for this preset.",
+          "direction": "west",
+          "laptop": { "x": "9.9cm", "y": "2.5cm" },
+          "mobile": { "x": "5.9cm", "y": "2.9cm" , "side": "north" }
+        },
+        {
+          "id": "lists-participant-filter-fastest-1y-event-adj",
+          "text": "Participant Filter is set to runners with more than 10 local runs in the last year.",
+          "direction": "west",
+          "laptop": { "x": "9.9cm", "y": "3.1cm" },
+          "mobile": { "x": "5.9cm", "y": "3.5cm" , "side": "north" }
+        },
+        {
+          "id": "lists-course-adj-fastest-1y-event-adj",
+          "text": "Course adj is set to full event adjustments.",
+          "direction": "west",
+          "laptop": { "x": "8.9cm", "y": "3.8cm" },
+          "mobile": { "x": "5.9cm", "y": "4.2cm" , "side": "north" }
+        },
+        {
+          "id": "lists-other-adj-fastest-1y-event-adj",
+          "text": "Other Adj stays on no adjustment for this event-adjusted ranking.",
+          "direction": "west",
+          "laptop": { "x": "8.9cm", "y": "4.5cm" },
+          "mobile": { "x": "5.9cm", "y": "4.9cm" , "side": "north" }
+        },
+        {
+          "id": "lists-sort-ev-adj-fastest-1y-event-adj",
+          "text": "The Ev Adj column is sorted ascending to rank the best full-event-adjusted times first.",
+          "direction": "east",
+          "laptop": { "x": "37.5cm", "y": "7.9cm" },
+          "mobile": { "x": "8.5cm", "y": "7.9cm" }
+        }
+      ]
+    },
+    {
+      "tileId": "fastest-local-runners-year-aes-course-sort",
+      "steps": [
+        {
+          "id": "lists-selection-fastest-1y-aes-course",
+          "text": "List selection opens on Fastest Athletes - Over last 1 Year for this preset.",
+          "direction": "west",
+          "laptop": { "x": "9.9cm", "y": "2.5cm" },
+          "mobile": { "x": "5.9cm", "y": "2.9cm" , "side": "north" }
+        },
+        {
+          "id": "lists-participant-filter-fastest-1y-aes-course",
+          "text": "Participant Filter is set to runners with more than 10 local runs in the last year.",
+          "direction": "west",
+          "laptop": { "x": "9.9cm", "y": "3.1cm" },
+          "mobile": { "x": "5.9cm", "y": "3.5cm" , "side": "north" }
+        },
+        {
+          "id": "lists-course-adj-fastest-1y-aes-course",
+          "text": "Course adj is set to full event adjustments.",
+          "direction": "west",
+          "laptop": { "x": "8.9cm", "y": "3.8cm" },
+          "mobile": { "x": "5.9cm", "y": "4.2cm" , "side": "north" }
+        },
+        {
+          "id": "lists-other-adj-fastest-1y-aes-course",
+          "text": "Other Adj is set to age and sex adjustment, so this view uses the full AES adjusted time.",
+          "direction": "west",
+          "laptop": { "x": "8.9cm", "y": "4.5cm" },
+          "mobile": { "x": "5.9cm", "y": "4.9cm" , "side": "north" }
+        },
+        {
+          "id": "lists-sort-course-fastest-1y-aes-course",
+          "text": "The Course column is sorted ascending so the adjusted results are grouped alphabetically by course.",
+          "direction": "north",
+          "laptop": { "x": "30cm", "y": "7.9cm" },
+          "mobile": { "x": "8.5cm", "y": "7.9cm" , "side": "east" }
+        },
+        {
+          "id": "lists-sort-AES-fastest-1y-aes-course",
+          "text": "The AES column is inherently sorted ascending so the best AES adjusted times, before sorting the course column.",
+          "direction": "east",
+          "laptop": { "x": "47cm", "y": "7.5cm" },
+          "mobile": { "x": "8.5cm", "y": "7.9cm" , "side": "east" }
+        }
+      ]
+    },
+    {
+      "tileId": "highest-total-parkruns-local-attendees",
+      "steps": [
+        {
+          "id": "lists-selection-highest-total-runs",
+          "text": "List selection opens on Highest Total Runs for this preset.",
+          "direction": "west",
+          "laptop": { "x": "9.9cm", "y": "2.5cm" },
+          "mobile": { "x": "5.9cm", "y": "2.9cm" , "side": "north" }
+        },
+        {
+          "id": "lists-participant-filter-highest-total-runs",
+          "text": "Participant Filter is left on all participants for this total parkruns ranking.",
+          "direction": "west",
+          "laptop": { "x": "9.9cm", "y": "3.1cm" },
+          "mobile": { "x": "5.9cm", "y": "3.5cm" , "side": "north" }
+        },
+        {
+          "id": "lists-participant-nofilter-highest-total-runs",
+          "text": "Switch adjustments off when sorting by participation.",
+          "direction": "west",
+          "laptop": { "x": "4.9cm", "y": "5.2cm" },
+          "mobile": { "x": "4.5cm", "y": "5.9cm" , "side": "north" }
+        },
+        {
+          "id": "lists-sort-total-runs-highest-total-runs",
+          "text": "The Tot. Runs column is sorted descending so the most prolific runners appear first.",
+          "direction": "north",
+          "laptop": { "x": "21.6cm", "y": "7.9cm" },
+          "mobile": { "x": "8.5cm", "y": "7.9cm" , "side": "east" }
+        }
+      ]
+    },
+    {
+      "tileId": "highest-local-runs-this-year",
+      "steps": [
+        {
+          "id": "lists-selection-highest-local-runs-1y",
+          "text": "List selection opens on Highest Local Runs - Over last 1 Year for this preset.",
+          "direction": "west",
+          "laptop": { "x": "9.9cm", "y": "2.5cm" },
+          "mobile": { "x": "5.9cm", "y": "2.9cm" , "side": "north" }
+        },
+        {
+          "id": "lists-participant-filter-highest-local-runs-1y",
+          "text": "Participant Filter is left on all participants for this local-runs-in-1Y ranking.",
+          "direction": "west",
+          "laptop": { "x": "9.9cm", "y": "3.1cm" },
+          "mobile": { "x": "5.9cm", "y": "3.5cm" , "side": "north" }
+        },
+        {
+          "id": "lists-participant-nofilter-highest-total-runs",
+          "text": "Switch adjustments off when sorting by participation.",
+          "direction": "west",
+          "laptop": { "x": "4.9cm", "y": "5.2cm" },
+          "mobile": { "x": "4.5cm", "y": "5.9cm" , "side": "north" }
+        },
+        {
+          "id": "lists-sort-local-runs-1y-highest-local-runs-1y",
+          "text": "The Runs in 1Y column is sorted descending so the highest recent local attendance appears first.",
+          "direction": "north",
+          "laptop": { "x": "26.6cm", "y": "7.9cm" },
+          "mobile": { "x": "8.5cm", "y": "7.9cm" , "side": "east" }
+        }
+      ]
+    }
+  ]
+}

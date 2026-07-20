@@ -18,6 +18,16 @@
   },
   "elements": [
     {
+      "id": "lists.backButton",
+      "type": "field",
+      "name": "Back",
+      "style": {
+        "backgroundColor": "#fff"
+      },
+      "laptop": { "x": "-0.0cm", "y": "0.1cm" },
+      "mobile": { "x": "-0.0cm", "y": "-0.9cm" }
+    },
+    {
       "id": "lists.title",
       "type": "label",
       "name": "Top 1000 List",
@@ -27,8 +37,8 @@
         "color": "#111827",
         "lineHeight": 1.2
       },
-      "laptop": { "x": "0.1cm", "y": "3.8cm" },
-      "mobile": { "x": "0.1cm", "y": "2.9cm" }
+      "laptop": { "x": "1.1cm", "y": "3.8cm" },
+      "mobile": { "x": "1.1cm", "y": "2.9cm" }
     },
     {
       "id": "lists.statusLabel",
@@ -40,8 +50,8 @@
         "color": "#1d4ed8",
         "lineHeight": 1.1
       },
-      "laptop": { "x": "4.3cm", "y": "3.8cm" },
-      "mobile": { "x": "4.3cm", "y": "2.9cm" }
+      "laptop": { "x": "5.3cm", "y": "3.8cm" },
+      "mobile": { "x": "5.3cm", "y": "2.9cm" }
     },
     {
       "id": "lists.listLabel",
@@ -55,8 +65,8 @@
         "color": "#111827",
         "lineHeight": 1.0
       },
-      "laptop": { "x": "0.7cm", "y": "0.2cm" },
-      "mobile": { "x": "0.7cm", "y": "-0.7cm" }
+      "laptop": { "x": "0.9cm", "y": "0.2cm" },
+      "mobile": { "x": "0.9cm", "y": "-0.7cm" }
     },
     {
       "id": "lists.listSelect",
@@ -70,8 +80,8 @@
         "Highest Local Runs",
         "Highest Local Runs - Over last 1 Year"
       ],
-      "laptop": { "x": "3.6cm", "y": "0.2cm", "width": "6.5cm" },
-      "mobile": { "x": "3.6cm", "y": "-0.7cm", "width": "6.0cm" }
+      "laptop": { "x": "3.8cm", "y": "0.2cm", "width": "6.5cm" },
+      "mobile": { "x": "3.8cm", "y": "-0.7cm", "width": "6.0cm" }
     },
     {
       "id": "lists.participantFilterLabel",
@@ -85,8 +95,8 @@
         "color": "#111827",
         "lineHeight": 1.0
       },
-      "laptop": { "x": "-0.0cm", "y": "0.9cm" },
-      "mobile": { "x": "-0.0cm", "y": "0.0cm" }
+      "laptop": { "x": "0.2cm", "y": "0.9cm" },
+      "mobile": { "x": "0.2cm", "y": "0.0cm" }
     },
     {
       "id": "lists.participantFilterSelect",
@@ -100,8 +110,8 @@
         "Participants > 50 local-runs",
         "Participants > 10 local_run_1y"
       ],
-      "laptop": { "x": "3.6cm", "y": "0.9cm", "width": "6.5cm" },
-      "mobile": { "x": "3.6cm", "y": "0.0cm", "width": "6.0cm" }
+      "laptop": { "x": "3.8cm", "y": "0.9cm", "width": "6.5cm" },
+      "mobile": { "x": "3.8cm", "y": "0.0cm", "width": "6.0cm" }
     },
     {
       "id": "lists.courseAdjLabel",
@@ -115,8 +125,8 @@
         "color": "#111827",
         "lineHeight": 1.0
       },
-      "laptop": { "x": "1.1cm", "y": "1.6cm" },
-      "mobile": { "x": "1.1cm", "y": "0.7cm" }
+      "laptop": { "x": "1.3cm", "y": "1.6cm" },
+      "mobile": { "x": "1.3cm", "y": "0.7cm" }
     },
     {
       "id": "lists.courseAdjSelect",
@@ -127,8 +137,8 @@
         "seasonal adjustments",
         "full event adjustments"
       ],
-      "laptop": { "x": "3.6cm", "y": "1.6cm", "width": "4.5cm" },
-      "mobile": { "x": "3.6cm", "y": "0.7cm", "width": "4.5cm" }
+      "laptop": { "x": "3.8cm", "y": "1.6cm", "width": "4.5cm" },
+      "mobile": { "x": "3.8cm", "y": "0.7cm", "width": "4.5cm" }
     },
     {
       "id": "lists.otherAdjLabel",
@@ -142,8 +152,8 @@
         "color": "#111827",
         "lineHeight": 1.0
       },
-      "laptop": { "x": "1.4cm", "y": "2.3cm" },
-      "mobile": { "x": "1.4cm", "y": "1.4cm" }
+      "laptop": { "x": "1.6cm", "y": "2.3cm" },
+      "mobile": { "x": "1.6cm", "y": "1.4cm" }
     },
     {
       "id": "lists.otherAdjSelect",
@@ -155,8 +165,8 @@
         "sex adjustments",
         "age & sex adjustment"
       ],
-      "laptop": { "x": "3.6cm", "y": "2.3cm", "width": "4.5cm" },
-      "mobile": { "x": "3.6cm", "y": "1.4cm", "width": "4.5cm" }
+      "laptop": { "x": "3.8cm", "y": "2.3cm", "width": "4.5cm" },
+      "mobile": { "x": "3.8cm", "y": "1.4cm", "width": "4.5cm" }
     },
     {
       "id": "lists.adjustmentFilterLabel",
@@ -170,15 +180,15 @@
         "color": "#111827",
         "lineHeight": 1.0
       },
-      "laptop": { "x": "0.6cm", "y": "3.0cm" },
-      "mobile": { "x": "0.6cm", "y": "2.1cm" }
+      "laptop": { "x": "0.8cm", "y": "3.0cm" },
+      "mobile": { "x": "0.8cm", "y": "2.1cm" }
     },
     {
       "id": "lists.adjustmentFilterCheckbox",
       "type": "field",
       "name": "filtered by adjustments",
-      "laptop": { "x": "3.5cm", "y": "2.9cm", "width": "0.5cm", "height": "0.5cm" },
-      "mobile": { "x": "3.5cm", "y": "2.1cm", "width": "0.5cm", "height": "0.5cm" }
+      "laptop": { "x": "3.7cm", "y": "2.9cm", "width": "0.5cm", "height": "0.5cm" },
+      "mobile": { "x": "3.7cm", "y": "2.1cm", "width": "0.5cm", "height": "0.5cm" }
     },
     {
       "id": "lists.adjustmentControlsGroup",
@@ -190,8 +200,8 @@
         "borderRadius": "0.22cm",
         "backgroundColor": "transparent"
       },
-      "laptop": { "x": "0.35cm", "y": "1.5cm", "width": "8.1cm", "height": "2.2cm" },
-      "mobile": { "x": "0.35cm", "y": "0.6cm", "width": "8.1cm", "height": "2.2cm" }
+      "laptop": { "x": "0.37cm", "y": "1.5cm", "width": "8.1cm", "height": "2.2cm" },
+      "mobile": { "x": "0.37cm", "y": "0.6cm", "width": "8.1cm", "height": "2.2cm" }
     },
     {
       "id": "lists.tableContainer",

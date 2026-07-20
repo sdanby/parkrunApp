@@ -36,6 +36,11 @@
   background: #f0f0f0;
 }
 
+.hamburger-list li.hamburger-chat-unread {
+  color: #b91c1c;
+  font-weight: 700;
+}
+
 /* Add this to src/styles/main.css or similar */
 .page-content {
   margin-top: 60px;
