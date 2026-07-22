@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import quickStartTiles from '../config/quickStartTiles.json';
+import { API_BASE_URL, fetchAthleteRuns } from '../api/backendAPI';
 import { buildQuickStartHelpMarkerId, QUICK_START_HELP_STATE_KEY, QUICK_START_TOUR_STATE_KEY } from './UnifiedHelp';
 import { navigateWithNavStack } from '../utils/navigationStack';
 import './QuickStart.css';
@@ -20,6 +21,15 @@ type QuickTileTarget = {
     search?: string;
 };
 
+type AuthUserLike = {
+    athleteCode?: string | null;
+    athlete_code?: string | null;
+    defaultCourseCode?: string | null;
+    default_course_code?: string | null;
+};
+
+type GenericRecord = Record<string, any>;
+
 const CATEGORY_ORDER = [
     'Event Analysis',
     'Course Insights',
@@ -30,6 +40,7 @@ const CATEGORY_ORDER = [
 ] as const;
 
 const QUICK_START_GUIDANCE_ENABLED_KEY = 'quickStart:guidanceEnabled';
+const AUTH_USER_KEY = 'auth_user_v1';
 
 const CATEGORY_ACCENTS: Record<string, string> = {
     'Event Analysis': 'quick-start-accent-fire',
@@ -42,11 +53,85 @@ const CATEGORY_ACCENTS: Record<string, string> = {
 
 const PAGE_LABEL_BY_ROUTE: Record<string, string> = {
     '/event-analysis': 'Event Analysis',
+    '/event-highlights': 'Event',
     '/course': 'Course',
     '/athletes': 'Participant',
     '/next-event': 'Next Event',
     '/clubs': 'Club',
     '/lists': 'Lists'
+};
+
+const parseDateMs = (value: unknown): number => {
+    const raw = String(value ?? '').trim();
+    if (!raw) return 0;
+
+    const iso = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (iso) {
+        return Date.UTC(Number(iso[1]), Number(iso[2]) - 1, Number(iso[3]));
+    }
+
+    const slash = raw.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if (slash) {
+        return Date.UTC(Number(slash[3]), Number(slash[2]) - 1, Number(slash[1]));
+    }
+
+    const parsed = Date.parse(raw);
+    return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const getCourseCode = (row: GenericRecord): string => String(row?.event_code ?? row?.eventCode ?? '').trim();
+
+const getRowDateMs = (row: GenericRecord): number => parseDateMs(row?.formatted_date ?? row?.event_date ?? row?.eventDate ?? row?.date);
+
+const getMostFrequentCourseCode = (runsToCheck: GenericRecord[]): string => {
+    const summaryByCourse = new Map<string, { count: number; latestDateMs: number }>();
+
+    runsToCheck.forEach((row) => {
+        const courseCode = getCourseCode(row);
+        if (!courseCode) {
+            return;
+        }
+
+        const rowDateMs = getRowDateMs(row);
+        const current = summaryByCourse.get(courseCode);
+        if (!current) {
+            summaryByCourse.set(courseCode, { count: 1, latestDateMs: rowDateMs });
+            return;
+        }
+
+        summaryByCourse.set(courseCode, {
+            count: current.count + 1,
+            latestDateMs: Math.max(current.latestDateMs, rowDateMs)
+        });
+    });
+
+    let selectedCode = '';
+    let selectedCount = -1;
+    let selectedLatestDateMs = -1;
+
+    summaryByCourse.forEach((summary, courseCode) => {
+        if (
+            summary.count > selectedCount
+            || (summary.count === selectedCount && summary.latestDateMs > selectedLatestDateMs)
+        ) {
+            selectedCode = courseCode;
+            selectedCount = summary.count;
+            selectedLatestDateMs = summary.latestDateMs;
+        }
+    });
+
+    return selectedCode;
+};
+
+const readAuthUser = (): AuthUserLike => {
+    try {
+        const raw = window.localStorage.getItem(AUTH_USER_KEY);
+        if (!raw) return {};
+        const parsed = JSON.parse(raw);
+        return parsed && typeof parsed === 'object' ? parsed as AuthUserLike : {};
+    } catch (_err) {
+        return {};
+    }
 };
 
 const normalizeQuickStartPeriod = (value: unknown): string | null => {
@@ -235,8 +320,67 @@ const QuickStart: React.FC = () => {
         })).filter((section) => section.tiles.length > 0 || !query.trim());
     }, [filteredTiles, query]);
 
-    const handleTileActivate = (tile: QuickTile) => {
-        const target = buildTileTarget(tile);
+    const resolveLatestEventDate = async (eventCode: string): Promise<string> => {
+        if (!eventCode) return '';
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/last_positions?event_code=${encodeURIComponent(eventCode)}`);
+            if (!response.ok) return '';
+            const payload = await response.json();
+            if (!Array.isArray(payload) || payload.length === 0) return '';
+            const sortedEvents = [...payload].sort((a: any, b: any) => {
+                const dateA = String(a?.formatted_date || a?.event_date || a?.eventDate || '');
+                const dateB = String(b?.formatted_date || b?.event_date || b?.eventDate || '');
+                return dateB.localeCompare(dateA);
+            });
+            return String(sortedEvents[0]?.event_date || sortedEvents[0]?.eventDate || '');
+        } catch (_err) {
+            return '';
+        }
+    };
+
+    const resolveHighlightsTileTarget = async (): Promise<QuickTileTarget | null> => {
+        const authUser = readAuthUser();
+        const defaultCourseCode = String(authUser.defaultCourseCode || authUser.default_course_code || '').trim();
+        const athleteCode = String(authUser.athleteCode || authUser.athlete_code || '').trim();
+
+        let resolvedCourseCode = /^\d+$/.test(defaultCourseCode) ? defaultCourseCode : '';
+
+        if (!resolvedCourseCode && athleteCode) {
+            try {
+                const runsPayload = await fetchAthleteRuns(athleteCode);
+                const runs = Array.isArray(runsPayload) ? runsPayload : [];
+                resolvedCourseCode = getMostFrequentCourseCode(runs);
+            } catch (_err) {
+                resolvedCourseCode = '';
+            }
+        }
+
+        if (!resolvedCourseCode) {
+            return null;
+        }
+
+        const latestDate = await resolveLatestEventDate(resolvedCourseCode);
+        if (!latestDate) {
+            return null;
+        }
+
+        const search = new URLSearchParams();
+        search.set('event_code', resolvedCourseCode);
+        search.set('event_date', latestDate);
+
+        return {
+            pathname: '/event-highlights',
+            search: `?${search.toString()}`
+        };
+    };
+
+    const handleTileActivate = async (tile: QuickTile) => {
+        const target = tile.route === '/event-highlights'
+            ? await resolveHighlightsTileTarget()
+            : buildTileTarget(tile);
+        if (!target) {
+            return;
+        }
         const navigationState: Record<string, unknown> = {
             ...tile.params
         };

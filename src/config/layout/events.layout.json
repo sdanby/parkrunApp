@@ -25,6 +25,18 @@
       "mobile": { "x": "0.3cm", "y": "0.0cm" }
     },
     {
+      "id": "event.highlightsButton",
+      "type": "button",
+      "name": "high-lights",
+      "style": {
+        "fontSize": "0.55rem",
+        "fontWeight": 700,
+        "lineHeight": 1.0
+      },
+      "laptop": { "x": "0.25cm", "y": "2.4cm", "width": "1.2cm", "height": "0.7cm" },
+      "mobile": { "x": "0.25cm", "y": "2.4cm", "width": "1.2cm", "height": "0.7cm" }
+    },
+    {
       "id": "event.courseLabel",
       "type": "label",
       "name": "Course:",
@@ -231,8 +243,8 @@
       "id": "event.statusMessage",
       "type": "field",
       "name": "empty",
-      "laptop": { "x": "0.3cm", "y": "3.2cm", "width": "7cm" },
-      "mobile": { "x": "0.3cm", "y": "3.2cm", "width": "7cm" }
+      "laptop": { "x": "0.3cm", "y": "3.3cm", "width": "7cm" },
+      "mobile": { "x": "0.3cm", "y": "3.3cm", "width": "7cm" }
     },
     {
       "id": "event.table.corner",

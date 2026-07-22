@@ -134,6 +134,17 @@
     "keywords": ["course", "monthly", "participation", "age", "group", "split"]
   },
   {
+    "id": "event-highlights-current-course",
+    "label": "Event Highlights",
+    "icon": "✨",
+    "category": "Event Analysis",
+    "route": "/event-highlights",
+    "params": {
+      "course_seed": "default_or_freq"
+    },
+    "keywords": ["event highlights", "poster", "current course", "preferred course", "most frequent"]
+  },
+  {
     "id": "my-participant-page",
     "label": "My Last Local Event",
     "icon": "🧍",

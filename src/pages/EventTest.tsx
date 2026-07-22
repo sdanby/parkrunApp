@@ -216,6 +216,16 @@ const parseTimeToSeconds = (value: any): number | null => {
   return null;
 };
 
+const normalizeEventDateKey = (value: unknown): string => {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  const iso = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (iso) return `${iso[1]}-${iso[2]}-${iso[3]}`;
+  const slash = raw.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (slash) return `${slash[3]}-${slash[2]}-${slash[1]}`;
+  return raw;
+};
+
 const EventTest: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -236,6 +246,7 @@ const EventTest: React.FC = () => {
   const [eventCode, setEventCode] = useState<string>(requestedEventCode);
   const [eventNumber, setEventNumber] = useState<number | null>(requestedEventNumber ? Number(requestedEventNumber) : null);
   const [eventDate, setEventDate] = useState<string>(requestedDate);
+  const [eventLastPosition, setEventLastPosition] = useState<number | null>(null);
   const [hardnessDisplay, setHardnessDisplay] = useState<string>('--');
   const [eventOptions, setEventOptions] = useState<EventOption[]>([]);
   const [courseEditMode, setCourseEditMode] = useState(false);
@@ -481,6 +492,8 @@ const EventTest: React.FC = () => {
   const eventNoLabelElement = getEventElementById('event.eventNoLabel');
   const eventNoElement = getEventElementById('event.eventNo');
   const eventNoStyle = eventNoElement?.style;
+  const highlightsButtonElement = getEventElementById('event.highlightsButton');
+  const highlightsButtonStyle = highlightsButtonElement?.style;
   const upSortElement = getEventElementById('event.upSort');
   const downSortElement = getEventElementById('event.downSort');
   const courseAdjLabelElement = getEventElementById('event.courseAdjLabel');
@@ -501,6 +514,7 @@ const EventTest: React.FC = () => {
   const pDate = getEventElementPlacement('event.date', viewport);
   const pEventNoLabel = getEventElementPlacement('event.eventNoLabel', viewport);
   const pEventNo = getEventElementPlacement('event.eventNo', viewport);
+  const pHighlightsButton = getEventElementPlacement('event.highlightsButton', viewport);
   const pUp = getEventElementPlacement('event.upSort', viewport);
   const pDown = getEventElementPlacement('event.downSort', viewport);
   const pViewLabel = getEventElementPlacement('event.viewLabel', viewport);
@@ -589,10 +603,13 @@ const EventTest: React.FC = () => {
           throw new Error('No event date available for Event_test.');
         }
 
-        const [info, positionsRaw, adjustmentsRaw] = await Promise.all([
+        const [info, positionsRaw, adjustmentsRaw, lastPositionsRaw] = await Promise.all([
           fetchEventInfo(code, date),
           fetchEventPositions(code, date),
-          fetchEventTimeAdjustment(code, date).catch(() => [])
+          fetchEventTimeAdjustment(code, date).catch(() => []),
+          fetch(`${API_BASE_URL}/api/last_positions?event_code=${encodeURIComponent(code)}`)
+            .then((response) => (response.ok ? response.json() : []))
+            .catch(() => [])
         ]);
 
         const baseRows = Array.isArray(positionsRaw) ? positionsRaw : [];
@@ -648,16 +665,26 @@ const EventTest: React.FC = () => {
 
         if (cancelled) return;
 
+        const normalizedDate = normalizeEventDateKey(date);
+        const matchedLastPositionRow = Array.isArray(lastPositionsRaw)
+          ? lastPositionsRaw.find((row: any) => normalizeEventDateKey(row?.formatted_date || row?.event_date || row?.eventDate) === normalizedDate)
+          : null;
+        const resolvedLastPosition = parseNumeric(matchedLastPositionRow?.last_position ?? matchedLastPositionRow?.lastPosition)
+          ?? parseNumeric(info?.last_position ?? info?.lastPosition)
+          ?? parseNumeric(mergedRows[0]?.last_position ?? mergedRows[0]?.lastPosition);
+
         setRows(mergedRows);
         setEventName(String(info?.event_name || info?.display_name || ''));
         setEventCode(String(info?.event_code || code));
         setEventDate(String(date));
         const finalNumber = Number(info?.event_number || numberFromQuery || 0);
         setEventNumber(Number.isFinite(finalNumber) && finalNumber > 0 ? finalNumber : null);
+        setEventLastPosition(resolvedLastPosition !== null && resolvedLastPosition > 0 ? resolvedLastPosition : null);
         setHardnessDisplay(formatHardnessPercent(combinedHardnessRaw));
       } catch (err: any) {
         if (!cancelled) {
           setRows([]);
+          setEventLastPosition(null);
           setHardnessDisplay('--');
           setError(String(err?.message || 'Failed to load Event_test data'));
         }
@@ -739,6 +766,24 @@ const EventTest: React.FC = () => {
     }
 
     return value.replace(/\$[a-zA-Z][a-zA-Z0-9]*/g, (match) => tokenMap[match] ?? '');
+  };
+
+  const handleOpenHighlights = () => {
+    const params = new URLSearchParams();
+    if (String(eventCode || '').trim()) {
+      params.set('event_code', String(eventCode).trim());
+    }
+    if (String(eventName || '').trim()) {
+      params.set('event_name', String(eventName).trim());
+    }
+    if (String(eventDate || '').trim()) {
+      params.set('event_date', String(eventDate).trim());
+    }
+    if (eventNumber) {
+      params.set('event_number', String(eventNumber));
+    }
+
+    navigateWithNavStack(navigate, location, `/event-highlights?${params.toString()}`);
   };
 
   const handleCourseInteraction = () => {
@@ -1193,6 +1238,47 @@ const EventTest: React.FC = () => {
               ←
             </button>
 
+            <button
+              type="button"
+              onClick={handleOpenHighlights}
+              title="Open event high-lights"
+              aria-label="Open event high-lights"
+              disabled={!String(eventDate || '').trim() || !String(eventCode || '').trim()}
+              style={{
+                position: 'absolute',
+                left: pHighlightsButton?.x ?? '0.3cm',
+                top: pHighlightsButton?.y ?? '1.95cm',
+                display: 'grid',
+                placeItems: 'center',
+                width: pHighlightsButton?.width || '1cm',
+                minWidth: pHighlightsButton?.width || '1cm',
+                height: pHighlightsButton?.height || '0.7cm',
+                margin: 0,
+                padding: 0,
+                border: '1px solid rgba(0,0,0,0.7)',
+                background: 'white',
+                color: '#333',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontSize: highlightsButtonStyle?.fontSize || '0.5rem',
+                lineHeight: Number(highlightsButtonStyle?.lineHeight || 1),
+                fontWeight: highlightsButtonStyle?.fontWeight || 700,
+                textAlign: 'center',
+                transform: 'none'
+              }}
+            >
+              <span
+                style={{
+                  display: 'block',
+                  width: '100%',
+                  textAlign: 'center',
+                  lineHeight: Number(highlightsButtonStyle?.lineHeight || 1)
+                }}
+              >
+                high-<br />lights
+              </span>
+            </button>
+
             <div
               className="races-header-title"
               style={{
@@ -1403,7 +1489,9 @@ const EventTest: React.FC = () => {
               }}
             >
               <div style={{ fontSize: '0.9em' }}>
-                {loading ? 'Loading event positions…' : (error || `Event Total : ${rows.length} participant${rows.length === 1 ? '' : 's'}`)}
+                {loading
+                  ? 'Loading event positions…'
+                  : (error || `${rows.length}${eventLastPosition ? ` / ${eventLastPosition}` : ''} scanned participant${rows.length === 1 ? '' : 's'}`)}
               </div>
             </div>
           </div>

@@ -367,6 +367,44 @@ h1, h2, h3 {
     scrollbar-gutter: stable;
 }
 
+.unified-help-body table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0.75rem 0 1rem;
+    font-size: 0.95rem;
+    line-height: 1.35;
+}
+
+.unified-help-body thead tr {
+    border-bottom: 2px solid rgba(110, 96, 35, 0.45);
+}
+
+.unified-help-body tbody tr + tr {
+    border-top: 1px solid rgba(110, 96, 35, 0.22);
+}
+
+.unified-help-body th,
+.unified-help-body td {
+    padding: 0.38rem 0.5rem;
+    text-align: left;
+    vertical-align: top;
+    white-space: nowrap;
+}
+
+.unified-help-body th {
+    font-weight: 700;
+}
+
+.unified-help-body td:first-child,
+.unified-help-body th:first-child {
+    padding-left: 0;
+}
+
+.unified-help-body td:last-child,
+.unified-help-body th:last-child {
+    padding-right: 0;
+}
+
 .unified-help-resize-handle {
     position: absolute;
     width: 14px;

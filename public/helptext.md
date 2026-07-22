@@ -2605,11 +2605,40 @@ It appears visually as shown in *adjustmentColumn.png*.
 
 The adjustment applied is determined by the following matrix:
 
-| **Course Adj ↓**      | **No Other Adj** | **Age Adj** | **Sex Adj** | **Age & Sex Adj** |
-|-----------------------|------------------|--------------|-------------|--------------------|
-| **No adjustment**     | — (no column)    | Age          | Sex         | AS                 |
-| **Seasonal Adj**      | Seasonal         | —            | —           | —                  |
-| **Event Adj**         | Ev               | AE           | ES          | AES                |
+<table>
+  <thead>
+    <tr>
+      <th>Course Adj ↓</th>
+      <th>No Other Adj</th>
+      <th>Age Adj</th>
+      <th>Sex Adj</th>
+      <th>Age &amp; Sex Adj</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>No adjustment</td>
+      <td>— (no column)</td>
+      <td>Age</td>
+      <td>Sex</td>
+      <td>AS</td>
+    </tr>
+    <tr>
+      <td>Seasonal Adj</td>
+      <td>Seasonal</td>
+      <td>—</td>
+      <td>—</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>Event Adj</td>
+      <td>Ev</td>
+      <td>AE</td>
+      <td>ES</td>
+      <td>AES</td>
+    </tr>
+  </tbody>
+</table>
 
 **Interpretation:**
 

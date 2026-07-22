@@ -117,6 +117,80 @@ export type ClubCourseSummaryRecord = {
     rank_last_year: number;
 };
 
+export type EventHighlightsPerson = {
+    position?: number | null;
+    name: string;
+    athlete_code?: string | null;
+    time?: string | null;
+    age_group?: string | null;
+    sex?: 'male' | 'female' | 'unknown' | string;
+    age_grade?: string | number | null;
+    age_grade_value?: number | null;
+    comment?: string | null;
+    role?: string | null;
+    total_runs?: number | null;
+    total_vols?: number | null;
+    milestone_level?: number | null;
+    milestone_label?: string | null;
+    first_timer_type?: 'ever' | 'here' | string;
+};
+
+export type EventHighlightsBreakdown = {
+    total?: number;
+    male?: number;
+    female?: number;
+    unknown?: number;
+    ever?: number;
+    here?: number;
+    '10'?: number;
+    '25'?: number;
+    '50'?: number;
+    '100'?: number;
+    '250'?: number;
+    '500'?: number;
+    '1000'?: number;
+};
+
+export type EventHighlightsResponse = {
+    event_code: number;
+    event_date: string;
+    event_number?: number | null;
+    event_name: string;
+    last_position?: number | null;
+    volunteers?: number | null;
+    avg_age?: number | null;
+    first_timers_count?: number | null;
+    pb_count?: number | null;
+    tourist_count?: number | null;
+    regulars?: number | null;
+    returners_count?: number | null;
+    club_count?: number | null;
+    participants: number;
+    distance_covered_km: number;
+    first_finisher?: EventHighlightsPerson | null;
+    first_finishers?: {
+        male?: EventHighlightsPerson | null;
+        female?: EventHighlightsPerson | null;
+    };
+    top_age_grade?: EventHighlightsPerson | null;
+    gender_breakdown?: EventHighlightsBreakdown;
+    pb_breakdown?: EventHighlightsBreakdown;
+    first_timer_breakdown?: EventHighlightsBreakdown;
+    milestone_breakdown?: EventHighlightsBreakdown;
+    volunteer_milestone_breakdown?: EventHighlightsBreakdown;
+    first_timers: EventHighlightsPerson[];
+    first_timer_names?: string[];
+    pb_roster: EventHighlightsPerson[];
+    volunteer_roster: EventHighlightsPerson[];
+    volunteer_names?: string[];
+    milestone_people?: EventHighlightsPerson[];
+    milestone_names?: string[];
+    volunteer_milestones?: EventHighlightsPerson[];
+    milestone_candidates?: EventHighlightsPerson[];
+    finishers_by_minute: Array<{ minute: number; label: string; count: number }>;
+    provisional_notes?: string[];
+};
+
 export type AdminStatusResponse = {
     adminCount: number;
     bootstrapOpen: boolean;
@@ -463,6 +537,32 @@ export const fetchEventInfo = async (eventIdentifier: string, eventDate: string)
         return response.data;
     } catch (error) {
         console.error('Error fetching event info:', error);
+        throw error;
+    }
+};
+
+export const fetchEventHighlights = async ({
+    eventCode,
+    eventName,
+    eventDate
+}: {
+    eventCode?: string | number | null;
+    eventName?: string | null;
+    eventDate: string;
+}): Promise<EventHighlightsResponse> => {
+    try {
+        const params = new URLSearchParams();
+        if (eventCode !== undefined && eventCode !== null && String(eventCode).trim()) {
+            params.set('event_code', String(eventCode).trim());
+        } else if (eventName && String(eventName).trim()) {
+            params.set('event_name', String(eventName).trim());
+        }
+        params.set('event_date', eventDate);
+        const url = `${API_BASE_URL}/api/event_highlights?${params.toString()}`;
+        const response = await axios.get(url);
+        return response.data as EventHighlightsResponse;
+    } catch (error) {
+        console.error('Error fetching event highlights:', error);
         throw error;
     }
 };
