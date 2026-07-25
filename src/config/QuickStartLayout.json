@@ -326,6 +326,13 @@
           "direction": "right",
           "laptop": { "x": "3.8cm", "y": "12.0cm" ,"side": "west" },
           "mobile": { "x": "3.8cm", "y": "12.0cm" ,"side": "west" }
+        },
+                {
+          "id": "participant-first-table",
+          "text": "This was your last activity. Click the date to see the event and where you were positionsed",
+          "direction": "right",
+          "laptop": { "x": "3.8cm", "y": "8.2cm" ,"side": "west" },
+          "mobile": { "x": "3.8cm", "y": "8.2cm" ,"side": "west" }
         }
       ]
     },
@@ -430,7 +437,7 @@
         },
         {
           "id": "participant-course-legend",
-          "text": "These legend points show how different courses are coloured in the participant time series.",
+          "text": "These legend points show how different courses are coloured in the participant time series. Click any course to filter on that course and click ",
           "direction": "west",
           "laptop": { "x": "12.5cm", "y": "19.1cm" },
           "mobile": { "x": "4.0cm", "y": "17.9cm", "side": "south" }

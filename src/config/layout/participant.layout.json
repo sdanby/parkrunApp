@@ -322,7 +322,7 @@
       "type": "table",
       "name": "tableContainer",
       "laptop": { "x": "0cm", "y": "4.5cm", "width": "50cm", "height": "16.5cm" },
-      "mobile": { "x": "0cm", "y": "5.2cm", "width": "30cm", "height": "14.5cm" }
+      "mobile": { "x": "0cm", "y": "5.2cm", "width": "30cm", "height": "16.3cm" }
     },
     {
       "id": "participant.plotShowLabel",

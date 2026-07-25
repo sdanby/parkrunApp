@@ -31,9 +31,9 @@ type AuthUserLike = {
 type GenericRecord = Record<string, any>;
 
 const CATEGORY_ORDER = [
-    'Event Analysis',
-    'Course Insights',
     'Personal Stats',
+    'Course Insights',
+    'Event Analysis',
     'Next Event',
     'Clubs',
     'Lists & Records'
@@ -257,13 +257,12 @@ const QuickStart: React.FC = () => {
         return storedValue !== 'false';
     });
     const [isMobile, setIsMobile] = useState<boolean>(() => window.innerWidth <= 1024);
-    const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>(() => {
-        const firstCategory = CATEGORY_ORDER[0];
-        return CATEGORY_ORDER.reduce<Record<string, boolean>>((acc, category) => {
-            acc[category] = category === firstCategory;
+    const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>(() =>
+        CATEGORY_ORDER.reduce<Record<string, boolean>>((acc, category) => {
+            acc[category] = false;
             return acc;
-        }, {});
-    });
+        }, {})
+    );
 
     useEffect(() => {
         const handleResize = () => setIsMobile(window.innerWidth <= 1024);
@@ -289,11 +288,10 @@ const QuickStart: React.FC = () => {
             return;
         }
 
-        const firstCategory = CATEGORY_ORDER[0];
         setExpandedCategories((prev) => {
             const next: Record<string, boolean> = {};
             CATEGORY_ORDER.forEach((category) => {
-                next[category] = prev[category] ?? category === firstCategory;
+                next[category] = prev[category] ?? false;
             });
             return next;
         });
@@ -441,7 +439,7 @@ const QuickStart: React.FC = () => {
                     </div>
                     <p>
                         Jump straight into the most useful views without rebuilding filters each time.
-                        Search by analysis idea, then open the preset you want.
+                        Search by analysis idea, then open the preset you want. Click the <span className="quick-start-inline-back-arrow" aria-hidden="true">←</span> to come back here.
                     </p>
                 </div>
                 <div className="quick-start-search-shell">

@@ -2516,8 +2516,8 @@ const NextEvent: React.FC = () => {
                             aria-label="Shift rank range higher"
                             title="Shift rank range higher"
                             style={{
-                                width: '0.52cm',
-                                height: '0.52cm',
+                                width: '0.7cm',
+                                height: '0.7cm',
                                 border: '1px solid #9ca3af',
                                 borderRadius: '6px',
                                 background: '#fff',
@@ -2539,8 +2539,8 @@ const NextEvent: React.FC = () => {
                             aria-label="Shift rank range lower"
                             title="Shift rank range lower"
                             style={{
-                                width: '0.52cm',
-                                height: '0.52cm',
+                                width: '0.7cm',
+                                height: '0.7cm',
                                 border: '1px solid #9ca3af',
                                 borderRadius: '6px',
                                 background: '#fff',
