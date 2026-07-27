@@ -102,7 +102,7 @@ Click cumulative to see the progressive growth.
 <a id="quick-start-course-monthly-participation-split-by-age-group"></a>
 ### Course monthly participation split by age group
 
-Show how participation is split by age group across the months, with all-course comparison bars displayed for context.
+Shows how participation is split by age group across the months, with all-course comparison bars displayed for context.
 
 This quick start opens the groups chart with Age Group already selected. Use the same toggle to switch back and look at the other types of participant data.
 
@@ -2686,6 +2686,8 @@ As a result:
 
 - In other cases, a participant’s total runs may fall **entirely within** the local courses, meaning all runs can be fully analysed.
 
+**It should be noted that attendance of outside (non-local) courses will not be picked until that participant attends a local course so the Total runs: will not be updated until then.**
+
 A value of **1** indicates the participant’s **very first recorded parkrun**, which also corresponds to  
 [First Timer](#term-first-timer) status.
 
@@ -2704,7 +2706,7 @@ This provides a measure of the participant’s **recent running volume**.
 ### Est. Volunts
 
 This is the latest total volunteering for this participant.
-This data is only recently collected and is only collected from participants that have been active.
+This data is collected when the participant does a local parkrun and there may lag if the participant has run in non-local parkruns, up until they run another local parkrun when the data can catch-up. So may be inidcative.
 If `pend` is shown, then we have local volunteer information but we havent collected the up to date data yet.
 If `NA` is shown then no data has been collected, and `0` means no volunteering when last snapped.
 
@@ -3209,6 +3211,12 @@ This page is usually reached from event, course, club or list tables by clicking
 - `Table View`: changes the visible participant-history columns and includes
   `Basic`, `Detailed`, `All Time Adjustments`, and `Event Ranks`.
 - Supporting labels include `Athlete Code`, `Estimated Age`, `Total Runs`, `Recent Club` and `Freq Course`.
+
+#### Event Ranks
+
+- The event ranks have a colouring system that follows these rules.
+1) The cell with the highest rank is always coloured. This will change normally depending on the sex or the age of the participant. i.e. a younger participant the absolute or event adjusted times will be more significant.
+2) depending on the performance of that event the following colours are applied - see  [Event Ranks colouring](#term-event-rank-colouring)
 
 #### Buttons
 

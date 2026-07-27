@@ -1014,6 +1014,21 @@ export const setAdminUserDefaultCourse = async (
     return response.data || { ok: true };
 };
 
+export const setAdminUserAthleteCode = async (
+    token: string,
+    userId: number,
+    athleteCode?: string
+): Promise<{ ok: boolean; user?: AdminUser }> => {
+    const response = await axios.post(`${API_BASE_URL}/api/admin/users/${userId}/athlete-code`, {
+        athleteCode
+    }, {
+        headers: {
+            Authorization: `Bearer ${token}`
+        }
+    });
+    return response.data || { ok: true };
+};
+
 export const fetchAdminActivity = async (token: string, limit = 300, since?: string): Promise<{ activity: AdminActivityRecord[]; limit: number }> => {
     const params = new URLSearchParams();
     params.set('limit', String(limit));

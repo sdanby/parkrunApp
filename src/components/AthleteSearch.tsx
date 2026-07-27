@@ -162,7 +162,7 @@ const AthleteSearch: React.FC<Props> = ({ onSelect, placeholder, inputId, initia
     return () => {
       if (debounceRef.current) window.clearTimeout(debounceRef.current);
     };
-  }, [query]);
+  }, [initialQuery, query, suppressInitialSearch]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (!open) return;

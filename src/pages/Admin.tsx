@@ -12,6 +12,7 @@ import {
     resetAdminCurveReferencePublish,
     resetAdminWeeklyUpload,
     startAdminCurveReferencePublish,
+    setAdminUserAthleteCode,
     setAdminUserDefaultCourse,
     setAdminUserFlag,
     startAdminWeeklyUpload,
@@ -26,6 +27,7 @@ import {
     type WeeklySqlPipelineOptions,
     type WeeklyUploadStatus
 } from '../api/backendAPI';
+import AthleteSearch from '../components/AthleteSearch';
 import './Admin.css';
 
 const AUTH_TOKEN_KEY = 'auth_token_v1';
@@ -515,6 +517,7 @@ const Admin: React.FC = () => {
     const [users, setUsers] = useState<AdminUser[]>([]);
     const [courseOptions, setCourseOptions] = useState<EventOption[]>([]);
     const [savingUserId, setSavingUserId] = useState<number | null>(null);
+    const [savingAthleteUserId, setSavingAthleteUserId] = useState<number | null>(null);
     const [savingCourseUserId, setSavingCourseUserId] = useState<number | null>(null);
     const [section, setSection] = useState<AdminPanelSection>('admin-setup');
     const [activity, setActivity] = useState<AdminActivityRecord[]>([]);
@@ -1240,10 +1243,6 @@ const Admin: React.FC = () => {
         setUserFilters((prev) => ({ ...prev, [field]: '' }));
     };
 
-    const clearActivityFilter = (field: keyof ActivityFilters) => {
-        setActivityFilters((prev) => ({ ...prev, [field]: '' }));
-    };
-
     const getActivityColumns = (row: AdminActivityRecord) => {
         const detail = row.activityType === 'page_visit'
             ? (row.pagePath || 'Page visit')
@@ -1467,6 +1466,32 @@ const Admin: React.FC = () => {
         }
     };
 
+    const handleAthleteCodeChange = async (row: AdminUser, athleteCode?: string) => {
+        if (!token || savingAthleteUserId !== null) {
+            return;
+        }
+
+        try {
+            setSavingAthleteUserId(row.id);
+            setError(null);
+            const response = await setAdminUserAthleteCode(token, row.id, athleteCode);
+            const updated = response?.user;
+            const nextAthleteCode = updated?.athleteCode ?? athleteCode ?? null;
+            setUsers((prev) => prev.map((entry) => (
+                entry.id === row.id
+                    ? {
+                        ...entry,
+                        athleteCode: nextAthleteCode ? String(nextAthleteCode) : null
+                    }
+                    : entry
+            )));
+        } catch (err: any) {
+            setError(err?.response?.data?.error || 'Unable to update athlete code.');
+        } finally {
+            setSavingAthleteUserId(null);
+        }
+    };
+
     if (loading) {
         return <div className="page-content admin-page"><div className="admin-status">Loading admin panel...</div></div>;
     }
@@ -1585,7 +1610,31 @@ const Admin: React.FC = () => {
                                             <tr key={row.id}>
                                                 <td>{row.email}</td>
                                                 <td>{row.displayName || '—'}</td>
-                                                <td>{row.athleteCode || '—'}</td>
+                                                <td>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', minWidth: 240 }}>
+                                                        <AthleteSearch
+                                                            inputId={`admin-athlete-${row.id}`}
+                                                            placeholder="Search by athlete name or code"
+                                                            initialQuery={String(row.athleteCode || '')}
+                                                            suppressInitialSearch
+                                                            onSelect={(athleteCode) => handleAthleteCodeChange(row, athleteCode)}
+                                                        />
+                                                        {row.athleteCode ? (
+                                                            <button
+                                                                type="button"
+                                                                className="admin-filter-clear"
+                                                                onClick={() => handleAthleteCodeChange(row, undefined)}
+                                                                disabled={savingAthleteUserId === row.id}
+                                                                aria-label={`Clear athlete code for ${row.email}`}
+                                                            >
+                                                                Clear
+                                                            </button>
+                                                        ) : null}
+                                                        {savingAthleteUserId === row.id ? (
+                                                            <span style={{ color: '#64748b', fontSize: '0.75rem' }}>Saving...</span>
+                                                        ) : null}
+                                                    </div>
+                                                </td>
                                                 <td>
                                                     {(() => {
                                                         const currentCode = String(row.defaultCourseCode || '').trim();
