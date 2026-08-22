@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ClubCourseSummaryRecord, fetchAthleteRuns } from '../api/backendAPI';
+import { ClubCourseSummaryRecord, fetchAthleteRuns, searchAthletes } from '../api/backendAPI';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { fetchClubCourseSummary, fetchClubMembers, fetchClubsSearch } from '../api/backendAPI';
 import { navigateBackWithNavStack, navigateWithNavStack } from '../utils/navigationStack';
@@ -253,17 +253,62 @@ const extractRunsArray = (payload: unknown): any[] => {
     return [];
 };
 
-const getMostRecentClubFromAthletePayload = (payload: unknown): string | null => {
+const getPreferredClubFromAthletePayload = (payload: unknown): string | null => {
+    const summaryClub = pickStringField((payload as any)?.summary, ['club', 'athlete_club'])
+        || pickStringField(payload, ['club', 'athlete_club']);
+    if (summaryClub) {
+        return summaryClub;
+    }
+
     const runs = extractRunsArray(payload);
     const latestRun = runs.length > 0 ? runs[runs.length - 1] : null;
     const latestRunClub = pickStringField(latestRun, ['club']);
-    if (latestRunClub) {
-        return latestRunClub;
+    return latestRunClub || null;
+};
+
+const getCurrentClubForLoggedInAthlete = async (athleteCode: string): Promise<string | null> => {
+    const trimmedAthleteCode = String(athleteCode || '').trim();
+    if (!trimmedAthleteCode) {
+        return null;
     }
 
-    const summaryClub = pickStringField((payload as any)?.summary, ['club', 'athlete_club'])
-        || pickStringField(payload, ['club', 'athlete_club']);
-    return summaryClub || null;
+    try {
+        const searchRows = await searchAthletes(trimmedAthleteCode, 10);
+        const exactMatch = searchRows.find((row) => String(row?.athlete_code || '').trim() === trimmedAthleteCode);
+        const searchClub = pickStringField(exactMatch, ['club']);
+        if (searchClub) {
+            return searchClub;
+        }
+    } catch {
+        // Fall back to athlete-runs payload lookup below.
+    }
+
+    const payload = await fetchAthleteRuns(trimmedAthleteCode);
+    return getPreferredClubFromAthletePayload(payload);
+};
+
+const resolveLoggedInAthleteCode = async (authUser: unknown): Promise<string> => {
+    const directAthleteCode = pickStringField(authUser, ['athleteCode', 'athlete_code']);
+    if (directAthleteCode) {
+        return directAthleteCode;
+    }
+
+    const displayName = pickStringField(authUser, ['displayName', 'display_name', 'name']);
+    if (!displayName) {
+        return '';
+    }
+
+    try {
+        const searchRows = await searchAthletes(displayName, 20);
+        const normalizedDisplayName = displayName.toLowerCase();
+        const exactNameMatch = searchRows.find((row) => String(row?.name || '').trim().toLowerCase() === normalizedDisplayName);
+        const uniqueCandidate = searchRows.length === 1 ? searchRows[0] : null;
+        const fallbackStartsWithMatch = searchRows.find((row) => String(row?.name || '').trim().toLowerCase().startsWith(normalizedDisplayName));
+        const matchedRow = exactNameMatch || uniqueCandidate || fallbackStartsWithMatch;
+        return String(matchedRow?.athlete_code || '').trim();
+    } catch {
+        return '';
+    }
 };
 
 const Clubs: React.FC = () => {
@@ -303,7 +348,7 @@ const Clubs: React.FC = () => {
     const [userClub, setUserClub] = useState<string | null>(null);
     const initialClub = initialClubFromUrl || userClub || '';
 
-    // If there is no club in URL, default to logged-in athlete's most recent club.
+    // If there is no club in URL, default to the logged-in athlete's defined club.
     useEffect(() => {
         if (initialClubFromUrl) {
             return;
@@ -317,13 +362,12 @@ const Clubs: React.FC = () => {
                     return;
                 }
                 const parsed = JSON.parse(raw);
-                const athleteCode = typeof parsed?.athleteCode === 'string' ? parsed.athleteCode.trim() : '';
+                const athleteCode = await resolveLoggedInAthleteCode(parsed);
                 if (!athleteCode) {
                     return;
                 }
 
-                const payload = await fetchAthleteRuns(athleteCode);
-                const club = getMostRecentClubFromAthletePayload(payload);
+                const club = await getCurrentClubForLoggedInAthlete(athleteCode);
                 if (!cancelled && club) {
                     setUserClub(club);
                 }

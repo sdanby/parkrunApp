@@ -104,6 +104,14 @@ export type EventOption = {
     eventName: string;
 };
 
+export type AthleteSearchResult = {
+    athlete_code: string;
+    name?: string;
+    total_runs?: number;
+    club?: string;
+    current_age_estimate?: string | number;
+};
+
 export type ClubCourseSummaryRecord = {
     event_code: number | string;
     event_name: string;
@@ -714,6 +722,25 @@ export const fetchAthleteBestSummary = async (athleteCode: string) => {
         return response.data;
     } catch (error) {
         console.error('Error fetching athlete best summary:', error);
+        throw error;
+    }
+};
+
+export const searchAthletes = async (query: string, limit: number = 20): Promise<AthleteSearchResult[]> => {
+    const trimmedQuery = String(query || '').trim();
+    if (!trimmedQuery) {
+        return [];
+    }
+    try {
+        const params = new URLSearchParams({
+            q: trimmedQuery,
+            limit: String(limit)
+        });
+        const url = `${API_BASE_URL}/api/athletes/search?${params.toString()}`;
+        const response = await axios.get(url);
+        return Array.isArray(response.data) ? response.data : [];
+    } catch (error) {
+        console.error('Error searching athletes:', error);
         throw error;
     }
 };

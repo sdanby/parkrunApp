@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { fetchAthleteBestSummary, fetchAthleteRuns, fetchCurveRankReference, type CurveRankReferenceRow } from '../api/backendAPI';
+import { fetchAthleteBestSummary, fetchAthleteRuns, fetchCurveRankReference, searchAthletes, type CurveRankReferenceRow } from '../api/backendAPI';
 import './ResultsTable.css';
 import AthleteSearch from '../components/AthleteSearch';
 import ReactECharts from 'echarts-for-react';
@@ -1033,9 +1033,11 @@ const Athletes: React.FC = () => {
         }
     };
     const loggedInUser = getLoggedInUser();
+    const [resolvedInitialAthleteCode, setResolvedInitialAthleteCode] = useState<string>('');
     const loggedInAthleteCode = loggedInUser.athleteCode && typeof loggedInUser.athleteCode === 'string' && loggedInUser.athleteCode.trim() ? loggedInUser.athleteCode.trim() : undefined;
     const loggedInDisplayName = loggedInUser.displayName && typeof loggedInUser.displayName === 'string' && loggedInUser.displayName.trim() ? loggedInUser.displayName.trim() : undefined;
-    const selectedCode = locationState.athleteCode || searchParams.get('athlete_code') || loggedInAthleteCode;
+    const athleteCodeFromQuery = searchParams.get('athlete_code') || undefined;
+    const selectedCode = locationState.athleteCode || athleteCodeFromQuery || loggedInAthleteCode || resolvedInitialAthleteCode;
     const activeSelectedCode = selectedCode;
     // If we are defaulting to the logged-in user, prefill the search box with their name
     const athleteNameFromQuery = searchParams.get('athlete_name') || searchParams.get('name') || undefined;
@@ -1052,6 +1054,52 @@ const Athletes: React.FC = () => {
         eventName: sourceEventNameFromQuery,
         eventDate: sourceEventDateFromQuery
     }, [locationState.sourceEvent, sourceEventCodeFromQuery, sourceEventDateFromQuery, sourceEventNameFromQuery]);
+
+    useEffect(() => {
+        if (locationState.athleteCode || athleteCodeFromQuery || loggedInAthleteCode) {
+            setResolvedInitialAthleteCode('');
+            return;
+        }
+
+        const displayName = String(loggedInDisplayName || '').trim();
+        if (!displayName) {
+            setResolvedInitialAthleteCode('');
+            return;
+        }
+
+        let cancelled = false;
+        const normalizedDisplayName = displayName.toLowerCase();
+
+        const resolveAthleteCode = async () => {
+            try {
+                const rows = await searchAthletes(displayName, 20);
+                if (cancelled || !Array.isArray(rows) || rows.length === 0) {
+                    return;
+                }
+
+                const exactNameMatch = rows.find((row) => String(row?.name || '').trim().toLowerCase() === normalizedDisplayName);
+                const uniqueCandidate = rows.length === 1 ? rows[0] : null;
+                const fallbackStartsWithMatch = rows.find((row) => String(row?.name || '').trim().toLowerCase().startsWith(normalizedDisplayName));
+                const matchedRow = exactNameMatch || uniqueCandidate || fallbackStartsWithMatch;
+                const matchedCode = String(matchedRow?.athlete_code || '').trim();
+
+                if (!matchedCode) {
+                    return;
+                }
+
+                setResolvedInitialAthleteCode(matchedCode);
+            } catch (err) {
+                if (!cancelled) {
+                    console.error('Unable to resolve logged-in athlete code from display name:', err);
+                }
+            }
+        };
+
+        resolveAthleteCode();
+        return () => {
+            cancelled = true;
+        };
+    }, [athleteCodeFromQuery, locationState.athleteCode, loggedInAthleteCode, loggedInDisplayName]);
     const hasSourceEvent = Boolean(sourceEvent?.eventCode || sourceEvent?.eventName || sourceEvent?.eventDate);
     const sourceEventKey = useMemo(() => JSON.stringify({
         eventCode: sourceEvent?.eventCode || '',
@@ -1681,7 +1729,7 @@ const Athletes: React.FC = () => {
         );
     }, [activeSelectedCode, headerName, location.pathname, location.search, location.state, navigate]);
 
-    const showHeader = Boolean(activeSelectedCode);
+    const showHeader = true;
     const headerCode = pickField(latestRun, ['athlete_code', 'athleteCode', 'runner_code', 'code']) || summary?.athlete_code || activeSelectedCode || '';
     const headerClubRaw = pickField(latestRun, ['club']) || summary?.club;
     const headerClub = headerClubRaw ? String(headerClubRaw) : '<no club>';
@@ -2931,15 +2979,20 @@ const Athletes: React.FC = () => {
         };
     }, [statusMessageElement, statusMessagePlacement]);
 
+    const hasSelectedAthlete = Boolean(activeSelectedCode);
+
     const participantStatusMessage = useMemo(() => {
-        if (activeSelectedCode && loading) {
+        if (hasSelectedAthlete && loading) {
             return 'Loading athlete data…';
         }
         if (error) {
             return error;
         }
+        if (!hasSelectedAthlete) {
+            return 'Select a participant to view event history.';
+        }
         return '';
-    }, [activeSelectedCode, error, loading]);
+    }, [error, hasSelectedAthlete, loading]);
 
     const renderConfigControlLabel = (
         element: {
@@ -3887,7 +3940,7 @@ const Athletes: React.FC = () => {
         setShowPlot(false);
         setShowProfile(false);
     };
-    const showBackButton = showHeader;
+    const showBackButton = true;
 
     return (
         <div className="page-content athletes-page" style={{ position: 'relative' }}>
@@ -3910,7 +3963,7 @@ const Athletes: React.FC = () => {
                             &#8592;
                         </button>
                     )}
-                    <div className={`athlete-header-main ${showHeader ? 'athlete-header-main--selected' : 'athlete-header-main--search'}`}>
+                    <div className="athlete-header-main athlete-header-main--selected">
                         <div className="athlete-header-text">
                             <div className="athlete-header-title" title="Athlete Search" style={participantInputWrapperStyle}>
                                 <AthleteSearch inputId="athletes-search-input" onSelect={(athleteCode) => {
@@ -3925,9 +3978,9 @@ const Athletes: React.FC = () => {
                                         }
                                     });
                                 }} placeholder="Enter Search" initialQuery={initialSearchQuery} suppressInitialSearch={shouldSuppressInitialSearch} />
-                                {showHeader && sexSymbol && <span className="athlete-header-sex" aria-label="Athlete sex">{sexSymbol}</span>}
+                                {sexSymbol && <span className="athlete-header-sex" aria-label="Athlete sex">{sexSymbol}</span>}
                             </div>
-                            {showHeader && headerCode && (
+                            {showHeader && (
                                 <>
                                     {renderConfigControlLabel(
                                         athleteCodeLabelElement,
@@ -3939,7 +3992,7 @@ const Athletes: React.FC = () => {
                                         true
                                     )}
                                     <div className="athlete-header-code" title="Athlete Code" style={athleteCodeFieldStyle}>
-                                        {headerCode}
+                                        {headerCode || '--'}
                                     </div>
                                 </>
                             )}
@@ -3979,7 +4032,7 @@ const Athletes: React.FC = () => {
                                                 {headerClub}
                                             </button>
                                         ) : (
-                                            headerClub
+                                            (hasSelectedAthlete ? headerClub : '--')
                                         )}
                                     </div>
                                 </>
@@ -4000,7 +4053,7 @@ const Athletes: React.FC = () => {
                                     </div>
                                 </>
                             )}
-                            {showHeader && totalRunsCount !== undefined && (
+                            {showHeader && (
                                 <div
                                     className="athlete-header-total-runs"
                                     title="Total runs recorded"
@@ -4015,7 +4068,7 @@ const Athletes: React.FC = () => {
                                         totalRunsLabelWrapperStyle,
                                         true
                                     )}
-                                    <span style={{ ...totalRunsValueStyle, ...totalRunsValueTextStyle }}>{totalRunsCount}</span>
+                                    <span style={{ ...totalRunsValueStyle, ...totalRunsValueTextStyle }}>{totalRunsCount ?? '--'}</span>
                                 </div>
                             )}
                             {participantStatusMessage && (
@@ -4179,6 +4232,7 @@ const Athletes: React.FC = () => {
                                         onClick={handlePanelCycle}
                                         title={`Show ${panelToggleLabel.toLowerCase()}`}
                                         aria-label={`Show ${panelToggleLabel.toLowerCase()}`}
+                                        disabled={!hasSelectedAthlete}
                                         style={profileButtonStyle}
                                     >
                                         {panelToggleLabel}
@@ -4190,6 +4244,7 @@ const Athletes: React.FC = () => {
                                         onClick={handleNextEventNavigate}
                                         title="Open Next Event"
                                         aria-label="Open Next Event"
+                                        disabled={!hasSelectedAthlete}
                                         style={nextEventButtonStyle}
                                     >
                                         {nextEventButtonElement?.name || 'Next Event'}
@@ -4213,9 +4268,7 @@ const Athletes: React.FC = () => {
                         </div>
                     </div>
                 </div>
-            {/* When no athlete selected, we show only the search box in the header above. Empty message removed. */}
-
-            {!loading && !error && activeSelectedCode && (
+            {!loading && !error && (
                 <>
                     <section className="athlete-runs-section" style={activePanelContainerStyle}>
                         {curveRankReferenceOpen ? (
@@ -4935,7 +4988,6 @@ const Athletes: React.FC = () => {
                                     maxHeight: tableWrapperSizeStyle.maxHeight ? `calc(${tableWrapperSizeStyle.maxHeight} - ${nonPlotPanelTopOffset})` : tableWrapperSizeStyle.maxHeight
                                 }}
                             >
-                                {runs.length > 0 ? (
                                 <table className="athlete-runs-table">
                                     <thead>
                                         <tr>
@@ -5053,7 +5105,19 @@ const Athletes: React.FC = () => {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {rowsToRender.map((row, index) => {
+                                        {rowsToRender.length === 0 ? (
+                                            <tr>
+                                                <td
+                                                    colSpan={tableColumns.length}
+                                                    className="athlete-runs-empty"
+                                                    style={{ textAlign: 'center' }}
+                                                >
+                                                    {hasSelectedAthlete
+                                                        ? 'No run data returned for this athlete.'
+                                                        : 'Select a participant to view event history.'}
+                                                </td>
+                                            </tr>
+                                        ) : rowsToRender.map((row, index) => {
                                             const rowKey = makeTableRowKey(row, index);
                                             const rowEventDate = pickField(row, ['formatted_date', 'event_date', 'date']);
                                             const rowDisplayDate = formatDateValue(rowEventDate);
@@ -5255,9 +5319,6 @@ const Athletes: React.FC = () => {
                                         })}
                                     </tbody>
                                 </table>
-                            ) : (
-                                <p className="athlete-runs-empty">No run data returned for this athlete.</p>
-                            )}
                             </div>
                         )}
                     </section>
