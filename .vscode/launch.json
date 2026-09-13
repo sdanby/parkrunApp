@@ -1,0 +1,35 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Python: backendAPI",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/backendAPI.py",
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "justMyCode": true,
+      "envFile": "${workspaceFolder}/.env"
+    },
+    {
+      "name": "Python: Current File",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${file}",
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "clearAgeErrors summary-only",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/clearAgeErrors.py",
+      "console": "integratedTerminal",
+      "args": [
+        "--athlete",
+        "1001117",
+        "--summary-only",
+        "--skip-downstream"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git -C \"C:/Users/stevi/Siege\" status *)",
+      "Bash(git -C \"C:/Users/stevi/Siege\" diff *)",
+      "Bash(git -C \"C:/Users/stevi/Siege\" log *)"
+    ]
+  }
+}

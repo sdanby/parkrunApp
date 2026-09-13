@@ -1,0 +1,92 @@
+database.py     def connections():
+                    used to get a connect to both databases
+                def get_or_insert_event_code(conn, cursor, render_db_conn,render_cursor, parkrun_name):
+                                used to insert or retrieve and event_code; inserts the parkrun_name that is used in the URL
+                def record_exists(cursor, event_code, event_date,dbType):
+                                does the eventposition record exist for event_code and event_date
+                def upsert_event_position(cursor, render_cursor, event_code, event_date, position, name, malePos, maleCount, ageGroup, ageGrade, time_, club, comment, athlete_code, updateFlag=False):
+                                [NOT USED] update or insert an eventposition into both databases
+                def main_process_function(cursor, render_cursor, collected_data, last_position, event_code, event_date,localStatus,renderStatus):
+                                update or insert a record into eventposition into both databases
+                def update_athlete_code(cursor, runner_code, event_code, event_date, position):
+                                [NOT USED] updates eventposition with the runner_code - but only does for sqlite
+                def update_parkrun_events(sqlite_cursor,render_cursor,event_code, event_date, last_position,event_number,volunteersNo,parkrunName):
+                                update or insert a record into parkrun_events for both databases
+
+scraper.py      def create_webdriver():
+                                return the Chrome webdriver
+                def findElements(driver):
+                                find the tag in the webpage
+                def findElementsTAG(row):
+                                find the tag in the webpage
+                def check_page_not_found(wait):
+                                checks if a web page is found in a certain time
+                def select_detailed_view(wait):
+                                used to automatically expand the parkrun page to select the detail mode
+                def extract_event_details(wait):
+                                extracting the event name and event date
+                def load_more_results(wait):
+                                keeps click the load more button until end of results is reached
+                def process_column(columns):
+                                [NOT USED] returns a row of data for a runner ready for upload
+                def process_row_csv(columns, event_code, event_date):
+                                used to get the row of runner data for upload
+                def get_parkrun_events(driver):
+                                returns the footnote volunteer_count and event number for upload
+
+process.py      def processResults(results_rows,event_code,event_date):
+                                collects all of the records from a webpage
+                def process_event_url(driver,cursor, render_cursor, url, event_code, parkrun_name, conn,render_db_conn):
+                                processing a whole parkrun URL and updates the eventposition and parkrun_events tables with data (if it doesn't already exist)
+
+consistency.py  def fetch_data(event_code, conn, render_db_conn): 
+                                gets all of the parkruns for an event_code from both databases
+                def fetch_max_position(event_code, conn, render_db_conn):
+                                finds the highest positions for parkruns from both databases
+                def create_table(event_code, conn, render_db_conn): 
+                                creates a table (dataframe) for showing the comparison of each parkrun (by summary) across both databases
+                def get_parkrun_data(event_codes): 
+                                for a range of event codes, calles creat_table to collect all the comparisons for different parkruns
+                def insert_missing_events(df): 
+                                [NOT USED] used for dealing with missing events in a get_parkrun_data
+
+App.js
+- const
+
+- Utilities
+
+- Common processes
+
+- processes
+
+- menu 
+    viewEvents                  Display events 
+    viewEventsDates
+        handleEventSelect
+        endProcessCells
+        toggleFilter
+        processCells
+        handleTestButtonClick
+    scrapping
+        handleStartScraping
+        handleLoopEvents
+    viewTable
+        handleRefreshEvents
+        handleEventChange
+        processAllWeeks
+        groupEventsByMonth
+        handleCellClick   
+    handleStopProcessing
+    viewAnalytics               Buils the header of the analytics table
+        getTotalCount()
+        getAvgStdDv()
+        setCutoff
+        handleRecalculate
+        handleActualMode
+        processCoeff
+        fetchCoefficients
+        handleSort
+        getSortedEventDates
+        
+
+

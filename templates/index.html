@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Random Image Slideshow</title>
+    <style>
+        #slideshow {
+            width: 1200px; /* Desired width */
+            height: 900px; /* Desired height */
+            overflow: hidden;
+            position: relative;
+            margin: auto; /* Center the slideshow */
+        }
+
+        img {
+            width: auto;           /* Maintain original width */
+            height: auto;          /* Maintain original height */
+            max-width: 100%;      /* Image scales down if needed */
+            max-height: 100%;     /* Image scales down if needed */
+            position: absolute;
+            top: 50%;              /* Center vertically */
+            left: 50%;             /* Center horizontally */
+            transform: translate(-50%, -50%); /* Centering transformation */
+            transition: opacity 1s ease-in-out; /* Smooth transitions */
+            object-fit: contain;  /* Maintain aspect ratio */
+        }
+    </style>
+</head>
+<body>
+    <div id="slideshow">
+        <img id="image" src="" alt="Random Image Slideshow">
+    </div>
+
+    <script>
+        async function fetchImages() {
+            try {
+                const response = await fetch('/api/images');
+                if (!response.ok) throw new Error("Network response was not ok");
+                const images = await response.json();
+                startSlideshow(images);
+            } catch (error) {
+                console.error("Failed to fetch images:", error);
+            }
+        }
+
+        function startSlideshow(images) {
+            const imgElement = document.getElementById('image');
+            let currentIndex = 0;
+
+            function showNextImage() {
+                const randomIndex = Math.floor(Math.random() * images.length); // Get a random index
+                imgElement.src = '/images/' + images[randomIndex]; // Set image source to a random image
+            }
+
+            // Initialize the slideshow
+            showNextImage();
+            setInterval(showNextImage, 4000); // Change image every 2 seconds
+        }
+
+        // Fetch images when the page loads
+        document.addEventListener('DOMContentLoaded', fetchImages);
+    </script>
+</body>
+</html>

@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Random Image Slideshow</title>
+    <style>
+        #slideshow {
+            width: 500px;
+            height: 400px;
+            overflow: hidden;
+        }
+        img {
+            width: 100%;
+            height: auto;
+        }
+    </style>
+</head>
+<body>
+    <div id="slideshow">
+        <img id="image" src="" alt="Random Image Slideshow">
+    </div>
+
+    <script>
+        async function fetchImages() {
+            try {
+                const response = await fetch('/api/images');
+                if (!response.ok) throw new Error("Network response was not ok");
+                const images = await response.json();
+                startSlideshow(images);
+            } catch (error) {
+                console.error("Failed to fetch images:", error);
+            }
+        }
+
+        function startSlideshow(images) {
+            const imgElement = document.getElementById('image');
+            let currentIndex = 0;
+
+            function showNextImage() {
+                currentIndex = Math.floor(Math.random() * images.length);
+                imgElement.src = '/images/' + images[currentIndex];
+            }
+
+            // Initialize slideshow
+            showNextImage();
+            setInterval(showNextImage, 2000);
+        }
+
+        // Fetch images when the page loads
+        document.addEventListener('DOMContentLoaded', fetchImages);
+    </script>
+</body>
+</html>

@@ -1,0 +1,3238 @@
+/* eslint-disable */
+/*
+    LEGACY PAGE (retiring): `Results.tsx`
+    Active replacement: `EventAnalysisTest.tsx`.
+    Use the replacement page for new feature work and behavior changes.
+    Keep this page functional for now because some legacy links/routes may still land here.
+*/
+import React, { useEffect, useState, useRef, useMemo } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { fetchResults, fetchAllResults } from '../api/backendAPI';
+import './ResultsTable.css'; // Create this CSS file for sticky headers
+import { formatDate,formatDate1,formatDate2,formatAvgTime,formatDateToDDMMYYYY } from '../utilities'; // Utility function to format dates
+import ReactECharts from 'echarts-for-react';
+import { getMarkerForControlLabel, requestUnifiedHelp } from './UnifiedHelp';
+import { navigateWithNavStack } from '../utils/navigationStack';
+
+const queryOptions = [
+    { value: 'recent', label: 'Recent Events' },
+    { value: 'last50', label: 'Last 50 Events' },
+    { value: 'since-lockdown', label: 'Since Lockdown' },
+    { value: 'all', label: 'All Events' },
+    { value: 'Annual', label: 'Annual'},
+    { value: 'Qseason', label: 'Qtr Seasonality'},
+    { value: 'Mseason', label: 'Mnth Seasonality'},
+    // Add more options here as needed
+];
+const analysisOptions = [
+    { value: 'participants', label: 'Actual' },
+    { value: '%Participants', label: 'Actual%' },
+    { value: '%Total', label: '%Total' },
+    { value: '%Deviation', label: '%Deviation' },
+    { value: '#Actual Deviation', label: '#Actual Deviation' },
+    { value: 'Times', label: 'Times' },
+    { value: 'Age', label: 'Age' },
+
+
+    // Add more options here as needed
+];
+// Global page load time to prevent help popups on mobile
+let pageLoadTime = Date.now();
+
+const HelpTooltip: React.FC<{ label: string; options: { value: string; label: string }[]; triggerText?: string }> = ({ label, triggerText }) => {
+    const markerId = getMarkerForControlLabel(label);
+
+    return (
+        <span className="help-tooltip">
+            <button
+                type="button"
+                className={`help-trigger${triggerText ? ' help-trigger-label' : ''}`}
+                onClick={(event) => {
+                    const rect = (event.currentTarget as HTMLButtonElement).getBoundingClientRect();
+                    requestUnifiedHelp(markerId, {
+                        x: rect.left,
+                        y: rect.bottom
+                    });
+                }}
+                aria-label={`${label} help`}
+                title={`${label} help`}
+            >
+                {triggerText ? <span className="help-trigger-text">{triggerText}</span> : '?'}
+            </button>
+        </span>
+    );
+};
+const filterOptions = [
+    { value: 'all', label: 'Participants' },
+    { value: 'sex', label: 'Sex' },
+    { value: 'tourist', label: 'Tourist'},
+    { value: 'volunteers', label: 'Volunteers' },
+    { value: 'eventNumber', label: 'Event Number' },
+    { value: 'coeff', label: 'Seasonal Hardness' },
+    { value: 'coeff_event', label: 'Event Hardness' },
+    { value: 'coeff_combined', label: 'Combined Hardness' },
+    { value: 'coeff_combined', label: 'Combined Hardness' },
+    { value: 'regs', label: 'Regulars' },
+    { value: 'sTourist', label: 'Super Tourist'},
+    // removed super-regular filter
+    { value: '1time', label: 'First Timers' },
+    { value: 'returners', label: 'Returners'},
+    { value: 'clubs', label: 'Clubs' },
+    { value: 'top10n', label: 'Top 10' },
+    { value: 'top10p', label: 'Top 10%'},
+    { value: 'last25n', label: 'Last 25' },
+    { value: 'last25p', label: 'Last 25%' },
+    { value: '15pc', label: '15% consistency' },
+    { value: '10pc', label: '10% consistency'},
+    { value: '5pc', label: '5% consistency' },
+    { value: 'unknown', label: 'Unknown'},  
+];
+// Specific filter lists per analysis Type
+const participantFilterOptions = [
+    { value: 'all', label: 'All Participants' },
+    { value: 'eventNumber', label: 'Event Number' },
+    { value: 'coeff', label: 'Seasonal Hardness' },
+    { value: 'coeff_event', label: 'Event Hardness' },
+    { value: 'coeff_combined', label: 'Combined Hardness' },
+    { value: 'volunteers', label: 'Volunteers' },
+    { value: 'tourist', label: 'Tourists' },
+    { value: 'sTourist', label: 'Super Tourists' },
+    { value: '1time', label: 'First Timers' },
+    { value: 'clubs', label: 'Clubbers' },
+    { value: 'pb', label: 'PBs' },
+    { value: 'recentBest', label: 'Recent Bests' },
+    { value: 'regs', label: 'Regulars' },
+    { value: 'returners', label: 'Returners' },
+    { value: 'eligible_time', label: 'Eligible Times' },
+    { value: 'unknown', label: 'Unknowns' }
+];
+// For %Participants and %Total show the same filter list as Participants per requirement
+const percentParticipantFilterOptions = participantFilterOptions.slice();
+const percentTotalFilterOptions = participantFilterOptions.slice();
+const timesFilterOptions = [
+    { value: 'all', label: 'All Participants' },
+    { value: 'tourist', label: 'Tourist' },
+    { value: 'regs', label: 'Regulars' },
+    { value: 'sTourist', label: 'Super Tourists' },
+    // removed super-regular filter
+    { value: '1time', label: 'First Timers' },
+    { value: 'returners', label: 'Returners' },
+    { value: 'clubs', label: 'Clubs' },
+    { value: 'top10n', label: 'Top 10' },
+    { value: 'top10p', label: 'Top 10%' },
+    { value: 'last25n', label: 'Last 25' },
+    { value: 'last25p', label: 'Last 25%' },
+    { value: '15pc', label: '15% consistency' },
+    { value: '10pc', label: '10% consistency' },
+    { value: '5pc', label: '5% consistency' },
+    { value: 'unknown', label: 'Unknown' },
+];
+// For Age analysis exclude volunteers, eventNumber and seasonal hardness (both seasonal and event-level)
+const ageFilterOptions = participantFilterOptions.filter(o => !['volunteers', 'eventNumber', 'coeff', 'coeff_event', 'coeff_combined'].includes(o.value));
+const avgOptions = [
+    { value: 'none', label: 'No Adjustment' },
+    { value: 'hardness', label: 'Hardness Adjusted' },
+    { value: 'age', label: 'Age Adjusted' },
+    { value: 'both', label: 'Hardness and Age Adjusted' },
+];
+const aggOptions = [
+    { value: 'avg', label: 'Average' },
+    { value: 'total', label: 'Total' },
+    { value: 'max', label: 'Maximum' },
+    { value: 'min', label: 'Minimum' },
+    { value: 'range', label: 'Range' },
+    { value: 'growth', label: 'Growth' },
+];
+const cellAggOptions = [
+    { value: 'single', label: 'Single Value' },
+    { value: 'avg', label: 'Average' },
+];
+const eventMilestones = new Set([50, 100, 150, 200, 250, 300, 400, 500, 600, 700, 750, 800, 900, 1000]);
+
+
+// Aggregate an array of result rows by month (seasonality). Each returned row represents one event_code for a month name (Jan..Dec)
+function aggregateResultsByMonth(rows: any[]): any[] {
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const byEventMonth: { [key: string]: any[] } = {};
+    rows.forEach(r => {
+        let mon = '';
+        try {
+            // If event_date is DD/MM/YYYY
+            if (typeof r.event_date === 'string' && r.event_date.includes('/')) {
+                const parts = r.event_date.split('/');
+                mon = months[Number(parts[1]) - 1];
+            } else if (typeof r.event_date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(r.event_date)) {
+                // ISO YYYY-MM-DD
+                const m = Number(r.event_date.slice(5,7));
+                mon = months[m - 1];
+            }
+        } catch (e) {
+            mon = '';
+        }
+        const key = `${r.event_code}::${mon}`;
+        if (!byEventMonth[key]) byEventMonth[key] = [];
+        byEventMonth[key].push(r);
+    });
+    const out: any[] = [];
+    Object.keys(byEventMonth).forEach(key => {
+        const parts = key.split('::');
+        const code = parts[0];
+        const mon = parts[1];
+        const group = byEventMonth[key];
+    const numericFields = ['last_position', 'volunteers', 'event_number', 'coeff', 'obs', 'coeff_event', 'avg_time', 'avgtimelim12', 'avgtimelim5', 'tourist_count', 'super_tourist_count', 'regulars', 'avg_age', 'first_timers_count', 'first_timer_count', 'club_count', 'pb_count', 'recentbest_count', 'returners_count', 'eligible_time_count', 'unknown_count'];
+        const agg: any = {
+            event_code: code,
+            event_name: group[0]?.event_name || code,
+            event_date: mon // use month name
+        };
+        numericFields.forEach(f => {
+            const rawVals = group.map((g: any) => g[f]).filter((v: any) => {
+                if (v === null || v === undefined || v === '') return false;
+                const num = Number(v);
+                if (isNaN(num)) return false;
+                if (f === 'event_number') {
+                    return num > 0 && num <= 10000;
+                }
+                return true;
+            });
+            const vals = rawVals.map((v: any) => Number(v));
+            agg[f] = vals.length > 0 ? (vals.reduce((a: number, b: number) => a + b, 0) / vals.length) : null;
+        });
+        out.push(agg);
+    });
+    // Ensure month order Jan..Dec
+    const monthsOrder = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    out.sort((a,b) => monthsOrder.indexOf(a.event_date) - monthsOrder.indexOf(b.event_date));
+    return out;
+}
+
+// Aggregate rows by quarter (Q1..Q4)
+function aggregateResultsByQuarter(rows: any[]): any[] {
+    const quarters = ['Q1','Q2','Q3','Q4'];
+    const byEventQuarter: { [key: string]: any[] } = {};
+    rows.forEach(r => {
+        let q = '';
+        try {
+            if (typeof r.event_date === 'string' && r.event_date.includes('/')) {
+                const parts = r.event_date.split('/');
+                const m = Number(parts[1]);
+                const qi = Math.max(1, Math.min(4, Math.ceil(m / 3)));
+                q = quarters[qi - 1];
+            } else if (typeof r.event_date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(r.event_date)) {
+                const m = Number(r.event_date.slice(5,7));
+                const qi = Math.max(1, Math.min(4, Math.ceil(m / 3)));
+                q = quarters[qi - 1];
+            }
+        } catch (e) {
+            q = '';
+        }
+        const key = `${r.event_code}::${q}`;
+        if (!byEventQuarter[key]) byEventQuarter[key] = [];
+        byEventQuarter[key].push(r);
+    });
+    const out: any[] = [];
+    Object.keys(byEventQuarter).forEach(key => {
+        const parts = key.split('::');
+        const code = parts[0];
+        const quarter = parts[1];
+        const group = byEventQuarter[key];
+    const numericFields = ['last_position', 'volunteers', 'event_number', 'coeff', 'obs', 'coeff_event', 'avg_time', 'avgtimelim12', 'avgtimelim5', 'tourist_count', 'super_tourist_count', 'regulars', 'avg_age', 'first_timers_count', 'first_timer_count', 'club_count', 'pb_count', 'recentbest_count', 'returners_count', 'eligible_time_count', 'unknown_count'];
+        const agg: any = {
+            event_code: code,
+            event_name: group[0]?.event_name || code,
+            event_date: quarter // use quarter label
+        };
+        numericFields.forEach(f => {
+            const rawVals = group.map((g: any) => g[f]).filter((v: any) => {
+                if (v === null || v === undefined || v === '') return false;
+                const num = Number(v);
+                if (isNaN(num)) return false;
+                if (f === 'event_number') {
+                    return num > 0 && num <= 10000;
+                }
+                return true;
+            });
+            const vals = rawVals.map((v: any) => Number(v));
+            agg[f] = vals.length > 0 ? (vals.reduce((a: number, b: number) => a + b, 0) / vals.length) : null;
+        });
+        out.push(agg);
+    });
+    // Ensure quarter order Q1..Q4
+    out.sort((a,b) => ['Q1','Q2','Q3','Q4'].indexOf(a.event_date) - ['Q1','Q2','Q3','Q4'].indexOf(b.event_date));
+    return out;
+}
+// Aggregate an array of result rows by year. Each returned row represents one event_code for a year.
+function aggregateResultsByYear(rows: any[]): any[] {
+    // rows expected to have event_date like 'DD/MM/YYYY' or ISO; try to extract year robustly
+    const byEventYear: { [key: string]: any[] } = {};
+    rows.forEach(r => {
+        let yr = '';
+        try {
+            // If event_date is DD/MM/YYYY
+            if (typeof r.event_date === 'string' && r.event_date.includes('/')) {
+                const parts = r.event_date.split('/');
+                yr = parts[2];
+            } else if (typeof r.event_date === 'string' && r.event_date.length >= 4) {
+                // ISO-like YYYY-MM-DD
+                yr = r.event_date.slice(0, 4);
+            }
+        } catch (e) {
+            yr = '';
+        }
+        const key = `${r.event_code}::${yr}`;
+        if (!byEventYear[key]) byEventYear[key] = [];
+        byEventYear[key].push(r);
+    });
+
+    const out: any[] = [];
+    Object.keys(byEventYear).forEach(key => {
+        const parts = key.split('::');
+        const code = parts[0];
+        const year = parts[1];
+        const group = byEventYear[key];
+        // Aggregate numeric fields by average
+    const numericFields = ['last_position', 'volunteers', 'event_number', 'coeff', 'obs', 'coeff_event', 'avg_time', 'avgtimelim12', 'avgtimelim5', 'tourist_count', 'super_tourist_count', 'regulars', 'avg_age', 'first_timers_count', 'first_timer_count', 'club_count', 'pb_count', 'recentbest_count', 'returners_count', 'eligible_time_count', 'unknown_count'];
+        const agg: any = {
+            event_code: code,
+            event_name: group[0]?.event_name || code,
+            event_date: year // use year as the date value for the table
+        };
+        numericFields.forEach(f => {
+            // collect raw values, ignore null/undefined/empty and non-numeric
+            // For event_number specifically, also ignore absurdly large values > 10000
+            const rawVals = group.map((g: any) => g[f]).filter((v: any) => {
+                if (v === null || v === undefined || v === '') return false;
+                const num = Number(v);
+                if (isNaN(num)) return false;
+                if (f === 'event_number') {
+                    return num > 0 && num <= 10000;
+                }
+                return true;
+            });
+            const vals = rawVals.map((v: any) => Number(v));
+            // if no valid values, set to null so display logic treats it as missing
+            agg[f] = vals.length > 0 ? (vals.reduce((a: number, b: number) => a + b, 0) / vals.length) : null;
+        });
+        out.push(agg);
+    });
+    // Sort years descending so latest years appear first in the table
+    out.sort((a, b) => Number(b.event_date) - Number(a.event_date));
+    return out;
+}
+
+// Safely format header date values. If `query` is 'Annual' we expect year strings and return them directly.
+function formatHeaderDate(date: any, query: string): string {
+    // For Annual (year strings) and Monthly seasonality (month names) return the value directly
+    if (query === 'Annual' || query === 'Mseason' || query === 'Qseason') return String(date ?? '');
+    if (!date) return '';
+    // If date is not a string, coerce to string to avoid downstream errors
+    if (typeof date !== 'string') return String(date);
+    // If date looks like a year-only string (4 digits), just return it
+    if (/^\d{4}$/.test(date)) return date;
+    // If date is ISO (YYYY-MM-DD), convert to DD/MM/YYYY for formatDate2
+    if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+        return formatDateToDDMMYYYY(date);
+    }
+    // Otherwise assume it's DD/MM/YYYY already and return formatted version via formatDate2
+    try {
+        return formatDate2(date);
+    } catch (e) {
+        // fallback to a safe string
+        return String(date);
+    }
+}
+
+const ResultsPageComponent: React.FC = () => {
+    const [results, setResults] = useState<any[]>([]);
+    const [loading, setLoading] = useState<boolean>(true);
+        const [error, setError] = useState<string | null>(null);
+    
+    // Reset page load time when component mounts
+    useEffect(() => {
+        pageLoadTime = Date.now();
+    }, []);
+    
+    const [query, setQuery] = useState<string>(() => {
+        try {
+            // Prefer explicit rs_query in URL (when returning via Back), else sessionStorage saved state
+            const ps = new URLSearchParams(window.location.search);
+            const rsq = ps.get('rs_query');
+            if (rsq) return rsq;
+            const raw = sessionStorage.getItem('results_state_v1');
+            if (raw) {
+                const obj = JSON.parse(raw);
+                if (obj && obj.query) return obj.query;
+            }
+        } catch (e) {
+            // ignore
+        }
+        return 'recent';
+    });
+    const [sortBy, setSortBy] = useState<'event' | 'total'>('event');
+    const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+    //nst [aggregation, setAggregation] = useState<'total' | 'average'>('total');
+    const [analysisType, setAnalysisType] = useState<string>('participants');
+    const [avgType, setAvgType] = useState<string>('none');
+    const [filterType, setFilterType] = useState<string>('all');
+    const [aggType, setAggType] = useState<string>('avg');
+    const [cellAgg, setCellAgg] = useState<string>('single');
+    const [infoMessage, setInfoMessage] = useState<string | null>(null);
+    const [showPlot, setShowPlot] = useState<boolean>(false);
+    const [plotDisplayMode, setPlotDisplayMode] = useState<'per_event' | 'cumulative'>('per_event');
+    const [isPlotExpanded, setIsPlotExpanded] = useState<boolean>(false);
+    const [plotSeriesColorMap, setPlotSeriesColorMap] = useState<Record<string, string>>({});
+    const [plotSelectionOrder, setPlotSelectionOrder] = useState<string[]>([]);
+    const [isLaptopLayout, setIsLaptopLayout] = useState<boolean>(() => {
+        if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+            return true;
+        }
+        return window.matchMedia('(min-width: 901px) and (pointer: fine)').matches;
+    });
+
+    const navigate = useNavigate();
+    const location = useLocation();
+    const containerRef = useRef<HTMLDivElement | null>(null);
+    const plotChartRef = useRef<any>(null);
+    const pendingRestoreRef = useRef<{ top: number | null; left: number | null } | null>(null);
+    const plotColorCursorRef = useRef<number>(0);
+    const plotHighlightPalette = ['#3b82f6', '#ef4444', '#22c55e', '#f97316', '#ec4899'];
+    const [plotXZoom, setPlotXZoom] = useState<{ start: number; end: number }>({ start: 0, end: 100 });
+    const [plotYZoom, setPlotYZoom] = useState<{ start: number; end: number }>({ start: 0, end: 100 });
+
+    const handlePlotLegendToggle = (seriesName: string) => {
+        if (!seriesName) return;
+
+        const wasSelected = Boolean(plotSeriesColorMap[seriesName]);
+
+        setPlotSeriesColorMap((prev) => {
+            const next = { ...prev };
+
+            if (next[seriesName]) {
+                delete next[seriesName];
+                return next;
+            }
+
+            const usedColors = new Set(Object.values(next));
+            const freeColor = plotHighlightPalette.find((color) => !usedColors.has(color));
+
+            if (freeColor) {
+                next[seriesName] = freeColor;
+                return next;
+            }
+
+            const rotateColor = plotHighlightPalette[plotColorCursorRef.current % plotHighlightPalette.length];
+            Object.keys(next).forEach((name) => {
+                if (next[name] === rotateColor) {
+                    delete next[name];
+                }
+            });
+            next[seriesName] = rotateColor;
+            plotColorCursorRef.current = (plotColorCursorRef.current + 1) % plotHighlightPalette.length;
+            return next;
+        });
+
+        setPlotSelectionOrder((prev) => {
+            const withoutCurrent = prev.filter((name) => name !== seriesName);
+            return wasSelected ? withoutCurrent : [...withoutCurrent, seriesName];
+        });
+    };
+
+    useEffect(() => {
+        setPlotSelectionOrder((prev) => prev.filter((name) => Boolean(plotSeriesColorMap[name])));
+    }, [plotSeriesColorMap]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+            return;
+        }
+
+        const mediaQuery = window.matchMedia('(min-width: 901px) and (pointer: fine)');
+        const syncLayout = () => setIsLaptopLayout(mediaQuery.matches);
+        syncLayout();
+
+        if (typeof mediaQuery.addEventListener === 'function') {
+            mediaQuery.addEventListener('change', syncLayout);
+            return () => mediaQuery.removeEventListener('change', syncLayout);
+        }
+
+        mediaQuery.addListener(syncLayout);
+        return () => mediaQuery.removeListener(syncLayout);
+    }, []);
+
+    const canTogglePlotExpand = isLaptopLayout;
+    const plotChartHeight = (isLaptopLayout ? '13.3cm' : '10.3cm');
+    const plotChartMinWidth = canTogglePlotExpand && isPlotExpanded ? '33cm' : (isLaptopLayout ? '18cm' : '10cm');
+
+    const clampPercent = (value: number) => Math.max(0, Math.min(100, value));
+
+    const normalizeZoomWindow = (start: number, end: number, minWindow = 2) => {
+        let nextStart = clampPercent(start);
+        let nextEnd = clampPercent(end);
+        if (nextEnd < nextStart) {
+            [nextStart, nextEnd] = [nextEnd, nextStart];
+        }
+        let windowSize = nextEnd - nextStart;
+        if (windowSize < minWindow) {
+            const center = (nextStart + nextEnd) / 2;
+            nextStart = clampPercent(center - minWindow / 2);
+            nextEnd = clampPercent(center + minWindow / 2);
+            windowSize = nextEnd - nextStart;
+            if (windowSize < minWindow) {
+                if (nextStart === 0) {
+                    nextEnd = minWindow;
+                } else if (nextEnd === 100) {
+                    nextStart = 100 - minWindow;
+                }
+            }
+        }
+        return { start: clampPercent(nextStart), end: clampPercent(nextEnd) };
+    };
+
+    const updateAxisZoom = (axis: 'x' | 'y', nextRange: { start: number; end: number }) => {
+        const normalized = normalizeZoomWindow(nextRange.start, nextRange.end);
+        if (axis === 'x') {
+            setPlotXZoom(normalized);
+        } else {
+            setPlotYZoom(normalized);
+        }
+
+        const chart = plotChartRef.current?.getEchartsInstance?.();
+        if (chart) {
+            chart.dispatchAction({
+                type: 'dataZoom',
+                dataZoomId: axis === 'x' ? 'xZoom' : 'yZoom',
+                start: normalized.start,
+                end: normalized.end
+            });
+        }
+    };
+
+    const zoomAxisIn = (axis: 'x' | 'y') => {
+        const source = axis === 'x' ? plotXZoom : plotYZoom;
+        const windowSize = source.end - source.start;
+        const delta = windowSize * 0.12;
+        updateAxisZoom(axis, { start: source.start + delta, end: source.end - delta });
+    };
+
+    const zoomAxisOut = (axis: 'x' | 'y') => {
+        const source = axis === 'x' ? plotXZoom : plotYZoom;
+        const windowSize = source.end - source.start;
+        const delta = windowSize * 0.15;
+        updateAxisZoom(axis, { start: source.start - delta, end: source.end + delta });
+    };
+
+    const shiftAxisLeft = (axis: 'x' | 'y') => {
+        const source = axis === 'x' ? plotXZoom : plotYZoom;
+        const windowSize = source.end - source.start;
+        const delta = Math.max(windowSize * 0.2, 1);
+        updateAxisZoom(axis, { start: source.start - delta, end: source.end - delta });
+    };
+
+    const shiftAxisRight = (axis: 'x' | 'y') => {
+        const source = axis === 'x' ? plotXZoom : plotYZoom;
+        const windowSize = source.end - source.start;
+        const delta = Math.max(windowSize * 0.2, 1);
+        updateAxisZoom(axis, { start: source.start + delta, end: source.end + delta });
+    };
+
+    const shiftYAxisUp = () => {
+        shiftAxisLeft('y');
+    };
+
+    const shiftYAxisDown = () => {
+        shiftAxisRight('y');
+    };
+
+    const resetPlotZoom = () => {
+        const resetRange = { start: 0, end: 100 };
+        setPlotXZoom(resetRange);
+        setPlotYZoom(resetRange);
+
+        const chart = plotChartRef.current?.getEchartsInstance?.();
+        if (chart) {
+            chart.dispatchAction({
+                type: 'dataZoom',
+                dataZoomId: 'xZoom',
+                start: resetRange.start,
+                end: resetRange.end
+            });
+            chart.dispatchAction({
+                type: 'dataZoom',
+                dataZoomId: 'yZoom',
+                start: resetRange.start,
+                end: resetRange.end
+            });
+        }
+    };
+
+    const handlePlotDataZoom = (params: any) => {
+        const events = Array.isArray(params?.batch) ? params.batch : [params];
+        events.forEach((event: any) => {
+            const id = String(event?.dataZoomId ?? '');
+            const start = Number(event?.start);
+            const end = Number(event?.end);
+            if (!Number.isFinite(start) || !Number.isFinite(end)) {
+                return;
+            }
+            const normalized = normalizeZoomWindow(start, end);
+            if (id.startsWith('xZoom')) {
+                setPlotXZoom((prev) =>
+                    prev.start === normalized.start && prev.end === normalized.end ? prev : normalized
+                );
+            }
+            if (id.startsWith('yZoom')) {
+                setPlotYZoom((prev) =>
+                    prev.start === normalized.start && prev.end === normalized.end ? prev : normalized
+                );
+            }
+        });
+    };
+
+    useEffect(() => {
+        setPlotXZoom({ start: 0, end: 100 });
+        setPlotYZoom({ start: 0, end: 100 });
+    }, [showPlot, query, analysisType, filterType, avgType, aggType, cellAgg]);
+
+    // Restore scroll positions once the results have been fetched and rendered.
+    const restoreScrollPositions = (desiredTop: number | null, desiredLeft: number | null) => {
+        // Candidate elements to try for horizontal scrolling. Prefer container then table then documentElement/body.
+        const candidates: (HTMLElement | null)[] = [];
+        const container = containerRef.current;
+        if (container) candidates.push(container);
+        try {
+            let table: HTMLElement | null = null;
+            if (container) {
+                table = container.querySelector('table');
+            } else {
+                table = document.querySelector('table');
+            }
+            if (table) candidates.push(table);
+        } catch (e) { /* ignore */ }
+        const docEl = document.documentElement;
+        const docBody = document.body;
+        candidates.push(docEl);
+        candidates.push(docBody);
+
+        // Vertical restore: prefer container, else documentElement/body
+        if (desiredTop !== null && typeof desiredTop === 'number') {
+            const vertHost = container || document.documentElement || document.body;
+            try { vertHost.scrollTop = desiredTop; } catch (e) { /* ignore */ }
+        }
+
+        // Horizontal restore: try candidates; clamp to maxLeft
+        if (desiredLeft !== null && typeof desiredLeft === 'number') {
+            // Dev diagnostic: record candidate metrics before attempting apply
+            // dev-only candidate diagnostics removed
+            let applied = false;
+            for (const cand of candidates) {
+                if (!cand) continue;
+                const maxLeft = Math.max(0, cand.scrollWidth - cand.clientWidth);
+                const applyLeft = Math.min(desiredLeft, maxLeft);
+                try {
+                    cand.scrollLeft = applyLeft;
+                } catch (e) { /* ignore */ }
+                // If this candidate accepted the clamped value, stop
+                    if (cand.scrollLeft === applyLeft) {
+                    applied = true;
+                    // dev diagnostic removed: previously logged appliedLeft and candidate info
+                    break;
+                }
+            }
+            // dev diagnostic removed: no-apply case previously logged here
+        }
+    };
+
+    // Restore state from sessionStorage (or URL rs_ params) when the URL search changes
+    useEffect(() => {
+        try {
+            const ps = new URLSearchParams(location.search);
+            let found = false;
+            const maybeSet = (key: string, setter: (v: any) => void) => {
+                const val = ps.get(`rs_${key}`);
+                if (val !== null) {
+                    // pass the string directly to the setter; runtime coercion is acceptable
+                    setter(val);
+                    found = true;
+                }
+            };
+            maybeSet('query', setQuery);
+            maybeSet('sortBy', setSortBy);
+            maybeSet('sortDir', setSortDir);
+            maybeSet('analysisType', setAnalysisType);
+            maybeSet('avgType', setAvgType);
+            maybeSet('filterType', setFilterType);
+            maybeSet('aggType', setAggType);
+            maybeSet('cellAgg', setCellAgg);
+            if (!found) {
+                const raw = sessionStorage.getItem('results_state_v1');
+                if (raw) {
+                    const obj = JSON.parse(raw);
+                    if (obj.query) setQuery(obj.query);
+                    if (obj.sortBy) setSortBy(obj.sortBy);
+                    if (obj.sortDir) setSortDir(obj.sortDir);
+                    if (obj.analysisType) setAnalysisType(obj.analysisType);
+                    if (obj.avgType) setAvgType(obj.avgType);
+                    if (obj.filterType) setFilterType(obj.filterType);
+                    if (obj.aggType) setAggType(obj.aggType);
+                    if (obj.cellAgg) setCellAgg(obj.cellAgg);
+                    // If session storage contains scroll positions, defer their restoration until results are rendered
+                    const st = (obj.scrollTop !== undefined && obj.scrollTop !== null) ? Number(obj.scrollTop) : null;
+                    const sl = (obj.scrollLeft !== undefined && obj.scrollLeft !== null) ? Number(obj.scrollLeft) : null;
+                    if ((st !== null && !isNaN(st)) || (sl !== null && !isNaN(sl))) {
+                        pendingRestoreRef.current = { top: (typeof st === 'number' && !isNaN(st)) ? st : null, left: (typeof sl === 'number' && !isNaN(sl)) ? sl : null };
+                    }
+                }
+            }
+            // Also, if rs_ params exist in the URL specifically for scroll positions, prefer those
+            const rsTop = ps.get('rs_scrollTop');
+            const rsLeft = ps.get('rs_scrollLeft');
+            if ((rsTop !== null && rsTop !== '') || (rsLeft !== null && rsLeft !== '')) {
+                const st = rsTop !== null ? Number(rsTop) : null;
+                const sl = rsLeft !== null ? Number(rsLeft) : null;
+                pendingRestoreRef.current = { top: (st !== null && !isNaN(st)) ? st : null, left: (sl !== null && !isNaN(sl)) ? sl : null };
+            }
+        } catch (e) {
+            // ignore
+        }
+    }, [location.search]);
+
+    // Persist selected Results state to sessionStorage whenever it changes
+    useEffect(() => {
+        try {
+            const toSave = { query, sortBy, sortDir, analysisType, avgType, filterType, aggType, cellAgg };
+            sessionStorage.setItem('results_state_v1', JSON.stringify(toSave));
+        } catch (e) {
+            // ignore
+        }
+    }, [query, sortBy, sortDir, analysisType, avgType, filterType, aggType, cellAgg]);
+
+    const handleCellClick = (date: string, eventCode: string) => {
+        // Prevent navigation when the current period is aggregated
+        const aggregatedPeriods = ['Annual', 'Qseason', 'Mseason'];
+        if (aggregatedPeriods.includes(query)) {
+            setInfoMessage('Cannot select an aggregated period');
+            // clear after a short delay
+            window.setTimeout(() => setInfoMessage(null), 3000);
+            return;
+        }
+        // Push a results history entry containing the serialized UI state (rs_* params)
+        try {
+            // capture current scroll positions (prefer container, fallback to document)
+            const container = containerRef.current;
+            const top = container && typeof container.scrollTop === 'number'
+                ? container.scrollTop
+                : (window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0);
+            const left = container && typeof container.scrollLeft === 'number'
+                ? container.scrollLeft
+                : (window.scrollX || document.documentElement.scrollLeft || document.body.scrollLeft || 0);
+
+            // ensure current UI state is synchronously saved so Back navigation can restore it
+            const toSave: any = { query, sortBy, sortDir, analysisType, avgType, filterType, aggType, cellAgg, scrollTop: top, scrollLeft: left };
+            try { sessionStorage.setItem('results_state_v1', JSON.stringify(toSave)); } catch (e) { /* ignore */ }
+
+            const rs = new URLSearchParams();
+            rs.set('rs_query', String(query));
+            rs.set('rs_sortBy', String(sortBy));
+            rs.set('rs_sortDir', String(sortDir));
+            rs.set('rs_analysisType', String(analysisType));
+            rs.set('rs_avgType', String(avgType));
+            rs.set('rs_filterType', String(filterType));
+            rs.set('rs_aggType', String(aggType));
+            rs.set('rs_cellAgg', String(cellAgg));
+            rs.set('rs_scrollTop', String(top));
+            rs.set('rs_scrollLeft', String(left));
+            navigate(`${location.pathname}?${rs.toString()}`);
+        } catch (e) {
+            // ignore
+        }
+
+        // Navigate to Races page with query params for date and event
+        const params = new URLSearchParams();
+        if (date) params.set('date', String(date));
+        if (eventCode) params.set('event', String(eventCode));
+        navigateWithNavStack(navigate, location, `/races?${params.toString()}`);
+    };
+
+    useEffect(() => {
+        const getResults = async () => {
+            setLoading(true);
+            try {
+                let data;
+                if (query === 'all') {
+                    data = await fetchAllResults();
+                } else if (query === 'Annual') {
+                    // Fetch all results then aggregate by year
+                    const all = await fetchAllResults();
+                    data = aggregateResultsByYear(Array.isArray(all) ? all : []);
+                    // default Cell Agg to average for annual view
+                    setCellAgg('avg');
+                } else if (query === 'Mseason') {
+                    // Monthly seasonality: fetch all and aggregate by month
+                    const all = await fetchAllResults();
+                    data = aggregateResultsByMonth(Array.isArray(all) ? all : []);
+                    setCellAgg('avg');
+                } else if (query === 'Qseason') {
+                    // Quarterly seasonality: fetch all and aggregate by quarter
+                    const all = await fetchAllResults();
+                    data = aggregateResultsByQuarter(Array.isArray(all) ? all : []);
+                    setCellAgg('avg');
+                } else if (query === 'last50') {
+                    data = await fetchResults(50);
+                } else if (query === 'since-lockdown') {
+                    // fetch results from 2021-07-24 onwards by asking the server
+                    data = await fetchResults('2021-07-24');
+                } else {
+                    // Default: recent events (or when query is unrecognised) -> fetch recent results
+                    data = await fetchResults();
+                }
+                setResults(Array.isArray(data) ? data : []);
+            } catch (err) {
+                setError('Failed to fetch results');
+            } finally {
+                setLoading(false);
+            }
+        };
+        getResults();
+    }, [query]);
+    // When results have been fetched and rendered, apply any pending scroll restore request
+    useEffect(() => {
+        if (pendingRestoreRef.current) {
+            const { top, left } = pendingRestoreRef.current;
+            // Use two RAFs to ensure DOM layout has settled
+            requestAnimationFrame(() => requestAnimationFrame(() => restoreScrollPositions(top, left)));
+            pendingRestoreRef.current = null;
+        }
+    }, [results, loading]);
+    useEffect(() => {
+        // When analysis type is not Times, force no time adjustment and reset filter to safe default
+        if (analysisType !== 'Times' && avgType !== 'none') {
+            setAvgType('none');
+            setFilterType('all');
+        }
+    }, [analysisType, avgType]);
+    useEffect(() => {
+        // Ensure aggType remains valid when analysisType or filterType change
+        // Implemented inline here so the hook order is stable (must run before any early returns)  
+        let allowed: string[];
+    if (analysisType === 'Times') {
+            allowed = ['avg', 'max', 'min'];
+            // allow growth for numeric aggregates (Times uses slope of avg_time)
+            allowed.push('growth');
+        } else if (filterType === 'eventNumber') {
+                allowed = ['avg', 'max', 'min', 'range'];
+                allowed.push('growth');
+        } else if (analysisType === 'participants' && (filterType === 'coeff' || filterType === 'coeff_event' || filterType === 'coeff_combined')) {
+            allowed = ['avg', 'max', 'min', 'range'];
+        } else {
+                allowed = ['avg', 'total', 'max', 'min', 'range'];
+                allowed.push('growth');
+        }
+        if (!allowed.includes(aggType)) {
+            setAggType(allowed[0]);
+        }
+    }, [analysisType, filterType]);
+    useEffect(() => {
+            // Reset filterType if it isn't valid for the selected analysisType
+        const allowedFilters = analysisType === 'Times'
+            ? timesFilterOptions.map(o => o.value)
+            : (analysisType === 'Age' ? ageFilterOptions.map(o => o.value) : participantFilterOptions.map(o => o.value));
+        if (!allowedFilters.includes(filterType)) {
+            setFilterType(allowedFilters[0]);
+        }
+    }, [analysisType]);
+    useEffect(() => {
+    // Default cellAgg based on analysisType when Type changes.
+    // Do not override when viewing Annual/Mseason/Qseason (these force 'avg').
+    if (['Annual', 'Mseason', 'Qseason'].includes(query)) return;
+    setCellAgg(analysisType === 'Times' ? 'avg' : 'single');
+    }, [analysisType]);
+
+    // When Period is Annual, force Cell Agg to 'avg' and keep it consistent
+    useEffect(() => {
+        if (['Annual', 'Mseason', 'Qseason'].includes(query)) {
+            setCellAgg('avg');
+        }
+    }, [query]);
+
+    // Auto-switch Type back to 'participants' when certain filters require numeric counts
+    useEffect(() => {
+        if ((filterType === 'eventNumber' || filterType === 'coeff' || filterType === 'coeff_event' || filterType === 'coeff_combined') && analysisType === '%Participants') {
+            setAnalysisType('participants');
+        }
+    }, [filterType, analysisType]);
+
+    if (loading) return <div>Loading...</div>;
+    if (error) return <div>{error}</div>;
+    if (!results.length) return <div>No results found.</div>;
+
+
+// Helper function to get allowed aggTypes
+function getAllowedAggTypes(analysisType: string, filterType: string): string[] {
+    // For #Actual Deviation and %Deviation we only support cell-level comparisons: avg, max, min
+    if (analysisType === '#Actual Deviation' || analysisType === '%Deviation') return ['avg', 'max', 'min'];
+    // For %Participants and %Total we don't allow Total or Growth (percent-of-column should be a simple aggregate)
+    if (analysisType === '%Participants') {
+        // allow growth for %Participants to show trend of the percentage over time
+        return ['avg', 'max', 'min', 'range', 'growth'];
+    }
+    if (analysisType === '%Total') {
+        // allow Total for %Total mode
+        return ['avg', 'total', 'max', 'min', 'range'];
+    }
+    if (analysisType === 'Times') {
+        return ['avg', 'max', 'min', 'growth'];
+    }
+    // For Age, don't allow 'total' as it doesn't make sense for averages
+    if (analysisType === 'Age') {
+        return ['avg', 'max', 'min', 'range', 'growth'];
+    }
+    // When filtering by event number we can't show 'total'
+    if (filterType === 'eventNumber') {
+        return ['avg', 'max', 'min', 'range', 'growth']; // 'total' not allowed
+    }
+    // Don't allow 'total' when viewing Participants with Seasonal Hardness (coeff) or Event Hardness (coeff_event)
+    if (analysisType === 'participants' && (filterType === 'coeff' || filterType === 'coeff_event' || filterType === 'coeff_combined')) {
+        return ['avg', 'max', 'min', 'range', 'growth'];
+    }
+    return ['avg', 'total', 'max', 'min', 'range', 'growth'];
+}  
+// Helper to compute the second-column header label (short forms for Range/Growth)
+function getSecondColumnHeaderLabel(analysisType: string, aggType: string): string {
+    if (aggType === 'growth') return 'Grth';
+    if (aggType === 'range') return 'Rng';
+    // Use short labels for both Times and Participants
+    if (aggType === 'avg') return 'Avg';
+    if (aggType === 'total') return 'Total';
+    if (aggType === 'max') return 'Max';
+    if (aggType === 'min') return 'Min';
+    return '';
+}
+function toOldestToNewestSeries<T>(values: T[], periodQuery: string): T[] {
+    if (periodQuery === 'Mseason' || periodQuery === 'Qseason') {
+        return values;
+    }
+    return values.slice().reverse();
+}
+function getAggregatedValueForDate(
+    lookup: { [date: string]: { [code: string]: number } },
+    date: string,
+    eventCodes: string[],
+    aggregation: string
+    , precision?: number
+): number {
+    let values;
+    // Special filter for event_number
+    // Collect raw values (accept numbers or numeric strings), ignore null/undefined/empty
+    // Build raw values, excluding codes where there was no event (when in granular view)
+    const rawVals = eventCodes
+        .map(code => ({ code, val: lookup[date]?.[code], en: event_number?.[date]?.[code] }))
+        .filter(item => {
+            // ignore truly missing values
+            if (item.val === null || item.val === undefined) return false;
+            if (typeof item.val === 'string' && item.val === '') return false;
+            // If we're in a granular view, ignore codes/dates with no event_number (no event)
+            if (!['Annual', 'Mseason', 'Qseason'].includes(query)) {
+                if (typeof item.en !== 'number') return false;
+            }
+            return true;
+        })
+        .map(item => item.val);
+    if (lookup === event_number) {
+        // event_number: coerce and ignore zeros and absurd values
+        values = rawVals
+            .map(v => Number(v))
+            .filter(v => !isNaN(v) && v !== 0 && v <= 10000);
+    } else {
+        // For other lookups, coerce numeric-like values and include zeros
+        values = rawVals
+            .map(v => Number(v))
+            .filter(v => !isNaN(v));
+    }
+
+    const sum = values.reduce((acc, val) => acc + val, 0);
+    const count = values.length;
+
+    if (aggregation === 'average' || aggregation === 'avg') {
+        if (lookup === coeff || lookup === coeff_event || lookup === coeff_combined) {
+            // For coeff or coeff_event, keep two decimals
+            return count > 0 ? Number((sum / count).toFixed(4)) : 0;
+        } else {
+            // For others, round to whole number unless precision provided
+            if (typeof precision === 'number') {
+                return count > 0 ? Number((sum / count).toFixed(precision)) : 0;
+            }
+            return count > 0 ? Math.round(sum / count) : 0;
+        }
+    } else if (aggregation === 'max') {
+        return count > 0 ? Math.max(...values) : 0;
+        } else if (aggregation === 'min') {
+            return count > 0 ? Math.min(...values) : 0;
+        } else if (aggregation === 'range') {
+            if (count > 0) {
+                const rangeVal = Math.max(...values) - Math.min(...values);
+                // For coeff (seasonal hardness) and event-level coeff_event we want a coefficient-like result
+                // so add 1 to the range (e.g. 0.04 -> 1.04) so formatCoeff yields a positive percent
+                return (lookup === coeff || lookup === coeff_event) ? rangeVal + 1 : rangeVal;
+            }
+            return 0;
+    } else {
+        return sum;
+    }
+}
+function getAggregatedTotalForCode(
+    lookup: { [date: string]: { [code: string]: number } },
+    eventDates: string[],
+    code: string,
+    aggregation: string
+    , precision?: number
+): number {
+    let values;
+    // Collect raw per-date values for this code; accept numeric or numeric strings
+    // Build per-date raw values for this code, excluding dates with no event in granular view
+    const rawVals2 = eventDates
+        .map(d => ({ date: d, val: lookup[d]?.[code], en: event_number?.[d]?.[code] }))
+        .filter(item => {
+            if (item.val === null || item.val === undefined) return false;
+            if (typeof item.val === 'string' && item.val === '') return false;
+            if (!['Annual', 'Mseason', 'Qseason'].includes(query)) {
+                if (typeof item.en !== 'number') return false;
+            }
+            return true;
+        })
+        .map(item => item.val);
+    if (lookup === event_number) {
+        values = rawVals2
+            .map(v => Number(v))
+            .filter(v => !isNaN(v) && v !== 0 && v <= 10000);
+    } else {
+        values = rawVals2
+            .map(v => Number(v))
+            .filter(v => !isNaN(v));
+    }
+
+    const sum = values.reduce((acc, val) => acc + val, 0);
+
+    if (aggregation === 'average' || aggregation === 'avg') {
+        // For coeff, keep two decimals; for others, round to whole number
+            if (lookup === coeff || lookup === coeff_event || lookup === coeff_combined) {
+            return values.length > 0 ? (sum / values.length) : 0;
+        } else if (typeof precision === 'number') {
+            return values.length > 0 ? Number((sum / values.length).toFixed(precision)) : 0;
+        } else {
+            return values.length > 0 ? Math.round(sum / values.length) : 0;
+        }
+    }
+    if (aggregation === 'max') {
+        return values.length > 0 ? Math.max(...values) : 0;
+    }
+    if (aggregation === 'min') {
+        return values.length > 0 ? Math.min(...values) : 0;
+    }
+    if (aggregation === 'growth') {
+        // compute linear slope from oldest to newest
+        if (values.length < 2) return 0;
+        const xs = values.map((_, i) => i); // simple indices as x
+        const ys = toOldestToNewestSeries(values, query);
+        // compute slope using least-squares
+        const n = ys.length;
+        const meanX = (n - 1) / 2;
+        const meanY = ys.reduce((a, b) => a + b, 0) / n;
+        let num = 0, den = 0;
+        for (let i = 0; i < n; i++) {
+            num += (i - meanX) * (ys[i] - meanY);
+            den += (i - meanX) * (i - meanX);
+        }
+        const slope = den !== 0 ? num / den : 0;
+        return slope;
+    } else if (aggregation === 'range') {
+        if (values.length > 0) {
+            const rangeVal = Math.max(...values) - Math.min(...values);
+            return (lookup === coeff || lookup === coeff_event) ? rangeVal + 1 : rangeVal;
+        }
+        return 0;
+    }
+    return sum;
+}
+function getCellValue({
+    analysisType,
+    avgType: _avgType,
+    filterType,
+    date,
+    code,
+    avgTimeLim12Lookup,
+    avgTimeLim5Lookup,
+    avgTimeLookup,
+    volunteers,
+    tourists,
+    coeff,
+    positionLookup,
+    event_number,
+    formatAvgTime
+    ,
+    cellAgg,
+    avgAgeLookup
+}: {
+    analysisType: string;
+    avgType: string;
+    filterType: string;
+    date: string;
+    code: string;
+    avgTimeLim12Lookup: { [key: string]: { [key: string]: number } };
+    avgTimeLim5Lookup: { [key: string]: { [key: string]: number } };
+    avgTimeLookup: { [key: string]: { [key: string]: number } };
+volunteers: { [key: string]: { [key: string]: number } };
+tourists: { [key: string]: { [key: string]: number } };
+coeff: { [key: string]: { [key: string]: number } };
+    positionLookup: { [key: string]: { [key: string]: number } };
+    event_number: { [key: string]: { [key: string]: number } };
+    formatAvgTime: (val: number) => string;
+    cellAgg?: string;
+    avgAgeLookup?: { [key: string]: { [key: string]: number | null } };
+}): string | number {
+    // Use numeric getter and format according to analysisType/filterType
+    const numeric = getCellNumericValue({ analysisType, avgType: _avgType, filterType, date, code, avgTimeLim12Lookup, avgTimeLim5Lookup, avgTimeLookup, volunteers, tourists, coeff, positionLookup, event_number, cellAgg, avgAgeLookup });
+    if (numeric === null || numeric === undefined) return '';
+    const n = Number(numeric);
+    if (!isFinite(n)) return '';
+    if (analysisType === 'Times') {
+        return typeof formatAvgTime === 'function' ? formatAvgTime(n) : n;
+    }
+    if (analysisType === 'Age') {
+        return formatAge(n);
+    }
+    if (analysisType === '%Participants') {
+        return formatPercent(n, (percentOneDecimalFilters.includes(filterType) || showOneDecimalForAnnual) ? 1 : 0);
+    }
+    if (analysisType === '%Total') {
+        // For coeff-style filters numeric already represents deviation where required
+        const precision = (String(filterType).startsWith('coeff') || percentOneDecimalFilters.includes(filterType) || showOneDecimalForAnnual) ? 1 : 0;
+        return formatPercent(n, precision);
+    }
+    // Default: Participants / raw numbers
+    // Special-case: when viewing raw Participants but the filter is a hardness coeff
+    // we want to show the deviation as a percent with two decimals (e.g. 0.096 -> 9.60%).
+    if (String(analysisType).toLowerCase() === 'participants') {
+        if (String(filterType).startsWith('coeff')) {
+            if (filterType === 'coeff_combined') {
+                // coeff_combined stored as deviation
+                return formatCombined(n);
+            }
+            // coeff and coeff_event stored as coefficient (≈1.02)
+            return formatCoeff(n);
+        }
+        if (showOneDecimalCells) return roundTo1(n, 3);
+        return Math.round(n);
+    }
+    return n;
+}
+// Handle Age cells
+function formatAge(val: number | null | undefined): string {
+    if (val === null || val === undefined) return '';
+    if (typeof val === 'number' && !isNaN(val)) return (Math.round(val * 10) / 10).toFixed(1);
+    return '';
+}
+// Round value to `sig` significant figures (e.g. sig=2: 123 -> 120, 4.345 -> 4.3)
+function roundToSignificant(val: number, sig = 2): number {
+    if (!isFinite(val) || val === 0) return val === 0 ? 0 : NaN;
+    const abs = Math.abs(val);
+    const digits = Math.floor(Math.log10(abs)) + 1;
+    const shift = sig - digits;
+    const factor = Math.pow(10, shift);
+    return Math.round(val * factor) / factor;
+}
+
+// Round to 1 decimal after first rounding to `sig` significant figures
+function roundTo1(val: number, sig = 2): number {
+    const sigRounded = roundToSignificant(val, sig);
+    return Math.round(sigRounded * 10) / 10;
+}
+// Return numeric value for a cell (unformatted) to allow comparisons/highlighting
+function getCellNumericValue({
+    analysisType,
+    avgType: _avgType,
+    filterType,
+    date,
+    code,
+    avgTimeLim12Lookup,
+    avgTimeLim5Lookup,
+    avgTimeLookup,
+    volunteers,
+    tourists,
+    coeff,
+    positionLookup,
+    event_number,
+    cellAgg
+}: {
+    analysisType: string;
+    avgType: string;
+    filterType: string;
+    date: string;
+    code: string;
+    avgTimeLim12Lookup: { [key: string]: { [key: string]: number } };
+    avgTimeLim5Lookup: { [key: string]: { [key: string]: number } };
+    avgTimeLookup: { [key: string]: { [key: string]: number } };
+volunteers: { [key: string]: { [key: string]: number } };
+tourists: { [key: string]: { [key: string]: number } };
+coeff: { [key: string]: { [key: string]: number } };
+positionLookup: { [key: string]: { [key: string]: number } };
+    event_number: { [key: string]: { [key: string]: number } };
+    avgAgeLookup?: { [key: string]: { [key: string]: number | null } };
+    cellAgg?: string;
+}): number | null {
+    // If granular view and the event_number is missing, return null to indicate missing cell
+    if (!['Annual', 'Mseason', 'Qseason'].includes(query)) {
+        const en = event_number?.[date]?.[code];
+        if (typeof en !== 'number') return null;
+    }
+    if (analysisType === 'Times') {
+        if (cellAgg === 'lt12') {
+            const v = avgTimeLim12Lookup[date]?.[code];
+            return typeof v === 'number' && !isNaN(v) ? v : null;
+        } else if (cellAgg === 'lt5') {
+            const v = avgTimeLim5Lookup[date]?.[code];
+            return typeof v === 'number' && !isNaN(v) ? v : null;
+        } else {
+            const v = avgTimeLookup[date]?.[code];
+            return typeof v === 'number' && !isNaN(v) ? v : null;
+        }
+    }
+    if (analysisType === '%Participants') {
+        const participants = positionLookup[date]?.[code];
+        if (!participants || participants === 0) return null;
+        let count: number | null = null;
+        if (filterType === 'tourist') count = (tourists[date] && typeof tourists[date][code] === 'number') ? tourists[date][code] : null;
+        else if (filterType === 'sTourist') count = (superTourists[date] && typeof superTourists[date][code] === 'number') ? superTourists[date][code] : null;
+        else if (filterType === 'volunteers') count = (volunteers[date] && typeof volunteers[date][code] === 'number') ? volunteers[date][code] : null;
+        else if (filterType === 'regs') count = (regulars[date] && typeof regulars[date][code] === 'number') ? regulars[date][code] : null;
+    else if (filterType === '1time') count = (firstTimers[date] && typeof firstTimers[date][code] === 'number') ? firstTimers[date][code] : null;
+        else if (filterType === 'clubs') count = (clubbers[date] && typeof clubbers[date][code] === 'number') ? clubbers[date][code] : null;
+        else if (filterType === 'pb') count = (pbCount[date] && typeof pbCount[date][code] === 'number') ? pbCount[date][code] : null;
+        else if (filterType === 'recentBest') count = (recentBest[date] && typeof recentBest[date][code] === 'number') ? recentBest[date][code] : null;
+        else if (filterType === 'returners') count = (returners[date] && typeof returners[date][code] === 'number') ? returners[date][code] : null;
+        else if (filterType === 'eligible_time') count = (eligibleTimes[date] && typeof eligibleTimes[date][code] === 'number') ? eligibleTimes[date][code] : null;
+        else if (filterType === 'unknown') count = (unknowns[date] && typeof unknowns[date][code] === 'number') ? unknowns[date][code] : null;
+        else if (filterType === 'all') count = participants;
+        else count = (positionLookup[date] && typeof positionLookup[date][code] === 'number') ? positionLookup[date][code] : null;
+        if (count === null) return null;
+        const pct = (Number(count) / Number(participants)) * 100;
+    return isFinite(pct) ? (percentOneDecimalFilters.includes(filterType) ? pct : Math.round(pct)) : null;
+    }
+    if (filterType === 'volunteers') {
+        const v = volunteers[date]?.[code];
+        return typeof v === 'number' ? v : null;
+    }
+    if (filterType === 'tourist') {
+        const v = tourists[date]?.[code];
+        return typeof v === 'number' ? v : null;
+    }
+    if (filterType === '1time') {
+        const v = firstTimers[date]?.[code];
+        return typeof v === 'number' ? v : null;
+    }
+    if (filterType === 'clubs') {
+        const v = clubbers[date]?.[code];
+        return typeof v === 'number' ? v : null;
+    }
+    if (filterType === 'pb') {
+        const v = pbCount[date]?.[code];
+        return typeof v === 'number' ? v : null;
+    }
+    if (filterType === 'recentBest') {
+        const v = recentBest[date]?.[code];
+        return typeof v === 'number' ? v : null;
+    }
+    if (filterType === 'returners') {
+        const v = returners[date]?.[code];
+        return typeof v === 'number' ? v : null;
+    }
+    if (filterType === 'eligible_time') {
+        const v = eligibleTimes[date]?.[code];
+        return typeof v === 'number' ? v : null;
+    }
+    if (filterType === 'unknown') {
+        const v = unknowns[date]?.[code];
+        return typeof v === 'number' ? v : null;
+    }
+    if (filterType === 'sTourist') {
+        const v = superTourists[date]?.[code];
+        return typeof v === 'number' ? v : null;
+    }
+    if (filterType === 'regs') {
+        const v = regulars[date]?.[code];
+        return typeof v === 'number' ? v : null;
+    }
+    if (filterType === 'eventNumber') {
+        const v = event_number[date]?.[code];
+        return (typeof v === 'number' && v <= 10000) ? v : null;
+    }
+    // Age analysis: use precomputed avg_age per event (if available)
+    if (analysisType === 'Age') {
+        const v = avgAgeLookup && avgAgeLookup[date] ? avgAgeLookup[date][code] : null;
+        return typeof v === 'number' ? v : null;
+    }
+    if (filterType === 'coeff' || filterType === 'coeff_event' || filterType === 'coeff_combined') {
+        const v = (filterType === 'coeff_event') ? coeff_event[date]?.[code] : (filterType === 'coeff_combined' ? coeff_combined[date]?.[code] : coeff[date]?.[code]);
+        if (typeof v !== 'number' || !isFinite(v)) return null;
+        // For %Total we want the numerator to be the deviation value (coeff - 1)
+        if (analysisType === '%Total') {
+            if (filterType === 'coeff_combined') return v; // combined already stored as deviation
+            return v - 1;
+        }
+        return v;
+    }
+    const v = positionLookup[date]?.[code];
+    return typeof v === 'number' ? v : null;
+}
+function formatCoeff(val: number): string | number {
+    const percent = ((val - 1) * 100).toFixed(2);
+    return `${percent}%`;
+}
+function formatCombined(val: number): string {
+    if (val === null || val === undefined || !isFinite(Number(val))) return '';
+    // val is combined deviation (e.g. 0.096032). Show as percent with two decimals (e.g. 9.60%).
+    const pct = (Number(val) * 100).toFixed(2);
+    return `${pct}%`;
+}
+function formatPercent(val: number | null | undefined, precision = 0): string {
+    if (val === null || val === undefined || !isFinite(Number(val))) return '';
+    const n = Number(val);
+    if (precision <= 0) return `${Math.round(n)}%`;
+    return `${n.toFixed(precision)}%`;
+}
+// Format a number with `sig` significant figures and a leading '+' for positive values
+function formatSigned(val: number, sig = 2): string {
+    if (val === null || val === undefined || !isFinite(val)) return '';
+    // Convert to a numeric then to precision and back to number to avoid scientific notation when possible
+    const p = Number(Number(val).toPrecision(sig));
+    // Remove trailing .0 where possible
+    let s = p.toString();
+    // Ensure we keep negative sign if present
+    if (val > 0) s = `+${s}`;
+    return s;
+}
+// Format a number with fixed decimal places and a leading '+' for positive values
+function formatSignedFixed(val: number, decimals = 2): string {
+    if (val === null || val === undefined || !isFinite(val)) return '';
+    const s = Number(val).toFixed(decimals);
+    return val > 0 ? `+${s}` : s;
+}
+
+interface AnalysisControlsProps {
+    value: string;
+    setValue: (val: string) => void;
+    options: { value: string; label: string }[];
+    label1: string;
+    label2: string;
+    value2: string;
+    setValue2: (val: string) => void;
+    options2?: { value: string; label: string }[];
+    disabled?: boolean;
+    disabled2?: boolean;
+    pos1?: string;
+    pos2?: string;
+    }
+const AnalysisControls: React.FC<AnalysisControlsProps> = ({
+    value,
+    setValue,
+    options,
+    label1,
+    label2,
+    value2,
+    setValue2,
+    options2,
+    disabled = false,
+    disabled2 = false,
+    pos1 = '0.2cm',
+    pos2 = '0.8em'
+    }) => (
+    <div style={{ marginBottom: '0.5em', marginLeft: '0.4cm', display: 'flex', alignItems: 'center' }}>
+
+            <div style={{ display: 'flex', alignItems: 'center', marginRight: pos1 }}>
+                <HelpTooltip label={label1} options={options} triggerText={label1} />
+            </div>
+            <select
+                id={`${label1}-select`}
+                value={value}
+                onChange={e => setValue(e.target.value)}
+                style={{ width: '125px' }}
+                disabled={disabled}
+            >
+                {options.map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+            </select>
+ 
+            <div style={{ margin: `0 0.5em 0 ${pos2}` }}>
+                {(options2 ?? []).length > 0 ? (
+                    <HelpTooltip label={label2} options={options2 ?? []} triggerText={label2} />
+                ) : (
+                    <span style={{ fontSize: '0.85em' }}>{label2}</span>
+                )}
+            </div>
+            <select
+                id={`${label2}-select`}
+                value={value2}
+                onChange={e => setValue2(e.target.value)}
+                style={{ width: '125px' }}
+                disabled={disabled2}
+            >
+                {(options2 ?? []).map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+            </select>
+        
+    </div>
+    );
+// Use setAggType directly from component state to update aggregation type
+// Get unique event_codes and event_dates
+const eventCodes = Array.from(new Set(results.map(r => r.event_code)))
+    .sort((a, b) => Number(a) - Number(b));
+let eventDates = Array.from(new Set(results.map(r => r.event_date)));
+    if (query === 'Mseason') {
+        // Ensure months are in calendar order Jan..Dec
+        const monthsOrder = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        eventDates = eventDates.sort((a, b) => monthsOrder.indexOf(a) - monthsOrder.indexOf(b));
+    } else if (query === 'Qseason') {
+        const qOrder = ['Q1','Q2','Q3','Q4'];
+        eventDates = eventDates.sort((a, b) => qOrder.indexOf(a) - qOrder.indexOf(b));
+    } else {
+        eventDates = eventDates.sort((a, b) => new Date(b).getTime() - new Date(a).getTime()); // Latest first
+    }
+    // Aggregates (top row and left column): for Type=Participants and Filter=Super Tourists
+    // show 1 decimal + 2 significant figures only for Periods: All, Recent, Last50, Since-lockdown
+    // (for other periods aggregates may still use other formatting rules elsewhere)
+    // Aggregates: for Type=Participants and Filter=Super Tourists, always show 1 decimal (2 significant figures)
+    const showOneDecimalForAnnual = String(analysisType).toLowerCase() === 'participants' && filterType === 'sTourist';
+    // Filters to display percent values with 1 decimal and two significant figures when Type='%Participants'
+    const percentOneDecimalFilters = ['sTourist','pb','recentBest','regs','returners','unknown'];
+    // Cells: for Type=Participants and filter = Super Tourists, show 1 decimal (2 significant figures)
+    // for Annual, Qtr Seasonality and Monthly Seasonality; otherwise show integers
+    const showOneDecimalCells = String(analysisType).toLowerCase() === 'participants' && filterType === 'sTourist' && ['Annual', 'Qseason', 'Mseason'].includes(query);
+// Build lookups in a single pass for performance
+const positionLookup: { [key: string]: { [key: string]: number } } = {};
+const volunteers: { [key: string]: { [key: string]: number } } = {};
+const tourists: { [key: string]: { [key: string]: number } } = {};
+const clubbers: { [key: string]: { [key: string]: number } } = {};
+const pbCount: { [key: string]: { [key: string]: number } } = {};
+const recentBest: { [key: string]: { [key: string]: number } } = {};
+const returners: { [key: string]: { [key: string]: number } } = {};
+const eligibleTimes: { [key: string]: { [key: string]: number } } = {};
+const unknowns: { [key: string]: { [key: string]: number } } = {};
+const firstTimers: { [key: string]: { [key: string]: number } } = {};
+const superTourists: { [key: string]: { [key: string]: number } } = {};
+const regulars: { [key: string]: { [key: string]: number } } = {};
+const coeff: { [key: string]: { [key: string]: number } } = {};
+const coeff_event: { [key: string]: { [key: string]: number } } = {};
+const coeff_combined: { [key: string]: { [key: string]: number } } = {};
+const event_number: { [key: string]: { [key: string]: number } } = {};
+const avgTimeLookup: { [key: string]: { [key: string]: number } } = {};
+const avgTimeLim12Lookup: { [key: string]: { [key: string]: number } } = {};
+const avgTimeLim5Lookup: { [key: string]: { [key: string]: number } } = {};
+const avgAgeLookup: { [key: string]: { [key: string]: number | null } } = {};
+
+results.forEach(r => {
+    const d = r.event_date;
+    const c = r.event_code;
+    if (!positionLookup[d]) positionLookup[d] = {};
+    positionLookup[d][c] = r.last_position;
+
+    if (!volunteers[d]) volunteers[d] = {};
+    volunteers[d][c] = typeof r.volunteers === 'number' ? r.volunteers : (r.volunteers ? Number(r.volunteers) : 0);
+
+    if (!tourists[d]) tourists[d] = {};
+    tourists[d][c] = typeof r.tourist_count === 'number' ? r.tourist_count : (r.tourist_count ? Number(r.tourist_count) : 0);
+
+    if (!clubbers[d]) clubbers[d] = {};
+    clubbers[d][c] = typeof r.club_count === 'number' ? r.club_count : (r.club_count ? Number(r.club_count) : 0);
+
+    if (!pbCount[d]) pbCount[d] = {};
+    pbCount[d][c] = typeof r.pb_count === 'number' ? r.pb_count : (r.pb_count ? Number(r.pb_count) : 0);
+
+    if (!recentBest[d]) recentBest[d] = {};
+    recentBest[d][c] = typeof r.recentbest_count === 'number' ? r.recentbest_count : (r.recentbest_count ? Number(r.recentbest_count) : 0);
+
+    if (!returners[d]) returners[d] = {};
+    returners[d][c] = typeof r.returners_count === 'number' ? r.returners_count : (r.returners_count ? Number(r.returners_count) : 0);
+
+    if (!eligibleTimes[d]) eligibleTimes[d] = {};
+    eligibleTimes[d][c] = typeof r.eligible_time_count === 'number' ? r.eligible_time_count : (r.eligible_time_count ? Number(r.eligible_time_count) : 0);
+
+    if (!unknowns[d]) unknowns[d] = {};
+    unknowns[d][c] = typeof r.unknown_count === 'number' ? r.unknown_count : (r.unknown_count ? Number(r.unknown_count) : 0);
+
+    if (!firstTimers[d]) firstTimers[d] = {};
+    const ft = (r.first_timers_count !== undefined && r.first_timers_count !== null) ? r.first_timers_count : (r.first_timer_count !== undefined && r.first_timer_count !== null ? r.first_timer_count : 0);
+    firstTimers[d][c] = typeof ft === 'number' ? ft : Number(ft) || 0;
+
+    if (!superTourists[d]) superTourists[d] = {};
+    const sc = (r.super_tourist_count !== undefined && r.super_tourist_count !== null) ? r.super_tourist_count : (r.super_tourist !== undefined && r.super_tourist !== null ? r.super_tourist : 0);
+    superTourists[d][c] = typeof sc === 'number' ? sc : Number(sc) || 0;
+
+    if (!regulars[d]) regulars[d] = {};
+    const rr = (r.regulars !== undefined && r.regulars !== null) ? r.regulars : (r.regs !== undefined ? r.regs : 0);
+    regulars[d][c] = typeof rr === 'number' ? rr : Number(rr) || 0;
+
+    // event_number
+    if (typeof r.event_number === 'number' && !isNaN(r.event_number) && r.event_number > 0 && r.event_number <= 10000) {
+        if (!event_number[d]) event_number[d] = {};
+        event_number[d][c] = r.event_number;
+    }
+
+    // avg times
+    if (!avgTimeLookup[d]) avgTimeLookup[d] = {};
+    avgTimeLookup[d][c] = r.avg_time;
+    if (!avgTimeLim12Lookup[d]) avgTimeLim12Lookup[d] = {};
+    avgTimeLim12Lookup[d][c] = r.avgtimelim12;
+    if (!avgTimeLim5Lookup[d]) avgTimeLim5Lookup[d] = {};
+    avgTimeLim5Lookup[d][c] = r.avgtimelim5;
+
+    // coeff normalization: accept multiple possible key names and normalize small deviations to coefficient form
+    if (!coeff[d]) coeff[d] = {};
+    const rawCoeff = (r.coeff !== undefined && r.coeff !== null) ? r.coeff : 0;
+    let numCoeff = (typeof rawCoeff === 'number') ? rawCoeff : (rawCoeff ? Number(rawCoeff) : 0);
+    if (isFinite(numCoeff) && Math.abs(numCoeff) < 0.5) numCoeff = 1 + numCoeff;
+    coeff[d][c] = isFinite(numCoeff) ? numCoeff : 0;
+
+    if (!coeff_event[d]) coeff_event[d] = {};
+    const rawCe = (r.coeff_event !== undefined && r.coeff_event !== null) ? r.coeff_event : (r.coefEvent !== undefined ? r.coefEvent : (r.coeffEvent ?? r.coeffevent ?? 0));
+    let numCe = (typeof rawCe === 'number') ? rawCe : (rawCe ? Number(rawCe) : 0);
+    if (isFinite(numCe) && Math.abs(numCe) < 0.5) numCe = 1 + numCe;
+    coeff_event[d][c] = isFinite(numCe) ? numCe : 0;
+
+    if (!coeff_combined[d]) coeff_combined[d] = {};
+    const combinedDeviation = (isFinite(numCoeff) ? numCoeff : 0) - 1 + (isFinite(numCe) ? numCe : 0) - 1;
+    coeff_combined[d][c] = combinedDeviation;
+
+    // avg age
+    if (!avgAgeLookup[d]) avgAgeLookup[d] = {};
+    const v = r.avg_age ?? r.avgAge ?? null;
+    const num = (v === null || v === undefined || v === '') ? null : Number(v);
+    avgAgeLookup[d][c] = (num !== null && !isNaN(Number(num))) ? Number(num) : null;
+});
+    // (removed debug sample check for firstTimers)
+    // Seasonal debug: when viewing aggregated periods and First Timers filter, print a small sample matrix
+    // removed development debug logging
+const eventTotals: { [code: string]: number } = {};
+// Compute totals/aggregates per event code. For Times use the selected avgType lookup and respect aggType.
+    // Precompute column totals (sum across eventCodes for each date) for %Total mode.
+    // Use the currently selected filter to build column totals so %Total divides by the correct base.
+    const columnTotals: { [date: string]: number } = {};
+    // Build column totals by summing the numeric value used for each cell.
+    // This ensures numerators and denominators use the same units for all filters,
+    // including coeff / coeff_event / coeff_combined where getCellNumericValue
+    // already returns deviations for `%Total` mode when appropriate.
+    eventDates.forEach(d => {
+        let colSum = 0;
+        eventCodes.forEach(c => {
+            const v = getCellNumericValue({
+                analysisType,
+                avgType,
+                filterType,
+                date: d,
+                code: c,
+                avgTimeLim12Lookup,
+                avgTimeLim5Lookup,
+                avgTimeLookup,
+                volunteers,
+                tourists,
+                coeff,
+                positionLookup,
+                event_number,
+                cellAgg,
+                avgAgeLookup
+            });
+            colSum += (typeof v === 'number' && isFinite(v)) ? Number(v) : 0;
+        });
+        columnTotals[d] = colSum;
+    });
+    let grandTotalSum = Object.values(columnTotals).reduce((a, b) => a + b, 0);
+    // Removed dev diagnostics and per-date coeff precompute. Header aggregation for
+    // `%Total` + `agg='total'` now computes the sum of the per-event percentages
+    // for that date so the header reflects the cells below.
+
+    eventCodes.forEach(code => {
+        if (analysisType === 'Times') {
+            // Use cellAgg (per-cell aggregation choice) to compute the row totals and header aggregates
+            let lookup;
+            if (cellAgg === 'lt12') {
+                lookup = avgTimeLim12Lookup;
+            } else if (cellAgg === 'lt5') {
+                lookup = avgTimeLim5Lookup;
+            } else {
+                lookup = avgTimeLookup;
+            }
+            eventTotals[code] = getAggregatedTotalForCode(lookup, eventDates, code, aggType);
+        } else if (analysisType === 'Age') {
+            // Use the precomputed per-event avg age values directly. getAggregatedTotalForCode will ignore nulls.
+            const ageLookupAny: any = avgAgeLookup;
+            eventTotals[code] = getAggregatedTotalForCode(ageLookupAny, eventDates, code, aggType, 1);
+        } else {
+            // Special handling for the new "%Participants" analysis: compute per-date percentages then aggregate those percentages
+        if (analysisType === '%Participants' || analysisType === '%Total') {
+                const pcts: number[] = [];
+                let rowSum = 0; // sum of numerators for this row across dates (used for %Total left aggregate)
+                eventDates.forEach(d => {
+                    // Skip dates where there was no event for this code in granular views
+                    if (!['Annual', 'Mseason', 'Qseason'].includes(query)) {
+                        const en = event_number[d]?.[code];
+                        if (typeof en !== 'number') return;
+                    }
+                    let denom = analysisType === '%Total' ? columnTotals[d] : positionLookup[d]?.[code];
+                    // For coefficient-style filters, compute denom as the sum of deviations
+                    if (analysisType === '%Total' && String(filterType).startsWith('coeff')) {
+                        denom = eventCodes.reduce((acc, cc) => {
+                            let v: any;
+                            if (filterType === 'coeff') v = coeff[d]?.[cc];
+                            else if (filterType === 'coeff_event') v = coeff_event[d]?.[cc];
+                            else v = coeff_combined[d]?.[cc];
+                            if (v === null || v === undefined) return acc;
+                            const num = (filterType === 'coeff_combined') ? Number(v) : (Number(v) - 1);
+                            return acc + (isFinite(num) ? num : 0);
+                        }, 0);
+                    }
+                    if (!denom || denom === 0) return;
+                    // Do not coerce missing numerators to 0: treat NULL/blank as absent and skip
+                    let rawNumer: any;
+                    if (filterType === 'volunteers') rawNumer = volunteers[d]?.[code];
+                    else if (filterType === 'tourist') rawNumer = tourists[d]?.[code];
+                    else if (filterType === 'sTourist') rawNumer = superTourists[d]?.[code];
+                    else if (filterType === 'regs') rawNumer = regulars[d]?.[code];
+                    else if (filterType === '1time') rawNumer = firstTimers[d]?.[code];
+                    else if (filterType === 'clubs') rawNumer = clubbers[d]?.[code];
+                    else if (filterType === 'pb') rawNumer = pbCount[d]?.[code];
+                    else if (filterType === 'recentBest') rawNumer = recentBest[d]?.[code];
+                    else if (filterType === 'returners') rawNumer = returners[d]?.[code];
+                    else if (filterType === 'eligible_time') rawNumer = eligibleTimes[d]?.[code];
+                    else if (filterType === 'unknown') rawNumer = unknowns[d]?.[code];
+                    else if (filterType === 'eventNumber') rawNumer = event_number[d]?.[code];
+                    else if (filterType === 'all') rawNumer = positionLookup[d]?.[code];
+                    else if (filterType === 'coeff') rawNumer = (coeff[d]?.[code] !== undefined && coeff[d]?.[code] !== null) ? (Number(coeff[d][code]) - 1) : null;
+                    else if (filterType === 'coeff_event') rawNumer = (coeff_event[d]?.[code] !== undefined && coeff_event[d]?.[code] !== null) ? (Number(coeff_event[d][code]) - 1) : null;
+                    else if (filterType === 'coeff_combined') rawNumer = coeff_combined[d]?.[code];
+                    else rawNumer = positionLookup[d]?.[code];
+                    // Skip NULL/undefined/empty-string numerators so missing cells are ignored
+                    if (rawNumer === null || rawNumer === undefined || rawNumer === '') return;
+                    const numerN = Number(rawNumer);
+                    if (!isFinite(numerN)) return;
+                    // accumulate rowSum for %Total left-aggregate
+                    if (analysisType === '%Total') rowSum += numerN || 0;
+                    const pct = (numerN / Number(denom)) * 100;
+                    if (isFinite(pct)) pcts.push(pct);
+                });
+                if (pcts.length === 0) {
+                    eventTotals[code] = 0;
+                } else if (aggType === 'total') {
+                    // For 'total' agg: sum the per-date percentages (pcts)
+                    // For %Total this means the left aggregate is the sum of each cell's percent-of-column value.
+                    const totalPct = pcts.reduce((a, b) => a + b, 0);
+                    // Keep decimals for %Total or filters that require one decimal, otherwise round
+                    if (analysisType === '%Total' || percentOneDecimalFilters.includes(filterType)) {
+                        eventTotals[code] = totalPct;
+                    } else {
+                        eventTotals[code] = Math.round(totalPct);
+                    }
+                } else if (aggType === 'avg' || aggType === 'average') {
+                    const s = pcts.reduce((a, b) => a + b, 0) / pcts.length;
+                    // Preserve decimals for %Total or sTourist; otherwise keep integer
+                    eventTotals[code] = (analysisType === '%Total' || percentOneDecimalFilters.includes(filterType)) ? (percentOneDecimalFilters.includes(filterType) ? roundTo1(s, 3) : s) : Math.round(s);
+                } else if (aggType === 'max') {
+                    const m = Math.max(...pcts);
+                    eventTotals[code] = (analysisType === '%Total' || percentOneDecimalFilters.includes(filterType)) ? (percentOneDecimalFilters.includes(filterType) ? roundTo1(m, 3) : m) : Math.round(m);
+                } else if (aggType === 'min') {
+                    const m = Math.min(...pcts);
+                    eventTotals[code] = (analysisType === '%Total' || percentOneDecimalFilters.includes(filterType)) ? (percentOneDecimalFilters.includes(filterType) ? roundTo1(m, 3) : m) : Math.round(m);
+                } else if (aggType === 'range') {
+                    const r = Math.max(...pcts) - Math.min(...pcts);
+                    eventTotals[code] = (analysisType === '%Total' || percentOneDecimalFilters.includes(filterType)) ? (percentOneDecimalFilters.includes(filterType) ? roundTo1(r, 3) : r) : Math.round(r);
+                } else if (aggType === 'growth') {
+                    // Compute slope from oldest to newest
+                    const ys = toOldestToNewestSeries(pcts, query);
+                    const n = ys.length;
+                    if (n < 2) {
+                        eventTotals[code] = 0;
+                    } else {
+                        const meanX = (n - 1) / 2;
+                        const meanY = ys.reduce((a, b) => a + b, 0) / n;
+                        let num = 0, den = 0;
+                        for (let i = 0; i < n; i++) {
+                            num += (i - meanX) * (ys[i] - meanY);
+                            den += (i - meanX) * (i - meanX);
+                        }
+                        const slope = den !== 0 ? num / den : 0;
+                        eventTotals[code] = slope; // keep slope as numeric (percent points per period)
+                    }
+                } else {
+                    // Fallback: ratio of aggregated totals
+                    const numLookup = filterType === 'volunteers' ? volunteers
+                        : (filterType === 'tourist' ? tourists
+                        : (filterType === 'sTourist' ? superTourists
+                        : (filterType === 'regs' ? regulars
+                        : (filterType === '1time' ? firstTimers
+                        : (filterType === 'clubs' ? clubbers
+                        : (filterType === 'pb' ? pbCount
+                        : (filterType === 'recentBest' ? recentBest
+                        : (filterType === 'returners' ? returners
+                        : (filterType === 'eligible_time' ? eligibleTimes
+                        : (filterType === 'unknown' ? unknowns : positionLookup))))))))));
+                    const numer = getAggregatedTotalForCode(numLookup, eventDates, code, aggType);
+                    const denom = getAggregatedTotalForCode(positionLookup, eventDates, code, aggType);
+                    eventTotals[code] = denom ? (percentOneDecimalFilters.includes(filterType) ? (Number(numer) / Number(denom)) * 100 : Math.round((Number(numer) / Number(denom)) * 100)) : 0;
+                }
+            } else {
+                let lookup;
+                                                            if (filterType === 'volunteers') {
+                                                                lookup = volunteers;
+                                                            } else if (filterType === 'tourist') {
+                                                                lookup = tourists;
+                                                            } else if (filterType === 'sTourist') {
+                                                                lookup = superTourists;
+                                                            } else if (filterType === 'regs') {
+                                                                lookup = regulars;
+                                                            } else if (filterType === '1time') {
+                                                                lookup = firstTimers;
+                                                            } else if (filterType === 'clubs') {
+                                                                lookup = clubbers;
+                                                            } else if (filterType === 'pb') {
+                                                                lookup = pbCount;
+                                                            } else if (filterType === 'recentBest') {
+                                                                lookup = recentBest;
+                                                            } else if (filterType === 'returners') {
+                                                                lookup = returners;
+                                                            } else if (filterType === 'eligible_time') {
+                                                                lookup = eligibleTimes;
+                                                            } else if (filterType === 'unknown') {
+                                                                lookup = unknowns;
+                } else if (filterType === 'eventNumber') {
+                    lookup = event_number;
+                } else if (filterType === 'coeff' || filterType === 'coeff_event' || filterType === 'coeff_combined') {
+                    lookup = (filterType === 'coeff_event') ? coeff_event : (filterType === 'coeff_combined' ? coeff_combined : coeff);
+                } else {
+                    lookup = positionLookup;
+                }
+                eventTotals[code] = getAggregatedTotalForCode(lookup, eventDates, code, aggType, (showOneDecimalForAnnual && (lookup === positionLookup || filterType === 'sTourist')) ? 1 : undefined);
+            }
+        }
+    });    
+const sortedEventCodes = [...eventCodes].sort((a, b) => {
+    if (sortBy === 'event') {
+        const nameA = (results.find(r => r.event_code === a)?.event_name || a).toLowerCase();
+        const nameB = (results.find(r => r.event_code === b)?.event_name || b).toLowerCase();
+        return sortDir === 'asc' ? nameA.localeCompare(nameB) : nameB.localeCompare(nameA);
+    } else {
+        return sortDir === 'asc'
+            ? eventTotals[a] - eventTotals[b]
+            : eventTotals[b] - eventTotals[a];
+    }
+    });
+
+// Compute per-row averages (used for #Actual Deviation)
+const rowAverages: { [code: string]: number } = {};
+eventCodes.forEach(code => {
+    const vals: number[] = [];
+    eventDates.forEach(d => {
+        const v = getCellNumericValue({
+            analysisType,
+            avgType,
+            filterType,
+            date: d,
+            code,
+            avgTimeLim12Lookup,
+            avgTimeLim5Lookup,
+            avgTimeLookup,
+            volunteers,
+            tourists,
+            coeff,
+            positionLookup,
+            event_number,
+            avgAgeLookup,
+            cellAgg
+        });
+        if (typeof v === 'number' && isFinite(v)) vals.push(Number(v));
+    });
+    rowAverages[code] = vals.length ? (vals.reduce((a, b) => a + b, 0) / vals.length) : 0;
+});
+
+    // NOTE: historic behavior — recomputing `eventTotals` from displayed
+    // #Actual Deviation diffs produced left-hand aggregates that average to 0
+    // (since mean(value - mean(value)) === 0). Keep the original underlying
+    // participant-based `eventTotals` by disabling that recomputation here.
+    // To re-enable in future, change the condition below.
+    if (false) {
+        // Recompute eventTotals per event code from diffs across dates
+        eventCodes.forEach(code => {
+            const diffs: number[] = [];
+            eventDates.forEach(d => {
+                const v = getCellNumericValue({
+                    analysisType,
+                    avgType,
+                    filterType,
+                    date: d,
+                    code,
+                    avgTimeLim12Lookup,
+                    avgTimeLim5Lookup,
+                    avgTimeLookup,
+                    volunteers,
+                    tourists,
+                    coeff,
+                    positionLookup,
+                    event_number,
+                    cellAgg,
+                    avgAgeLookup
+                });
+                if (typeof v === 'number' && isFinite(v) && typeof rowAverages[code] === 'number' && isFinite(rowAverages[code])) {
+                    const diff = Number(v) - Number(rowAverages[code]);
+                    if (isFinite(diff)) diffs.push(diff);
+                }
+            });
+            if (!diffs.length) {
+                eventTotals[code] = 0;
+            } else {
+                if (aggType === 'avg' || aggType === 'average') {
+                    const s = diffs.reduce((a, b) => a + b, 0) / diffs.length;
+                    eventTotals[code] = Math.round(s);
+                } else if (aggType === 'total') {
+                    const s = diffs.reduce((a, b) => a + b, 0);
+                    eventTotals[code] = Math.round(s);
+                } else if (aggType === 'max') {
+                    eventTotals[code] = Math.round(Math.max(...diffs));
+                } else if (aggType === 'min') {
+                    eventTotals[code] = Math.round(Math.min(...diffs));
+                } else if (aggType === 'range') {
+                    eventTotals[code] = Math.round(Math.max(...diffs) - Math.min(...diffs));
+                } else if (aggType === 'growth') {
+                    const ys = toOldestToNewestSeries(diffs, query);
+                    const n = ys.length;
+                    if (n < 2) eventTotals[code] = 0;
+                    else {
+                        const meanX = (n - 1) / 2;
+                        const meanY = ys.reduce((a, b) => a + b, 0) / n;
+                        let num = 0, den = 0;
+                        for (let i = 0; i < n; i++) {
+                            num += (i - meanX) * (ys[i] - meanY);
+                            den += (i - meanX) * (i - meanX);
+                        }
+                        const slope = den !== 0 ? num / den : 0;
+                        eventTotals[code] = Math.round(slope);
+                    }
+                } else {
+                    const s = diffs.reduce((a, b) => a + b, 0) / diffs.length;
+                    eventTotals[code] = Math.round(s);
+                }
+            }
+        });
+
+        // Recompute grandTotalSum after overriding columnTotals
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        // (grandTotalSum used later only for display in some modes)
+    }
+
+    // Precompute per-row max/min diffs for #Actual Deviation and %Deviation so highlighting
+    // of max/min uses the actual displayed cell diffs (cell - rowAvg or percent-of-cell).
+    const rowMaxDiffs: { [code: string]: number | null } = {};
+    const rowMinDiffs: { [code: string]: number | null } = {};
+    if (analysisType === '#Actual Deviation' || analysisType === '%Deviation') {
+        eventCodes.forEach(code => {
+            const diffs: number[] = [];
+            eventDates.forEach(d => {
+                const v = getCellNumericValue({
+                    analysisType,
+                    avgType,
+                    filterType,
+                    date: d,
+                    code,
+                    avgTimeLim12Lookup,
+                    avgTimeLim5Lookup,
+                    avgTimeLookup,
+                    volunteers,
+                    tourists,
+                    coeff,
+                    positionLookup,
+                    event_number,
+                    cellAgg,
+                    avgAgeLookup
+                });
+                const rowAvg = rowAverages[code];
+                if (typeof v === 'number' && isFinite(v) && typeof rowAvg === 'number' && isFinite(rowAvg)) {
+                    if (analysisType === '#Actual Deviation') {
+                        if (String(filterType).startsWith('coeff')) {
+                            // For coefficient-style filters, express diffs as percentage points with one decimal
+                            const raw = Number(v) - Number(rowAvg);
+                            const pct = Number((raw * 100).toFixed(1));
+                            if (isFinite(pct)) diffs.push(pct);
+                        } else {
+                            const diff = Math.round(Number(v) - Number(rowAvg));
+                            if (isFinite(diff)) diffs.push(diff);
+                        }
+                    } else {
+                        // %Deviation: percent relative to row average: (v/rowAvg - 1) * 100
+                        if (Number(rowAvg) === 0) {
+                            // skip invalid row average
+                        } else {
+                            const pct = Math.round(((Number(v) / Number(rowAvg)) - 1) * 100);
+                            if (isFinite(pct)) diffs.push(pct);
+                        }
+                    }
+                }
+            });
+            if (!diffs.length) {
+                rowMaxDiffs[code] = null;
+                rowMinDiffs[code] = null;
+            } else {
+                rowMaxDiffs[code] = Math.max(...diffs);
+                rowMinDiffs[code] = Math.min(...diffs);
+            }
+        });
+    }
+
+    return (
+        <div className="page-content">
+
+        <AnalysisControls
+            value={analysisType}
+            setValue={setAnalysisType}
+            options={analysisOptions}
+            label1="Calc"
+            label2="Period"
+            value2={query}
+            setValue2={setQuery}
+            options2={queryOptions}
+            pos2='1.6em'
+        />
+        {infoMessage && (
+            <div style={{ color: 'darkorange', margin: '0.4em 0' }}>{infoMessage}</div>
+        )}
+        <AnalysisControls
+            value={filterType}
+            setValue={setFilterType}
+            options={analysisType === 'Times' ? timesFilterOptions : (analysisType === '%Participants' ? percentParticipantFilterOptions : (analysisType === '%Total' ? percentTotalFilterOptions : (analysisType === 'Age' ? ageFilterOptions : participantFilterOptions)))}
+            label1="Type"
+            label2="Cell Agg"
+            value2={cellAgg}
+            setValue2={setCellAgg}
+            options2={analysisType === 'Times'
+                ? [
+                    { value: 'avg', label: 'Average' },
+                    { value: 'lt12', label: 'avg (Times < 12%)' },
+                    { value: 'lt5', label: 'avg (Times < 5%)' }
+                ]
+                : (['Annual', 'Mseason', 'Qseason'].includes(query) ? [{ value: 'avg', label: 'Average' }] : [{ value: 'single', label: 'Single Value' }])
+            }
+            pos2='0.7em'
+        />
+        {/* debug logging removed */}
+        <AnalysisControls
+            value={aggType}
+            setValue={setAggType}
+            options={aggOptions.filter(opt => getAllowedAggTypes(analysisType, filterType).includes(opt.value))}
+            label1="Agg"
+            label2="Time Adj"
+            value2={avgType}
+            setValue2={setAvgType}
+            options2={analysisType === 'Times' ? avgOptions : [{ value: 'none', label: 'No Adjustment' }]}
+            disabled={filterType === 'eventNumber' && aggType === 'total'}
+            disabled2={analysisType !== 'Times'}
+            pos1="0.4cm"
+            pos2 ="0.5em"
+        />
+        <div style={{ display: 'flex', justifyContent: 'flex-start', alignItems: 'center', gap: '0.4rem', margin: '0.2rem 0.6rem 0.35rem 0.6rem' }}>
+            <button
+                id="results-view-toggle-btn"
+                type="button"
+                onClick={() => setShowPlot(prev => !prev)}
+                title={`Show ${showPlot ? 'table' : 'plot'}`}
+                aria-label={`Show ${showPlot ? 'table' : 'plot'}`}
+                style={{
+                    width: '1cm',
+                    height: '1cm',
+                    border: '1px solid #777',
+                    borderRadius: '6px',
+                    background: '#fff',
+                    cursor: 'pointer',
+                    fontSize: '0.5rem',
+                    fontWeight: 700,
+                    lineHeight: 1,
+                    padding: 0,
+                }}
+            >
+                {showPlot ? 'Table' : 'Plot'}
+            </button>
+            {showPlot && canTogglePlotExpand && (
+                <button
+                    id="results-expand-toggle-btn"
+                    type="button"
+                    onClick={() => setIsPlotExpanded((prev) => !prev)}
+                    style={{
+                        height: '1cm',
+                        border: '1px solid #777',
+                        borderRadius: '6px',
+                        background: '#fff',
+                        cursor: 'pointer',
+                        fontSize: '0.5rem',
+                        fontWeight: 700,
+                        lineHeight: 1,
+                        padding: '0 0.45rem',
+                    }}
+                >
+                    {isPlotExpanded ? 'Reduce' : 'Expand'}
+                </button>
+            )}
+            <span style={{ marginLeft: '0.2rem', fontSize: '0.72rem', fontStyle: 'italic', color: '#6b7280' }}>
+                {['Annual', 'Mseason', 'Qseason'].includes(query)
+                    ? 'cannot click a cell to see event details for aggregation periods'
+                    : 'click a cell to see event details'}
+            </span>
+        </div>
+            {showPlot ? (
+                <div
+                    className="results-table-container analysis-container"
+                    style={{ padding: '0.5rem 0.6rem', background: 'transparent', borderRadius: '8px', overflowX: 'hidden' }}
+                >
+                    {sortedEventCodes.length === 0 || eventDates.length === 0 ? (
+                        <div style={{ color: '#6b7280', fontSize: '0.9rem' }}>No data to plot.</div>
+                    ) : (
+                        (() => {
+                            const lineColor = '#c4c7cf';
+                            const parsePlotDate = (raw: string): Date | null => {
+                                const value = String(raw || '').trim();
+                                if (!value) return null;
+                                if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+                                    const dt = new Date(`${value}T00:00:00`);
+                                    return Number.isNaN(dt.getTime()) ? null : dt;
+                                }
+                                const slash = value.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+                                if (slash) {
+                                    const day = Number(slash[1]);
+                                    const month = Number(slash[2]) - 1;
+                                    const year = Number(slash[3]);
+                                    const dt = new Date(year, month, day);
+                                    return Number.isNaN(dt.getTime()) ? null : dt;
+                                }
+                                const dt = new Date(value);
+                                return Number.isNaN(dt.getTime()) ? null : dt;
+                            };
+
+                            const monthOrder = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                            const quarterOrder = ['Q1', 'Q2', 'Q3', 'Q4'];
+
+                            const plotDates = [...eventDates].sort((a, b) => {
+                                if (query === 'Mseason') {
+                                    return monthOrder.indexOf(String(a)) - monthOrder.indexOf(String(b));
+                                }
+                                if (query === 'Qseason') {
+                                    return quarterOrder.indexOf(String(a)) - quarterOrder.indexOf(String(b));
+                                }
+                                if (query === 'Annual') {
+                                    return Number(a) - Number(b);
+                                }
+                                const ta = parsePlotDate(String(a))?.getTime() ?? 0;
+                                const tb = parsePlotDate(String(b))?.getTime() ?? 0;
+                                return ta - tb;
+                            });
+
+                            const xLabels = plotDates.map((date) => formatHeaderDate(date, query));
+
+                            const monthTickIndices = (() => {
+                                if (['Annual', 'Mseason', 'Qseason'].includes(query)) {
+                                    return xLabels.map((_label, index) => index);
+                                }
+
+                                const firstIndexPerMonth = new Map<string, number>();
+                                for (let index = 0; index < plotDates.length; index += 1) {
+                                    const parsed = parsePlotDate(String(plotDates[index]));
+                                    if (!parsed) continue;
+                                    const monthKey = `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(2, '0')}`;
+                                    if (!firstIndexPerMonth.has(monthKey)) {
+                                        firstIndexPerMonth.set(monthKey, index);
+                                    }
+                                }
+
+                                const monthStartIndices = Array.from(firstIndexPerMonth.values()).sort((a, b) => a - b);
+
+                                if (monthStartIndices.length === 0) {
+                                    return [0];
+                                }
+
+                                const targetCount = Math.max(3, Math.min(10, monthStartIndices.length));
+
+                                if (monthStartIndices.length <= targetCount) {
+                                    return monthStartIndices;
+                                }
+
+                                const sampled: number[] = [];
+                                const step = (monthStartIndices.length - 1) / (targetCount - 1);
+                                for (let i = 0; i < targetCount; i += 1) {
+                                    sampled.push(monthStartIndices[Math.round(i * step)]);
+                                }
+                                return Array.from(new Set(sampled)).sort((a, b) => a - b);
+                            })();
+
+                            const monthTickIndexSet = new Set<number>(monthTickIndices);
+                            const monthLabelByIndex = new Map<number, string>();
+                            monthTickIndices.forEach((index) => {
+                                const parsed = parsePlotDate(String(plotDates[index]));
+                                if (parsed) {
+                                    monthLabelByIndex.set(index, parsed.toLocaleDateString(undefined, { month: 'short', year: '2-digit' }));
+                                } else {
+                                    monthLabelByIndex.set(index, String(xLabels[index] || ''));
+                                }
+                            });
+
+                            const computePlotValue = (date: string, code: string): number | null => {
+                                const numeric = getCellNumericValue({
+                                    analysisType,
+                                    avgType,
+                                    filterType,
+                                    date,
+                                    code,
+                                    avgTimeLim12Lookup,
+                                    avgTimeLim5Lookup,
+                                    avgTimeLookup,
+                                    volunteers,
+                                    tourists,
+                                    coeff,
+                                    positionLookup,
+                                    event_number,
+                                    avgAgeLookup,
+                                    cellAgg
+                                });
+
+                                if (numeric === null || !isFinite(Number(numeric))) return null;
+
+                                if (analysisType === '%Total') {
+                                    const denom = eventCodes.reduce((acc, cc) => {
+                                        const v = getCellNumericValue({
+                                            analysisType,
+                                            avgType,
+                                            filterType,
+                                            date,
+                                            code: cc,
+                                            avgTimeLim12Lookup,
+                                            avgTimeLim5Lookup,
+                                            avgTimeLookup,
+                                            volunteers,
+                                            tourists,
+                                            coeff,
+                                            positionLookup,
+                                            event_number,
+                                            avgAgeLookup,
+                                            cellAgg
+                                        });
+                                        return acc + (typeof v === 'number' && isFinite(v) ? Number(v) : 0);
+                                    }, 0);
+                                    if (!denom) return null;
+                                    return (Number(numeric) / Number(denom)) * 100;
+                                }
+
+                                if (analysisType === '#Actual Deviation') {
+                                    const rowAvg = rowAverages[code];
+                                    if (!isFinite(Number(rowAvg))) return null;
+                                    const diff = Number(numeric) - Number(rowAvg);
+                                    if (!isFinite(diff)) return null;
+                                    if (String(filterType).startsWith('coeff')) {
+                                        return Number((diff * 100).toFixed(1));
+                                    }
+                                    return Math.round(diff);
+                                }
+
+                                if (analysisType === '%Deviation') {
+                                    const rowAvg = rowAverages[code];
+                                    if (!isFinite(Number(rowAvg)) || Number(rowAvg) === 0) return null;
+                                    return Math.round(((Number(numeric) / Number(rowAvg)) - 1) * 100);
+                                }
+
+                                return Number(numeric);
+                            };
+
+                            const plotRows = sortedEventCodes
+                                .map((code) => {
+                                    const label = String(results.find(r => r.event_code === code)?.event_name || code);
+                                    const data = plotDates.map((date) => {
+                                        const value = computePlotValue(date, code);
+                                        if (value === null || !isFinite(value)) return null;
+                                        return Number(value.toFixed(3));
+                                    });
+                                    const hasData = data.some((value) => value !== null);
+                                    if (!hasData) return null;
+                                    return {
+                                        code: String(code),
+                                        label,
+                                        data
+                                    };
+                                })
+                                .filter((entry): entry is any => entry !== null);
+
+                            if (plotRows.length === 0) {
+                                return <div style={{ color: '#6b7280', fontSize: '0.9rem' }}>No data to plot.</div>;
+                            }
+
+                            const lineSeries = plotRows.map((row: any) => {
+                                const selectedColor = plotSeriesColorMap[row.label];
+                                const activeColor = selectedColor || lineColor;
+                                const priorityIndex = plotSelectionOrder.indexOf(row.label);
+                                const isSelectedSeries = priorityIndex >= 0;
+                                return {
+                                    name: row.label,
+                                    type: 'line',
+                                    connectNulls: false,
+                                    symbol: 'circle',
+                                    symbolSize: 4,
+                                    showSymbol: true,
+                                    lineStyle: { color: activeColor, width: isSelectedSeries ? 1.6 : 1 },
+                                    itemStyle: { color: activeColor, borderColor: activeColor, borderWidth: 1 },
+                                    emphasis: { disabled: true },
+                                    zlevel: isSelectedSeries ? 1 : 0,
+                                    z: isSelectedSeries ? (20 + priorityIndex) : 1,
+                                    data: row.data
+                                };
+                            });
+
+                            const getLastNonNull = (arr: Array<number | null>) => {
+                                for (let index = arr.length - 1; index >= 0; index -= 1) {
+                                    const value = arr[index];
+                                    if (typeof value === 'number' && isFinite(value)) {
+                                        return value;
+                                    }
+                                }
+                                return Number.NEGATIVE_INFINITY;
+                            };
+
+                            const cumulativeRows = [...plotRows].sort((a: any, b: any) => {
+                                const aLast = getLastNonNull(a.data);
+                                const bLast = getLastNonNull(b.data);
+                                return bLast - aLast;
+                            });
+
+                            const cumulativeSeries = cumulativeRows.map((row: any) => {
+                                const selectedColor = plotSeriesColorMap[row.label];
+                                const isSelectedSeries = Boolean(selectedColor);
+                                const priorityIndex = plotSelectionOrder.indexOf(row.label);
+                                return {
+                                    name: row.label,
+                                    type: 'bar',
+                                    stack: 'total',
+                                    barMaxWidth: 22,
+                                    itemStyle: {
+                                        color: selectedColor || '#d1d5db',
+                                        borderColor: selectedColor || '#9ca3af',
+                                        borderWidth: 1
+                                    },
+                                    emphasis: { disabled: true },
+                                    zlevel: isSelectedSeries ? 1 : 0,
+                                    z: isSelectedSeries ? (20 + Math.max(priorityIndex, 0)) : 1,
+                                    data: row.data
+                                };
+                            });
+
+                            const activeSeries = plotDisplayMode === 'cumulative' ? cumulativeSeries : lineSeries;
+
+                            const option = {
+                                animation: false,
+                                grid: { left: 0, right: 20, top: 10, bottom: isLaptopLayout ? 140 : 150 },
+                                tooltip: {
+                                    trigger: 'axis',
+                                    axisPointer: { type: plotDisplayMode === 'cumulative' ? 'shadow' : 'line' },
+                                    confine: true,
+                                    formatter: (params: any) => {
+                                        const rows = Array.isArray(params) ? params : [params];
+                                        if (!rows.length) return '';
+
+                                        const toNumeric = (value: any): number => {
+                                            if (Array.isArray(value)) {
+                                                const last = value[value.length - 1];
+                                                const parsed = Number(last);
+                                                return Number.isFinite(parsed) ? parsed : Number.NEGATIVE_INFINITY;
+                                            }
+                                            const parsed = Number(value);
+                                            return Number.isFinite(parsed) ? parsed : Number.NEGATIVE_INFINITY;
+                                        };
+
+                                        const sorted = [...rows].sort((a, b) => toNumeric(b?.value) - toNumeric(a?.value));
+                                        const header = String(sorted[0]?.axisValueLabel ?? sorted[0]?.name ?? '');
+
+                                        const lines = sorted.map((item: any) => {
+                                            const raw = toNumeric(item?.value);
+                                            const displayValue = Number.isFinite(raw)
+                                                ? Number(raw.toFixed(3)).toLocaleString()
+                                                : '-';
+                                            return `${item?.marker || ''}${String(item?.seriesName || '')}: ${displayValue}`;
+                                        });
+
+                                        return [header, ...lines].join('<br/>');
+                                    },
+                                    textStyle: {
+                                        fontSize: 10
+                                    },
+                                    padding: [4, 6],
+                                    position: (point: any, _params: any, _dom: any, _rect: any, size: any) => {
+                                        const [mouseX, mouseY] = point as [number, number];
+                                        const contentWidth = Number(size?.contentSize?.[0] ?? 0);
+                                        const contentHeight = Number(size?.contentSize?.[1] ?? 0);
+                                        const viewWidth = Number(size?.viewSize?.[0] ?? 0);
+                                        const viewHeight = Number(size?.viewSize?.[1] ?? 0);
+
+                                        let left = mouseX + 10;
+                                        if (left + contentWidth > viewWidth - 6) {
+                                            left = mouseX - contentWidth - 10;
+                                        }
+                                        left = Math.max(6, Math.min(left, Math.max(6, viewWidth - contentWidth - 6)));
+
+                                        let top = mouseY - contentHeight - 10;
+                                        if (top < 6) {
+                                            top = mouseY + 10;
+                                        }
+                                        top = Math.max(6, Math.min(top, Math.max(6, viewHeight - contentHeight - 6)));
+
+                                        return [left, top];
+                                    }
+                                },
+                                xAxis: {
+                                    type: 'category',
+                                    data: xLabels,
+                                    boundaryGap: plotDisplayMode === 'cumulative',
+                                    name: 'Date',
+                                    nameTextStyle: { fontWeight: 'bold' },
+                                    nameLocation: 'middle',
+                                    nameGap: isLaptopLayout ? 26 : 26,
+                                    axisLine: { lineStyle: { color: '#9ca3af', width: 1 } },
+                                    axisTick: {
+                                        alignWithLabel: true,
+                                        interval: (index: number) => monthTickIndexSet.has(index)
+                                    },
+                                    splitLine: { show: true, lineStyle: { color: '#d1d5db', width: 0.7 } },
+                                    axisLabel: {
+                                        color: '#4b5563',
+                                        fontSize: 11,
+                                        rotate: 0,
+                                        interval: (index: number) => monthTickIndexSet.has(index),
+                                        formatter: (_value: string, index: number) => monthLabelByIndex.get(index) || ''
+                                    }
+                                },
+                                yAxis: {
+                                    type: 'value',
+                                    name: String(getSecondColumnHeaderLabel(analysisType, aggType) || 'Value'),
+                                    nameLocation: 'middle',
+                                    nameGap: 42,
+                                    axisLabel: { color: '#4b5563', fontSize: 11 },
+                                    splitLine: { lineStyle: { color: '#e5e7eb' } }
+                                },
+                                legend: {
+                                    show: true,
+                                    type: 'plain',
+                                    bottom: isLaptopLayout ? 0 : -23,
+                                    left: isLaptopLayout ? 56 : 0,
+                                    right: isLaptopLayout ? 16 : 16,
+                                    itemWidth: isLaptopLayout ? 10 : 10,
+                                    itemHeight: isLaptopLayout ? 6 : 5,
+                                    itemGap: isLaptopLayout ? 6 : 4,
+                                    selected: Object.fromEntries(activeSeries.map((s: any) => [s.name, true])),
+                                    textStyle: { fontSize: isLaptopLayout ? 12 : 12, color: '#6b7280' }
+                                },
+                                dataZoom: [
+                                    { id: 'xZoom', type: 'inside', xAxisIndex: 0, filterMode: 'none', start: plotXZoom.start, end: plotXZoom.end },
+                                    { id: 'yZoom', type: 'inside', yAxisIndex: 0, filterMode: 'none', start: plotYZoom.start, end: plotYZoom.end }
+                                ],
+                                series: activeSeries
+                            };
+
+                            return (
+                                <div
+                                    style={{
+                                        width: isLaptopLayout ? '100%' : 'calc(100% - 1.0cm)',
+                                        margin: isLaptopLayout ? '0' : '0 0.75cm 0 0.15cm',
+                                        marginTop: '-0.2cm',
+                                        border: '2px solid #9ca3af',
+                                        borderRadius: '12px',
+                                        background: '#fff',
+                                        overflow: 'hidden',
+                                        boxShadow: '0 10px 18px rgba(15, 23, 42, 0.08)'
+                                    }}
+                                >
+                                    <div
+                                        style={{
+                                            background: '#e5e7eb',
+                                            borderBottom: '1px solid #d1d5db',
+                                            padding: '0.35rem 0.0rem',
+                                            fontSize: '1.05rem',
+                                            fontWeight: 700,
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            gap: '0.35rem'
+                                        }}
+                                    >
+                                        <div
+                                            style={{
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                alignItems: 'center',
+                                                lineHeight: 1.15
+                                            }}
+                                        >
+                                            <span>Event statistics comparison</span>
+                                            <span style={{ fontSize: '0.68rem', fontWeight: 500 }}>
+                                                Legend courses can be selected to highlight
+                                            </span>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            className="top-bar-help-btn"
+                                            aria-label="Event statistics comparison help"
+                                            title="Event statistics comparison help"
+                                            onClick={(event) => {
+                                                const rect = (event.currentTarget as HTMLButtonElement).getBoundingClientRect();
+                                                requestUnifiedHelp('section-event-stats-comparison', {
+                                                    x: rect.left,
+                                                    y: rect.bottom
+                                                });
+                                            }}
+                                        >
+                                            📖
+                                        </button>
+                                    </div>
+                                    <div style={{ padding: '0.6rem 0.8rem 0.8rem 0.8rem' }}>
+                                        <ReactECharts
+                                            ref={plotChartRef}
+                                            option={option}
+                                            notMerge
+                                            lazyUpdate
+                                            onEvents={{
+                                                datazoom: handlePlotDataZoom,
+                                                legendselectchanged: (params: any) => {
+                                                    const name = String(params?.name || '');
+                                                    if (name) {
+                                                        handlePlotLegendToggle(name);
+                                                    }
+                                                }
+                                            }}
+                                            style={{ width: '100%', minWidth: plotChartMinWidth, height: plotChartHeight }}
+                                        />
+                                        <div
+                                            style={{
+                                                marginTop: isLaptopLayout ? '0.45rem' : 'calc(0.45rem + 0.0cm)',
+                                                display: 'flex',
+                                                flexDirection: isLaptopLayout ? 'row' : 'column',
+                                                alignItems: 'flex-start',
+                                                gap: isLaptopLayout ? '0.45rem' : '0.3rem',
+                                                overflow: 'hidden'
+                                            }}
+                                        >
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: isLaptopLayout ? '0.45rem' : '0.25rem', flexWrap: 'nowrap', overflow: 'hidden' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: isLaptopLayout ? '0.22rem' : '0.15rem', border: '1px solid #9ca3af', borderRadius: '6px', background: '#f9fafb', padding: isLaptopLayout ? '0.12rem 0.2rem' : '0.1rem 0.15rem' }}>
+                                                    <span style={{ fontSize: '0.74rem', fontWeight: 700, color: '#374151', marginRight: '0.08rem' }}>Date</span>
+                                                    <button type="button" onClick={() => zoomAxisIn('x')} style={{ minWidth: 'calc(1.35rem + 1mm)', height: 'calc(1.35rem + 2mm)', border: '1px solid #9ca3af', borderRadius: '4px', background: '#fff', fontWeight: 700, cursor: 'pointer' }}>+</button>
+                                                    <button type="button" onClick={() => zoomAxisOut('x')} style={{ minWidth: 'calc(1.35rem + 1mm)', height: 'calc(1.35rem + 2mm)', border: '1px solid #9ca3af', borderRadius: '4px', background: '#fff', fontWeight: 700, cursor: 'pointer' }}>-</button>
+                                                    <button type="button" onClick={() => shiftAxisLeft('x')} style={{ minWidth: 'calc(1.35rem + 1mm)', height: 'calc(1.35rem + 2mm)', border: '1px solid #9ca3af', borderRadius: '4px', background: '#fff', fontWeight: 700, cursor: 'pointer' }}>{'←'}</button>
+                                                    <button type="button" onClick={() => shiftAxisRight('x')} style={{ minWidth: 'calc(1.35rem + 1mm)', height: 'calc(1.35rem + 2mm)', border: '1px solid #9ca3af', borderRadius: '4px', background: '#fff', fontWeight: 700, cursor: 'pointer' }}>{'→'}</button>
+                                                </div>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: isLaptopLayout ? '0.22rem' : '0.15rem', border: '1px solid #9ca3af', borderRadius: '6px', background: '#f9fafb', padding: isLaptopLayout ? '0.12rem 0.2rem' : '0.1rem 0.15rem' }}>
+                                                    <span style={{ fontSize: '0.74rem', fontWeight: 700, color: '#374151', marginRight: '0.08rem' }}>Time</span>
+                                                    <button type="button" onClick={() => zoomAxisIn('y')} style={{ minWidth: 'calc(1.35rem + 1mm)', height: 'calc(1.35rem + 2mm)', border: '1px solid #9ca3af', borderRadius: '4px', background: '#fff', fontWeight: 700, cursor: 'pointer' }}>+</button>
+                                                    <button type="button" onClick={() => zoomAxisOut('y')} style={{ minWidth: 'calc(1.35rem + 1mm)', height: 'calc(1.35rem + 2mm)', border: '1px solid #9ca3af', borderRadius: '4px', background: '#fff', fontWeight: 700, cursor: 'pointer' }}>-</button>
+                                                    <button type="button" onClick={shiftYAxisUp} style={{ minWidth: 'calc(1.35rem + 1mm)', height: 'calc(1.35rem + 2mm)', border: '1px solid #9ca3af', borderRadius: '4px', background: '#fff', fontWeight: 700, cursor: 'pointer' }}>{'↑'}</button>
+                                                    <button type="button" onClick={shiftYAxisDown} style={{ minWidth: 'calc(1.35rem + 1mm)', height: 'calc(1.35rem + 2mm)', border: '1px solid #9ca3af', borderRadius: '4px', background: '#fff', fontWeight: 700, cursor: 'pointer' }}>{'↓'}</button>
+                                                </div>
+                                            </div>
+                                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: isLaptopLayout ? '0.45rem' : '0.25rem', flexWrap: 'nowrap', flexShrink: 0 }}>
+                                            <button
+                                                type="button"
+                                                onClick={resetPlotZoom}
+                                                style={{
+                                                    height: '1.35rem',
+                                                    border: '1px solid #9ca3af',
+                                                    borderRadius: '6px',
+                                                    background: '#fff',
+                                                    color: '#111827',
+                                                    fontSize: '0.72rem',
+                                                    fontWeight: 700,
+                                                    cursor: 'pointer',
+                                                    padding: isLaptopLayout ? '0 0.4rem' : '0 0.3rem'
+                                                }}
+                                            >
+                                                pan-out
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setPlotDisplayMode((prev) => (prev === 'cumulative' ? 'per_event' : 'cumulative'))}
+                                                style={{
+                                                    height: '1.35rem',
+                                                    border: '1px solid #9ca3af',
+                                                    borderRadius: '6px',
+                                                    background: '#fff',
+                                                    color: '#111827',
+                                                    fontSize: '0.72rem',
+                                                    fontWeight: 700,
+                                                    cursor: 'pointer',
+                                                    padding: isLaptopLayout ? '0 0.45rem' : '0 0.32rem'
+                                                }}
+                                            >
+                                                {plotDisplayMode === 'cumulative' ? 'per event' : 'cumulative'}
+                                            </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })()
+                    )}
+                </div>
+            ) : (
+            <div ref={containerRef} className="results-table-container analysis-container">
+                <table className={query === 'Qseason' ? 'results-table compact analysis-table' : 'results-table analysis-table'}>
+                    <thead>
+                        <tr>
+                            <th
+                                colSpan={2}
+                                className="sticky-corner-wide"
+                                style={{ textAlign: 'center' }}
+                            >
+                                Participation
+                            </th>
+                            {eventDates.filter(Boolean).map(date => (
+                                <th key={date} className="sticky-header">{formatHeaderDate(date, query)}</th>
+                            ))}
+                        </tr>
+                        <tr>
+                            <th
+                                className="sticky-col sticky-corner-2-1"
+                                style={{ cursor: 'pointer' }}
+                                onClick={() => {
+                                    setSortBy('event');
+                                    setSortDir(sortBy === 'event' && sortDir === 'asc' ? 'desc' : 'asc');
+                                }}
+                            >
+                                Event {sortBy === 'event'
+                                    ? (sortDir === 'asc' ? '▲' : '▼')
+                                    : <span style={{ opacity: 0.3 }}>▲▼</span>}
+                            </th>
+                            <th
+                                className="sticky-col-2 sticky-corner-2-2"
+                                style={{ cursor: 'pointer' }}
+                                onClick={() => {
+                                    setSortBy('total');
+                                    setSortDir(sortBy === 'total' && sortDir === 'asc' ? 'desc' : 'asc');
+                                }}
+                            >
+                                {getSecondColumnHeaderLabel(analysisType, aggType)}
+                                {sortBy === 'total'
+                                    ? (sortDir === 'asc' ? '▲' : '▼')
+                                    : <span style={{ opacity: 0.3 }}>▲▼</span>}
+                            </th>
+                            {eventDates.map(date => {
+                                let lookup;
+                                if (aggType === 'growth') {
+                                    return <th key={date} className="sticky-header second-row"> </th>;
+                                }
+                                if (analysisType === 'Age') {
+                                    const _ageLookupAny: any = avgAgeLookup;
+                                    const hdrVal = getAggregatedValueForDate(_ageLookupAny, date, eventCodes, aggType, 1);
+                                    return (
+                                        <th key={date} className="sticky-header second-row">{hdrVal ? formatAge(hdrVal) : ''}</th>
+                                    );
+                                }
+                                if (analysisType === 'Times') {
+                                                        // header aggregates follow cellAgg selection
+                                                        if (cellAgg === 'lt12') {
+                                                            lookup = avgTimeLim12Lookup;
+                                                        } else if (cellAgg === 'lt5') {
+                                                            lookup = avgTimeLim5Lookup;
+                                                        } else {
+                                                            lookup = avgTimeLookup;
+                                                        }
+                                    // For Times, format as time (mm:ss)
+                                    const value = getAggregatedValueForDate(lookup, date, eventCodes, aggType, showOneDecimalForAnnual ? 1 : undefined);
+                                    return (
+                                        <th key={date} className="sticky-header second-row">
+                                            {typeof value === 'number' && value !== 0 ? formatAvgTime(value) : ''}
+                                        </th>
+                                    );
+                                } else {
+                                    // For Participants, Volunteers, etc.
+                                                            if (filterType === 'volunteers') {
+                                                                lookup = volunteers;
+                                                            } else if (filterType === 'tourist') {
+                                                                lookup = tourists;
+                                                            } else if (filterType === 'sTourist') {
+                                                                lookup = superTourists;
+                                                            } else if (filterType === 'regs') {
+                                                                lookup = regulars;
+                                                            } else if (filterType === 'clubs') {
+                                                                lookup = clubbers;
+                                                            } else if (filterType === 'pb') {
+                                                                lookup = pbCount;
+                                                            } else if (filterType === 'recentBest') {
+                                                                lookup = recentBest;
+                                                            } else if (filterType === 'returners') {
+                                                                lookup = returners;
+                                                            } else if (filterType === 'eligible_time') {
+                                                                lookup = eligibleTimes;
+                                                            } else if (filterType === 'unknown') {
+                                                                lookup = unknowns;
+                                    } else if (filterType === 'eventNumber') {
+                                        lookup = event_number;
+                                    } else if (filterType === '1time') {
+                                        lookup = firstTimers;
+                                    } else if (filterType === 'coeff' || filterType === 'coeff_event' || filterType === 'coeff_combined') {
+                                        lookup = (filterType === 'coeff_event') ? coeff_event : (filterType === 'coeff_combined' ? coeff_combined : coeff);
+                                    } else {
+                                        lookup = positionLookup;
+                                    }
+                                    // When viewing `#Actual Deviation` or `%Deviation` compute the header aggregate
+                                    // from the displayed diffs so the top row reflects the same numbers
+                                    // shown in the matrix cells.
+                                    if (analysisType === '#Actual Deviation') {
+                                        const diffs: number[] = [];
+                                        eventCodes.forEach(code => {
+                                            const v = getCellNumericValue({
+                                                analysisType,
+                                                avgType,
+                                                filterType,
+                                                date,
+                                                code,
+                                                avgTimeLim12Lookup,
+                                                avgTimeLim5Lookup,
+                                                avgTimeLookup,
+                                                volunteers,
+                                                tourists,
+                                                coeff,
+                                                positionLookup,
+                                                event_number,
+                                                cellAgg,
+                                                avgAgeLookup
+                                            });
+                                            const rowAvg = rowAverages[code];
+                                            if (typeof v === 'number' && isFinite(v) && typeof rowAvg === 'number' && isFinite(rowAvg)) {
+                                                const diff = Number(v) - Number(rowAvg);
+                                                if (isFinite(diff)) diffs.push(diff);
+                                            }
+                                        });
+                                        if (diffs.length === 0) return <th key={date} className="sticky-header second-row"> </th>;
+                                        let hdrVal: number | null = null;
+                                        if (aggType === 'avg' || aggType === 'average') hdrVal = diffs.reduce((a, b) => a + b, 0) / diffs.length;
+                                        else if (aggType === 'total') hdrVal = diffs.reduce((a, b) => a + b, 0);
+                                        else if (aggType === 'max') hdrVal = Math.max(...diffs);
+                                        else if (aggType === 'min') hdrVal = Math.min(...diffs);
+                                        else if (aggType === 'range') hdrVal = Math.max(...diffs) - Math.min(...diffs);
+                                        else {
+                                            // growth and other unsupported header-level aggregations
+                                            return <th key={date} className="sticky-header second-row"> </th>;
+                                        }
+                                        if (hdrVal === null || !isFinite(Number(hdrVal))) return <th key={date} className="sticky-header second-row"> </th>;
+                                        const isCoeff = String(filterType).startsWith('coeff');
+                                        let out: any;
+                                        let color: string = 'inherit';
+                                        if (isCoeff) {
+                                            out = `${formatSignedFixed(hdrVal * 100, 1)}%`;
+                                            color = Number(hdrVal) > 0 ? 'red' : (Number(hdrVal) < 0 ? 'blue' : 'inherit');
+                                        } else {
+                                            out = formatSigned(Math.round(hdrVal));
+                                            color = Number(hdrVal) > 0 ? 'blue' : (Number(hdrVal) < 0 ? 'red' : 'inherit');
+                                        }
+                                        return <th key={date} className="sticky-header second-row"><span style={{ color }}>{out}</span></th>;
+                                    }
+                                        if (analysisType === '%Deviation') {
+                                            const diffs: number[] = [];
+                                            eventCodes.forEach(code => {
+                                                const v = getCellNumericValue({
+                                                    analysisType,
+                                                    avgType,
+                                                    filterType,
+                                                    date,
+                                                    code,
+                                                    avgTimeLim12Lookup,
+                                                    avgTimeLim5Lookup,
+                                                    avgTimeLookup,
+                                                    volunteers,
+                                                    tourists,
+                                                    coeff,
+                                                    positionLookup,
+                                                    event_number,
+                                                    cellAgg,
+                                                    avgAgeLookup
+                                                });
+                                                const rowAvg = rowAverages[code];
+                                                if (typeof v === 'number' && isFinite(v) && typeof rowAvg === 'number' && isFinite(rowAvg) && Number(rowAvg) !== 0) {
+                                                                            // use rowAvg as denominator: (v/rowAvg - 1) * 100
+                                                                            const pct = Math.round(((Number(v) / Number(rowAvg)) - 1) * 100);
+                                                                            if (isFinite(pct)) diffs.push(pct);
+                                                                        }
+                                            });
+                                            if (diffs.length === 0) return <th key={date} className="sticky-header second-row"> </th>;
+                                            let hdrVal: number | null = null;
+                                            if (aggType === 'avg' || aggType === 'average') hdrVal = diffs.reduce((a, b) => a + b, 0) / diffs.length;
+                                            else if (aggType === 'total') hdrVal = diffs.reduce((a, b) => a + b, 0);
+                                            else if (aggType === 'max') hdrVal = Math.max(...diffs);
+                                            else if (aggType === 'min') hdrVal = Math.min(...diffs);
+                                            else if (aggType === 'range') hdrVal = Math.max(...diffs) - Math.min(...diffs);
+                                            else {
+                                                return <th key={date} className="sticky-header second-row"> </th>;
+                                            }
+                                            if (hdrVal === null || !isFinite(Number(hdrVal))) return <th key={date} className="sticky-header second-row"> </th>;
+                                            const isCoeff = String(filterType).startsWith('coeff');
+                                            let out: any;
+                                            let color: string = 'inherit';
+                                            // %Deviation is a percentage (no decimal places)
+                                            out = `${formatSigned(Math.round(hdrVal))}%`;
+                                            color = Number(hdrVal) > 0 ? (isCoeff ? 'red' : 'blue') : (Number(hdrVal) < 0 ? (isCoeff ? 'blue' : 'red') : 'inherit');
+                                            return <th key={date} className="sticky-header second-row"><span style={{ color }}>{out}</span></th>;
+                                        }
+                                    if (aggType === 'growth') {
+                                        return <th key={date} className="sticky-header second-row"> </th>;
+                                    }
+                                    // No special-case here: fall through to generic aggregation
+                                    // which will use the appropriate lookup (coeff/coeff_event/coeff_combined)
+                                    // and formatting helpers for header cells.
+
+                                    let value = getAggregatedValueForDate(lookup, date, eventCodes, aggType, (showOneDecimalForAnnual && (lookup === positionLookup || filterType === 'sTourist')) ? 1 : undefined);
+                                    // For participants view (non-percent) ensure header aggregates are integers
+                                    // but do NOT round coeff-style filters (they are coefficients ≈1.00)
+                                    if (String(analysisType).toLowerCase() === 'participants' && !showOneDecimalForAnnual) {
+                                        if (typeof value === 'number' && !String(filterType).startsWith('coeff')) value = Math.round(value);
+                                    }
+                                    // For %Participants mode compute per-event percentages for this date then aggregate those
+                                    if (analysisType === '%Participants' || analysisType === '%Total') {
+                                        const pcts: number[] = [];
+                                        eventCodes.forEach(code => {
+                                            // Skip dates where there was no event for this code in granular views
+                                            if (!['Annual', 'Mseason', 'Qseason'].includes(query)) {
+                                                const en = event_number[date]?.[code];
+                                                if (typeof en !== 'number') return;
+                                            }
+                                            let denom = analysisType === '%Total' ? columnTotals[date] : positionLookup[date]?.[code];
+                                            if (analysisType === '%Total' && String(filterType).startsWith('coeff')) {
+                                                denom = eventCodes.reduce((acc, cc) => {
+                                                    const v = getCellNumericValue({
+                                                        analysisType,
+                                                        avgType,
+                                                        filterType,
+                                                        date,
+                                                        code: cc,
+                                                        avgTimeLim12Lookup,
+                                                        avgTimeLim5Lookup,
+                                                        avgTimeLookup,
+                                                        volunteers,
+                                                        tourists,
+                                                        coeff,
+                                                        positionLookup,
+                                                        event_number,
+                                                        cellAgg
+                                                    });
+                                                    return acc + (typeof v === 'number' ? Number(v) : 0);
+                                                }, 0);
+                                            }
+                                            if (!denom || denom === 0) return;
+                                            // Do not coerce missing numerators to 0: treat NULL/blank as absent and skip
+                                            let rawNumer: any;
+                                            if (filterType === 'volunteers') rawNumer = volunteers[date]?.[code];
+                                            else if (filterType === 'tourist') rawNumer = tourists[date]?.[code];
+                                            else if (filterType === 'sTourist') rawNumer = superTourists[date]?.[code];
+                                            else if (filterType === 'regs') rawNumer = regulars[date]?.[code];
+                                            else if (filterType === '1time') rawNumer = firstTimers[date]?.[code];
+                                            else if (filterType === 'clubs') rawNumer = clubbers[date]?.[code];
+                                            else if (filterType === 'pb') rawNumer = pbCount[date]?.[code];
+                                            else if (filterType === 'recentBest') rawNumer = recentBest[date]?.[code];
+                                            else if (filterType === 'returners') rawNumer = returners[date]?.[code];
+                                            else if (filterType === 'eligible_time') rawNumer = eligibleTimes[date]?.[code];
+                                            else if (filterType === 'unknown') rawNumer = unknowns[date]?.[code];
+                                            else if (filterType === 'eventNumber') rawNumer = event_number[date]?.[code];
+                                            else if (filterType === 'all') rawNumer = positionLookup[date]?.[code];
+                                            else if (filterType === 'coeff') rawNumer = (coeff[date]?.[code] !== undefined && coeff[date]?.[code] !== null) ? (Number(coeff[date][code]) - 1) : null;
+                                            else if (filterType === 'coeff_event') rawNumer = (coeff_event[date]?.[code] !== undefined && coeff_event[date]?.[code] !== null) ? (Number(coeff_event[date][code]) - 1) : null;
+                                            else if (filterType === 'coeff_combined') rawNumer = coeff_combined[date]?.[code];
+                                            else rawNumer = positionLookup[date]?.[code];
+                                            // Skip NULL/undefined/empty-string numerators so missing cells are ignored
+                                            if (rawNumer === null || rawNumer === undefined || rawNumer === '') return;
+                                            const numerN = Number(rawNumer);
+                                            if (!isFinite(numerN)) return;
+                                            const pct = (numerN / Number(denom)) * 100;
+                                            if (isFinite(pct)) pcts.push(pct);
+                                        });
+                                        if (pcts.length === 0) {
+                                            return <th key={date} className="sticky-header second-row"> </th>;
+                                        }
+                                        if (aggType === 'avg' || aggType === 'average') {
+                                            const s = pcts.reduce((a, b) => a + b, 0) / pcts.length;
+                                            if (analysisType === '%Total') {
+                                                const sig2 = roundToSignificant(s, 2);
+                                                return <th key={date} className="sticky-header second-row">{formatPercent(Number(sig2.toFixed(1)), 1)}</th>;
+                                            }
+                                            const outVal = (percentOneDecimalFilters.includes(filterType) || showOneDecimalForAnnual) ? roundTo1(s, 3) : Math.round(s);
+                                            return <th key={date} className="sticky-header second-row">{formatPercent((percentOneDecimalFilters.includes(filterType) ? roundTo1(outVal, 3) : outVal), (percentOneDecimalFilters.includes(filterType) || showOneDecimalForAnnual) ? 1 : 0)}</th>;
+                                        }
+                                        if (aggType === 'total') {
+                                            const totalPct = pcts.reduce((a, b) => a + b, 0);
+                                            if (analysisType === '%Total') {
+                                                const sig2 = roundToSignificant(totalPct, 2);
+                                                return <th key={date} className="sticky-header second-row">{formatPercent(Number(sig2.toFixed(1)), 1)}</th>;
+                                            }
+                                            const outVal = (percentOneDecimalFilters.includes(filterType) || showOneDecimalForAnnual) ? roundTo1(totalPct, 3) : Math.round(totalPct);
+                                            return <th key={date} className="sticky-header second-row">{formatPercent((percentOneDecimalFilters.includes(filterType) ? roundTo1(outVal, 3) : outVal), (percentOneDecimalFilters.includes(filterType) || showOneDecimalForAnnual) ? 1 : 0)}</th>;
+                                        }
+                                        if (aggType === 'max') {
+                                            const m = Math.max(...pcts);
+                                            if (analysisType === '%Total') {
+                                                const sig2 = roundToSignificant(m, 2);
+                                                return <th key={date} className="sticky-header second-row">{formatPercent(Number(sig2.toFixed(1)), 1)}</th>;
+                                            }
+                                            const outVal = (percentOneDecimalFilters.includes(filterType) || showOneDecimalForAnnual) ? roundTo1(m, 3) : Math.round(m);
+                                            return <th key={date} className="sticky-header second-row">{formatPercent((percentOneDecimalFilters.includes(filterType) ? roundTo1(outVal, 3) : outVal), (percentOneDecimalFilters.includes(filterType) || showOneDecimalForAnnual) ? 1 : 0)}</th>;
+                                        }
+                                        if (aggType === 'min') {
+                                            const m = Math.min(...pcts);
+                                            if (analysisType === '%Total') {
+                                                const sig2 = roundToSignificant(m, 2);
+                                                return <th key={date} className="sticky-header second-row">{formatPercent(Number(sig2.toFixed(1)), 1)}</th>;
+                                            }
+                                            const outVal = (percentOneDecimalFilters.includes(filterType) || showOneDecimalForAnnual) ? roundTo1(m, 3) : Math.round(m);
+                                            return <th key={date} className="sticky-header second-row">{formatPercent((percentOneDecimalFilters.includes(filterType) ? roundTo1(outVal, 3) : outVal), (percentOneDecimalFilters.includes(filterType) || showOneDecimalForAnnual) ? 1 : 0)}</th>;
+                                        }
+                                        if (aggType === 'range') {
+                                            const r = Math.max(...pcts) - Math.min(...pcts);
+                                            if (analysisType === '%Total') {
+                                                const sig2 = roundToSignificant(r, 2);
+                                                return <th key={date} className="sticky-header second-row">{formatPercent(Number(sig2.toFixed(1)), 1)}</th>;
+                                            }
+                                            const outVal = (percentOneDecimalFilters.includes(filterType) || showOneDecimalForAnnual) ? roundTo1(r, 3) : Math.round(r);
+                                            return <th key={date} className="sticky-header second-row">{formatPercent((percentOneDecimalFilters.includes(filterType) ? roundTo1(outVal, 3) : outVal), (percentOneDecimalFilters.includes(filterType) || showOneDecimalForAnnual) ? 1 : 0)}</th>;
+                                        }
+                                        // growth not shown at header-level for percent mode
+                                        return <th key={date} className="sticky-header second-row"> </th>;
+                                    }
+                                    // For Participants and participant-like filters, round aggregates for these agg types
+                                    const participantLike = analysisType === 'participants' && ['all', 'tourist', 'sTourist', 'eventNumber', 'volunteers', 'regs', '1time', 'clubs', 'pb', 'recentBest', 'returners', 'eligible_time', 'unknown'].includes(filterType);
+                                    const roundAggs = ['total', 'max', 'min', 'range'];
+                                    // Compute displayValue: for sTourist or Annual-seasonal participants show 1 decimal
+                                    let displayValue: any;
+                                    if (participantLike && (filterType !== 'coeff' && filterType !== 'coeff_event' && filterType !== 'coeff_combined')) {
+                                        if (showOneDecimalForAnnual) {
+                                            // only the special annual-season case shows a rounded 1-decimal value
+                                            displayValue = Number(roundTo1(Number(value || 0), 3)).toFixed(1);
+                                        } else {
+                                            // for participants view show integer aggregates (same behaviour for pb/recentBest/regs/returners/unknown)
+                                            displayValue = Math.round(Number(value || 0));
+                                        }
+                                    } else {
+                                        displayValue = value;
+                                    }
+                                    return (
+                                        <th key={date} className="sticky-header second-row">
+                                            {filterType === 'coeff_combined' ? formatCombined(value) : (filterType === 'coeff' || filterType === 'coeff_event' ? formatCoeff(value) : displayValue)}
+                                        </th>
+                                    );
+                                }
+                            })}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {sortedEventCodes.map(code => (
+                            <tr key={code}>
+                                <td
+                                    className="sticky-col"
+                                    style={{ cursor: 'default' }}
+                                >
+                                    <button
+                                        type="button"
+                                        style={{
+                                            border: 'none',
+                                            background: 'none',
+                                            color: '#0a5ad1',
+                                            padding: 0,
+                                            margin: 0,
+                                            font: 'inherit',
+                                            cursor: 'pointer',
+                                            textAlign: 'left',
+                                            textDecoration: 'underline'
+                                        }}
+                                        onClick={() => {
+                                            const eventName = String(results.find(r => r.event_code === code)?.event_name || code);
+                                            const params = new URLSearchParams();
+                                            params.set('event_code', String(code));
+                                            params.set('event_name', eventName);
+                                            navigateWithNavStack(navigate, location, `/courses?${params.toString()}`, {
+                                                state: {
+                                                    eventCode: String(code),
+                                                    eventName,
+                                                    from: 'results',
+                                                    returnTo: {
+                                                        pathname: location.pathname,
+                                                        search: location.search
+                                                    }
+                                                }
+                                            });
+                                        }}
+                                        title="Open course"
+                                        aria-label={`Open course ${String(results.find(r => r.event_code === code)?.event_name || code)}`}
+                                    >
+                                        {results.find(r => r.event_code === code)?.event_name || code}
+                                    </button>
+                                </td>
+                                <td className="sticky-col-2">
+                                    {(() => {
+                                        // compute left aggregate display
+                                        if (analysisType === '%Participants' || analysisType === '%Total') {
+                                            if (aggType === 'growth') return formatSignedFixed(Number(eventTotals[code]), 2);
+                                            // For %Total we want two significant figures and 1 decimal place
+                                            if (analysisType === '%Total') {
+                                                const raw = Number(eventTotals[code]);
+                                                if (!isFinite(raw)) return '';
+                                                    // When Agg = 'total' we want the left aggregate to be the sum
+                                                    // of the per-cell percentages and displayed with no decimals.
+                                                    if (aggType === 'total') {
+                                                        return formatPercent(raw, 0);
+                                                    }
+                                                    // For coefficient filters, keep two decimal places; otherwise use 1 decimal
+                                                    if (String(filterType).startsWith('coeff')) {
+                                                        return formatPercent(roundTo1(raw, 4), 1);
+                                                    }
+                                                    const sig2 = roundToSignificant(raw, 2);
+                                                    return formatPercent(Number(sig2.toFixed(1)), 1);
+                                            }
+                                            return formatPercent((percentOneDecimalFilters.includes(filterType) ? roundTo1(eventTotals[code], 3) : eventTotals[code]), (percentOneDecimalFilters.includes(filterType) || showOneDecimalForAnnual) ? 1 : 0);
+                                        }
+                                        if (aggType === 'growth') return formatSignedFixed(Number(eventTotals[code]), 2);
+                                        if (filterType === 'coeff_combined') return formatCombined(eventTotals[code]);
+                                        if (filterType === 'coeff' || filterType === 'coeff_event') return formatCoeff(eventTotals[code]);
+                                        if (analysisType === 'Times') return formatAvgTime(eventTotals[code]);
+                                        if (analysisType === 'Age') return formatAge(eventTotals[code]);
+                                        // participants numeric aggregates
+                                        // For participants when the special one-decimal annual view is active,
+                                        // always show a rounded 1-decimal value (significant decimal), except for growth/Times/Age/coeff handled above.
+                                        if (analysisType === 'participants' && showOneDecimalForAnnual) {
+                                            return Number(roundTo1(Number(eventTotals[code] || 0), 3)).toFixed(1);
+                                        }
+                                        if (analysisType === 'participants' && ['total', 'max', 'min', 'range'].includes(aggType)) {
+                                            return Math.round(Number(eventTotals[code] || 0));
+                                        }
+                                        return eventTotals[code];
+                                    })()}
+                                </td>
+                                {eventDates.map(date => {
+                                    // compute numeric cell value for comparison/highlighting
+                                    const numeric = getCellNumericValue({
+                                        analysisType,
+                                        avgType,
+                                        filterType,
+                                        date,
+                                        code,
+                                        avgTimeLim12Lookup,
+                                        avgTimeLim5Lookup,
+                                        avgTimeLookup,
+                                        volunteers,
+                                        tourists,
+                                        coeff,
+                                        positionLookup,
+                                        event_number,
+                                        avgAgeLookup,
+                                        cellAgg
+                                    });
+                                    // compare numeric values; for sTourist percent mode compare formatted values (1dp) to avoid float mismatches
+                                    let isEqual = false;
+                                    if (numeric !== null && typeof eventTotals[code] === 'number' && aggType !== 'growth') {
+                                        // Special-case comparison for #Actual Deviation: compare the
+                                        // cell's displayed diff (cell - rowAvg) to the row aggregate
+                                        // so highlighting (max/min) matches what's shown to the user.
+                                        if (analysisType === '#Actual Deviation' || analysisType === '%Deviation') {
+                                            const rowAvg = rowAverages[code];
+                                            if (typeof numeric === 'number' && isFinite(numeric) && typeof rowAvg === 'number' && isFinite(rowAvg)) {
+                                                let cellDiff: number | null = null;
+                                                if (analysisType === '#Actual Deviation') {
+                                                    if (String(filterType).startsWith('coeff')) {
+                                                        cellDiff = Number(((Number(numeric) - Number(rowAvg)) * 100).toFixed(1));
+                                                    } else {
+                                                        cellDiff = Math.round(Number(numeric) - Number(rowAvg));
+                                                    }
+                                                } else {
+                                                    // %Deviation: percent relative to row average: (numeric/rowAvg - 1) * 100
+                                                    if (Number(rowAvg) === 0) {
+                                                        cellDiff = null;
+                                                    } else {
+                                                        cellDiff = Math.round(((Number(numeric) / Number(rowAvg)) - 1) * 100);
+                                                    }
+                                                }
+                                                if (cellDiff === null) {
+                                                    isEqual = false;
+                                                } else {
+                                                    let aggVal: number | null = null;
+                                                    if (aggType === 'max') aggVal = (rowMaxDiffs && Object.prototype.hasOwnProperty.call(rowMaxDiffs, code)) ? rowMaxDiffs[code] : null;
+                                                    else if (aggType === 'min') aggVal = (rowMinDiffs && Object.prototype.hasOwnProperty.call(rowMinDiffs, code)) ? rowMinDiffs[code] : (typeof eventTotals[code] === 'number' ? Math.round(Number(eventTotals[code])) : null);
+                                                    if (aggVal === null || aggVal === undefined) {
+                                                        isEqual = false;
+                                                    } else {
+                                                        isEqual = Math.abs(Number(cellDiff) - Number(aggVal)) < 0.0001;
+                                                    }
+                                                }
+                                            } else {
+                                                isEqual = false;
+                                            }
+                                        } else if (analysisType === '%Participants' && percentOneDecimalFilters.includes(filterType)) {
+                                            // compare as displayed with 1 decimal
+                                            const a = formatPercent((percentOneDecimalFilters.includes(filterType) ? roundTo1(numeric, 3) : numeric), 1);
+                                            const b = formatPercent((percentOneDecimalFilters.includes(filterType) ? roundTo1(eventTotals[code], 3) : eventTotals[code]), 1);
+                                            isEqual = a === b;
+                                        } else if (analysisType === '%Total') {
+                                            // compute per-cell percent (numer / column total) and compare using appropriate precision
+                                            // Compute column denominator from the same numeric source used for cells
+                                            const computedDenom = eventCodes.reduce((acc, cc) => {
+                                                const v = getCellNumericValue({
+                                                    analysisType,
+                                                    avgType,
+                                                    filterType,
+                                                    date,
+                                                    code: cc,
+                                                    avgTimeLim12Lookup,
+                                                    avgTimeLim5Lookup,
+                                                    avgTimeLookup,
+                                                    volunteers,
+                                                    tourists,
+                                                    coeff,
+                                                    positionLookup,
+                                                    event_number,
+                                                    cellAgg
+                                                });
+                                                return acc + (typeof v === 'number' ? Number(v) : 0);
+                                            }, 0);
+                                            if (computedDenom && typeof numeric === 'number') {
+                                                const pct = (Number(numeric) / Number(computedDenom)) * 100;
+                                                if (String(filterType).startsWith('coeff')) {
+                                                    const a = formatPercent(roundTo1(pct, 4), 1);
+                                                    const b = formatPercent(roundTo1(Number(eventTotals[code]), 4), 1);
+                                                    isEqual = a === b;
+                                                } else {
+                                                    const a = formatPercent((percentOneDecimalFilters.includes(filterType) ? roundTo1(pct, 3) : pct), 1);
+                                                    const b = formatPercent((percentOneDecimalFilters.includes(filterType) ? roundTo1(eventTotals[code], 3) : eventTotals[code]), 1);
+                                                    isEqual = a === b;
+                                                }
+                                            } else {
+                                                isEqual = false;
+                                            }
+                                        } else {
+                                            isEqual = Math.abs(numeric - eventTotals[code]) < 0.0001;
+                                        }
+                                    }
+                                    const cellStyle = isEqual
+                                        ? (aggType === 'max' ? { backgroundColor: '#d4f5d4' }
+                                            : aggType === 'min' ? { backgroundColor: '#ffdce6' }
+                                            : undefined)
+                                        : undefined;
+                                    return (
+                                        <td
+                                            key={date}
+                                            style={{ ...(cellStyle || {}), cursor: 'pointer' }}
+                                            tabIndex={0}
+                                            onClick={() => {
+                                                try {
+                                                    const v = getCellValue({
+                                                        analysisType,
+                                                        avgType,
+                                                        filterType,
+                                                        date,
+                                                        code,
+                                                        avgTimeLim12Lookup,
+                                                        avgTimeLim5Lookup,
+                                                        avgTimeLookup,
+                                                        volunteers,
+                                                        tourists,
+                                                        coeff,
+                                                        event_number,
+                                                        positionLookup,
+                                                        formatAvgTime,
+                                                        cellAgg,
+                                                        avgAgeLookup
+                                                    });
+                                                    if (v !== '' && v !== null && typeof v !== 'undefined') handleCellClick(date, code);
+                                                } catch (e) {
+                                                    // ignore
+                                                }
+                                            }}
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter') {
+                                                    try {
+                                                        const v = getCellValue({
+                                                            analysisType,
+                                                            avgType,
+                                                            filterType,
+                                                            date,
+                                                            code,
+                                                            avgTimeLim12Lookup,
+                                                            avgTimeLim5Lookup,
+                                                            avgTimeLookup,
+                                                            volunteers,
+                                                            tourists,
+                                                            coeff,
+                                                            event_number,
+                                                            positionLookup,
+                                                            formatAvgTime,
+                                                            cellAgg,
+                                                            avgAgeLookup
+                                                        });
+                                                        if (v !== '' && v !== null && typeof v !== 'undefined') handleCellClick(date, code);
+                                                    } catch (e) {
+                                                        // ignore
+                                                    }
+                                                }
+                                            }}
+                                        >
+                                            {(() => {
+                                                const participantLike = analysisType === 'participants' && ['all', 'tourist', 'sTourist', 'eventNumber', 'volunteers', 'regs'].includes(filterType);
+                                                let val: any = '';
+                                                if (filterType === 'eventNumber') {
+                                                    // For per-code cells show the raw event_number for that date/code
+                                                    // If missing (e.g., Annual view uses year keys) fall back to the aggregated cell value
+                                                    const raw = event_number[date]?.[code];
+                                                    if (typeof raw === 'number' && raw !== 0 && raw <= 10000) {
+                                                        val = raw;
+                                                    } else {
+                                                        // Only attempt fallbacks for the Annual view; avoid polluting Recent/other views
+                                                        if (query === 'Annual') {
+                                                            const fallback = getCellValue({
+                                                                analysisType,
+                                                                avgType,
+                                                                filterType,
+                                                                date,
+                                                                code,
+                                                                avgTimeLim12Lookup,
+                                                                avgTimeLim5Lookup,
+                                                                avgTimeLookup,
+                                                                volunteers,
+                                                                tourists,
+                                                                coeff,
+                                                                positionLookup,
+                                                                event_number,
+                                                                formatAvgTime,
+                                                                cellAgg,
+                                                                avgAgeLookup
+                                                            });
+                                                            if (fallback !== '' && fallback !== null && typeof fallback !== 'undefined') {
+                                                                val = fallback;
+                                                            } else {
+                                                                const aggRow = results.find(r => String(r.event_code) === String(code) && String(r.event_date) === String(date));
+                                                                const aggVal = aggRow ? aggRow.event_number : null;
+                                                                if (typeof aggVal === 'number' && !isNaN(aggVal) && aggVal !== 0) val = aggVal;
+                                                            }
+                                                        }
+                                                    }
+                                                } else {
+                                                    val = getCellValue({
+                                                        analysisType,
+                                                        avgType,
+                                                        filterType,
+                                                        date,
+                                                        code,
+                                                        avgTimeLim12Lookup,
+                                                        avgTimeLim5Lookup,
+                                                        avgTimeLookup,
+                                                        volunteers,
+                                                        tourists,
+                                                        coeff,
+                                                        event_number,
+                                                        positionLookup,
+                                                        formatAvgTime,
+                                                        cellAgg,
+                                                        avgAgeLookup
+                                                    });
+                                                }
+                                                // #Actual Deviation: show cell value minus row-average (integer output)
+                                                if (analysisType === '#Actual Deviation') {
+                                                    const rowAvg = rowAverages[code];
+                                                    if (numeric === null || rowAvg === 0 || !isFinite(Number(rowAvg))) return '';
+                                                    const diff = Number(numeric) - Number(rowAvg);
+                                                    if (!isFinite(diff)) return '';
+                                                    const isCoeff = String(filterType).startsWith('coeff');
+                                                    const color = isCoeff ? (diff > 0 ? 'red' : (diff < 0 ? 'blue' : 'inherit')) : (diff > 0 ? 'blue' : (diff < 0 ? 'red' : 'inherit'));
+                                                    // For coefficient-style filters show percentage-points with one decimal and inverted colour
+                                                    if (isCoeff) {
+                                                        const txt = `${formatSignedFixed(diff * 100, 1)}%`;
+                                                        return <span style={{ color }}>{txt}</span>;
+                                                    }
+                                                    // Always show integer difference (no decimal points) for non-coeff
+                                                    const txt = formatSigned(Math.round(diff));
+                                                    return <span style={{ color }}>{txt}</span>;
+                                                }
+                                                // %Deviation: show (cell - rowAvg) / cell as percent (no decimals)
+                                                if (analysisType === '%Deviation') {
+                                                    const rowAvg = rowAverages[code];
+                                                    if (numeric === null || !isFinite(Number(rowAvg))) return '';
+                                                    const raw = Number(numeric) - Number(rowAvg);
+                                                    if (!isFinite(raw)) return '';
+                                                    // denominator is rowAvg as requested
+                                                    if (Number(rowAvg) === 0) return '';
+                                                    const pct = Math.round(((Number(numeric) / Number(rowAvg)) - 1) * 100);
+                                                    const isCoeff = String(filterType).startsWith('coeff');
+                                                    const color = pct > 0 ? (isCoeff ? 'red' : 'blue') : (pct < 0 ? (isCoeff ? 'blue' : 'red') : 'inherit');
+                                                    const txt = `${formatSigned(Math.round(pct))}%`;
+                                                    // debug logging removed
+                                                    return <span style={{ color }}>{txt}</span>;
+                                                }
+                                                // If this is the Age analysis, prefer avgAgeLookup and format with two decimals
+                                                if (analysisType === 'Age') {
+                                                    // Try avgAgeLookup first (per-event precomputed average)
+                                                    const ageVal = (avgAgeLookup && avgAgeLookup[date]) ? avgAgeLookup[date][code] : null;
+                                                    if (typeof ageVal === 'number') return formatAge(ageVal);
+                                                    // Fallback to whatever val contains (might be numeric)
+                                                    if (typeof val === 'number') return formatAge(val);
+                                                    return '';
+                                                }
+                                                // If this is the new %Total analysis, show each cell as percent of the column total
+                                                if (analysisType === '%Total') {
+                                                        // use the precomputed numeric 'numeric' where available, otherwise try val
+                                                        let numer: number | null = null;
+                                                        if (typeof numeric === 'number') numer = Number(numeric);
+                                                        else if (typeof val === 'number') numer = Number(val);
+                                                        // Compute column denominator from same numeric source used for cells
+                                                        const computedDenom = eventCodes.reduce((acc, cc) => {
+                                                            const v = getCellNumericValue({
+                                                                analysisType,
+                                                                avgType,
+                                                                filterType,
+                                                                date,
+                                                                code: cc,
+                                                                avgTimeLim12Lookup,
+                                                                avgTimeLim5Lookup,
+                                                                avgTimeLookup,
+                                                                volunteers,
+                                                                tourists,
+                                                                coeff,
+                                                                positionLookup,
+                                                                event_number,
+                                                                cellAgg
+                                                            });
+                                                            return acc + (typeof v === 'number' ? Number(v) : 0);
+                                                        }, 0);
+                                                        if (!computedDenom || numer === null) return '';
+                                                        const pct = (Number(numer) / Number(computedDenom)) * 100;
+                                                        // For coefficient-style filters, show one decimal
+                                                        if (String(filterType).startsWith('coeff')) {
+                                                            return formatPercent(roundTo1(pct, 4), 1);
+                                                        }
+                                                        return percentOneDecimalFilters.includes(filterType) ? formatPercent(roundTo1(pct, 3), 1) : formatPercent(pct, 1);
+                                                }
+                                                // If numeric and participant-like, round to integer for display
+                                                if (participantLike && typeof val === 'number' && !isNaN(val)) {
+                                                    if (showOneDecimalCells) {
+                                                        const r1 = roundTo1(val);
+                                                        // Only bold milestone numbers when filtering by Event Number (use rounded integer check)
+                                                        if (String(filterType) === 'eventNumber' && eventMilestones.has(Math.round(r1))) return <span style={{ fontWeight: 'bold' }}>{r1.toFixed(1)}</span>;
+                                                        return r1.toFixed(1);
+                                                    }
+                                                    const rounded = Math.round(val);
+                                                    // Only bold milestone numbers when filtering by Event Number
+                                                    if (String(filterType) === 'eventNumber' && eventMilestones.has(rounded)) return <span style={{ fontWeight: 'bold' }}>{rounded}</span>;
+                                                    return rounded;
+                                                }
+                                                // If val is still numeric but not participant-like, return as-is
+                                                return val ?? '';
+                                            })()}
+                                        </td>
+                                    );
+                                })}
+
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+            )}
+        </div>
+    );
+};
+
+export default ResultsPageComponent;

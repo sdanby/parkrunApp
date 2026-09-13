@@ -1,0 +1,1524 @@
+/* Results table layout and column width constraints */
+
+:root {
+--col1-width: 4cm;
+--col2-width: 2.5cm;
+}
+
+/* Races-specific overrides for first two columns */
+.races-table {
+  --col1-width: 1.39cm;
+  --col2-width: 4cm;
+}
+
+.races-athlete-button {
+  border: none;
+  background: none;
+  color: #0a5ad1;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+.races-athlete-button:disabled {
+  color: #777;
+  cursor: default;
+}
+.races-athlete-button:not(:disabled):hover,
+.races-athlete-button:not(:disabled):focus-visible {
+  text-decoration: underline;
+}
+
+.athletes-club-link {
+  border: none;
+  background: none;
+  color: #0a5ad1;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+  text-decoration: underline;
+}
+
+.athletes-event-link {
+  border: none;
+  background: none;
+  color: #0a5ad1;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+  text-decoration: underline;
+}
+
+
+
+/* Small back button shown on the Races page header */
+.races-back-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  margin-right: 0.6rem;
+  border: 1px solid rgba(0,0,0,1);
+  background: white;
+  color: #333;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 1.05rem;
+  line-height: 1;
+  font-weight: 1000;
+}
+.races-back-btn:hover { background: #f4f6f8; }
+.races-back-btn:active { transform: translateX(-1px); }
+
+.races-output-box {
+  margin-top: -1cm;
+  margin-bottom: 0.1cm;
+  margin-left: 0.3cm;
+  margin-right: auto;
+  width: min(740px, calc(100% - 0.5rem));
+  position: relative;
+  z-index: 0;
+  pointer-events: none;
+}
+
+@media (max-width: 640px) {
+  .races-output-box {
+    margin-top: -1.35cm;
+    width: calc(100% - 2.6rem);
+  }
+}
+
+.results-table th {
+  background-color: rgba(224,224,224,0.98) !important;
+}
+
+/* Light blue background for All Time Adjustments headers */
+.sticky-header.adjustment-header {
+  background-color: #add8e6 !important; /* light blue */
+}
+
+.results-table th.event-rank-header,
+.athlete-runs-table th.event-rank-header {
+  background-color: #d9f99d !important;
+}
+
+/* apply to both headers and cells for column 1/2 */
+.results-table th:first-child,
+.results-table td:first-child {
+box-sizing: border-box;
+min-width: var(--col1-width) !important;
+max-width: var(--col1-width) !important;
+width: var(--col1-width) !important;
+white-space: nowrap;
+overflow: hidden;
+}
+
+.results-table th:nth-child(2),
+.results-table td:nth-child(2) {
+box-sizing: border-box;
+min-width: var(--col2-width) !important;
+max-width: var(--col2-width) !important;
+width: var(--col2-width) !important;
+white-space: nowrap;
+overflow: hidden;
+}
+
+
+/* make sticky offsets match variable widths */
+.sticky-col { left: 0 !important; }
+.sticky-col-2, .sticky-corner-2-2 { left: var(--col1-width) !important; }
+
+/* make sticky offsets match variable widths */
+.sticky-col { left: 0 !important; }
+.sticky-col-2, .sticky-corner-2-2 { left: var(--col1-width) !important; }
+
+.results-table {
+  width: auto !important; /* let table size to its content, preventing squeeze */
+  border-collapse: collapse;
+  table-layout: fixed; /* keep columns to specified widths */
+  font-size: 0.9rem;
+  text-align: left; /* left justify the table content */
+}
+
+.results-table th,
+.results-table td {
+  padding: 0.25rem 0.4rem;
+  border: 1px solid #eee;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 3.5cm; /* allow a bit more room by default */
+  box-sizing: border-box;
+}
+
+/* Top-left spanning header should be sum of first two columns */
+.sticky-corner-wide {
+  min-width: 5cm !important;
+  max-width: 5cm !important;
+  width: 5cm !important;
+}
+
+/* First sticky column (event name) fixed to 4cm */
+.help-tooltip .help-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #0077cc;
+  color: #fff;
+  font-weight: bold;
+  cursor: pointer;
+  font-size: 0.9em;
+}
+
+.help-tooltip .help-trigger.help-trigger-label {
+  width: auto;
+  height: auto;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #eaf5ff 0%, #cfe8ff 100%);
+  color: #114a9a;
+  border: 1px solid #9ec5ee;
+  padding: 3px 8px;
+  gap: 0;
+  font-weight: 400;
+  white-space: nowrap;
+  box-shadow: inset 0 1px 0 #ffffff, 0 1px 0 rgba(0, 0, 0, 0.08);
+}
+
+.help-tooltip .help-trigger.help-trigger-label .help-trigger-text {
+  font-size: 0.86em;
+  line-height: 1;
+  white-space: nowrap;
+  font-weight: 400;
+}
+
+.help-tooltip .help-trigger.help-trigger-label .help-trigger-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: #0f3b66;
+  color: #fff;
+  font-size: 0.72em;
+  font-weight: 700;
+}
+
+.help-tooltip .help-trigger.help-trigger-label:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+.help-tooltip .help-content {
+  visibility: hidden;
+  width: 320px;
+  max-width: 90vw;
+  background-color: #333;
+  color: #fff;
+  text-align: left;
+  border-radius: 8px;
+  padding: 12px;
+  position: absolute; /* will be overridden when visible */
+  z-index: 10000;
+  top: 36px; /* fallback anchored position */
+  left: 0;
+  transform: translateY(0);
+  opacity: 0;
+  transition: opacity 0.15s ease-in-out, visibility 0.15s, transform 0.15s;
+  font-size: 0.92em;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.35);
+}
+/* When visible (hover or pinned), place help box at 20%/20% of viewport */
+.help-tooltip.open .help-content,
+.help-tooltip:hover .help-content {
+  visibility: visible;
+  opacity: 0.98;
+  position: fixed !important;
+  top: 20vh !important;
+  left: 20vw !important;
+  transform: none !important;
+}
+
+/* Improve readability: spacing and highlight keys */
+.help-content .help-item {
+  margin-bottom: 10px;
+  line-height: 1.25;
+}
+.help-content .help-key {
+  color: #4CAF50; /* green */
+  font-weight: 600;
+  margin-right: 6px;
+}
+.help-tooltip.open .help-content {
+  /* Place help box at 20% from left and 20% from top of viewport */
+  position: fixed !important;
+  top: 20vh !important;
+  left: 20vw !important;
+  transform: none !important;
+}
+.help-content .close-x {
+  position: absolute;
+  right: 8px;
+  top: 6px;
+  cursor: pointer;
+  color: #ddd;
+  font-weight: bold;
+}
+.sticky-col,
+.sticky-corner-2-1 {
+  position: sticky;
+  left: 0;
+  z-index: 60; /* raised so sticky first-column content stays above header rows */
+  min-width: 4cm !important;
+  max-width: 4cm !important;
+  width: 4cm !important;
+  background: #fff;
+}
+
+/* Second sticky column (totals) fixed to 2.5cm */
+.sticky-col-2,
+.sticky-corner-2-2 {
+  position: sticky;
+  left: 4cm; /* positioned after first column */
+  z-index: 55; /* slightly below first sticky col but above header dates */
+  min-width: 2.5cm !important;
+  max-width: 2.5cm !important;
+  width: 2.5cm !important;
+  background: #fff;
+}
+
+/* Date/header columns capped to 2cm */
+.sticky-header,
+.sticky-header.second-row {
+  min-width: 2cm;
+  max-width: 2cm;
+  width: 2cm;
+}
+
+/* Strongly enforce first and second column widths across both header and body cells */
+.results-table th:first-child,
+.results-table td:first-child {
+  min-width: 4cm !important;
+  max-width: 4cm !important;
+  width: 4cm !important;
+}
+.results-table th:nth-child(2),
+.results-table td:nth-child(2) {
+  min-width: 2.5cm !important;
+  max-width: 2.5cm !important;
+  width: 2.5cm !important;
+}
+
+/* Keep table visually neat on small screens */
+@media (max-width: 640px) {
+  .sticky-col { min-width: 3.5cm; max-width: 3.5cm; width: 3.5cm; }
+  .sticky-col-2 { min-width: 2.5cm !important; max-width: 2.5cm !important; width: 2.5cm !important; }
+  .sticky-header { min-width: 1.6cm; max-width: 1.6cm; width: 1.6cm; }
+}
+
+/* Compact table mode: don't stretch to fill container (used for Qseason/Mseason) */
+.results-table.compact {
+  table-layout: fixed;
+  width: auto !important; /* let the table size to its content caps instead of stretching */
+  margin-left: 0; /* left-justify compact tables as well */
+  margin-right: 0;
+}
+
+/* Ensure compact table still enforces the column caps */
+.results-table.compact th,
+.results-table.compact td {
+  max-width: 3.5cm;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  
+}
+
+/* Ensure columns 3 and onwards are at least 2.5cm so header dates can display */
+.results-table th:nth-child(n+3),
+.results-table td:nth-child(n+3) {
+  min-width: 2.5cm !important;
+  max-width: 4cm !important;
+  width: 2.5cm !important;
+}
+
+/* Allow `.races-table` to accept user-controlled widths via <colgroup>
+   Override the strong global width caps so column widths from the colgroup
+   are respected for the Races view. These rules use !important to override
+   earlier constraints that were applied globally to .results-table. */
+/* For the Races view, bind sticky columns to the CSS custom properties so
+   user-resized widths are reflected both in the colgroup and in the
+   sticky column layout. */
+.races-table th:first-child,
+.races-table td:first-child {
+  min-width: var(--col1-width) !important;
+  max-width: var(--col1-width) !important;
+  width: var(--col1-width) !important;
+}
+.races-table th:nth-child(2),
+.races-table td:nth-child(2) {
+  min-width: var(--col2-width) !important;
+  max-width: var(--col2-width) !important;
+  width: var(--col2-width) !important;
+}
+.races-table th:nth-child(n+3),
+.races-table td:nth-child(n+3) {
+  /* allow the colgroup to control later columns */
+  min-width: 0 !important;
+  max-width: none !important;
+}
+
+/* Ensure sticky column classes inside .races-table respect the CSS variables */
+.races-table .sticky-col,
+.races-table .sticky-corner-2-1 {
+  position: sticky;
+  left: 0 !important;
+  z-index: 60;
+  min-width: var(--col1-width) !important;
+  max-width: var(--col1-width) !important;
+  width: var(--col1-width) !important;
+  background: #fff;
+}
+.races-table .sticky-col-2,
+.races-table .sticky-corner-2-2 {
+  position: sticky;
+  left: var(--col1-width) !important;
+  z-index: 55;
+  min-width: var(--col2-width) !important;
+  max-width: var(--col2-width) !important;
+  width: var(--col2-width) !important;
+  background: #fff;
+}
+
+/* Same enforcement for compact tables */
+.results-table.compact th:nth-child(n+3),
+.results-table.compact td:nth-child(n+3) {
+  min-width: 2.5cm !important;
+  max-width: 4cm !important;
+  width: 2.5cm !important;
+}
+select:focus {
+    outline: none;
+    border-color: #111; /* or your preferred color */
+    box-shadow: 0 0 2px #aaa; /* optional: subtle focus effect */
+}
+
+
+
+/* position context for absolute overlay */
+.results-table-container { position: relative; z-index: 5; }
+
+/* small right-edge overlay to support faster vertical scrolling */
+.fast-scroll {
+  position: absolute;
+  /* move further left so it does not sit on top of the native scrollbar */
+  right: 16px;
+  top: 0;
+  height: 100%;
+  width: 18px;
+  z-index: 120;
+  cursor: ns-resize;
+  background: linear-gradient(90deg, rgba(0,0,0,0.02), rgba(0,0,0,0));
+  border-left: 1px solid rgba(0,0,0,0.04);
+  border-radius: 4px 0 0 4px;
+}
+.fast-scroll:hover { background: linear-gradient(90deg, rgba(0,0,0,0.06), rgba(0,0,0,0)); }
+
+/* WebKit/Chromium scrollbar styling (Chrome, Edge) */
+.results-table-container::-webkit-scrollbar {
+  width: 12px;
+}
+.results-table-container::-webkit-scrollbar-track {
+  background: rgba(0,0,0,0.04);
+}
+.results-table-container::-webkit-scrollbar-thumb {
+  background-color: rgba(0,0,0,0.35);
+  border-radius: 6px;
+  border: 3px solid rgba(0,0,0,0.06);
+}
+
+/* Keep native horizontal scrollbar available so users can scroll across columns.
+  We purposely do not hide native scrollbars here; the custom vertical scrollbar
+  remains for visibility when OS/browser auto-hides vertical scrollbars. */
+
+/* Custom, always-visible scrollbar (drawn UI) to ensure users can always see and drag a thumb
+   regardless of OS/browser auto-hide settings. Positioned inside the container and left of native track. */
+.custom-scrollbar {
+  position: absolute;
+  right: 8px; /* sit slightly inset from the container edge */
+  top: 6px;
+  bottom: 6px;
+  width: 12px; /* slimmer track */
+  z-index: 130;
+  pointer-events: auto; /* accept pointer events on track and thumb */
+  background: rgba(0,0,0,0.02);
+  border-radius: 6px;
+  display: block;
+}
+.custom-scrollbar .custom-thumb {
+  position: absolute;
+  left: 1px;
+  width: 10px; /* slimmer thumb */
+  background: rgba(0,0,0,0.45);
+  border-radius: 6px;
+  pointer-events: auto; /* thumb accepts pointer events */
+  cursor: grab;
+  box-shadow: none; /* remove inset shadow to reduce flicker */
+}
+.custom-scrollbar .custom-thumb:active { cursor: grabbing; transform: translateZ(0); }
+
+/* make sure overlay doesn't block pointer events for table cells except its own area */
+.results-table-container .fast-scroll { pointer-events: auto; }
+
+.results-table {
+  border-collapse: collapse;
+  width: 100%;
+  min-width: 600px;
+ 
+  border-spacing: 0.1;
+}
+
+/* Races-specific header/body sizing fixes
+   Ensure header <th> and body <td> share identical box model and
+   prevent the resizer handle from contributing to header layout.
+*/
+.races-table {
+  table-layout: fixed; /* ensure <colgroup> widths are obeyed predictably */
+}
+
+.races-table thead th,
+.races-table tbody td {
+  box-sizing: border-box; /* consistent box model */
+  padding: 0.25rem 0.4rem; /* identical padding for header and body */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Make the resizer absolutely positioned and slightly outside the header
+   so it does not contribute to the header cell's measured width. The
+   inline styles in `Races.tsx` will be superseded by this selector. */
+.races-table thead th [role="separator"] {
+  position: absolute !important;
+  right: -4px !important; /* nudge half outside the header box */
+  top: 0 !important;
+  bottom: 0 !important;
+  width: 8px !important;
+  cursor: col-resize !important;
+  z-index: 220 !important;
+  background: transparent !important;
+}
+@media (pointer: coarse) {
+  .races-table thead th {
+    touch-action: manipulation;     /* allow tap without triggering scroll */
+  }
+  .races-table thead th [role="separator"] {
+    pointer-events: none;
+  }
+}
+
+/* Ensure sticky header sits above body cells and doesn't get clipped */
+.races-table thead th {
+  position: sticky; /* keep header sticky behavior aligned with sticky cols */
+  top: 0;
+  z-index: 200;
+  background: #fff;
+  min-height: 28px;        /* gives a taller tap target */
+  line-height: 20px;
+}
+
+/* Tooltip for small help popups over controls */
+.help-tooltip {
+  position: relative;
+  display: inline-block;
+}
+.help-tooltip .help-content {
+  visibility: hidden;
+  width: 320px;
+  max-width: calc(100vw - 40px);
+  background-color: #333;
+  color: #fff;
+  text-align: left;
+  border-radius: 8px;
+  padding: 12px;
+  position: fixed; /* center in viewport */
+  z-index: 10000;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  opacity: 0;
+  transition: opacity 0.15s ease-in-out;
+  font-size: 0.92em;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.35);
+}
+.help-tooltip:hover .help-content {
+  visibility: visible;
+  opacity: 0.95;
+}
+
+.races-table.eventtest-table th.eventtest-col,
+.races-table.eventtest-table td.eventtest-col {
+  width: var(--event-col-width) !important;
+  min-width: var(--event-col-width) !important;
+  max-width: var(--event-col-width) !important;
+  left: var(--event-col-left, auto) !important;
+}
+
+.races-table.eventtest-table th.eventtest-sticky-col {
+  position: sticky !important;
+  left: var(--event-col-left, 0px) !important;
+  z-index: 260 !important;
+}
+
+.races-table.eventtest-table td.eventtest-sticky-col {
+  position: sticky !important;
+  left: var(--event-col-left, 0px) !important;
+  z-index: 120 !important;
+}
+.help-content .more-link {
+  margin-top: 6px;
+  display: inline-block;
+  color: #9fd3ff;
+  cursor: pointer;
+}
+.help-content .help-title { font-weight: bold; margin-bottom: 6px; }
+
+.results-table th,
+.results-table td {
+  border: 1px solid #ddd;
+  padding: 6px 8px;
+  text-align: center;
+  min-width: 1cm;      /* Ensure minimum width */
+  white-space: nowrap; /* Prevent wrapping */
+
+}
+.sticky-corner-wide {
+  position: sticky;
+  top: 0;
+  left: 0;
+  z-index: 32; /* Higher than other sticky headers */
+  background-color: rgba(224,224,224,0.98) ;
+  text-align: center;
+}
+.sticky-header {
+  position: sticky;
+  top: 0;
+  background-color: rgba(224,224,224,0.98);
+  text-align: center;
+  z-index: 20;
+
+  box-shadow: 4px 0 12px rgba(80,80,80,0.15); /* Bevel effect */
+
+}
+.sticky-header.second-row {
+  position: sticky;
+  top: 25px; /* Match the actual height of your first header row */
+  z-index: 19;
+  background-color: rgba(224,224,224,0.98);
+  
+}
+
+
+
+.sticky-col {
+  position: sticky;
+  max-width: 2.6cm;
+  left: 0;
+  background-color: rgba(224,224,224,0.98);
+  z-index: 18;
+  font-weight: bold;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sticky-col-2 {
+  position: sticky;
+  left: 2.8cm; /* Must match the width of the first sticky column */
+  background-color: rgba(224,224,224,0.98);
+  z-index: 17;
+  font-weight: bold;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* Override for sticky column */
+.results-table td.sticky-col {
+  text-align: left;
+}
+
+/* Make the first two columns' body cells match the header's mid-grey background */
+.results-table td.sticky-col,
+.results-table td.sticky-col-2 {
+  background-color: rgba(224,224,224,0.98) !important; /* match header background */
+}
+
+.sticky-corner {
+  position: sticky;
+  top: 0;
+  left: 0;
+  z-index: 80; /* ensure the top-left header cells remain on top */
+  background-color: rgba(224,224,224,0.98);
+  box-shadow: 4px 4px 12px rgba(80,80,80,0.15);
+}
+.sticky-corner-2 {
+  position: sticky;
+  top: 0;
+  left: 2.8cm; /* Must match sticky-col-2 */
+  z-index: 75; /* keep second header corner just under the top-left */
+  background-color: rgba(224,224,224,0.98);
+  box-shadow: 4px 0 12px rgba(80,80,80,0.15);
+}
+.sticky-corner-2-1 {
+  position: sticky;
+  top: 25px;    /* Match .sticky-header.second-row top value */
+  left: 0;
+  z-index: 31;  /* Highest for second row, first column */
+  background-color: rgba(224,224,224,0.98);
+  box-shadow: 4px 4px 12px rgba(80,80,80,0.15);
+}
+.sticky-corner-2-2 {
+  position: sticky ;
+  top: 25px;    /* Match .sticky-header.second-row top value */
+  left: 2.8cm;  /* Match .sticky-col-2 left value */
+  z-index: 31;  /* Higher than .sticky-corner and .sticky-corner-2 */
+  background-color: rgba(224,224,224,0.98);
+  box-shadow: 4px 4px 12px rgba(80,80,80,0.15);
+}
+
+
+
+@media (max-width: 600px) {
+  .results-table th,
+  .results-table td {
+    padding: 4px 2px;
+    font-size: 0.85em;
+  }
+  .results-table {
+    min-width: 400px;
+  }
+}
+
+/* Extra-small screens: shrink the first column and adjust sticky offsets for mobile */
+@media (max-width: 480px) {
+  /* Make first column narrower for phones */
+  .results-table:not(.races-table) th:first-child,
+  .results-table:not(.races-table) td:first-child,
+  .results-table:not(.races-table) .sticky-col,
+  .results-table:not(.races-table) .sticky-corner-2-1 {
+    min-width: 100px !important;
+    max-width: 100px !important;
+    width: 100px !important;
+  }
+  /* Move second column to sit immediately after the smaller first column */
+  .results-table:not(.races-table) th:nth-child(2),
+  .results-table:not(.races-table) td:nth-child(2),
+  .results-table:not(.races-table) .sticky-col-2,
+  .results-table:not(.races-table) .sticky-corner-2-2 {
+    min-width: 70px !important;
+    max-width: 70px !important;
+    width: 70px !important;
+    left: 100px !important; /* must match the first column width */
+  }
+
+  /* Reduce header date column widths so table fits better */
+  .results-table:not(.races-table) .sticky-header,
+  .results-table:not(.races-table) .sticky-header.second-row {
+    min-width: 56px !important;
+    max-width: 56px !important;
+    width: 56px !important;
+  }
+
+  /* Ensure the wide corner spanning header aligns with smaller columns */
+  .results-table:not(.races-table) .sticky-corner-wide {
+    min-width: 170px !important;
+    max-width: 170px !important;
+    width: 170px !important;
+  }
+
+  /* Slightly reduce overall font size on very small screens */
+  .results-table:not(.races-table) {
+    font-size: 0.82em;
+  }
+
+  /* Make columns 2 and onwards (including date columns) more compact on phones.
+     This tightens the max-widths while leaving laptop/tablet rules unchanged. */
+  .results-table:not(.races-table) th:nth-child(n+2),
+  .results-table:not(.races-table) td:nth-child(n+2) {
+    /* second column and all following columns get a tighter cap on phones */
+    min-width: 60px !important;
+    max-width: 110px !important; /* allow some headroom for wider cells */
+    width: auto !important;
+  }
+
+  /* Dates / columns 3+ should be smaller to make the table more phone-friendly */
+  .results-table:not(.races-table) th:nth-child(n+3),
+  .results-table:not(.races-table) td:nth-child(n+3) {
+    min-width: 40px !important;
+    max-width: 75px !important;
+    width: 48px !important;
+  }
+
+  /* Ensure compact table variant also respects the tighter caps on phones */
+  .results-table:not(.races-table).compact th:nth-child(n+2),
+  .results-table:not(.races-table).compact td:nth-child(n+2),
+  .results-table:not(.races-table).compact th:nth-child(n+3),
+  .results-table:not(.races-table).compact td:nth-child(n+3) {
+    min-width: 40px !important;
+    max-width: 80px !important;
+    width: auto !important;
+  }
+}
+
+/* Default position for loading and error messages (laptop/desktop) */
+.loading-message, .error-message {
+  position: absolute;
+  color: darkred;
+  transform: translate(-50%, -50%);
+}
+
+/* Mobile-specific position: push higher (adjust 10% as needed for your preference) */
+@media (max-width: 768px) {
+  .loading-message {
+    top: calc(10% - 0.1cm); /* higher on mobile */
+    left: 27%;
+  }
+  .error-message {
+    top: calc(10% + 0.5cm); /* higher on mobile */
+    left: 57%;
+  }
+}
+
+/* Final, high-specificity overrides for the Races table: use CSS variables
+   so the user-controlled widths (via colgroup/state) remain authoritative. */
+.results-table.races-table th:first-child,
+.results-table.races-table td:first-child {
+  min-width: var(--col1-width) !important;
+  max-width: var(--col1-width) !important;
+  width: var(--col1-width) !important;
+  padding: 2px 6px !important;  
+  font-size: 0.95em !important;
+  text-align: center !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+.results-table.races-table th:nth-child(2),
+.results-table.races-table td:nth-child(2) {
+  min-width: var(--col2-width) !important;
+  max-width: var(--col2-width) !important;
+  width: var(--col2-width) !important;
+  padding: 4px 8px !important;
+  text-align: left !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+/* Sticky offsets must precisely match the widths above */
+.results-table.races-table .sticky-col {
+  left: 0 !important;
+  min-width: var(--col1-width) !important;
+  max-width: var(--col1-width) !important;
+  width: var(--col1-width) !important;
+}
+.results-table.races-table .sticky-col-2,
+.results-table.races-table .sticky-corner-2-2 {
+  left: var(--col1-width) !important;
+  min-width: var(--col2-width) !important;
+  max-width: var(--col2-width) !important;
+  width: var(--col2-width) !important;
+}
+
+/* Adjust the top-left corner span to avoid visual overflow */
+.results-table.races-table .sticky-corner,
+.results-table.races-table .sticky-corner-2 {
+  min-width: calc(var(--col1-width) + var(--col2-width)) !important;
+  max-width: calc(var(--col1-width) + var(--col2-width)) !important;
+}
+
+/* Make the races table size to its content, so the container width matches the table */
+.results-table.races-table {
+  width: var(--races-table-width, auto) !important;
+  display: inline-block; /* shrink-wrapping behavior so scrollbar will sit near the table */
+}
+.results-table-container {
+  overflow-x: auto;
+  overflow-y: auto;
+  display: inline-block;
+  vertical-align: top;
+  max-width: calc(100vw - 2rem);
+  margin-left: 0.5cm; /* Indent by 0.5cm */
+  margin-top: -0.5cm;
+  height: 600px;
+  padding-right: 6px;
+  padding-bottom: 18px;
+  -webkit-overflow-scrolling: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0,0,0,0.35) rgba(0,0,0,0.06);
+  position: relative;
+  z-index: 5;
+}
+
+/* Widths for columns 3+ are controlled by the table colgroup and inline
+  widths from the Races page component. */
+
+/* Strong override to keep the Races table header visible above the page header
+   and sticky columns. Some layouts place the page header near the table and
+   it can overlap the sticky table header; raise the header z-index here. */
+.results-table.races-table thead th,
+.results-table.races-table thead th.sticky-header {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 120 !important; /* above `.races-header` and below sticky cols by design */
+  /* background: #fff !important; */
+}
+
+@media (pointer: coarse) {
+  .results-table.races-table thead th [role="separator"] {
+    pointer-events: none !important;
+  }
+}
+
+/* Ensure sticky column classes are below the header */
+.results-table.races-table .sticky-col,
+.results-table.races-table .sticky-col-2 {
+  /* Make sticky columns render above the header so their content (Athlete)
+     remains dominant when horizontal scrolling on narrow viewports. Use a
+     higher z-index than the header but keep values consistent. */
+  z-index: 130 !important;
+}
+
+/* Ensure the header cells for the first two sticky columns remain stuck to
+   the top of the scroll container and are visible when vertically scrolling.
+   Apply higher z-index to header cells specifically so they don't disappear
+   behind other sticky elements. */
+.results-table.races-table thead th.sticky-col,
+.results-table.races-table thead th.sticky-col-2 {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 500 !important; /* above other header rows and body cells */
+  /*background: #fff !important;*/
+}
+
+/* Keep the body cells for sticky columns slightly below the header z-index
+   so header text remains visible when scrolling. */
+.results-table.races-table td.sticky-col,
+.results-table.races-table td.sticky-col-2 {
+  z-index: 130 !important;
+}
+
+/* Explicit Races sticky lead-column contract.
+   The working sticky tables use page-scoped header/body rules instead of
+   depending on generic sticky classes alone. Mirror that here so mobile
+   browsers keep the first header row aligned with the first two sticky body
+   columns. */
+.results-table.races-table thead th.sticky-col,
+.results-table.races-table thead th.sticky-corner,
+.results-table.races-table thead th.sticky-corner-2-1 {
+  position: sticky !important;
+  top: 0 !important;
+  left: 0 !important;
+  z-index: 620 !important;
+  width: var(--col1-width) !important;
+  min-width: var(--col1-width) !important;
+  max-width: var(--col1-width) !important;
+  background: rgba(224, 224, 224, 0.98) !important;
+  background-clip: padding-box !important;
+}
+
+.results-table.races-table thead th.sticky-col-2,
+.results-table.races-table thead th.sticky-corner-2,
+.results-table.races-table thead th.sticky-corner-2-2 {
+  position: sticky !important;
+  top: 0 !important;
+  left: var(--col1-width) !important;
+  z-index: 615 !important;
+  width: var(--col2-width) !important;
+  min-width: var(--col2-width) !important;
+  max-width: var(--col2-width) !important;
+  background: rgba(224, 224, 224, 0.98) !important;
+  background-clip: padding-box !important;
+}
+
+.results-table.races-table tbody td.sticky-col {
+  position: sticky !important;
+  left: 0 !important;
+  z-index: 310 !important;
+  width: var(--col1-width) !important;
+  min-width: var(--col1-width) !important;
+  max-width: var(--col1-width) !important;
+  background: #fff !important;
+  background-clip: padding-box !important;
+}
+
+.results-table.races-table tbody td.sticky-col-2 {
+  position: sticky !important;
+  left: var(--col1-width) !important;
+  z-index: 305 !important;
+  width: var(--col2-width) !important;
+  min-width: var(--col2-width) !important;
+  max-width: var(--col2-width) !important;
+  background: #fff !important;
+  background-clip: padding-box !important;
+}
+
+/* EventAnalysis_test: drive sticky lead column alignment from config via CSS vars */
+.results-table.races-table.eventtest-table th.eventanalysis-col1,
+.results-table.races-table.eventtest-table td.eventanalysis-col1 {
+  text-align: var(--ea-col1-align, left) !important;
+}
+
+.results-table.races-table.eventtest-table th.eventanalysis-col2,
+.results-table.races-table.eventtest-table td.eventanalysis-col2 {
+  text-align: var(--ea-col2-align, center) !important;
+}
+
+.results-table.races-table.eventtest-table thead th {
+  padding-top: 0.34rem !important;
+  padding-bottom: 0.34rem !important;
+  padding-right: 1.15rem !important;
+  line-height: 1.15 !important;
+  min-height: 30px;
+  background-clip: padding-box;
+  position: relative;
+}
+
+.results-table.races-table.eventtest-table thead th .eventtest-header-label {
+  display: block;
+  overflow: hidden;
+  text-overflow: clip;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.results-table.races-table.eventtest-table thead th .eventtest-sort-indicator {
+  position: absolute;
+  right: 0.24rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0.9rem;
+  text-align: center;
+  font-size: 0.95em;
+  font-weight: 800;
+  color: #0a5ad1;
+  pointer-events: none;
+}
+
+/* EventAnalysis_test: honor configured second sticky header row offset */
+.results-table.races-table.eventtest-table thead th.sticky-header.second-row {
+  top: calc(var(--ea-row2-top, 25px) - 1px) !important;
+}
+
+.results-table.races-table.eventtest-table thead th.eventanalysis-row2-corner {
+  top: calc(var(--ea-row2-top, 25px) - 1px) !important;
+}
+
+/* Current Event Analysis (/results_test): show period/date headers without trailing ellipsis */
+.eventanalysis-test-container .results-table thead th.sticky-header {
+  text-overflow: clip !important;
+}
+
+.results-table.races-table .sticky-corner,
+.results-table.races-table .sticky-corner-2,
+.results-table.races-table .sticky-corner-2-1,
+.results-table.races-table .sticky-corner-2-2 {
+  z-index: 135 !important;
+}
+
+/* Ensure non-sticky header cells stay behind sticky columns on all devices.
+   Mobile browsers sometimes promote sticky header rows into higher stacking
+   contexts which causes non-sticky header cells (e.g. Time) to paint over the
+   sticky Athlete column. The rules below enforce a clear stacking order and
+   create a compositing layer for sticky columns to avoid browser rendering
+   bugs (notably in mobile Safari/Chrome). */
+.results-table.races-table thead th:not(.sticky-col):not(.sticky-col-2) {
+  z-index: 200 !important; /* below sticky columns */
+}
+
+.results-table.races-table .sticky-col,
+.results-table.races-table .sticky-col-2 {
+  z-index: 300 !important; /* ensure sticky columns always render above headers */
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  will-change: left; /* hint to the browser this element will be moved */
+}
+
+/* Keep corner/sticky-first-row elements slightly higher than sticky cols */
+.results-table.races-table .sticky-corner,
+.results-table.races-table .sticky-corner-2,
+.results-table.races-table .sticky-corner-2-1,
+.results-table.races-table .sticky-corner-2-2 {
+  z-index: 105 !important;
+}
+
+/* Races page header: keep above sticky table headers to avoid overlap */
+.races-header {
+  position: relative;
+  z-index: 100; /* higher than table sticky headers (which use z-index ~80) */
+  background: transparent;
+  overflow: visible; /* allow child controls to extend outside the header when nudged */
+  pointer-events: none; /* allow table header clicks when the layout overlaps */
+}
+
+.races-header button,
+.races-header select {
+  pointer-events: auto;
+}
+
+/* Limit the visible table width to roughly 18 columns to avoid the table
+   expanding to the full page width. Calculation: first two columns use
+   --col1-width and --col2-width, remaining ~16 columns use 2.5cm each. */
+.results-table {
+  max-width: calc(var(--col1-width, 4cm) + var(--col2-width, 2.5cm) + 40cm) !important;
+  width: auto !important; /* allow the table to size to content up to the max */
+}
+
+/* Analysis-specific cap: limit analysis tables to roughly 16 visible columns
+   (first two variable-width columns + 14 columns at ~2.5cm). This prevents
+   the Event Analysis table from stretching the page when many periods are selected. */
+.results-table.analysis-table {
+  max-width: calc(var(--col1-width, 4cm) + var(--col2-width, 2.5cm) + 37cm) !important;
+  width: auto !important;
+}
+
+/* Positioning: move Event Analysis tables down slightly so header controls
+  and other page chrome do not overlap the table on both desktop and mobile. */
+.results-table.analysis-table { margin-top: 0.0cm; }
+.results-table-container.analysis-container { margin-top: 0.3cm !important; }
+
+/* Limit the container for analysis tables so only ~16 columns are visible at once */
+.results-table-container.analysis-container {
+  max-width: calc(var(--col1-width, 4cm) + var(--col2-width, 2.5cm) + 37cm) !important;
+  overflow-x: auto;
+}
+
+/* Event Analysis: prefer showing as much date text as possible without trailing ellipsis */
+.results-table.analysis-table thead th {
+  text-overflow: clip !important;
+}
+
+/* Races header indentation and emphasis */
+.races-header .races-header-title,
+.races-header .races-header-sub {
+  /* shift elements further left by 0.5cm (now no left indent) */
+  padding-left: 0.3cm; /* was 0.5cm, now 0cm */
+  font-weight: 700;    /* make both lines bold */
+  
+}
+@media (max-width: 768px) {
+  .races-header-title {
+    max-width: 11rem;          /* adjust as needed */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+.races-header .races-header-sub {
+  color: #444;
+  margin-top: 2px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start; /* align to left; change to 'center' if you want centered */
+  gap: 0.7rem; /* small gap between date and number; adjust as needed */
+  transform: translateY(0.2cm); /* preserve any existing vertical nudge */
+  will-change: transform;
+}
+
+
+/* Stack title + sub vertically when placed next to the back button */
+.races-header-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.05;
+}
+
+/* Small helper class to nudge the View: control upward without using
+   large negative margins that can be clipped on small screens. Use
+   `position: relative; top: -X` so the element remains in normal flow
+   and header overflow can remain visible. */
+.races-view-control {
+  margin-left: 1.3cm; /* shifted left again by 0.5cm (now 0cm) */
+  display: flex;
+  flex-direction: column; /* stack controls vertically */
+  align-items: flex-start;
+  gap: 6px;
+  position: relative;
+  top: -3.1rem; /* keeps it above the title line; tweak if needed */
+  z-index: 1 !important;     /* greater than sticky columns (3000) */
+  transform: translateZ(0);     /* create compositing layer to stabilize stacking */
+  will-change: transform;
+}
+
+.races-view-control-item label {
+  display: block;
+  font-size: 0.8rem;
+  justify-self: end;
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-left: 1.0cm;  /* moves label text right without affecting the select */
+}
+
+
+/* Mobile-specific adjustments: move date and event name down by 0.3cm */
+@media (max-width: 768px) {
+  .races-header-title {
+    transform: translateY(-0.0cm); /* move event name down 0.3cm */
+    will-change: transform;
+  }
+  .races-header-sub {
+    transform: translateY(-0.2cm); /* adjust from -0.8cm to move date down 0.3cm */
+    will-change: transform;
+  }
+}
+
+
+/* Individual control row inside the view control container: fixed label column
+   so all selects align vertically under the same margin. */
+.races-view-control-item {
+  display: grid;
+  grid-template-columns: 6.0rem 2.3cm; /* label | select fixed to 2.3cm (2.1cm + 0.2cm) */
+  align-items: center;
+  column-gap: 28px;
+  font-size: 0.9rem;
+}
+
+.races-view-control-item select { font-size: 0.8rem; width: 100%; min-width: 4.0cm; max-width: 2.3cm; box-sizing: border-box; margin-left: -0.5cm; }
+
+@media (max-width: 768px) {
+  /* Use a small fixed label column on mobile so the select column lines up
+     vertically across all rows. Prevent label wrapping by truncating with
+     an ellipsis. */
+  .races-view-control-item { grid-template-columns: 4.3rem 2.3cm; }
+  .races-view-control-item label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block;}
+}
+
+/* separator shown between date and event number */
+.races-header .races-header-sep {
+  display: inline-block;
+  margin: 0 0.6cm; /* spacing around the vertical bar */
+  color: #444;
+}
+
+/* Mobile safeguard: prevent the whole page from scrolling horizontally on small screens
+   and force the table container to manage horizontal scrolling. This keeps the
+   sticky left columns and top controls fixed while the table content scrolls. */
+@media (max-width: 768px) {
+  .page-content {
+    overflow-x: hidden; /* prevent page horizontal scrolling */
+  }
+  .results-table-container {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-left: 0 !important;
+   
+    /* ensure horizontal gestures are handled by this container only */
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+  /* Make sure the table itself can be wider than the container and will scroll inside it */
+  .results-table {
+    width: max-content;
+    min-width: 100%;
+  }
+}
+
+
+
+.help-tooltip .help-content {
+  width: 420px;
+  max-width: calc(100vw - 32px);
+  max-height: min(72vh, 620px);
+  overflow-y: auto;
+  background: #fff9d9;
+  color: #1f2937;
+  border: 1px solid #e4d48a;
+  border-radius: 12px;
+  box-shadow: 0 14px 40px rgba(15, 23, 42, 0.22);
+  padding: 12px 14px;
+}
+
+.help-tooltip.open .help-content,
+.help-tooltip:hover .help-content {
+  visibility: visible;
+  opacity: 0.98;
+  position: fixed !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+}
+
+@media (min-width: 641px) {
+  .help-tooltip .help-content {
+    max-width: min(460px, 62vw);
+  }
+
+  .help-tooltip.open .help-content,
+  .help-tooltip:hover .help-content {
+    position: absolute !important;
+    top: calc(100% + 8px) !important;
+    left: 0 !important;
+    transform: none !important;
+  }
+}
+
+.help-doc-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.help-doc-head .close-x {
+  position: static;
+  border: 1px solid #d8c676;
+  border-radius: 6px;
+  background: #fff3b0;
+  color: #6b5a17;
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.help-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.help-doc-summary {
+  font-size: 0.82rem;
+  color: #334155;
+  margin-bottom: 8px;
+}
+
+.help-doc-details {
+  margin: 0 0 10px 17px;
+  padding: 0;
+  color: #1e293b;
+  font-size: 0.8rem;
+}
+
+.help-doc-details li {
+  margin-bottom: 4px;
+}
+
+.help-doc-section {
+  border-top: 1px solid #ebdda2;
+  margin-top: 10px;
+  padding-top: 9px;
+}
+
+.help-doc-subtitle {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 6px;
+}
+
+.help-doc-links {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.help-ref-link {
+  border: 1px solid #e0cf84;
+  border-radius: 8px;
+  background: #fff7cc;
+  padding: 6px 8px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.help-ref-link:disabled {
+  opacity: 0.62;
+  cursor: default;
+}
+
+.help-ref-link.active {
+  border-color: #c9ab3a;
+  background: #ffef9e;
+}
+
+.help-key {
+  display: block;
+  font-size: 0.79rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 2px;
+}
+
+.help-desc {
+  display: block;
+  font-size: 0.75rem;
+  color: #475569;
+}
+
+.help-related-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.help-inline-link {
+  border: none;
+  background: transparent;
+  color: #2563eb;
+  font-size: 0.76rem;
+  font-weight: 600;
+  padding: 0;
+  cursor: pointer;
+}
+
+@media (max-width: 640px) {
+  .help-tooltip .help-content {
+    width: min(360px, calc(100vw - 42px));
+    max-width: min(360px, calc(100vw - 42px));
+    max-height: 70vh;
+  }
+
+  .help-tooltip.open .help-content,
+  .help-tooltip:hover .help-content {
+    top: 52% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+  }
+}
+
+.results-table.races-table.eventtest-table thead tr:nth-child(2) th:nth-child(1) {
+  position: sticky !important;
+  left: 0 !important;
+  z-index: 280 !important;
+}
+
+.results-table.races-table.eventtest-table thead tr:nth-child(2) th:nth-child(2) {
+  position: sticky !important;
+  left: var(--col1-width, 1.3cm) !important;
+  z-index: 279 !important;
+}
+
+.results-table.races-table.eventtest-table thead th.sticky-corner-wide {
+  position: sticky !important;
+  left: 0 !important;
+  top: 0 !important;
+  z-index: 320 !important;
+  min-width: calc(var(--col1-width, 4cm) + var(--col2-width, 2.5cm)) !important;
+  max-width: calc(var(--col1-width, 4cm) + var(--col2-width, 2.5cm)) !important;
+  width: calc(var(--col1-width, 4cm) + var(--col2-width, 2.5cm)) !important;
+}
+
+.results-table.races-table.eventtest-table tbody td:nth-child(1) {
+  position: sticky !important;
+  left: 0 !important;
+  z-index: 150 !important;
+}
+
+.results-table.races-table.eventtest-table tbody td:nth-child(2) {
+  position: sticky !important;
+  left: var(--col1-width, 1.3cm) !important;
+  z-index: 149 !important;
+}
+
+/* EventAnalysis_test: keep full-width horizontal scroll context so sticky lead
+   columns remain sticky for the entire scroll range (not capped to ~16 cols). */
+.results-table-container.eventanalysis-test-container {
+  display: inline-block !important;
+  width: fit-content !important;
+  max-width: var(--ea-max-visible-width, 100%) !important;
+  overflow-x: auto !important;
+  overflow-y: auto;
+}
+
+@media (max-width: 768px) {
+  .results-table-container.eventanalysis-test-container {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-left: 0 !important;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+  }
+}
+
+.results-table.races-table.eventtest-table {
+  display: table !important;
+  width: max-content !important;
+  max-width: none !important;
+}
+
+.results-table.races-table.eventtest-table thead th.sticky-header,
+.results-table.races-table.eventtest-table thead th.sticky-header.second-row {
+  min-width: var(--event-col-width, var(--ea-period-col-width, 2.0cm)) !important;
+  max-width: var(--event-col-width, var(--ea-period-col-width, 2.0cm)) !important;
+  width: var(--event-col-width, var(--ea-period-col-width, 2.0cm)) !important;
+}
+
+.results-table.races-table.eventtest-table thead th.eventtest-col:not(.eventtest-sticky-col) {
+  z-index: 200 !important;
+}
+
+.results-table.races-table.eventtest-table thead th.eventtest-sticky-col {
+  z-index: 260 !important;
+  background-clip: padding-box !important;
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+.results-table.races-table.eventtest-table tbody td.eventtest-sticky-col {
+  z-index: 120 !important;
+  background-clip: padding-box !important;
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+.results-table.races-table.eventtest-table tbody td:nth-child(n+3) {
+  min-width: var(--event-col-width, var(--ea-period-col-width, 2.0cm)) !important;
+  max-width: var(--event-col-width, var(--ea-period-col-width, 2.0cm)) !important;
+  width: var(--event-col-width, var(--ea-period-col-width, 2.0cm)) !important;
+}
+
+.eventanalysis-scroll-slider {
+  margin-top: 0.2rem;
+  padding-right: 6px;
+}
+
+.eventanalysis-plot-container {
+  display: block;
+  width: 100%;
+  max-width: var(--ea-max-visible-width, 100%);
+  overflow: hidden !important;
+  border: 2px solid #9ca3af;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 10px 18px rgba(15, 23, 42, 0.08);
+}
+
+.results-table.races-table.eventtest-table th .ea-sort-indicator {
+  display: inline-flex;
+  flex-direction: column;
+  margin-left: 0.2rem;
+  line-height: 0.78;
+  font-size: 0.62rem;
+  vertical-align: middle;
+}
+

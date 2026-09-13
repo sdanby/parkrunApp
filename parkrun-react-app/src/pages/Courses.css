@@ -1,0 +1,301 @@
+.courses-page {
+    width: 100%;
+    padding-bottom: 10rem;
+}
+
+.course-header {
+    display: block;
+    width: 100%;
+    position: relative !important;
+    height: auto;
+}
+
+@media (max-width: 640px) {
+    .courses-page {
+        padding: 0;
+    }
+
+    .course-header {
+        position: relative !important;
+        height: auto;
+        min-height: auto;
+        margin: 0;
+        padding: 0.3rem;
+        top: auto !important;
+        left: auto !important;
+        z-index: 1;
+    }
+
+    .course-runs-section {
+        position: relative !important;
+        margin-top: 0;
+        padding: 0.3rem;
+    }
+
+    .athlete-runs-table-wrapper:not(.plot-panel-wrapper):not(.course-table-wrapper):not(.top250-table-wrapper) {
+        position: relative !important;
+        margin-top: 0 !important;
+        left: auto !important;
+        top: auto !important;
+    }
+}
+
+.course-header-main {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    width: 100%;
+    min-width: 0;
+}
+
+.course-header-text {
+    min-width: 0;
+}
+
+.course-header-code,
+.course-header-total-events {
+    color: #374151;
+    font-size: 0.84rem;
+    margin-top: 0.1rem;
+}
+
+.course-view-control {
+    margin-left: auto;
+    min-width: 0;
+    transform: none;
+}
+
+.course-runs-section {
+    width: 100%;
+}
+
+.course-runs-empty {
+    color: #6b7280;
+    font-size: 0.9rem;
+    margin: 0.5rem 0;
+}
+
+.course-table-wrapper {
+    margin-top: -0.7cm;
+    --course-summary-sticky-height: 2.05rem;
+}
+
+.top250-table-wrapper {
+    margin-top: -0.7cm;
+}
+
+.course-table-wrapper .athlete-runs-table,
+.top250-table-wrapper .athlete-runs-table {
+    width: max-content !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    table-layout: fixed !important;
+}
+
+.course-table-wrapper,
+.top250-table-wrapper {
+    overflow-x: auto;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+}
+
+.top250-table-wrapper .athlete-runs-table thead th,
+.top250-table-wrapper .athlete-runs-table thead th.athlete-date-header {
+    top: 0;
+}
+
+.course-summary-table {
+    margin-bottom: 0;
+    position: sticky;
+    top: 0;
+    z-index: 80;
+}
+
+.course-table-wrapper .course-summary-table th,
+.course-table-wrapper .course-summary-table td {
+    position: sticky;
+    top: 0;
+    z-index: 80;
+    background: #ffffff;
+}
+
+.course-summary-table .athlete-date-cell {
+    background: #e0e0e0;
+}
+
+.course-table-wrapper .course-summary-table tbody th.athlete-date-cell {
+    position: sticky;
+    left: 0;
+    z-index: 95;
+    background: #e0e0e0;
+    box-shadow: 3px 0 6px rgba(0, 0, 0, 0.08);
+}
+
+.course-table-wrapper .athlete-runs-table:not(.course-summary-table) thead th,
+.course-table-wrapper .athlete-runs-table:not(.course-summary-table) thead th.athlete-date-header {
+    top: calc(var(--course-summary-sticky-height) - 1px);
+}
+
+.course-summary-table td {
+    font-weight: 700;
+}
+
+.course-summary-mode-select-wrap {
+    position: relative;
+    display: inline-block;
+}
+
+.course-summary-mode-select {
+    width: 100%;
+    border: 1px solid #8aa7c7;
+    border-radius: 0.22rem;
+    background-color: #f7fbff;
+    font: inherit;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #0f172a;
+    cursor: pointer;
+    padding: 0.06rem 1.15rem 0.06rem 0.3rem;
+    outline: none;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    line-height: 1.15;
+    background-image: linear-gradient(#f7fbff, #f7fbff);
+    background-repeat: repeat;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75);
+}
+
+.course-summary-mode-caret {
+    position: absolute;
+    right: 0.32rem;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.62rem;
+    color: #0f172a;
+    pointer-events: none;
+    line-height: 1;
+}
+
+.course-summary-mode-select:hover {
+    background-color: #edf5ff;
+}
+
+.course-summary-mode-select:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
+}
+
+.course-summary-mode-select::-ms-expand {
+    display: none;
+}
+
+.course-clickable-row {
+    cursor: pointer;
+}
+
+.course-clickable-row:hover {
+    background: #f3f4f6;
+}
+
+.course-clickable-row.highlighted-source-row,
+.course-clickable-row.highlighted-source-row:hover {
+    background: #add8e6;
+}
+
+.course-clickable-row.highlighted-source-row > th,
+.course-clickable-row.highlighted-source-row > td,
+.course-clickable-row.highlighted-source-row:hover > th,
+.course-clickable-row.highlighted-source-row:hover > td {
+    background-color: #add8e6 !important;
+}
+
+.courses-page .athlete-table-header {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.courses-page .athlete-table-header .courses-header-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.06rem;
+    min-width: 0;
+    width: 100%;
+}
+
+.courses-page .athlete-table-header .courses-header-label {
+    display: inline-block;
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.courses-page .athlete-table-header .courses-sort-indicator {
+    flex: 0 0 auto;
+    width: 0.95em;
+    text-align: center;
+    margin-left: 0;
+    display: inline-block;
+    font-size: 0.78em;
+    font-weight: 600;
+    vertical-align: middle;
+}
+
+.courses-page .athlete-table-header.courses-sorted-column .courses-header-label {
+    font-size: 0.92em;
+    opacity: 0.9;
+}
+
+.courses-page .athlete-table-header.courses-sorted-column .courses-sort-indicator {
+    font-size: 1.12em;
+    font-weight: 900;
+    color: #0a5ad1;
+}
+
+.courses-date-link {
+    border: none;
+    background: none;
+    color: #0a5ad1;
+    padding: 0;
+    margin: 0;
+    font: inherit;
+    cursor: pointer;
+    text-align: left;
+    text-decoration: underline;
+}
+
+.top250-highlighted-row > th,
+.top250-highlighted-row > td {
+    background-color: #add8e6 !important;
+}
+
+@media (min-width: 901px) {
+    .courses-page .course-view-control.races-view-control {
+        margin-left: 0 !important;
+        left: 0 !important;
+        transform: translateX(-33.2cm) !important;
+    }
+}
+
+@media (max-width: 900px) {
+    .course-header-main {
+        flex-direction: column;
+        gap: 0.35rem;
+    }
+
+    .course-view-control {
+        margin-left: 0;
+    }
+
+    .courses-page .course-view-control.races-view-control {
+        top: -1.2cm !important;
+        left: -0.3cm !important;
+        margin-left: 0 !important;
+        transform: translateX(-1.2cm) !important;
+    }
+}

@@ -1,0 +1,10 @@
+{
+  "status": "completed",
+  "mode": "one_off_eventpositions_sync",
+  "phase": "done",
+  "start_date": "2011-02-19",
+  "end_date": "2026-06-20",
+  "event_code": null,
+  "rows_changed": 2452022,
+  "completed_at": "2026-06-27T18:52:06"
+}

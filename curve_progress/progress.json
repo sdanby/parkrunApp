@@ -1,0 +1,13 @@
+{
+  "status": "running",
+  "started_at": null,
+  "total_dates": 759,
+  "processed_dates": 3,
+  "current_date": "2011-03-05",
+  "last_rows_changed": 20,
+  "last_curve_reference_rows": 505,
+  "last_stage2_file": null,
+  "last_stage3_file": null,
+  "updated_at": "2026-06-27T15:42:23",
+  "output_dir": "C:\\Users\\stevi\\parkrun_project\\curve_progress"
+}

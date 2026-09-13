@@ -1,0 +1,500 @@
+CREATE MATERIALIZED VIEW IF NOT EXISTS public.mv_extend_runs
+TABLESPACE pg_default
+AS
+ WITH base AS (
+         SELECT e.event_code,
+            e.event_date,
+            e.athlete_code,
+            e."position",
+            e.name,
+            e.age_group,
+            e.age_grade,
+            e.club,
+            e.comment,
+            p.coeff,
+            p.coeff_event,
+            ev.event_name,
+            GREATEST(COALESCE(e.time_seconds::double precision / COALESCE(NULLIF(p.coeff, 0::double precision), 1::real), 0::double precision), 769.0::double precision) AS season_adj_time_seconds,
+            GREATEST(COALESCE(e.time_seconds::double precision / COALESCE(NULLIF(COALESCE(NULLIF(p.coeff, 0::double precision), 1::real) + COALESCE(NULLIF(p.coeff_event, 0::double precision), 1::real) - 1::double precision, 0::double precision), 1::double precision), 0::double precision), 769.0::double precision) AS event_adj_time_seconds,
+            GREATEST(COALESCE(e.time_seconds::double precision / NULLIF(e.age_ratio_male, 0::double precision), 0::double precision), 769.0::double precision) AS age_adj_time_seconds,
+            GREATEST(COALESCE(e.time_seconds::double precision / (e.age_ratio_sex / NULLIF(e.age_ratio_male, 0::double precision)), 0::double precision), 769.0::double precision) AS sex_adj_time_seconds,
+            GREATEST(COALESCE(e.time_seconds::double precision / COALESCE(NULLIF(COALESCE(NULLIF(p.coeff, 0::double precision), 1::real) + COALESCE(NULLIF(p.coeff_event, 0::double precision), 1::real) - 1::double precision, 0::double precision), 1::double precision) / NULLIF(e.age_ratio_male, 0::double precision), 0::double precision), 769.0::double precision) AS age_event_adj_time_seconds,
+            GREATEST(COALESCE(e.time_seconds::double precision / NULLIF(e.age_ratio_sex, 0::double precision), 0::double precision), 769.0::double precision) AS age_sex_adj_time_seconds,
+            GREATEST(COALESCE(e.time_seconds::double precision / COALESCE(NULLIF(COALESCE(NULLIF(p.coeff, 0::double precision), 1::real) + COALESCE(NULLIF(p.coeff_event, 0::double precision), 1::real) - 1::double precision, 0::double precision), 1::double precision) / (e.age_ratio_sex / NULLIF(e.age_ratio_male, 0::double precision)), 0::double precision), 769.0::double precision) AS sex_event_adj_time_seconds,
+            GREATEST(COALESCE(e.time_seconds::double precision / COALESCE(NULLIF(COALESCE(NULLIF(p.coeff, 0::double precision), 1::real) + COALESCE(NULLIF(p.coeff_event, 0::double precision), 1::real) - 1::double precision, 0::double precision), 1::double precision) / NULLIF(e.age_ratio_sex, 0::double precision), 0::double precision), 769.0::double precision) AS age_sex_event_adj_time_seconds
+           FROM eventpositions e
+             JOIN parkrun_events p ON p.event_code = e.event_code AND p.event_date = e.event_date::text
+             JOIN events ev ON e.event_code = ev.event_code
+          --WHERE e.time_seconds IS NOT NULL AND e.age_ratio_male IS NOT NULL
+		  WHERE athlete_code='528017'
+		  order by (to_date(e.event_date::text, 'DD/MM/YYYY'::text)) DESC
+        )
+ SELECT event_code,
+    event_date,
+    athlete_code,
+    "position",
+    name,
+    age_group,
+    age_grade,
+    club,
+    comment,
+    "time",
+    time_seconds,
+    age_ratio_male,
+    age_ratio_sex,
+    coeff,
+    coeff_event,
+    event_name,
+    season_adj_time_seconds,
+    event_adj_time_seconds,
+    age_adj_time_seconds,
+    sex_adj_time_seconds,
+    age_event_adj_time_seconds,
+    age_sex_adj_time_seconds,
+    sex_event_adj_time_seconds,
+    age_sex_event_adj_time_seconds,
+    (((season_adj_time_seconds::integer / 60)::text) || ':'::text) || lpad((season_adj_time_seconds::integer % 60)::text, 2, '0'::text) AS season_adj_time,
+    (((event_adj_time_seconds::integer / 60)::text) || ':'::text) || lpad((event_adj_time_seconds::integer % 60)::text, 2, '0'::text) AS event_adj_time,
+    (((age_adj_time_seconds::integer / 60)::text) || ':'::text) || lpad((age_adj_time_seconds::integer % 60)::text, 2, '0'::text) AS age_adj_time,
+    (((sex_adj_time_seconds::integer / 60)::text) || ':'::text) || lpad((sex_adj_time_seconds::integer % 60)::text, 2, '0'::text) AS sex_adj_time,
+    (((age_event_adj_time_seconds::integer / 60)::text) || ':'::text) || lpad((age_event_adj_time_seconds::integer % 60)::text, 2, '0'::text) AS age_event_adj_time,
+    (((age_sex_adj_time_seconds::integer / 60)::text) || ':'::text) || lpad((age_sex_adj_time_seconds::integer % 60)::text, 2, '0'::text) AS age_sex_adj_time,
+    (((sex_event_adj_time_seconds::integer / 60)::text) || ':'::text) || lpad((sex_event_adj_time_seconds::integer % 60)::text, 2, '0'::text) AS sex_event_adj_time,
+    (((age_sex_event_adj_time_seconds::integer / 60)::text) || ':'::text) || lpad((age_sex_event_adj_time_seconds::integer % 60)::text, 2, '0'::text) AS age_sex_event_adj_time
+   FROM base
+WITH DATA;
+
+ALTER TABLE IF EXISTS public.mv_extend_runs
+    OWNER TO parkrundata_user;
+
+
+CREATE UNIQUE INDEX mv_extend_last_year_runs_uq
+    ON public.mv_extend_runs USING btree
+    (event_code, event_date COLLATE pg_catalog."default", athlete_code COLLATE pg_catalog."default", "position")
+    TABLESPACE pg_default;
+
+CREATE INDEX mv_extend_runs_age_event_idx
+    ON public.mv_extend_runs USING btree
+    (age_event_adj_time_seconds, athlete_code COLLATE pg_catalog."default")
+    TABLESPACE pg_default;
+
+CREATE INDEX mv_extend_runs_age_idx
+    ON public.mv_extend_runs USING btree
+    (age_adj_time_seconds, athlete_code COLLATE pg_catalog."default")
+    TABLESPACE pg_default;
+
+CREATE INDEX mv_extend_runs_age_sex_event_idx
+    ON public.mv_extend_runs USING btree
+    (age_sex_event_adj_time_seconds, athlete_code COLLATE pg_catalog."default")
+    TABLESPACE pg_default;
+
+CREATE INDEX mv_extend_runs_age_sex_idx
+    ON public.mv_extend_runs USING btree
+    (age_sex_adj_time_seconds, athlete_code COLLATE pg_catalog."default")
+    TABLESPACE pg_default;
+
+CREATE INDEX mv_extend_runs_event_idx
+    ON public.mv_extend_runs USING btree
+    (event_adj_time_seconds, athlete_code COLLATE pg_catalog."default")
+    TABLESPACE pg_default;
+
+CREATE INDEX mv_extend_runs_last_year_age_event_idx
+    ON public.mv_extend_runs USING btree
+    (age_event_adj_time_seconds, athlete_code COLLATE pg_catalog."default")
+    TABLESPACE pg_default;
+
+CREATE INDEX mv_extend_runs_last_year_age_idx
+    ON public.mv_extend_runs USING btree
+    (age_adj_time_seconds, athlete_code COLLATE pg_catalog."default")
+    TABLESPACE pg_default;
+
+CREATE INDEX mv_extend_runs_last_year_age_sex_event_idx
+    ON public.mv_extend_runs USING btree
+    (age_sex_event_adj_time_seconds, athlete_code COLLATE pg_catalog."default")
+    TABLESPACE pg_default;
+
+CREATE INDEX mv_extend_runs_last_year_age_sex_idx
+    ON public.mv_extend_runs USING btree
+    (age_sex_adj_time_seconds, athlete_code COLLATE pg_catalog."default")
+    TABLESPACE pg_default;
+
+CREATE INDEX mv_extend_runs_last_year_event_idx
+    ON public.mv_extend_runs USING btree
+    (event_adj_time_seconds, athlete_code COLLATE pg_catalog."default")
+    TABLESPACE pg_default;
+
+CREATE INDEX mv_extend_runs_last_year_season_idx
+    ON public.mv_extend_runs USING btree
+    (season_adj_time_seconds, athlete_code COLLATE pg_catalog."default")
+    TABLESPACE pg_default;
+
+CREATE INDEX mv_extend_runs_last_year_sex_event_idx
+    ON public.mv_extend_runs USING btree
+    (sex_event_adj_time_seconds, athlete_code COLLATE pg_catalog."default")
+    TABLESPACE pg_default;
+
+CREATE INDEX mv_extend_runs_last_year_sex_idx
+    ON public.mv_extend_runs USING btree
+    (sex_adj_time_seconds, athlete_code COLLATE pg_catalog."default")
+    TABLESPACE pg_default;
+
+CREATE INDEX mv_extend_runs_last_year_time_idx
+    ON public.mv_extend_runs USING btree
+    (time_seconds, athlete_code COLLATE pg_catalog."default")
+    TABLESPACE pg_default;
+
+CREATE INDEX mv_extend_runs_season_idx
+    ON public.mv_extend_runs USING btree
+    (season_adj_time_seconds, athlete_code COLLATE pg_catalog."default")
+    TABLESPACE pg_default;
+
+CREATE INDEX mv_extend_runs_sex_event_idx
+    ON public.mv_extend_runs USING btree
+    (sex_event_adj_time_seconds, athlete_code COLLATE pg_catalog."default")
+    TABLESPACE pg_default;
+
+CREATE INDEX mv_extend_runs_sex_idx
+    ON public.mv_extend_runs USING btree
+    (sex_adj_time_seconds, athlete_code COLLATE pg_catalog."default")
+    TABLESPACE pg_default;
+
+CREATE INDEX mv_extend_runs_time_idx
+    ON public.mv_extend_runs USING btree
+    (time_seconds, athlete_code COLLATE pg_catalog."default")
+    TABLESPACE pg_default;
+
+CREATE UNIQUE INDEX mv_extend_runs_uq
+    ON public.mv_extend_runs USING btree
+    (event_code, event_date COLLATE pg_catalog."default", athlete_code COLLATE pg_catalog."default", "position")
+    TABLESPACE pg_default;
+
+CREATE MATERIALIZED VIEW IF NOT EXISTS public.mv_best_curve
+TABLESPACE pg_default
+AS
+ WITH best_per_athlete AS (
+         SELECT DISTINCT ON (r.athlete_code) r.event_code,
+            r.event_date,
+            r.athlete_code,
+            r."position",
+            r.name,
+            r.age_group,
+            r.age_grade,
+            r.club,
+            r.comment,
+            r."time",
+            r.time_seconds,
+            r.age_ratio_male,
+            r.age_ratio_sex,
+            r.coeff,
+            r.coeff_event,
+            r.event_name,
+            r.season_adj_time_seconds,
+            r.event_adj_time_seconds,
+            r.age_adj_time_seconds,
+            r.sex_adj_time_seconds,
+            r.age_event_adj_time_seconds,
+            r.age_sex_adj_time_seconds,
+            r.sex_event_adj_time_seconds,
+            r.age_sex_event_adj_time_seconds,
+            r.season_adj_time,
+            r.event_adj_time,
+            r.age_adj_time,
+            r.sex_adj_time,
+            r.age_event_adj_time,
+            r.age_sex_adj_time,
+            r.sex_event_adj_time,
+            r.age_sex_event_adj_time
+           FROM mv_extend_runs r
+          ORDER BY r.athlete_code, r.time_seconds, r."position", (to_date(r.event_date::text, 'DD/MM/YYYY'::text)) DESC, r.event_code
+        )
+ SELECT event_code,
+    event_date,
+    athlete_code,
+    "position",
+    name,
+    age_group,
+    age_grade,
+    club,
+    comment,
+    "time",
+    time_seconds,
+    age_ratio_male,
+    age_ratio_sex,
+    coeff,
+    coeff_event,
+    event_name,
+    season_adj_time_seconds,
+    event_adj_time_seconds,
+    age_adj_time_seconds,
+    sex_adj_time_seconds,
+    age_event_adj_time_seconds,
+    age_sex_adj_time_seconds,
+    sex_event_adj_time_seconds,
+    age_sex_event_adj_time_seconds,
+    season_adj_time,
+    event_adj_time,
+    age_adj_time,
+    sex_adj_time,
+    age_event_adj_time,
+    age_sex_adj_time,
+    sex_event_adj_time,
+    age_sex_event_adj_time,
+    100 - floor(100::double precision * power(percent_rank() OVER (ORDER BY time_seconds, athlete_code), (ln(0.01) / ln(50.0 / NULLIF(count(*) OVER (), 0)::numeric))::double precision))::integer AS rank
+   FROM best_per_athlete b
+  ORDER BY time_seconds, athlete_code
+WITH DATA;
+
+ALTER TABLE IF EXISTS public.mv_best_curve
+    OWNER TO parkrundata_user;
+
+
+CREATE INDEX mv_best_curve_rank_idx
+    ON public.mv_best_curve USING btree
+    (rank DESC, athlete_code COLLATE pg_catalog."default")
+    TABLESPACE pg_default;
+
+CREATE UNIQUE INDEX mv_best_curve_uq
+    ON public.mv_best_curve USING btree
+    (athlete_code COLLATE pg_catalog."default")
+    TABLESPACE pg_default;
+
+CREATE MATERIALIZED VIEW IF NOT EXISTS public.mv_best_age_sex_event_curve
+TABLESPACE pg_default
+AS
+ WITH best_per_athlete AS (
+         SELECT DISTINCT ON (r.athlete_code) r.event_code,
+            r.event_date,
+            r.athlete_code,
+            r."position",
+            r.name,
+            r.age_group,
+            r.age_grade,
+            r.club,
+            r.comment,
+            r."time",
+            r.time_seconds,
+            r.age_ratio_male,
+            r.age_ratio_sex,
+            r.coeff,
+            r.coeff_event,
+            r.event_name,
+            r.season_adj_time_seconds,
+            r.event_adj_time_seconds,
+            r.age_adj_time_seconds,
+            r.sex_adj_time_seconds,
+            r.age_event_adj_time_seconds,
+            r.age_sex_adj_time_seconds,
+            r.sex_event_adj_time_seconds,
+            r.age_sex_event_adj_time_seconds,
+            r.season_adj_time,
+            r.event_adj_time,
+            r.age_adj_time,
+            r.sex_adj_time,
+            r.age_event_adj_time,
+            r.age_sex_adj_time,
+            r.sex_event_adj_time,
+            r.age_sex_event_adj_time
+           FROM mv_extend_runs r
+          ORDER BY r.athlete_code, r.age_sex_event_adj_time_seconds, r."position", (to_date(r.event_date::text, 'DD/MM/YYYY'::text)) DESC, r.event_code
+        )
+ SELECT event_code,
+    event_date,
+    athlete_code,
+    "position",
+    name,
+    age_group,
+    age_grade,
+    club,
+    comment,
+    "time",
+    time_seconds,
+    age_ratio_male,
+    age_ratio_sex,
+    coeff,
+    coeff_event,
+    event_name,
+    season_adj_time_seconds,
+    event_adj_time_seconds,
+    age_adj_time_seconds,
+    sex_adj_time_seconds,
+    age_event_adj_time_seconds,
+    age_sex_adj_time_seconds,
+    sex_event_adj_time_seconds,
+    age_sex_event_adj_time_seconds,
+    season_adj_time,
+    event_adj_time,
+    age_adj_time,
+    sex_adj_time,
+    age_event_adj_time,
+    age_sex_adj_time,
+    sex_event_adj_time,
+    age_sex_event_adj_time,
+    100 - floor(100::double precision * power(percent_rank() OVER (ORDER BY age_sex_event_adj_time_seconds, athlete_code), (ln(0.01) / ln(50.0 / NULLIF(count(*) OVER (), 0)::numeric))::double precision))::integer AS rank
+   FROM best_per_athlete b
+  ORDER BY age_sex_event_adj_time_seconds, athlete_code
+WITH DATA;
+
+ALTER TABLE IF EXISTS public.mv_best_age_sex_event_curve
+    OWNER TO parkrundata_user;
+
+
+CREATE INDEX mv_best_age_sex_event_curve_rank_idx
+    ON public.mv_best_age_sex_event_curve USING btree
+    (rank DESC, athlete_code COLLATE pg_catalog."default")
+    TABLESPACE pg_default;
+
+CREATE UNIQUE INDEX mv_best_age_sex_event_curve_uq
+    ON public.mv_best_age_sex_event_curve USING btree
+    (athlete_code COLLATE pg_catalog."default")
+    TABLESPACE pg_default;
+
+ @app.route('/api/athlete_best_summary', methods=['GET'])
+def get_athlete_best_summary():
+        """
+        API endpoint to get best-run ranks (all-time and last-year) plus total/recent runs
+        for a single athlete.
+        Query param:
+            - athlete_code (required)
+        """
+        from app import db  # Import db here to avoid circular import
+        try:
+                athlete_code = (request.args.get('athlete_code') or '').strip()
+                if not athlete_code:
+                        return jsonify({
+                                'error': 'Missing required parameter',
+                                'required': ['athlete_code']
+                        }), 400
+
+                sql = text("""
+                        WITH
+                        params AS (
+                            SELECT CAST(:athlete_code AS text) AS athlete_code
+                        ),
+                        best_ranked AS (
+                            SELECT athlete_code, event_date, time AS time, rank
+                            FROM mv_best_curve
+                        ),
+                        event_ranked AS (
+                            SELECT athlete_code, event_date, event_adj_time AS time, rank
+                            FROM mv_best_event_curve
+                        ),
+                        age_event_ranked AS (
+                            SELECT athlete_code, event_date, age_event_adj_time AS time, rank
+                            FROM mv_best_age_event_curve
+                        ),
+                        sex_event_ranked AS (
+                            SELECT athlete_code, event_date, sex_event_adj_time AS time, rank
+                            FROM mv_best_sex_event_curve
+                        ),
+                        age_sex_event_ranked AS (
+                            SELECT athlete_code, event_date, age_sex_event_adj_time AS time, rank
+                            FROM mv_best_age_sex_event_curve
+                        ),
+                        best_1y_ranked AS (
+                            SELECT athlete_code, event_date, time AS time, rank
+                            FROM mv_best_1y_curve
+                        ),
+                        event_1y_ranked AS (
+                            SELECT athlete_code, event_date, event_adj_time AS time, rank
+                            FROM mv_best_event_1y_curve
+                        ),
+                        age_event_1y_ranked AS (
+                            SELECT athlete_code, event_date, age_event_adj_time AS time, rank
+                            FROM mv_best_age_event_1y_curve
+                        ),
+                        sex_event_1y_ranked AS (
+                            SELECT athlete_code, event_date, sex_event_adj_time AS time, rank
+                            FROM mv_best_sex_event_1y_curve
+                        ),
+                        age_sex_event_1y_ranked AS (
+                            SELECT athlete_code, event_date, age_sex_event_adj_time AS time, rank
+                            FROM mv_best_age_sex_event_1y_curve
+                        ),
+                        total_runs_ranked AS (
+                            SELECT
+                                a.athlete_code::text AS athlete_code,
+                                COALESCE(a.total_runs, 0) AS total_runs,
+                                COALESCE(a.recent_runs, 0) AS recent_runs
+                            FROM athletes a
+                        ),
+                        stacked AS (
+                            SELECT e.athlete_code::text, 'best_all_time'::text AS best_type, e.event_date::text, e.rank, e.time::text
+                            FROM best_ranked e JOIN params p ON e.athlete_code::text = p.athlete_code
+
+                            UNION ALL
+                            SELECT e.athlete_code::text, 'event_all_time'::text AS best_type, e.event_date::text, e.rank, e.time::text
+                            FROM event_ranked e JOIN params p ON e.athlete_code::text = p.athlete_code
+
+                            UNION ALL
+                            SELECT e.athlete_code::text, 'age_event_all_time'::text, e.event_date::text, e.rank, e.time::text
+                            FROM age_event_ranked e JOIN params p ON e.athlete_code::text = p.athlete_code
+
+                            UNION ALL
+                            SELECT e.athlete_code::text, 'sex_event_all_time'::text, e.event_date::text, e.rank, e.time::text
+                            FROM sex_event_ranked e JOIN params p ON e.athlete_code::text = p.athlete_code
+
+                            UNION ALL
+                            SELECT e.athlete_code::text, 'age_sex_event_all_time'::text, e.event_date::text, e.rank, e.time::text
+                            FROM age_sex_event_ranked e JOIN params p ON e.athlete_code::text = p.athlete_code
+
+                            UNION ALL
+                            SELECT e.athlete_code::text, 'best_1y'::text, e.event_date::text, e.rank, e.time::text
+                            FROM best_1y_ranked e JOIN params p ON e.athlete_code::text = p.athlete_code
+
+                            UNION ALL
+                            SELECT e.athlete_code::text, 'event_1y'::text, e.event_date::text, e.rank, e.time::text
+                            FROM event_1y_ranked e JOIN params p ON e.athlete_code::text = p.athlete_code
+
+                            UNION ALL
+                            SELECT e.athlete_code::text, 'age_event_1y'::text, e.event_date::text, e.rank, e.time::text
+                            FROM age_event_1y_ranked e JOIN params p ON e.athlete_code::text = p.athlete_code
+
+                            UNION ALL
+                            SELECT e.athlete_code::text, 'sex_event_1y'::text, e.event_date::text, e.rank, e.time::text
+                            FROM sex_event_1y_ranked e JOIN params p ON e.athlete_code::text = p.athlete_code
+
+                            UNION ALL
+                            SELECT e.athlete_code::text, 'age_sex_event_1y'::text, e.event_date::text, e.rank, e.time::text
+                            FROM age_sex_event_1y_ranked e JOIN params p ON e.athlete_code::text = p.athlete_code
+
+                            UNION ALL
+                            SELECT tr.athlete_code, 'total_runs'::text AS best_type, CURRENT_DATE::text AS event_date, 0 AS rank, tr.total_runs::text AS time
+                            FROM total_runs_ranked tr JOIN params p ON tr.athlete_code = p.athlete_code
+
+                            UNION ALL
+                            SELECT tr.athlete_code, 'recent_runs'::text AS best_type, CURRENT_DATE::text AS event_date, 0 AS rank, tr.recent_runs::text AS time
+                            FROM total_runs_ranked tr JOIN params p ON tr.athlete_code = p.athlete_code
+                        ),
+                        picked AS (
+                            SELECT *,
+                                         ROW_NUMBER() OVER (
+                                             PARTITION BY athlete_code, best_type
+                                             ORDER BY rank DESC NULLS LAST, event_date DESC NULLS LAST
+                                         ) AS rn
+                            FROM stacked
+                        )
+                        SELECT athlete_code, best_type, event_date, rank, time
+                        FROM picked
+                        WHERE rn = 1
+                        ORDER BY best_type;
+                """)
+
+                result_proxy = db.session.execute(sql, {'athlete_code': athlete_code})
+                column_names = result_proxy.keys()
+                results = [dict(zip(column_names, row)) for row in result_proxy.fetchall()]
+
+                db.session.commit()
+                return jsonify(results)
+
+        except Exception as e:
+                try:
+                        db.session.rollback()
+                except Exception:
+                        pass
+                tb = traceback.format_exc()
+                print(f"Database error in get_athlete_best_summary: {e}\n{tb}")
+                return jsonify({
+                        "error": "Failed to fetch data from the database",
+                        "exception": str(e),
+                        "traceback": tb
+                }), 500   

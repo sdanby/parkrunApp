@@ -1,0 +1,39 @@
+{
+  "editor.tokenColorCustomizations": {
+    "textMateRules": [
+      {
+        "scope": [
+          "markup.heading.3",
+          "markup.heading.3.markdown",
+          "markup.heading.atx.3.markdown",
+          "entity.name.section.markdown.heading.3",
+          "punctuation.definition.heading.markdown.3",
+          "markup.heading.3.markdown punctuation.definition.heading.markdown"
+        ],
+        "settings": {
+          "foreground": "#7e22ce"
+        }
+      },
+      {
+        "scope": [
+          "markup.heading.2",
+          "markup.heading.2.markdown",
+          "markup.heading.atx.2.markdown",
+          "entity.name.section.markdown.heading.2",
+          "markup.heading.2.markdown punctuation.definition.heading.markdown",
+          "punctuation.definition.heading.markdown.2"
+        ],
+        "settings": {
+          "foreground": "#1d4ed8"
+        }
+      }
+    ]
+  },
+  "git.ignoreLimitWarning": true,
+  "chat.tools.terminal.autoApprove": {
+    "/^python -m py_compile app\\.py python_sql_calls_repo\\\\app\\.py$/": {
+      "approve": true,
+      "matchCommandLine": true
+    }
+  }
+}

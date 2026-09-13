@@ -1,0 +1,101 @@
+{
+  "version": "1.0.0-draft",
+  "page": "Error",
+  "units": "cm",
+  "anchor": "error-page-root",
+  "notes": "Layout config for the shared error and suggestion log page.",
+  "viewports": {
+    "laptop": {
+      "breakpointMin": 641
+    },
+    "mobile": {
+      "breakpointMax": 640
+    }
+  },
+  "elements": [
+    {
+      "id": "error.headerTitle",
+      "type": "label",
+      "name": "Header Title",
+      "laptop": { "x": "0.0cm", "y": "0.0cm", "width": "10.5cm", "height": "0.9cm" },
+      "mobile": { "x": "0.0cm", "y": "0.0cm", "width": "10.0cm", "height": "0.9cm" }
+    },
+    {
+      "id": "error.headerIntro",
+      "type": "field",
+      "name": "Header Intro",
+      "laptop": { "x": "0.0cm", "y": "1.0cm", "width": "16.8cm", "height": "0.9cm" },
+      "mobile": { "x": "0.0cm", "y": "1.0cm", "width": "10.0cm", "height": "1.3cm" }
+    },
+    {
+      "id": "error.headerNote",
+      "type": "field",
+      "name": "Header Note",
+      "laptop": { "x": "0.0cm", "y": "2.0cm", "width": "16.8cm", "height": "0.8cm" },
+      "mobile": { "x": "0.0cm", "y": "2.4cm", "width": "10.0cm", "height": "1.4cm" }
+    },
+    {
+      "id": "error.syncError",
+      "type": "field",
+      "name": "Sync Error",
+      "laptop": { "x": "0.0cm", "y": "3.0cm", "width": "12.0cm", "height": "0.8cm" },
+      "mobile": { "x": "0.0cm", "y": "4.0cm", "width": "10.0cm", "height": "0.9cm" }
+    },
+    {
+      "id": "error.editBanner",
+      "type": "field",
+      "name": "Edit Banner",
+      "laptop": { "x": "0.0cm", "y": "2.7cm", "width": "9.2cm", "height": "1.0cm" },
+      "mobile": { "x": "0.0cm", "y": "3.0cm", "width": "8.0cm", "height": "1.2cm" }
+    },
+    {
+      "id": "error.typeField",
+      "type": "select",
+      "name": "Type Field",
+      "laptop": { "x": "0.0cm", "y": "4.0cm", "width": "3.2cm", "height": "1.7cm" },
+      "mobile": { "x": "0.0cm", "y": "4.4cm", "width": "4.8cm", "height": "1.7cm" }
+    },
+    {
+      "id": "error.statusField",
+      "type": "select",
+      "name": "Status Field",
+      "laptop": { "x": "3.5cm", "y": "4.0cm", "width": "3.2cm", "height": "1.7cm" },
+      "mobile": { "x": "5.2cm", "y": "4.4cm", "width": "4.8cm", "height": "1.7cm" }
+    },
+    {
+      "id": "error.titleField",
+      "type": "field",
+      "name": "Title Field",
+      "laptop": { "x": "7.0cm", "y": "4.0cm", "width": "10.0cm", "height": "1.7cm" },
+      "mobile": { "x": "0.0cm", "y": "6.3cm", "width": "10.0cm", "height": "1.7cm" }
+    },
+    {
+      "id": "error.detailsField",
+      "type": "field",
+      "name": "Details Field",
+      "laptop": { "x": "0.0cm", "y": "6.0cm", "width": "17.0cm", "height": "4.1cm" },
+      "mobile": { "x": "0.0cm", "y": "9.2cm", "width": "10.5cm", "height": "3.0cm" }
+    },
+    {
+      "id": "error.submitButton",
+      "type": "button",
+      "name": "Submit Button",
+      "laptop": { "x": "9.5cm", "y": "2.7cm", "width": "4.0cm", "height": "0.9cm" },
+      "mobile": { "x": "0.0cm", "y": "8.2cm", "width": "4.0cm", "height": "0.9cm" }
+    },
+    {
+      "id": "error.clearButton",
+      "type": "button",
+      "name": "Clear Button",
+      "laptop": { "x": "14.0cm", "y": "2.7cm", "width": "2.8cm", "height": "0.9cm" },
+      "mobile": { "x": "5.0cm", "y": "8.2cm", "width": "2.8cm", "height": "0.9cm" }
+    },
+    {
+      "id": "error.tableContainer",
+      "type": "table",
+      "name": "Table Container",
+      "laptop": { "x": "0.0cm", "y": "10.2cm", "width": "30.0cm", "height": "11.0cm" },
+      "mobile": { "x": "0.0cm", "y": "12.2cm", "width": "10.5cm", "height": "7.0cm" }
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.pyc
+*.pyd
+.venv/
+
+# Build artifacts / local data
+build/
+instance/
+parkrun.db
+ngrok
+
+# Claude Code local settings (machine-specific, not shared)
+.claude/settings.local.json
+.claude/scheduled_tasks.lock
+python_sql_calls_repo/
